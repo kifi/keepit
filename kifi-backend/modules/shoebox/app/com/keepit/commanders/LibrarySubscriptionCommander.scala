@@ -94,7 +94,7 @@ class LibrarySubscriptionCommander @Inject() (
     def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
         currSubs.find {
-          _.equals(key)
+          hasSameNameOrEndpoint(key, _)
         } match {
           case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
           case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info, state = LibrarySubscriptionStates.ACTIVE))
@@ -105,7 +105,7 @@ class LibrarySubscriptionCommander @Inject() (
     def removeDifferences(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       currSubs.foreach { currSub =>
         subKeys.find {
-          _.equals(currSub)
+          hasSameNameOrEndpoint(_, currSub)
         } match {
           case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE))
           case Some(key) => // currSub has already been updated above, do nothing
