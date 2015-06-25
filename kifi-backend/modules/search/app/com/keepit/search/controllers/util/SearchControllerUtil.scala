@@ -94,8 +94,8 @@ trait SearchControllerUtil {
     }
   }.toMap
 
-  protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser, org: Option[PrimaryOrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = Library.formatLibraryPath((owner.username, org.map { _.original }), library.slug)
+  protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, org, library.slug)
     BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
   }
 

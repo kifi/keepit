@@ -152,7 +152,7 @@ class UserProfileController @Inject() (
           val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
-          val orgs = orgRepo.getByIds(mutualFollow.flatMap { _.organizationId }.toSet).mapValues(org => org.getHandle)
+          val orgs = orgRepo.getByIds(mutualFollow.flatMap { _.organizationId }.toSet)
           (ofUser, ofViewer, mutualFollow, basicUsers, orgs)
         }
         Ok(Json.obj(

@@ -90,13 +90,13 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, org: Option[OrganizationHandle], inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, org: Option[Organization], inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryPath((owner.username, org), lib.slug),
+      url = LibraryPathHelper.formatLibraryPath(owner, org, lib.slug),
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,

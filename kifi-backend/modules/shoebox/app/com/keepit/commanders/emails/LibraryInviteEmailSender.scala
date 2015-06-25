@@ -38,11 +38,11 @@ class LibraryInviteEmailSender @Inject() (
     toRecipientOpt map { toRecipient =>
       val (library, libraryInfo) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
-        val orgHandle = library.organizationId.map { id => orgRepo.get(id).getHandle }
+        val org = library.organizationId.map { id => orgRepo.get(id) }
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, orgHandle, Some(inviter))
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
         (library, libraryInfo)
 
       }

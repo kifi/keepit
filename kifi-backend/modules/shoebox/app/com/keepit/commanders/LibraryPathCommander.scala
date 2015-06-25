@@ -2,30 +2,32 @@ package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ User, OrganizationRepo, Library, UserRepo }
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.model._
 
 @Singleton
 class LibraryPathCommander @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
+    basicUserRepo: BasicUserRepo,
     userRepo: UserRepo) {
 
   def getPath(lib: Library): String = {
     val (user, org) = db.readOnlyMaster { implicit s =>
-      val user = userRepo.get(lib.ownerId)
-      val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
+      val user = basicUserRepo.load(lib.ownerId)
+      val org = lib.organizationId.map(orgRepo.get(_))
       (user, org)
     }
-    Library.formatLibraryPath((user.username, org.map(_.original)), lib.slug)
+    LibraryPathHelper.formatLibraryPath(user, org, lib.slug)
   }
 
   def getPathUrlEncoded(lib: Library): String = {
     val (user, org) = db.readOnlyMaster { implicit s =>
-      val user = userRepo.get(lib.ownerId)
-      val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
+      val user = basicUserRepo.load(lib.ownerId)
+      val org = lib.organizationId.map(orgRepo.get(_))
       (user, org)
     }
 
-    Library.formatLibraryPathUrlEncoded((user.username, org.map(_.original)), lib.slug)
+    LibraryPathHelper.formatLibraryPathUrlEncoded(user, org, lib.slug)
   }
 }

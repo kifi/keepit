@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -104,7 +105,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 3
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u2.username, lib3.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(u2), None, lib3.slug)}"
 
       }
     }
@@ -125,7 +126,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 1
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u1.username, lib1.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(u1), None, lib1.slug)}"
 
       }
     }

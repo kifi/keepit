@@ -144,19 +144,31 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
-  def formatLibraryPath(handle: Handle, slug: LibrarySlug): String = {
-    s"/${handle.value}/${slug.value}"
-  }
-
-  def formatLibraryPathUrlEncoded(handle: Handle, slug: LibrarySlug): String = {
-    s"/${handle.urlEncoded}/${slug.urlEncoded}"
-  }
-
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 
   def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
     seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
+}
+
+object LibraryPathHelper {
+
+  private def getHandle(owner: BasicUser, orgOpt: Option[Organization]): Handle = {
+    orgOpt match {
+      case Some(org) => org.getHandle
+      case None => owner.username
+    }
+  }
+
+  def formatLibraryPath(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, org)
+    s"/${handle.value}/${slug.value}"
+  }
+
+  def formatLibraryPathUrlEncoded(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, org)
+    s"/${handle.urlEncoded}/${slug.urlEncoded}"
+  }
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -276,11 +288,8 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
-  def apply(library: Library, space: Either[BasicUser, Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = space.fold(
-      user => Library.formatLibraryPath(user.username, library.slug),
-      org => Library.formatLibraryPath(org.getHandle, library.slug)
-    )
+  def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, org, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }

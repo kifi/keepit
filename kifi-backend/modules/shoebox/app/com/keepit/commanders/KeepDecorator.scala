@@ -65,8 +65,7 @@ class KeepDecorator @Inject() (
         val idToBasicLibrary = idToLibrary.mapValues { library =>
           val orgOpt = libIdToOrg.get(library.id.get)
           val user = idToBasicUser(library.ownerId)
-          val space = if (orgOpt.isDefined) Right(orgOpt.get) else Left(user)
-          BasicLibrary(library, space)
+          BasicLibrary(library, user, orgOpt)
         }
 
         (idToBasicUser, idToBasicLibrary)

@@ -46,7 +46,7 @@ case class Organization(
   def getHandle: OrganizationHandle = {
     handle match {
       case Some(h) => h.original
-      case None => throw Organization.UndefinedHandleException(this)
+      case None => throw Organization.UndefinedOrganizationHandleException(this)
     }
   }
 }
@@ -115,7 +115,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.basePermissions))
   }
 
-  case class UndefinedHandleException(org: Organization) extends Exception(s"no handle found for $org")
+  case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
 object OrganizationStates extends States[Organization]
