@@ -122,6 +122,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
 }
 
@@ -769,6 +771,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]] = {
     call(Shoebox.internal.getLibraryURIS(libId), callTimeouts = longTimeout).map { _.json.as[Seq[Id[NormalizedURI]]] }
+  }
+
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = {
+    call(Shoebox.internal.getIngestableOrganizations(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganization]] }
+  }
+
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = {
+    call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganizationMembership]] }
   }
 
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {

@@ -13,8 +13,7 @@ create table library_subscription (
   info varchar(2048) NOT NULL,
 
   PRIMARY KEY (id),
-  INDEX library_subscription_i_library_id (library_id),
-  UNIQUE INDEX(library_id, name)
+  INDEX library_subscription_i_library_id (library_id)
 );
 
 insert into evolutions (name, description) values('338.sql', 'adding library subscription');

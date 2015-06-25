@@ -41,6 +41,8 @@ case class Organization(
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
 
+  def toIngestableOrganization = IngestableOrganization(id, state, seq)
+
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -111,6 +113,12 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.handle.map(_.normalized),
       org.basePermissions))
   }
+}
+
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
+
+object IngestableOrganization {
+  implicit val format = Json.format[IngestableOrganization]
 }
 
 object OrganizationStates extends States[Organization]
