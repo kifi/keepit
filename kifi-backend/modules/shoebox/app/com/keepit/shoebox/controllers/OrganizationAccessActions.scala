@@ -4,48 +4,40 @@ import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipComm
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.model.{ Organization, User }
+import com.keepit.model.{ OrganizationFail, OrganizationPermission, Organization, User }
 import play.api.libs.json.Json
-import play.api.mvc.{ ActionFilter, Controller, Result }
+import play.api.mvc._
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 trait OrganizationAccessActions {
   self: UserActions with Controller =>
 
   val publicIdConfig: PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
-  val orgCommander: OrganizationCommander
   val orgMembershipCommander: OrganizationMembershipCommander
 
-  def OrganizationViewAction(id: PublicId[Organization]) = new ActionFilter[MaybeUserRequest] {
-    def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewable(id, input))
-  }
+  case class OrganizationRequest[T](request: MaybeUserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request)
 
-  private def lookupViewable[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A]) = {
-    parseRequest(orgPubId, input) match {
-      case Some((orgId, userIdOpt, authToken)) =>
-        // Right now all organizations are publicly visible
-        val access = true // TODO: this ought to be removed when Leo gets to OrganizationAccessAction.byPermission
-        if (access) {
-          None
-        } else {
-          Some(Forbidden(Json.obj("error" -> "permission_denied")))
-        }
-      case _ =>
-        Some(BadRequest(Json.obj("error" -> "invalid_id")))
-    }
-  }
-
-  private def parseRequest[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A]): Option[(Id[Organization], Option[Id[User]], Option[String])] = {
-    val userIdOpt: Option[Id[User]] = input match {
-      case userRequest: UserRequest[A] => Some(userRequest.userId)
-      case _ => None
-    }
-
-    val orgIdOpt = Organization.decodePublicId(orgPubId).toOption
-    orgIdOpt.map { orgId =>
-      (orgId, userIdOpt, input.getQueryString("authToken"))
+  def OrganizationAction(id: PublicId[Organization], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
+    override def invokeBlock[A](request: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
+      Organization.decodePublicId(id) match {
+        case Success(orgId) =>
+          val userIdOpt: Option[Id[User]] = request match {
+            case userRequest: UserRequest[A] => Some(userRequest.userId)
+            case _ => None
+          }
+          val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
+          val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
+          if (requiredPermissionsSet.subsetOf(memberPermissions)) {
+            val authTokenOpt = request.getQueryString("authToken")
+            block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
+          } else {
+            Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
+          }
+        case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+      }
     }
   }
 }
