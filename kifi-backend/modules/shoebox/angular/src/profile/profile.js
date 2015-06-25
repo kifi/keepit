@@ -272,35 +272,13 @@ angular.module('kifi')
           scope.isOpen[target] = !scope.isOpen[target];
         };
 
-        scope.getCloseAccountButtonText = function () {
-          return (scope.closeAccountStatus === 'error') && 'Retry' ||
-            (scope.closeAccountStatus === 'pending') && 'Sending...' ||
-            (scope.closeAccountStatus === 'sent') && 'Message Sent' ||
-            'Close Account';
-        };
-
         scope.closeAccount = function () {
-          // prevent multiple attempts
-          if (scope.closeAccountStatus) { return false; }
-
-          scope.closeAccountStatus = 'pending';
-          var data = { comment: scope.comment };
-          profileService.closeAccountRequest(data).then(function () {
-            scope.closeAccountStatus = 'sent';
-
-            $analytics.eventTrack('user_clicked_page', {
-              'action': 'clickCloseAccount',
-              'path': $location.path()
-            });
-          }, function () {
-            scope.closeAccountStatus = 'error';
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'clickCloseAccount',
+            'path': $location.path()
           });
-          return false;
         };
 
-        scope.isCloseAccountStatus = function (status) {
-          return scope.closeAccountStatus === status;
-        };
       }
     };
   }
