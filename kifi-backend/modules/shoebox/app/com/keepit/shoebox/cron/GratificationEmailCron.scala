@@ -33,11 +33,11 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
     val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0 ${utcHourForNoonEasternTime + 3}-${utcHourFor8pmEasternTime}} ? * *" // scheduled to send to QA
-    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
+    //val cronTimeEveryday = s"0 0 ${utcHourForNoonEasternTime} ? * *" // scheduled to send to QA
+    //cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
-    val cronTimeTues = s"0 0 $utcHourForNoonEasternTime ? * TUE"
-    cronTaskOnLeader(quartz, actor.ref, cronTimeTues, GratificationEmailMessage.SendOddEmails)
+    val cronTimeFriday = s"0 0 $utcHourForNoonEasternTime ? * TUE"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeFriday, GratificationEmailMessage.SendOddEmails)
 
     val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * MON"
     cronTaskOnLeader(quartz, actor.ref, cronTimeMonday, GratificationEmailMessage.SendEvenEmails)
@@ -59,10 +59,10 @@ class GratificationEmailActor @Inject() (
 
   def receive = {
     case SendEmails =>
-      emailCommander.batchSendEmails(_ => true, sendTo = Some(testDestinationEmail))
+      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
     case SendOddEmails =>
-      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 1 }, sendTo = Some(testDestinationEmail))
+      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) } }
     case SendEvenEmails =>
-      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 0 }, sendTo = Some(testDestinationEmail))
+      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
   }
 }
