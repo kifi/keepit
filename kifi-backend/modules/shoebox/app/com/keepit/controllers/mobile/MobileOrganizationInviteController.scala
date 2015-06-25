@@ -29,7 +29,6 @@ class MobileOrganizationInviteController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def inviteUsers(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
-    println("entering")
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         val invites = (request.body \ "invites").as[JsArray].value
