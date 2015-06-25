@@ -5,7 +5,7 @@ import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.net.{ ClientResponse, CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.actor.{ FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance }
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -93,7 +93,12 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 
-  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])]
+  def getEligibleGratData(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
+
+  def getGratData(userId: Id[User]): Future[GratificationData]
+
+  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
+
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -355,9 +360,23 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = {
-    call(Heimdal.internal.getOwnerLibraryViewStats(ownerId)).map { res =>
-      ((res.json \ "cnt").as[Int], (res.json \ "map").as[Map[Id[Library], Int]])
+  def getEligibleGratData(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
+    val payload = Json.toJson(userIds)
+    call(Heimdal.internal.getEligibleGratData, payload).map { response =>
+      Json.parse(response.body).as[Seq[GratificationData]]
+    }
+  }
+
+  def getGratData(userId: Id[User]): Future[GratificationData] = {
+    call(Heimdal.internal.getGratData(userId)).map { response =>
+      Json.parse(response.body).as[GratificationData]
+    }
+  }
+
+  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
+    val payload = Json.toJson(userIds)
+    call(Heimdal.internal.getGratDatas, payload).map { response =>
+      Json.parse(response.body).as[Seq[GratificationData]]
     }
   }
 }
