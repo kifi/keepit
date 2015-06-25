@@ -42,7 +42,6 @@ object InvitationStatus {
     case ACCEPTED.value => ACCEPTED
     case DECLINED.value => DECLINED
   }
-  def unapply(status: InvitationStatus) = Some(status.value)
   implicit def format[T]: Format[InvitationStatus] =
     Format(__.read[String].map(InvitationStatus(_)), new Writes[InvitationStatus] { def writes(o: InvitationStatus) = JsString(o.value) })
 }
