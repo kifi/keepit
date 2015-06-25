@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.{ Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
@@ -13,6 +13,7 @@ trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organiz
   def updateName(organizationId: Id[Organization], name: String): Organization = ???
   def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
+  def deactivate(model: Organization)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -58,5 +59,9 @@ class OrganizationRepoImpl @Inject() (
       val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }.toSet) && row.state === OrganizationStates.ACTIVE } yield row }
       q.list.map { x => (orgId2Key(x.id.get) -> x) }.toMap
     }.map { case (key, org) => key.id -> org }.toMap
+  }
+
+  def deactivate(model: Organization)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }

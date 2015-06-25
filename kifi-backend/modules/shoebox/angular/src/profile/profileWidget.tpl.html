@@ -1,0 +1,42 @@
+<div class="kf-pw">
+
+  <div class="kf-pw-badge">
+    <a href="{{me|profileUrl}}" ng-click="registerEvent('Photo')" class="kf-pw-profileImg">
+      <img src="{{me|pic:100}}" />
+    </a>
+    <aside>
+      <h1>
+        <a href="{{me|profileUrl}}" ng-click="registerEvent('Name')">
+          {{me.firstName}} {{me.lastName}}
+        </a>
+      </h1>
+      <p>
+        <a
+          ng-class="me.biography ? '' : 'no-bio'"
+          ng-click="bioClick()"
+          kf-ellipsis
+          full-text="me.biography || 'Add a Bio'"
+          max-num-lines="2">
+        </a>
+      </p>
+    </aside>
+  </div>
+
+  <div class="stats">
+    <a href="{{me|profileUrl}}" ng-click="registerEvent('Libraries')" class="stat">
+      <h2>Libraries</h1>
+      <h3>{{me.numLibraries}}</h3>
+    </a>
+    <a href="{{me|profileUrl:'connections'}}" ng-click="registerEvent('Connections')" class="stat">
+      <h2>Connections</h1>
+      <h3>
+        {{me.numConnections}}
+        <span ng-if="me.pendingFriendRequests > 0" >+{{me.pendingFriendRequests}}</span>
+      </h3>
+    </a>
+    <a href="{{me|profileUrl:'followers'}}" ng-click="registerEvent('Followers')" class="stat">
+      <h2>Followers</h1>
+      <h3>{{me.numFollowers}}</h3>
+    </a>
+  </div>
+</div>

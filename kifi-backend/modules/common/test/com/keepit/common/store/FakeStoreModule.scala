@@ -28,4 +28,7 @@ trait FakeStoreModule extends StoreModule {
 
   @Provides @Singleton
   def roverImageStore(): RoverImageStore = new InMemoryRoverImageStoreImpl()
+
+  @Provides @Singleton
+  def organizationAvatarStore(): OrganizationAvatarStore = new InMemoryOrganizationAvatarStoreImpl()
 }

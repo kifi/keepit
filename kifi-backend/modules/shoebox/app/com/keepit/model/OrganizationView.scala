@@ -73,7 +73,7 @@ case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifi
 case class OrganizationDeleteRequest(
   orgId: Id[Organization],
   requesterId: Id[User]) extends OrganizationRequest
-case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, deactivatedOrg: Organization)
+case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
 
 case class OrganizationModifications(
   newName: Option[String] = None,
