@@ -42,10 +42,11 @@ class MobileOrganizationMembershipController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
       case Success(orgId) =>
         val membersToBeRemoved = (request.body \ "members").as[Seq[Id[User]]]
-        val removeRequests = for( targetId <- membersToBeRemoved ) yield OrganizationMembershipRemoveRequest(orgId, request.userId, targetId)
+        val removeRequests = for (targetId <- membersToBeRemoved) yield OrganizationMembershipRemoveRequest(orgId, request.userId, targetId)
 
-        if ( !orgMembershipCommander.validateRequests(removeRequests).values.contains(false) ) {
-          for( r <- removeRequests ) { orgMembershipCommander.removeMembership(r) }
+        orgMembershipCommander.removeMemberships(removeRequests) match {
+          case Left(failure) => failure.asErrorResponse
+          case Right(responses) => Ok(Json.obj("removals" -> responses.keys.map(_.targetId)))
         }
     }
   }
