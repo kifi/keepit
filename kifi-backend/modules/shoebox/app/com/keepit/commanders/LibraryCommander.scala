@@ -110,6 +110,7 @@ class LibraryCommanderImpl @Inject() (
     librarySubscriptionCommander: LibrarySubscriptionCommander,
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    orgRepo: OrganizationRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -172,7 +173,8 @@ class LibraryCommanderImpl @Inject() (
       libraryIds.map { libId =>
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
-        LibraryInfo.fromLibraryAndOwner(library, None, owner) // library images are not used, so no need to include
+        val org = library.organizationId.map { orgRepo.get(_) }
+        LibraryInfo.fromLibraryAndOwner(library, None, owner, org) // library images are not used, so no need to include
       }
     }
   }

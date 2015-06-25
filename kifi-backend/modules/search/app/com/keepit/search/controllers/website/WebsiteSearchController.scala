@@ -54,7 +54,7 @@ class WebsiteSearchController @Inject() (
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
-    airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with LibraryPathHelper with Logging {
+    airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search2(
     query: String,
@@ -203,7 +203,7 @@ class WebsiteSearchController @Inject() (
         val libraries = libraryIds.map { libId =>
           val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
-          makeBasicLibrary(library, visibility, owner)
+          makeBasicLibrary(library, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
         }
         (users, libraries)
       }
@@ -375,7 +375,7 @@ class WebsiteSearchController @Inject() (
                 val (collaboratorIds, followerIds) = libraryMembersById(hit.id)
                 val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
                 val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
-                val path = formatLibraryPath(owner.username, library.slug)
+                val path = LibraryPathHelper.formatLibraryPath(owner, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                 val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
                 val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)
@@ -441,7 +441,7 @@ class WebsiteSearchController @Inject() (
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility, _) =>
                     val owner = users(record.ownerId)
-                    val library = makeBasicLibrary(record, visibility, owner)
+                    val library = makeBasicLibrary(record, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                     Json.obj("id" -> library.id, "name" -> library.name, "description" -> record.description, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
