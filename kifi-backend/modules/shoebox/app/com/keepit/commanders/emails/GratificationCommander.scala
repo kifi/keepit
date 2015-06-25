@@ -43,7 +43,11 @@ class GratificationCommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
       // val cnt = libMemRepo.userRecentUniqueFollowerCounts(userId, since) // deprecated, since it gets unique followers. we currently use the total "follows" across libraries.
-      val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since)
+      val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since).filter {
+        case (id, count) =>
+          val lib = libraryRepo.get(id)
+          lib.state == LibraryStates.ACTIVE && !lib.isSecret
+      }
       val cnt = cntMap.foldLeft[Int](0)((acc, kv) => acc + kv._2) // get total "follows" over all libraries
       LibraryCountData(cnt, cntMap)
     }
@@ -53,7 +57,13 @@ class GratificationCommander @Inject() (
     remoteCallQueue.withLockFuture {
       heimdal.getOwnerLibraryViewStats(userId).map {
         case (cnt, cntMap) =>
-          db.readOnlyReplica { implicit s => LibraryCountData(cnt, cntMap.filter { case (id, count) => libraryRepo.get(id).state == LibraryStates.ACTIVE }) }
+          db.readOnlyReplica { implicit s =>
+            LibraryCountData(cnt, cntMap.filter {
+              case (id, count) =>
+                val lib = libraryRepo.get(id)
+                lib.state == LibraryStates.ACTIVE && !lib.isSecret
+            })
+          }
       }
     }
   }
