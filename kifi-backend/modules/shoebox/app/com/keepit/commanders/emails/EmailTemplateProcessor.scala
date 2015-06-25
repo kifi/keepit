@@ -62,7 +62,6 @@ class EmailTemplateProcessorImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
-    keepRepo: KeepRepo,
     userCommander: Provider[UserCommander],
     libPathCommander: LibraryPathCommander,
     emailAddressRepo: UserEmailAddressRepo,
@@ -85,10 +84,8 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class LibraryNeeded(id: Id[Library]) extends NeededObject
 
-  case class KeepNeeded(id: Id[Keep]) extends NeededObject
-
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
-    libraries: Map[Id[Library], Library], keeps: Map[Id[Keep], Keep])
+    libraries: Map[Id[Library], Library])
 
   def process(emailToSend: EmailToSend) = new SafeFuture[ProcessedEmailResult]({
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
@@ -118,7 +115,6 @@ class EmailTemplateProcessorImpl @Inject() (
       val userIds = needs.collect { case UserNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
       val libraryIds = needs.collect { case LibraryNeeded(id) => id }
-      val keepIds = needs.collect { case KeepNeeded(id) => id }
 
       val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
 
@@ -130,15 +126,12 @@ class EmailTemplateProcessorImpl @Inject() (
         getUsers(allUserIds.toSeq) map { users => (users, libraries) }
       }
 
-      val keepsF = getKeeps(keepIds)
-
       for {
         (users, libraries) <- usersAndLibrariesF
         userImageUrls <- userImageUrlsF
         tipHtmlOpt <- tipHtmlF
-        keeps <- keepsF
       } yield {
-        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries, keeps = keeps)
+        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries)
         val includedTip = tipHtmlOpt.map(_._1)
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
@@ -189,9 +182,6 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def libraryId = tagArgs(0).as[Id[Library]]
       @inline def library: Library = input.libraries(libraryId)
 
-      @inline def keepId = tagArgs(0).as[Id[Keep]]
-      @inline def keep: Keep = input.keeps(keepId)
-
       tagWrapper.label match {
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
@@ -204,8 +194,6 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
           libOwner.fullName
-        case tags.keepName => keep.title.getOrElse("this keep")
-        case tags.keepUrl => keep.url
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
             case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
@@ -250,9 +238,6 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
-        case tags.keepName | tags.keepUrl =>
-          val keepId = tagArgs(0).as[Id[Keep]]
-          KeepNeeded(keepId)
         case _ => NothingNeeded
       }
     }.toSet
@@ -266,12 +251,6 @@ class EmailTemplateProcessorImpl @Inject() (
     db.readOnlyMasterAsync { implicit s =>
       libraryIds.map(id => id -> libraryRepo.get(id)).toMap
     }
-
-  private def getKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Keep]] = {
-    db.readOnlyMasterAsync { implicit s =>
-      keepIds.map(id => id -> keepRepo.get(id)).toMap
-    }
-  }
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {
     Future.sequence(
