@@ -4,6 +4,7 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
@@ -73,10 +74,28 @@ class GratificationCommander @Inject() (
     val numBatches = userCount / BATCH_SIZE
     (0 to numBatches).foreach { batchNum =>
       val userIds: Seq[Id[User]] = generateUserBatch(batchNum).filter(filter)
-      val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds)
+      val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map { _.map { addShoeboxData }.filter { _.isEligible } }
       fGratData.foreach { log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(_, sendTo) }
       fGratData.onFailure {
         case t: Throwable => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum")
+      }
+    }
+  }
+
+  private def addShoeboxData(gratData: GratificationData): GratificationData = {
+    val rawFollows = getLibraryFollowCounts(gratData.userId)
+    gratData.copy(
+      libraryViews = LibraryCountData(gratData.libraryViews.totalCount, filterPrivateLibraries(gratData.libraryViews.countById)),
+      libraryFollows = LibraryCountData(rawFollows.totalCount, filterPrivateLibraries(rawFollows.countById)),
+      connections = getNewConnections(gratData.userId)
+    )
+  }
+
+  private def filterPrivateLibraries(countById: Map[Id[Library], Int]): Map[Id[Library], Int] = {
+    db.readOnlyReplica { implicit session =>
+      countById.filter {
+        case (libId, _) =>
+          libraryRepo.get(libId).visibility != LibraryVisibility.SECRET
       }
     }
   }
