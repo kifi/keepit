@@ -36,7 +36,25 @@ class MobileOrganizationMembershipController @Inject() (
     }
   }
 
-  def modifyMembers(pubId: PublicId[Organization]) = ???
+  def modifyMembers(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
+    Organization.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
+      case Success(orgId) =>
+        val membersToBeModified = (request.body \ "members").as[JsArray].value
+        val modifyRequests = membersToBeModified map { memberMod =>
+          val targetId = (memberMod \ "userId").as[Id[User]]
+          val newRole = (memberMod \ "role").as[OrganizationRole]
+          OrganizationMembershipModifyRequest(orgId, requesterId = request.userId, targetId = targetId, newRole = newRole)
+        }
+
+        orgMembershipCommander.modifyMemberships(modifyRequests) match {
+          case Left(failure) => failure.asErrorResponse
+          case Right(responses) =>
+            val modifications = responses.keys.map(r => Json.obj("userId" -> r.targetId, "newRole" -> r.newRole))
+            Ok(Json.obj("modifications" -> modifications))
+        }
+    }
+  }
   def removeMembers(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
     Organization.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
