@@ -9,7 +9,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 trait OrganizationAccessActions {
   self: UserActions with Controller =>
