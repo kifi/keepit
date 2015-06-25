@@ -47,8 +47,7 @@ class MobileOrganizationInviteController @Inject() (
         }
 
         val emailInfo = emailInvites.map { emailInvite =>
-          // TODO: why is this `id` instead of `email`? It is the same way in LibraryController.
-          val email = (emailInvite \ "id").as[EmailAddress]
+          val email = (emailInvite \ "email").as[EmailAddress]
           val role = (emailInvite \ "role").as[OrganizationRole]
           OrganizationMemberInvitation(Right(email), role, msg)
         }
