@@ -990,10 +990,18 @@ class LibraryCommanderImpl @Inject() (
             if (toBeNotified.size > 100) {
               airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
             }
+            val libTrunc = if (library.name.length > 30) { library.name.take(30) + "…" } else { library.name }
+            val message = newKeep.title match {
+              case Some(title) =>
+                val trunc = if (title.length > 30) { title.take(30) + "…" } else { title }
+                s"“$trunc” added to $libTrunc"
+              case None =>
+                s"New keep added to $libTrunc"
+            }
             FutureHelpers.sequentialExec(toBeNotified) { userId =>
               elizaClient.sendLibraryPushNotification(
                 userId,
-                message = s"New Keep in ${library.name}",
+                message = message,
                 libraryId = library.id.get,
                 libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
