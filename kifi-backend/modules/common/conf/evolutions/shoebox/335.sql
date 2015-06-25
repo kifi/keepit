@@ -42,7 +42,7 @@ CREATE TABLE organization_invite (
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
-	status varchar(8) DEFAULT NULL,
+	decision varchar(8) NOT NULL,
 	organization_id bigint(20) NOT NULL,
 	inviter_id bigint(20) NOT NULL,
 	user_id bigint(20) DEFAULT NULL,

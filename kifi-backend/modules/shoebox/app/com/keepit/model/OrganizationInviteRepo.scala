@@ -32,13 +32,13 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
-    implicit val invitationStatusMapper = MappedColumnType.base[InvitationStatus, String](_.value, InvitationStatus(_))
+    implicit val invitationStatusMapper = MappedColumnType.base[InvitationDecision, String](_.value, InvitationDecision(_))
     implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
-    def status = column[Option[InvitationStatus]]("status", O.Nullable)
+    def decision = column[InvitationDecision]("decision", O.NotNull)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def role = column[OrganizationRole]("role", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
@@ -49,7 +49,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       createdAt: DateTime,
       updatedAt: DateTime,
       state: State[OrganizationInvite],
-      status: Option[InvitationStatus],
+      decision: InvitationDecision,
       organizationId: Id[Organization],
       inviterId: Id[User],
       userId: Option[Id[User]],
@@ -57,7 +57,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       role: OrganizationRole,
       message: Option[String],
       authToken: String) = {
-      OrganizationInvite(id, createdAt, updatedAt, state, status, organizationId, inviterId, userId, emailAddress, role, message, authToken)
+      OrganizationInvite(id, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role, message, authToken)
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
@@ -65,7 +65,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.createdAt,
         invite.updatedAt,
         invite.state,
-        invite.status,
+        invite.decision,
         invite.organizationId,
         invite.inviterId,
         invite.userId,
@@ -75,7 +75,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.authToken))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, status, organizationId, inviterId, userId, emailAddress, role, message, authToken) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, decision, organizationId, inviterId, userId, emailAddress, role, message, authToken) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
