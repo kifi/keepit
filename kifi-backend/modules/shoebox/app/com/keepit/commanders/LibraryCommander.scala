@@ -30,6 +30,7 @@ import play.api.http.Status._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import views.html.admin.{ libraries, library }
+import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
@@ -651,18 +652,8 @@ class LibraryCommanderImpl @Inject() (
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         val newInviteToCollab = modifyReq.whoCanInvite.orElse(targetLib.whoCanInvite)
-        Future {
-          val keeps = db.readOnlyMaster { implicit s =>
-            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
-          }
-          if (keeps.nonEmpty) {
-            db.readWriteBatch(keeps) { (s, k) =>
-              keepRepo.save(k.copy(visibility = newVisibility))(s)
-            }
-            searchClient.updateKeepIndex()
-          }
-        }
 
+        // New library subscriptions
         newSubKeysOpt match {
           case Some(newSubKeys) => db.readWrite { implicit s =>
             librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
@@ -682,6 +673,28 @@ class LibraryCommanderImpl @Inject() (
 
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
+
+        // Update visibility of keeps
+        def updateKeepVisibility(cnt: Int): Future[Unit] = Future {
+          val keeps = db.readOnlyMaster { implicit s =>
+            keepRepo.getByLibraryIdAndExcludingVisibility(libraryId, Some(newVisibility), 1000)
+          }
+          if (keeps.nonEmpty) {
+            db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
+              keepRepo.save(k.copy(visibility = newVisibility))(s)
+            }
+            if (cnt < 100) { // to prevent infinite loops if there's an issue updating keeps.
+              updateKeepVisibility(cnt + 1)
+            } else {
+              val msg = s"[updateKeepVisibility] Problems updating visibility on $libraryId to $newVisibility."
+              airbrake.notify(msg)
+              Future.failed(new Exception(msg))
+            }
+          } else {
+            Future.successful(())
+          }
+        }.flatMap(m => m)
+        updateKeepVisibility(0).onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
           "title" -> (newName != targetLib.name),
