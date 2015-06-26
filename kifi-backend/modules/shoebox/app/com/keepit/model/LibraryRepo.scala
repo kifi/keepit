@@ -32,6 +32,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
   def countWithState(state: State[Library])(implicit session: RSession): Int
+  def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int]
 
   //
   // Profile Library Repo functions
@@ -250,6 +251,16 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(*) from library where state = 'active'"
     query.as[Int].firstOption.getOrElse(0)
+  }
+
+  private val countLibrariesForOrgByVisibilityCompiled = Compiled { (organizationId: Column[Id[Organization]], excludeState: Column[State[Library]]) =>
+    (for (row <- rows if row.orgId === organizationId && row.state =!= excludeState) yield row).groupBy(_.visibility) map {
+      case (s, results) => (s -> results.length)
+    }
+  }
+
+  def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int] = {
+    countLibrariesForOrgByVisibilityCompiled(orgId, excludeState).list.toMap.withDefaultValue(0)
   }
 
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
