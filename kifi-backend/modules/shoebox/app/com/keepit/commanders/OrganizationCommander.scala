@@ -46,11 +46,11 @@ class OrganizationCommanderImpl @Inject() (
     }
 
     // TODO: how big should avatars be?
-    val avatar = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200))
+    val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
     val publicLibs = libraries(LibraryVisibility.PUBLISHED)
     val orgLibs = libraries(LibraryVisibility.ORGANIZATION)
     val privLibs = libraries(LibraryVisibility.SECRET)
-    FullOrganizationInfo(handle = orgHandle, name = orgName, description = description, avatar = avatar, members = externalIds,
+    FullOrganizationInfo(handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, members = externalIds,
       memberCount = memberCount, publicLibraries = publicLibs, organizationLibraries = orgLibs, secretLibraries = privLibs)
   }
 

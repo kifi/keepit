@@ -23,7 +23,7 @@ case class OrganizationNotificationInfo(
   image: Option[OrganizationImageInfo])
 
 @json
-case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatar: Option[OrganizationAvatar], members: Seq[ExternalId[User]],
+case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
   memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
 
 object OrganizationNotificationInfo {
