@@ -28,21 +28,18 @@ class GratificationCommander @Inject() (
 
   private val NUM_WEEKS_BACK = 1
   val EXPERIMENT_DEPLOY = true
-  val MIN_FOLLOWERS = 1
-  val MIN_VIEWS = 5
-  val MIN_CONNECTIONS = 1
 
   private val remoteCallQueue = new ReactiveLock(numConcurrent = 5)
 
   private val BATCH_SIZE = 1000
 
-  def getLibraryFollowCounts(userId: Id[User]): LibraryCountData = {
+  def getLibraryFollowCounts(userId: Id[User]): CountData[Library] = {
     db.readOnlyReplica { implicit s =>
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
       // val cnt = libMemRepo.userRecentUniqueFollowerCounts(userId, since) // deprecated, since it gets unique followers. we currently use the total "follows" across libraries.
       val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since)
       val cnt = cntMap.foldLeft[Int](0)((acc, kv) => acc + kv._2) // get total "follows" over all libraries
-      LibraryCountData(cnt, cntMap)
+      CountData[Library](cnt, cntMap)
     }
   }
 
@@ -54,7 +51,7 @@ class GratificationCommander @Inject() (
     newConnections.toSeq
   }
 
-  def getGratData(userId: Id[User]): Future[GratificationData] = heimdal.getGratData(userId)
+  def getGratData(userId: Id[User]): Future[GratificationData] = heimdal.getGratData(userId).map { augmentData }
 
   def generateUserBatch(batchNum: Int): Seq[Id[User]] = {
     db.readOnlyReplica { implicit s => userRepo.pageIncluding(UserStates.ACTIVE)(batchNum, BATCH_SIZE) }.map { user => user.id.get }
@@ -85,18 +82,19 @@ class GratificationCommander @Inject() (
   private def augmentData(gratData: GratificationData): GratificationData = {
     val rawFollows = getLibraryFollowCounts(gratData.userId)
     gratData.copy(
-      libraryViews = LibraryCountData(gratData.libraryViews.totalCount, filterPrivateLibraries(gratData.libraryViews.countById)),
-      libraryFollows = LibraryCountData(rawFollows.totalCount, filterPrivateLibraries(rawFollows.countById)),
-      connections = getNewConnections(gratData.userId)
+      libraryViews = filterPrivateLibraries(gratData.libraryViews),
+      libraryFollows = filterPrivateLibraries(rawFollows)
     )
   }
 
-  private def filterPrivateLibraries(countById: Map[Id[Library], Int]): Map[Id[Library], Int] = {
-    db.readOnlyReplica { implicit session =>
-      countById.filter {
+  private def filterPrivateLibraries(libCountData: CountData[Library]): CountData[Library] = {
+    val publicLibViewsById = db.readOnlyReplica { implicit session =>
+      libCountData.countById.filter {
         case (libId, _) =>
           libraryRepo.get(libId).visibility != LibraryVisibility.SECRET
       }
     }
+    val publicLibViewsTotal = publicLibViewsById.values.sum
+    CountData[Library](publicLibViewsTotal, publicLibViewsById)
   }
 }

@@ -2,29 +2,32 @@ package com.keepit.model
 
 import com.keepit.common.db.Id
 import com.kifi.macros.json
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
-@json
-case class LibraryCountData(totalCount: Int, countById: Map[Id[Library], Int]) {
-
-  val sortedCountById = countById.toList.sortWith { _._2 > _._2 }
+case class CountData[T](totalCount: Int, countById: Map[Id[T], Int]) {
+  val sortedCountById = countById.toList.sortWith {
+    _._2 > _._2
+  }
 }
 
-@json
-case class KeepCountData(totalCount: Int, countById: Map[Id[Keep], Int]) {
-  val sortedCountById = countById.toList.sortWith { _._2 > _._2 }
+object CountData {
+  implicit def format[T] = (
+    (__ \ 'totalCount).format[Int] and
+    (__ \ 'countById).format[Map[Id[T], Int]]
+  )(CountData.apply, unlift(CountData.unapply))
 }
 
 @json
 case class GratificationData(
     userId: Id[User],
-    libraryViews: LibraryCountData,
-    keepViews: KeepCountData,
-    rekeeps: KeepCountData,
-    libraryFollows: LibraryCountData = LibraryCountData(0, Map.empty),
-    connections: Seq[Id[User]] = Seq.empty) {
+    libraryViews: CountData[Library],
+    keepViews: CountData[Keep],
+    rekeeps: CountData[Keep],
+    libraryFollows: CountData[Library] = CountData[Library](0, Map.empty)) {
   import GratificationData._
   def isEligible = libraryViews.totalCount >= MIN_LIB_VIEWS || keepViews.totalCount >= MIN_KEEP_VIEWS ||
-    rekeeps.totalCount >= MIN_REKEEPS || libraryFollows.totalCount >= MIN_FOLLOWS || connections.length >= MIN_CONNECTIONS
+    rekeeps.totalCount >= MIN_REKEEPS || libraryFollows.totalCount >= MIN_FOLLOWS
 }
 
 object GratificationData {
@@ -32,5 +35,5 @@ object GratificationData {
   val MIN_LIB_VIEWS = 5
   val MIN_REKEEPS = 1
   val MIN_FOLLOWS = 1
-  val MIN_CONNECTIONS = 1
+  val LIST_LIMIT = 7
 }
