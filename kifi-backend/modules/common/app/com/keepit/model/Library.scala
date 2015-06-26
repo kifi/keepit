@@ -351,7 +351,6 @@ object LibrarySpace {
 
   def apply(ownerId: Id[User], organizationId: Option[Id[Organization]]): LibrarySpace = organizationId.map(OrganizationSpace(_)) getOrElse UserSpace(ownerId)
 
-
   def prettyPrint(space: LibrarySpace): String = space match {
     case OrganizationSpace(orgId) => s"organization $orgId"
     case UserSpace(userId) => s"user $userId"
