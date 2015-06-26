@@ -74,7 +74,7 @@ class GratificationCommander @Inject() (
     val numBatches = userCount / BATCH_SIZE
     (0 to numBatches).foreach { batchNum =>
       val userIds: Seq[Id[User]] = generateUserBatch(batchNum).filter(filter)
-      val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map { _.map { addShoeboxData }.filter { _.isEligible } }
+      val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map { _.map { augmentData }.filter { _.isEligible } }
       fGratData.foreach { log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(_, sendTo) }
       fGratData.onFailure {
         case t: Throwable => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum")
@@ -82,7 +82,7 @@ class GratificationCommander @Inject() (
     }
   }
 
-  private def addShoeboxData(gratData: GratificationData): GratificationData = {
+  private def augmentData(gratData: GratificationData): GratificationData = {
     val rawFollows = getLibraryFollowCounts(gratData.userId)
     gratData.copy(
       libraryViews = LibraryCountData(gratData.libraryViews.totalCount, filterPrivateLibraries(gratData.libraryViews.countById)),
