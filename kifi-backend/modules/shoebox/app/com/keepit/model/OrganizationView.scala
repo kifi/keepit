@@ -23,7 +23,7 @@ case class OrganizationNotificationInfo(
   image: Option[OrganizationImageInfo])
 
 @json
-case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
+case class FullOrganizationInfo(pubId: PublicId[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
   memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
 
 object OrganizationNotificationInfo {
@@ -69,16 +69,16 @@ case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipR
 
 @json
 case class OrganizationModifications(
-  newName: Option[String] = None,
-  newBasePermissions: Option[BasePermissions] = None)
+  name: Option[String] = None,
+  description: Option[String] = None,
+  basePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationRequest
 
 @json
 case class OrganizationCreateRequest(
   requesterId: Id[User],
-  orgName: String,
-  orgDescription: Option[String] = None) extends OrganizationRequest
+  initialValues: OrganizationModifications) extends OrganizationRequest
 
 @json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
@@ -109,6 +109,7 @@ object OrganizationFail {
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
   case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
+  case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -117,6 +118,7 @@ object OrganizationFail {
       case NOT_A_MEMBER.message => NOT_A_MEMBER
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
+      case BAD_PARAMETERS.message => BAD_PARAMETERS
     }
   }
 }

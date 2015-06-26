@@ -2,9 +2,11 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.LibraryFactoryHelper._
@@ -19,6 +21,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.Future
+import scala.util.Success
 
 class MobileOrganizationControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -51,7 +54,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val response = controller.getOrganization(publicId)(request)
           status(response) === OK
 
-          val jsonResponse = Json.parse(contentAsString(response)) tap println
+          val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "name").as[String] === "Forty Two Kifis"
           (jsonResponse \ "handle").as[String] === "Kifi"
           (jsonResponse \ "publicLibraries").as[Int] === 10
@@ -110,8 +113,9 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          val createRequest = OrganizationCreateRequest(requesterId = user.id.get, orgName = "Banana Capital, USA", orgDescription = Some("Fun for the whole family"))
-          val createRequestJson = Json.parse("""{"name": "Banana Capital, USA", "description": "Fun for the whole family"}""")
+          val orgName = "Banana Capital, USA"
+          val orgDescription = "Fun for the whole family"
+          val createRequestJson = Json.parse(s"""{"name": "$orgName", "description": "$orgDescription"}""")
 
           inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(createRequestJson)
@@ -119,8 +123,11 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          val createResponse = createResponseJson.as[OrganizationCreateResponse]
-          createResponse.request === createRequest
+          val createResponse = createResponseJson.as[FullOrganizationInfo]
+          implicit val config = inject[PublicIdConfiguration]
+          Organization.decodePublicId(createResponse.pubId) must haveClass[Success[Id[Organization]]]
+          createResponse.name === orgName
+          createResponse.description === Some(orgDescription)
         }
       }
     }

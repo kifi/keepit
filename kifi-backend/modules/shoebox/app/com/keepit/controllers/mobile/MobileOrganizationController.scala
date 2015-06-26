@@ -28,17 +28,17 @@ class MobileOrganizationController @Inject() (
   // getOrganizationCard
 
   def createOrganization = UserAction.async(parse.tolerantJson) { request =>
-    println("request.body = " + request.body)
-    (request.body \ "name").validate[String] match {
+    request.body.validate[OrganizationModifications] match {
       case _: JsError =>
-        println("Couldn't find a name in the json")
         Future.successful(BadRequest)
-      case JsSuccess(orgName, _) =>
-        val orgDescriptionOpt = (request.body \ "description").asOpt[String]
-        val createRequest = OrganizationCreateRequest(requesterId = request.userId, orgName, orgDescriptionOpt)
+      case JsSuccess(initialValues, _) =>
+        val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
         orgCommander.createOrganization(createRequest) match {
-          case Left(failure) => Future.successful(failure.asErrorResponse)
-          case Right(response) => Future.successful(Ok(Json.toJson(response)))
+          case Left(failure) =>
+            Future.successful(failure.asErrorResponse)
+          case Right(response) =>
+            val orgView = orgCommander.getFullOrganizationInfo(response.newOrg.id.get)
+            Future.successful(Ok(Json.toJson(orgView)))
         }
     }
   }
