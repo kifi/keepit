@@ -10,7 +10,6 @@ import com.keepit.rover.manager.BatchProcessingActor
 import com.keepit.rover.model.{ ArticleKey, ArticleInfoRepo, RoverArticleInfo }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure, Try }
 
 class RoverArticleStoreMigrationActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -40,15 +39,8 @@ class RoverArticleStoreMigrationActor @Inject() (
           var version = oldestVersion
           while (version <= latestVersion) {
             val key = ArticleKey(articleInfo.uriId, articleInfo.urlHash, articleInfo.articleKind, version)
-            val deprecatedUrlHashKey = DeprecatedUrlHashArticleStoreKey(key)
-            articleStore -= deprecatedUrlHashKey
-            val uriKey = ArticleStoreKey(key)
-            val urlHashKey = UrlHashArticleStoreKey(key)
-            Try(articleStore.copy(uriKey, urlHashKey)) match {
-              case Success(true) => ()
-              case Success(false) => airbrake.notify(s"Did not copy article from $uriKey to $urlHashKey: key not found.")
-              case Failure(error) => airbrake.notify(s"Failed to copy article from $uriKey to $urlHashKey.", error)
-            }
+            val uriKey = UriIdArticleStoreKey(key)
+            articleStore -= uriKey
             version = version.copy(minor = version.minor + 1)
           }
         }

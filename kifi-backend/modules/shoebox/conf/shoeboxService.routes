@@ -286,7 +286,7 @@ POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.Mobil
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 GET     /m/1/teams/:id                          @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
-GET     /m/1/teams/create                       @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+POST    /m/1/teams/create                       @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
 GET     /m/1/user/:id/teams                     @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 GET     /m/1/teams/:id/members                  @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST    /m/1/teams/:id/members/invite           @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])

@@ -8,6 +8,8 @@ import com.keepit.common.db.ExternalId
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import play.api.libs.json.Json
+import play.api.libs.json.{ Json, JsSuccess, JsError }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -25,13 +27,18 @@ class MobileOrganizationController @Inject() (
   // getOrganizationCard
 
   def createOrganization = UserAction.async(parse.tolerantJson) { request =>
-    // TODO: do this
-    Future.successful(Ok)
+    request.body.validate[OrganizationCreateRequest] match {
+      case _: JsError => Future.successful(BadRequest)
+      case JsSuccess(createRequest, _) =>
+        orgCommander.createOrganization(createRequest) match {
+          case Left(failure) => Future.successful(failure.asErrorResponse)
+          case Right(response) => Future.successful(Ok(Json.toJson(response)))
+        }
+    }
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    // TODO: provide a Json thing for an OrganizationView
-    Ok
+    Ok(Json.toJson(orgCommander.getFullOrganizationInfo(request.orgId)))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>

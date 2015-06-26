@@ -4,7 +4,6 @@ import java.io.{ FilterInputStream, InputStream }
 import java.nio.charset.Charset
 
 import com.keepit.model.HttpProxy
-import com.keepit.rover.article.Article
 import com.keepit.rover.article.content.HttpInfo
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
