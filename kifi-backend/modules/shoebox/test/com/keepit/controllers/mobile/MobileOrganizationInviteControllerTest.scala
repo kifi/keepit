@@ -155,9 +155,11 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val result = controller.declineInvitation(publicOrgId)(request)
           status(result) must equalTo(NO_CONTENT)
 
-          db.readOnlyMaster { implicit session =>
-            inviteRepo.getByOrgAndUserId(orgId, invitee.id.get).forall(_.decision == Some(InvitationDecision.DECLINED)) === true
+          val inactiveInvites = db.readOnlyMaster { implicit session =>
+            inviteRepo.getByOrgAndUserId(orgId, invitee.id.get, state = OrganizationInviteStates.INACTIVE)
           }
+          inactiveInvites.length == 1
+          inactiveInvites.forall(_.decision == InvitationDecision.DECLINED) === true
         }
       }
 
