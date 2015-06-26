@@ -59,6 +59,8 @@ case class Library(
   }
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+
+  def space: LibrarySpace = organizationId.map(LibrarySpace.OrganizationSpace(_)) getOrElse LibrarySpace.UserSpace(ownerId)
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -348,4 +350,19 @@ object LibraryColor {
     AllColors(rnd.nextInt(AllColors.size))
   }
 
+}
+
+sealed trait LibrarySpace
+
+object LibrarySpace {
+  case class UserSpace(id: Id[User]) extends LibrarySpace
+  case class OrganizationSpace(id: Id[Organization]) extends LibrarySpace
+
+  implicit def fromUserId(userId: Id[User]) = UserSpace(userId)
+  implicit def fromOrganizationId(organizationId: Id[Organization]) = OrganizationSpace(organizationId)
+
+  def prettyPrint(space: LibrarySpace): String = space match {
+    case OrganizationSpace(orgId) => s"organization $orgId"
+    case UserSpace(userId) => s"user $userId"
+  }
 }
