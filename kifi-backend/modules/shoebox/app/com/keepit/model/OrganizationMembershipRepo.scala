@@ -20,7 +20,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
-  def deactivate(membership: Id[OrganizationMembership])(implicit session: RWSession): OrganizationMembership
+  def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
 }
 
 @Singleton
@@ -148,8 +148,8 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     }
   }
 
-  def deactivate(membership: Id[OrganizationMembership])(implicit session: RWSession): OrganizationMembership = {
-    save(get(membership).copy(state = OrganizationMembershipStates.INACTIVE))
+  def deactivate(membership: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
+    save(membership.sanitizeForDelete)
   }
 }
 

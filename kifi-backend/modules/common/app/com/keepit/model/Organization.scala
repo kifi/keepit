@@ -3,8 +3,10 @@ package com.keepit.model
 import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.kifi.macros.json
@@ -12,6 +14,8 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class Organization(
     id: Option[Id[Organization]] = None,
@@ -40,6 +44,13 @@ case class Organization(
 
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
+
+  def getHandle: OrganizationHandle = {
+    handle match {
+      case Some(h) => h.original
+      case None => throw Organization.UndefinedOrganizationHandleException(this)
+    }
+  }
 
   def toIngestableOrganization = IngestableOrganization(id, state, seq)
 
@@ -113,6 +124,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.handle.map(_.normalized),
       org.basePermissions))
   }
+
+  case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
 case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
@@ -162,3 +175,13 @@ object BasePermissions {
     }
   }
 }
+
+case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
+  override val version = 1
+  val namespace = "organization_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class OrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationKey, Organization](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+

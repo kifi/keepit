@@ -106,7 +106,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
           orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = userId))
         }
 
-        val deactivate = db.readWrite { implicit session => orgMemberRepo.deactivate(membership.id.get) }
+        val deactivate = db.readWrite { implicit session => orgMemberRepo.deactivate(membership) }
         membership.state === OrganizationMembershipStates.ACTIVE
         deactivate.state === OrganizationMembershipStates.INACTIVE
       }

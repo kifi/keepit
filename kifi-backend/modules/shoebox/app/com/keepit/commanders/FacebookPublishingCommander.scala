@@ -35,7 +35,6 @@ class FacebookPublishingCommander @Inject() (
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
         case None => log.info(s"user $userId is not connected to facebook!")
         case Some(sui) =>
-          val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPath(library)}"""
           postOpenGraphAction(sui, facebookKeepAction, "library" -> libraryUrl, "object" -> keep.url, "fb:explicitly_shared" -> "true")
       }
@@ -47,7 +46,6 @@ class FacebookPublishingCommander @Inject() (
       db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(userId).find(u => u.networkType == SocialNetworks.FACEBOOK) } match {
         case None => log.info(s"user $userId is not connected to facebook!")
         case Some(sui) =>
-          val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
           val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPath(library)}"""
           postOpenGraphAction(sui, facebookJoinAction, "library" -> libraryUrl)
       }

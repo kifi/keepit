@@ -40,6 +40,7 @@ class UserProfileController @Inject() (
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
@@ -145,18 +146,19 @@ class UserProfileController @Inject() (
       case Some(user) =>
         val viewer = request.userId
         val userId = user.id.get
-        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
+        val (ofUser, ofViewer, mutualFollow, basicUsers, orgs) = db.readOnlyReplica { implicit s =>
           val ofUser = libraryRepo.getOwnerLibrariesUserFollows(userId, viewer)
           val ofViewer = libraryRepo.getOwnerLibrariesUserFollows(viewer, userId)
           val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
-          (ofUser, ofViewer, mutualFollow, basicUsers)
+          val orgs = orgRepo.getByIds(mutualFollow.flatMap { _.organizationId }.toSet)
+          (ofUser, ofViewer, mutualFollow, basicUsers, orgs)
         }
         Ok(Json.obj(
-          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
-          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
-          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
+          "ofUser" -> Json.toJson(ofUser.map { x => LibraryInfo.fromLibraryAndOwner(x, None, basicUsers(userId), x.organizationId.flatMap { orgs.get(_) }) }),
+          "ofOwner" -> Json.toJson(ofViewer.map { x => LibraryInfo.fromLibraryAndOwner(x, None, basicUsers(viewer), x.organizationId.flatMap { orgs.get(_) }) }),
+          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId), lib.organizationId.flatMap { orgs.get(_) })))
         ))
     }
   }
