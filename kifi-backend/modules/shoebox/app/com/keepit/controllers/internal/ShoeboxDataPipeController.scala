@@ -272,16 +272,17 @@ class ShoeboxDataPipeController @Inject() (
   def getDomainIdsByDomainNames() = Action.async(parse.json) { request =>
     SafeFuture {
       val domainNames = Json.fromJson[Seq[String]](request.body).get
-      val domainIds = db.readWrite { implicit session =>
+      val domainIdByDomainName: Map[String, Option[Id[Domain]]] = db.readWrite { implicit session =>
         domainNames.map { domainName =>
           domainRepo.get(domainName) match {
-            case Some(domain) if !domain.isEmailProvider => domain.id
-            case Some(domain) if domain.isEmailProvider => None
-            case None => domainRepo.save(Domain(hostname = domainName)).id
+            case Some(domain: Domain) if !domain.isEmailProvider => (domainName, domain.id)
+            case Some(domain: Domain) if domain.isEmailProvider => (domainName, Option.empty[Id[Domain]])
+            case None if domainName.nonEmpty => (domainName, domainRepo.save(Domain(hostname = domainName)).id)
+            case None if domainName.isEmpty => (domainName, Option.empty[Id[Domain]])
           }
-        }
+        }.toMap
       }
-      Ok(Json.toJson(domainIds))
+      Ok(Json.toJson(domainIdByDomainName))
     }
   }
 }

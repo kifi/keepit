@@ -1,5 +1,7 @@
 package com.keepit.graph
 
+import com.keepit.abook.model.EmailAccountInfo
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
@@ -41,6 +43,11 @@ trait GraphTestHelper {
 
   val ipAddress1: IpAddress = IpAddress("108.60.110.146")
 
+  val domainId1: Id[Domain] = Id[Domain](1)
+
+  val emailAccountId1: Id[EmailAccountInfo] = Id[EmailAccountInfo](1)
+  val emailAccountId2: Id[EmailAccountInfo] = Id[EmailAccountInfo](2)
+
   val userUpdate = UserGraphUpdate(UserFactory.user().withId(u42).withName("Tan", "Lin").withUsername("test").withSeq(1).get)
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
@@ -75,6 +82,13 @@ trait GraphTestHelper {
   val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates
+  val emailAccountUpdate1 = EmailAccountGraphUpdate(emailAccountId1, Some(userid1), Some(domainId1), verified = true, emailSeq = SequenceNumber(1))
+  val emailAccountUpdate2 = EmailAccountGraphUpdate(emailAccountId2, Some(userid2), Some(domainId1), verified = true, emailSeq = SequenceNumber(2))
+  val emailAccountUpdates = List(emailAccountUpdate1, emailAccountUpdate2)
+
+  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
+  val uriUpdates = List(normalizedUriUpdate1)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++ emailAccountUpdates ++ uriUpdates
 
 }
