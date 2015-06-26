@@ -287,7 +287,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         // Notify inviters on organization joined.
         notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
         invitations.foreach { invite =>
-          organizationInviteRepo.save(invite.copy(state = OrganizationInviteStates.ACCEPTED))
+          organizationInviteRepo.save(invite.copy(decision = InvitationDecision.ACCEPTED, state = OrganizationInviteStates.INACTIVE))
         }
       }
       success
@@ -329,7 +329,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite] = {
     db.readWrite { implicit s =>
       organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
-        .map(inv => organizationInviteRepo.save(inv.copy(state = OrganizationInviteStates.DECLINED)))
+        .map(inv => organizationInviteRepo.save(inv.copy(decision = InvitationDecision.DECLINED, state = OrganizationInviteStates.INACTIVE)))
     }
   }
 
