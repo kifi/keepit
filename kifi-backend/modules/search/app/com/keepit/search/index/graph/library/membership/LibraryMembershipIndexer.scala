@@ -1,7 +1,7 @@
 package com.keepit.search.index.graph.library.membership
 
-import com.keepit.model.{ LibraryMembership, LibraryAndMemberships, Library }
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.model.{ LibraryMembership }
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
