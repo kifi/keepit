@@ -28,8 +28,6 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo]
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[RoverArticleInfo]]
-  def intern(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo]
-  def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
@@ -166,44 +164,6 @@ class ArticleInfoRepoImpl @Inject() (
     val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[RoverArticleInfo].groupBy(_.uriId)
     val missingUriIds = uriIds -- existingByUriId.keySet
     existingByUriId ++ missingUriIds.map(_ -> Set.empty[RoverArticleInfo])
-  }
-
-  def intern(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
-    if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], RoverArticleInfo]
-    else {
-      val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = getByUrl(url, excludeState = None).map { info => (info.articleKind -> info) }.toMap
-      kinds.map { kind =>
-        val savedInfo = existingByKind.get(kind) match {
-          case Some(articleInfo) if articleInfo.isActive => {
-            if (articleInfo.uriId == uriId) articleInfo else {
-              airbrake.notify(s"Found ArticleInfo $kind for url $url with inconsistent uriId: expected $uriId, found ${articleInfo.uriId}.")
-              deleteCache(articleInfo)
-              save(articleInfo.copy(uriId = uriId))
-            }
-          }
-
-          case Some(inactiveArticleInfo) => {
-            val reactivatedInfo = inactiveArticleInfo.clean.copy(state = ArticleInfoStates.ACTIVE, uriId = uriId).initializeSchedulingPolicy
-            save(reactivatedInfo)
-          }
-          case None => {
-            val newInfo = RoverArticleInfo.initialize(uriId, url, kind)
-            save(newInfo)
-          }
-        }
-        kind -> savedInfo
-      }.toMap
-    }
-  }
-
-  def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit = {
-    if (kinds.nonEmpty) {
-      getByUri(uriId).foreach { info =>
-        if (kinds.contains(info.articleKind)) {
-          save(info.copy(state = ArticleInfoStates.INACTIVE))
-        }
-      }
-    }
   }
 
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {

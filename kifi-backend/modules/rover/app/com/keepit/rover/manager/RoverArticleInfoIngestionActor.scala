@@ -8,8 +8,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
+import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.article.policy.ArticleFetchPolicy
-import com.keepit.rover.model.ArticleInfoRepo
+import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ Future, ExecutionContext }
@@ -22,7 +23,7 @@ object RoverArticleInfoIngestionActor {
 
 class RoverArticleInfoIngestionActor @Inject() (
     db: Database,
-    articleInfoRepo: ArticleInfoRepo,
+    articleInfoHelper: ArticleInfoHelper,
     systemValueRepo: SystemValueRepo,
     shoebox: ShoeboxServiceClient,
     articlePolicy: ArticleFetchPolicy,
@@ -52,8 +53,8 @@ class RoverArticleInfoIngestionActor @Inject() (
     if (uris.nonEmpty) {
       db.readWrite { implicit session =>
         uris.foreach { uri =>
-          articleInfoRepo.intern(uri.url, uri.id.get, articlePolicy.toBeInterned(uri))
-          articleInfoRepo.deactivateByUriAndKinds(uri.id.get, articlePolicy.toBeDeactivated(uri))
+          articleInfoHelper.intern(uri.url, uri.id.get, articlePolicy.toBeInterned(uri))
+          articleInfoHelper.deactivate(uri.id.get, articlePolicy.toBeDeactivated(uri))
         }
         val maxSeq = uris.map(_.seq).max
         systemValueRepo.setSequenceNumber(roverNormalizedUriSeq, maxSeq)

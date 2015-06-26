@@ -59,6 +59,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         val articleImageRepo = inject[ArticleImageRepo]
         db.readWrite { implicit session =>
           val saved = articleImageRepo.save(ArticleImage(
+            url = "url",
             Id(14),
             EmbedlyArticle,
             ArticleVersionProvider.zero(EmbedlyArticle),

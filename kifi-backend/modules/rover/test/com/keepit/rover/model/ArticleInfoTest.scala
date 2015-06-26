@@ -2,7 +2,7 @@ package com.keepit.rover.model
 
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.{ YoutubeArticle, DefaultArticle, EmbedlyArticle }
+import com.keepit.rover.article._
 import com.keepit.rover.test.RoverTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.time._
@@ -19,7 +19,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
     "intern article infos" in {
       withDb() { implicit injector =>
         db.readWrite { implicit session =>
-          articleInfoRepo.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
+          articleInfoHelper.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -31,7 +31,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
         }
 
         db.readWrite { implicit session =>
-          articleInfoRepo.intern(firstUrl, firstUri, Set(YoutubeArticle, DefaultArticle))
+          articleInfoHelper.intern(firstUrl, firstUri, Set(YoutubeArticle, DefaultArticle))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -48,7 +48,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
       withDb() { implicit injector =>
         val (embedlyArticle, defaultArticle) = db.readWrite { implicit session =>
           val now = clock.now()
-          val articlesByKind = articleInfoRepo.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
+          val articlesByKind = articleInfoHelper.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
           val embedlyArticle = articleInfoRepo.save(articlesByKind(EmbedlyArticle).copy(imageProcessingRequestedAt = Some(now.minusHours(2))))
           val defaultArticle = articleInfoRepo.save(articlesByKind(DefaultArticle).copy(imageProcessingRequestedAt = Some(now.minusHours(4)), lastImageProcessingAt = Some(now.minusHours(2))))
           (embedlyArticle, defaultArticle)
