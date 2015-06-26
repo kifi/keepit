@@ -11,6 +11,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{Success, Failure}
 
 @Singleton
 class MobileOrganizationController @Inject() (
@@ -35,6 +36,33 @@ class MobileOrganizationController @Inject() (
             failure.asErrorResponse
           case Right(response) =>
             Ok(Json.toJson(orgCommander.getFullOrganizationInfo(response.newOrg.id.get)))
+        }
+    }
+  }
+
+  def modifyOrganization(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
+    Organization.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_organization_id")))
+      case Success(orgId) =>
+        request.body.validate[OrganizationModifications] match {
+          case _: JsError => Future.successful(BadRequest(Json.obj("error" -> "badly_formed_modifications")))
+          case JsSuccess(modifications, _) =>
+            orgCommander.modifyOrganization(OrganizationModifyRequest(request.userId, orgId, modifications)) match {
+              case Left(failure) => Future.successful(failure.asErrorResponse)
+              case Right(response) => Future.successful(Ok(Json.toJson(response)))
+            }
+        }
+    }
+  }
+
+  def deleteOrganization(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
+    Organization.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_organization_id")))
+      case Success(orgId) =>
+        val deleteRequest = OrganizationDeleteRequest(requesterId = request.userId, orgId = orgId)
+        orgCommander.deleteOrganization(deleteRequest) match {
+          case Left(fail) => Future.successful(fail.asErrorResponse)
+          case Right(response) => Future.successful(Ok(Json.toJson(response)))
         }
     }
   }
