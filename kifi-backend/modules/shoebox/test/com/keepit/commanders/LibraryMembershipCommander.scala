@@ -12,7 +12,7 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "succeed for member starring themselves" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, isStarred = Some(true)))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(true)))
           result.isRight === true
           result.right.get.starred === true
         }
@@ -20,7 +20,7 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "fail for member starring a lib other member" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, isStarred = Some(true)))
+          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(true)))
           result.isLeft === true
           result.left.get.message === "permission_denied"
         }
@@ -29,7 +29,7 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "succeed for owner of lib changing access" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, isStarred = Some(true)))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(true)))
           result.isRight === true
           result.right.get.starred === true
         }
