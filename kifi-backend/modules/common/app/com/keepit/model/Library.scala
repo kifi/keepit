@@ -259,12 +259,6 @@ object LibraryKind {
   }
 }
 
-case class LibraryAndMembershipsIds(library: Library, memberships: Seq[Id[LibraryMembership]])
-
-object LibraryAndMembershipsIds {
-  implicit val format = Json.format[LibraryAndMembershipsIds]
-}
-
 case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
 
 object LibraryView {
