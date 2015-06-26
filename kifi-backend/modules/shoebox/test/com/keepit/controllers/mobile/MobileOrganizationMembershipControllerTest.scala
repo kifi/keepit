@@ -109,6 +109,30 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
         }
       }
+
+      "list invitee emails, if the requester can invite members" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val n = 10
+          val (org, owner, members, invitedUsers, invitedEmails) = setup(numMembers = n - 1, numInvitedUsers = n, numInvitedEmails = n)
+
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val ownerRequest = route.getMembers(publicOrgId)
+          val ownerResult = controller.getMembers(publicOrgId, offset = 2 * n, limit = n)(ownerRequest)
+          status(ownerResult) === OK
+
+          val json = Json.parse(contentAsString(ownerResult))
+          println(json)
+          val resultInviteesList = (json \ "members").as[Seq[JsValue]]
+          resultInviteesList.length === n
+          (json \ "members" \\ "id").length === 0 // no user ids, only emails
+          (json \ "members" \\ "email").length === n
+          (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n)
+        }
+      }
     }
   }
 

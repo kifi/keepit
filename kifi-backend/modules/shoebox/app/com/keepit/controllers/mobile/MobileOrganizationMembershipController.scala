@@ -28,7 +28,6 @@ class MobileOrganizationMembershipController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
       case Success(orgId) =>
         val showInvitees = request.permissions.contains(OrganizationPermission.INVITE_MEMBERS)
-        println("[RPB] user can see invitees? " + showInvitees)
         val membersAndMaybeInvitees = orgMembershipCommander.getMembersAndInvitees(orgId, Limit(limit), Offset(offset), includeInvitees = showInvitees)
         Ok(Json.obj("members" -> membersAndMaybeInvitees))
     }
