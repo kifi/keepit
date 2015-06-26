@@ -60,7 +60,7 @@ case class Library(
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 
-  def space: LibrarySpace = organizationId.map(LibrarySpace.OrganizationSpace(_)) getOrElse LibrarySpace.UserSpace(ownerId)
+  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -348,6 +348,9 @@ object LibrarySpace {
 
   implicit def fromUserId(userId: Id[User]) = UserSpace(userId)
   implicit def fromOrganizationId(organizationId: Id[Organization]) = OrganizationSpace(organizationId)
+
+  def apply(ownerId: Id[User], organizationId: Option[Id[Organization]]): LibrarySpace = organizationId.map(OrganizationSpace(_)) getOrElse UserSpace(ownerId)
+
 
   def prettyPrint(space: LibrarySpace): String = space match {
     case OrganizationSpace(orgId) => s"organization $orgId"
