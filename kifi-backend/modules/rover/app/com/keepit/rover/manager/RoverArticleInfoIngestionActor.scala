@@ -52,7 +52,7 @@ class RoverArticleInfoIngestionActor @Inject() (
     if (uris.nonEmpty) {
       db.readWrite { implicit session =>
         uris.foreach { uri =>
-          articleInfoRepo.internByUri(uri.id.get, uri.url, articlePolicy.toBeInterned(uri))
+          articleInfoRepo.intern(uri.url, uri.id.get, articlePolicy.toBeInterned(uri))
           articleInfoRepo.deactivateByUriAndKinds(uri.id.get, articlePolicy.toBeDeactivated(uri))
         }
         val maxSeq = uris.map(_.seq).max

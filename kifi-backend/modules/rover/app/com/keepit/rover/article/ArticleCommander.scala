@@ -119,8 +119,8 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](url: String, uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfo(url, uriId, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
 
@@ -134,10 +134,10 @@ class ArticleCommander @Inject() (
     }
   }
 
-  private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  private def internArticleInfo(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     // natural race condition with the regular ingestion, hence the 3 attempts
     db.readWrite(attempts = 3) { implicit session =>
-      articleInfoRepo.internByUri(uriId, url, kinds)
+      articleInfoRepo.intern(url, uriId, kinds)
     }
   }
 
@@ -184,9 +184,9 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean): Future[Unit] = {
+  def fetchAsap(url: String, uriId: Id[NormalizedURI], refresh: Boolean): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
-    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
+    val interned = internArticleInfo(url, uriId, toBeInternedByPolicy)
 
     val toBeFetched = interned.collect { case (kind, info) if refresh || info.lastFetchedAt.isEmpty => (info.id.get -> info) }
 
