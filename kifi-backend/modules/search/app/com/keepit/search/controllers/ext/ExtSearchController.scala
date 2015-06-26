@@ -143,7 +143,7 @@ class ExtSearchController @Inject() (
         val libraries = libraryIds.map { libId =>
           val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
-          makeBasicLibrary(library, visibility, owner)
+          makeBasicLibrary(library, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
         }
         (users, libraries)
       }
