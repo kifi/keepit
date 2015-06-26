@@ -8,8 +8,6 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.json
-import com.keepit.common.store.ImagePath
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -61,9 +59,11 @@ case class Library(
   }
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+
+  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 }
 
-object Library extends ModelWithPublicIdCompanion[Library] with LibraryPathHelper {
+object Library extends ModelWithPublicIdCompanion[Library] {
 
   val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
   val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"
@@ -153,13 +153,23 @@ object Library extends ModelWithPublicIdCompanion[Library] with LibraryPathHelpe
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
 }
 
-trait LibraryPathHelper {
-  def formatLibraryPath(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/${ownerUsername.value}/${slug.value}"
+object LibraryPathHelper {
+
+  private def getHandle(owner: BasicUser, orgOpt: Option[Organization]): Handle = {
+    orgOpt match {
+      case Some(org) => org.getHandle
+      case None => owner.username
+    }
   }
 
-  def formatLibraryPathUrlEncoded(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
+  def formatLibraryPath(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, org)
+    s"/${handle.value}/${slug.value}"
+  }
+
+  def formatLibraryPathUrlEncoded(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, org)
+    s"/${handle.urlEncoded}/${slug.urlEncoded}"
   }
 }
 
@@ -249,18 +259,6 @@ object LibraryKind {
   }
 }
 
-case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembershipView])
-
-object LibraryAndMemberships {
-  implicit val format = Json.format[LibraryAndMemberships]
-}
-
-case class LibraryAndMembershipsIds(library: Library, memberships: Seq[Id[LibraryMembership]])
-
-object LibraryAndMembershipsIds {
-  implicit val format = Json.format[LibraryAndMembershipsIds]
-}
-
 case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
 
 object LibraryView {
@@ -279,9 +277,9 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
   def isSecret = visibility == LibraryVisibility.SECRET
 }
 
-object BasicLibrary extends LibraryPathHelper {
-  def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = formatLibraryPath(owner.username, library.slug)
+object BasicLibrary {
+  def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, org, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }

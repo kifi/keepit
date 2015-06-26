@@ -16,5 +16,6 @@
   register: service_home
 - name: run eddie-self-deploy
   command: /bin/true
+  changed_when: False
   when: not service_home.stat.exists
   notify: eddie-self-deploy

@@ -1,13 +1,16 @@
 ---
 - name: install zsh
   apt: name=zsh
+
 - name: add users
   user: name={{ item }} shell=/bin/zsh
   with_items:
     - eng
     - fortytwo
+
 - name: add eng to sudo group
   user: name=eng append=yes groups=sudo
+
 - name: create users .ssh directory
   file:
     path: /home/{{ item }}/.ssh
@@ -18,6 +21,7 @@
   with_items:
     - eng
     - fortytwo
+
 - name: set users .ssh/authorized_keys
   copy:
     src: ssh_authorized_keys
@@ -28,6 +32,7 @@
   with_items:
     - eng
     - fortytwo
+
 - name: copy .zshrc
   copy:
     src: zshrc
@@ -38,6 +43,7 @@
   with_items:
     - eng
     - fortytwo
+
 - name: update sudoers, allow nopasswd for "sudo" group
   lineinfile:
     dest: /etc/sudoers
@@ -56,3 +62,12 @@
   with_items:
     - common-session
     - common-session-noninteractive
+
+- name: register user forytwo's crontab
+  command: crontab -u fortytwo -l
+  changed_when: False
+  register: fortytwo_crontab
+
+- name: delete user fortytwo's crontab if ansible not altered it before
+  command: crontab -u fortytwo -r
+  when: "'#Ansible' not in fortytwo_crontab.stdout"

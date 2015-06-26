@@ -31,7 +31,7 @@ object SearchControllerUtil {
   val nonUser = Id[User](-1L)
 }
 
-trait SearchControllerUtil extends LibraryPathHelper {
+trait SearchControllerUtil {
 
   val shoeboxClient: ShoeboxServiceClient
 
@@ -94,8 +94,8 @@ trait SearchControllerUtil extends LibraryPathHelper {
     }
   }.toMap
 
-  protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = formatLibraryPath(owner.username, library.slug)
+  protected def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, org, library.slug)
     BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
   }
 

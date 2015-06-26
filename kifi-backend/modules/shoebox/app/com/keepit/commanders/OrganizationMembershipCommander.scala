@@ -91,7 +91,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       basicUserRepo.loadAllActive((members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
     }
 
-    val membersNotIncludingOwner = members.filterNot(_.isOwner).flatMap { member =>
+    val membersNotIncludingOwner = members.flatMap { member =>
       usersMap.get(member.userId) map { basicUser =>
         MaybeOrganizationMember(member = Left(basicUser), role = Some(member.role), lastInvitedAt = Some(member.updatedAt))
       }
@@ -170,7 +170,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
     } else {
       val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-      organizationMembershipRepo.deactivate(membership.id.get)
+      organizationMembershipRepo.deactivate(membership)
       Right(OrganizationMembershipRemoveResponse(request))
     }
   }

@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
@@ -22,6 +22,10 @@ case class OrganizationNotificationInfo(
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
 
+@json
+case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
+  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
+
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
     OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo(_)))
@@ -36,48 +40,61 @@ sealed abstract class OrganizationMembershipRequest {
   def targetId: Id[User]
 }
 
+@json
 case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipRemoveRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User]) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
+
+@json
+case class OrganizationModifications(
+  newName: Option[String] = None,
+  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationRequest
 
+@json
 case class OrganizationCreateRequest(
   userId: Id[User],
   orgName: String) extends OrganizationRequest
+@json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
+@json
 case class OrganizationModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   modifications: OrganizationModifications) extends OrganizationRequest
+@json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
+@json
 case class OrganizationDeleteRequest(
   orgId: Id[Organization],
   requesterId: Id[User]) extends OrganizationRequest
+@json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
-
-case class OrganizationModifications(
-  newName: Option[String] = None,
-  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))

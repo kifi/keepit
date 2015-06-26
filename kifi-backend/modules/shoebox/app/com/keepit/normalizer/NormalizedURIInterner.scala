@@ -7,10 +7,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import scala.concurrent.ExecutionContext
 import scala.util._
 import com.keepit.queue.NormalizationUpdateTask
-import java.sql.SQLException
 import com.keepit.common.logging.{ Timer, Logging }
-import org.feijoas.mango.common.cache.CacheBuilder
-import java.util.concurrent.TimeUnit
 import com.kifi.franz.SQSQueue
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.Left
@@ -28,28 +25,11 @@ class NormalizedURIInterner @Inject() (
     implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging {
 
-  /**
-   * if a stack trace will dump the lock we'll at least know what it belongs to
-   */
-  private def newUrlLock = (str: String) => new String(str)
-
-  /**
-   * We don't want to aggregate locks for ever, its no likely that a lock is still locked after one second
-   */
-  private val urlLocks = CacheBuilder.newBuilder().maximumSize(10000).weakKeys().expireAfterWrite(30, TimeUnit.MINUTES).build(newUrlLock)
-
-  /**
-   * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
-   * The lock is on the exact same url and using intern so we can have a globaly unique object of the url.
-   * Possible downside is that the permgen will fill up with these urls
-   *
-   * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
-   */
-  def internByUri(url: String, contentWanted: Boolean = false, candidates: Set[NormalizationCandidate] = Set.empty)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
+  def internByUri(url: String, contentWanted: Boolean = false, candidates: Set[NormalizationCandidate] = Set.empty)(implicit session: RWSession): NormalizedURI = {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.size})${candidates.mkString(",")})]")
     statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_THOUSAND) { timer =>
       val resUri = getByUriOrPrenormalize(url) match {
-        case Success(Left(uri)) =>
+        case Success(Left(uri)) => {
           if (candidates.nonEmpty) {
             session.onTransactionSuccess {
               updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
@@ -57,29 +37,14 @@ class NormalizedURIInterner @Inject() (
           }
           statsd.timing("normalizedURIRepo.internByUri.in_db", timer, ONE_IN_THOUSAND)
           uri
+        }
         case Success(Right(prenormalizedUrl)) => {
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
           val toBeSaved = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization).withContentRequest(contentWanted)
-          val newUri = try {
+          val newUri = {
             val saved = normalizedURIRepo.save(toBeSaved)
             statsd.timing("normalizedURIRepo.internByUri.new", timer, ONE_IN_THOUSAND)
             saved
-          } catch {
-            case sqlException: SQLException =>
-              log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
-              normalizedURIRepo.deleteCache(toBeSaved)
-              normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) match {
-                case None =>
-                  statsd.timing("normalizedURIRepo.internByUri.new.error.not_recovered", timer, ONE_IN_THOUSAND)
-                  throw new UriInternException(s"could not find existing uri $toBeSaved in the db", sqlException)
-                case Some(fromDb) =>
-                  log.warn(s"recovered url $fromDb from the db via urlHash")
-                  //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
-                  statsd.timing("normalizedURIRepo.internByUri.new.error.recovered", timer, ONE_IN_THOUSAND)
-                  fromDb
-              }
-            case t: Throwable =>
-              throw new UriInternException(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
           }
           urlRepo.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess {
@@ -88,22 +53,7 @@ class NormalizedURIInterner @Inject() (
           statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ONE_IN_THOUSAND)
           newUri
         }
-        case Failure(ex) =>
-          /**
-           * if we can't parse a url we should not let it get to the db.
-           * its scraping should stop as well and it will be removed from cache.
-           * an error should be thrown so we could examine the problem.
-           * in most cases its a user error so the exceptions may be caught upper in the stack.
-           */
-          val uriCandidate = NormalizedURI.withHash(normalizedUrl = url, normalization = None)
-          normalizedURIRepo.deleteCache(uriCandidate)
-          normalizedURIRepo.getByNormalizedUrl(url) match {
-            case None =>
-              statsd.timing("normalizedURIRepo.internByUri.fail.not_found", timer, ONE_IN_THOUSAND)
-              throw new UriInternException(s"could not parse or find url in db: $url", ex)
-            case Some(fromDb) =>
-              throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
-          }
+        case Failure(ex) => throw new UriInternException(s"could not parse or find url in db: $url", ex)
       }
       log.debug(s"[internByUri($url)] resUri=$resUri")
 
