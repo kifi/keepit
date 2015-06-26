@@ -51,7 +51,7 @@ class OrganizationCommanderImpl @Inject() (
     val orgLibs = libraries(LibraryVisibility.ORGANIZATION)
     val privLibs = libraries(LibraryVisibility.SECRET)
     FullOrganizationInfo(handle = orgHandle, name = orgName, description = description, avatar = avatar, members = externalIds,
-      memberCount = memberCount, publicLibraries = publicLibs, organizationLibraries = orgLibs, privateLibraries = privLibs)
+      memberCount = memberCount, publicLibraries = publicLibs, organizationLibraries = orgLibs, secretLibraries = privLibs)
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {

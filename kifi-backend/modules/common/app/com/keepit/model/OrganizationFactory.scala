@@ -27,5 +27,6 @@ object OrganizationFactory {
     def withMembers(newMembers: Seq[User]) = this.copy(members = members ++ newMembers)
     def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = invitedUsers ++ newInvitedUsers)
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = invitedEmails ++ newInvitedEmails)
+    def withHandle(newHandle: PrimaryOrganizationHandle) = this.copy(org = org.copy(handle = Some(newHandle)))
   }
 }

@@ -24,7 +24,7 @@ case class OrganizationNotificationInfo(
 
 @json
 case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatar: Option[OrganizationAvatar], members: Seq[ExternalId[User]],
-  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, privateLibraries: Int)
+  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
 
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
