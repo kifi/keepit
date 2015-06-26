@@ -14,7 +14,7 @@ trait LibraryMembershipCommander {
 
 case class ModifyLibraryMembershipRequest(userId: Id[User], libraryId: Id[Library],
   subscription: Option[Boolean] = None,
-  isStarred: Option[Boolean] = None,
+  starred: Option[Boolean] = None,
   listed: Option[Boolean] = None,
   access: Option[LibraryAccess] = None)
 
@@ -58,7 +58,7 @@ class LibraryMembershipCommanderImpl @Inject() (
       }
 
       for {
-        starred <- modifySelfCheck(request.isStarred, targetMembership.starred).right
+        starred <- modifySelfCheck(request.starred, targetMembership.starred).right
         subscribed <- modifySelfCheck(request.subscription, targetMembership.subscribedToUpdates).right
         isListed <- modifySelfCheck(request.listed, targetMembership.listed).right
         access <- canChangeAccess(request.access).right
