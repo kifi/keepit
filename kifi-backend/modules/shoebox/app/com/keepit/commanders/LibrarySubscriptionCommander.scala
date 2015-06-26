@@ -58,7 +58,7 @@ class LibrarySubscriptionCommander @Inject() (
         case info: SlackInfo =>
           val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
           val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
-          val attachments: Seq[SlackAttachment] = if (keep.note.exists(_.nonEmpty)) { Seq(SlackAttachment(fallback = "Check out this keep", text = "\"" + keep.note.get + "\" - " + keeper.firstName)) } else { Seq.empty }
+          val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${keeper.firstName}") }
           val body = BasicSlackMessage(text = text, channel = Some(subscription.name.toLowerCase), attachments = attachments)
 
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
