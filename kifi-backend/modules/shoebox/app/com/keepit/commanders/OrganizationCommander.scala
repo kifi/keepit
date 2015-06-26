@@ -56,11 +56,11 @@ class OrganizationCommanderImpl @Inject() (
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
     request match {
-      case OrganizationCreateRequest(createrId, orgName) => true // TODO: can we check ahead of time that an org handle is available?
-      case OrganizationModifyRequest(orgId, requesterId, modifications) =>
+      case OrganizationCreateRequest(createrId, _, _) => true // TODO: can we check ahead of time that an org handle is available?
+      case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
         permissions.exists { _.contains(EDIT_ORGANIZATION) } && areAllValidModifications(modifications)
-      case OrganizationDeleteRequest(orgId, requesterId) =>
+      case OrganizationDeleteRequest(requesterId, orgId) =>
         requesterId == orgRepo.get(orgId).ownerId
     }
   }
@@ -78,11 +78,11 @@ class OrganizationCommanderImpl @Inject() (
     try {
       db.readWrite { implicit session =>
         if (isValidRequest(request)) {
-          val orgPrototype = orgRepo.save(Organization(ownerId = request.userId, name = request.orgName, handle = None))
+          val orgPrototype = orgRepo.save(Organization(ownerId = request.requesterId, name = request.orgName, handle = None))
           val org = handleCommander.autoSetOrganizationHandle(orgPrototype) getOrElse {
             throw new Exception(s"COULD NOT CREATE ORGANIZATION [$request.orgName] SINCE WE DIDN'T FIND A HANDLE!!!")
           }
-          orgMembershipRepo.save(org.newMembership(userId = request.userId, role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
           Right(OrganizationCreateResponse(request, org))
         } else {
           Left(OrganizationFail.HANDLE_UNAVAILABLE)

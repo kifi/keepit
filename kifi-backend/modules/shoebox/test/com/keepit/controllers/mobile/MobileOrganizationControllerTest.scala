@@ -110,8 +110,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          val createRequest = OrganizationCreateRequest(userId = user.id.get, orgName = "Banana Capital, USA")
-          val createRequestJson = Json.toJson(createRequest)
+          val createRequest = OrganizationCreateRequest(requesterId = user.id.get, orgName = "Banana Capital, USA", orgDescription = Some("Fun for the whole family"))
+          val createRequestJson = Json.parse("""{"name": "Banana Capital, USA", "description": "Fun for the whole family"}""")
 
           inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(createRequestJson)
