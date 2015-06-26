@@ -29,9 +29,9 @@ trait SimpleGraphModule extends GraphManagerModule {
     new SimpleGraphManager(simpleGraph, state, graphDirectory, graphUpdater, serviceDiscovery, airbrake)
   }
 
-  protected def getArchivedSimpleGraphDirectory(path: String, graphStore: GraphStore): ArchivedSimpleGraphDirectory = {
-    val dir = new File(path)
-    val tempDir = new File(current.configuration.getString("graph.temporary.directory").get, dir.getName())
+  protected def getArchivedSimpleGraphDirectory(path: String, graphStore: GraphStore, serviceDiscovery: ServiceDiscovery): ArchivedSimpleGraphDirectory = {
+    cleanOldVersions(path)
+    val (dir, tempDir) = getVersionedGraphDirectories(path, GraphVersion.getVersionByStatus(serviceDiscovery))
     FileUtils.deleteDirectory(tempDir)
     FileUtils.forceMkdir(tempDir)
     tempDir.deleteOnExit()
@@ -39,23 +39,45 @@ trait SimpleGraphModule extends GraphManagerModule {
     archivedDirectory.init()
     archivedDirectory
   }
+
+  // returns graph directory and temp graph directory for the given version.
+  private def getVersionedGraphDirectories(basepath: String, graphVersion: GraphVersion): (File, File) = {
+    val dir = new File(basepath + graphVersion.dirSuffix)
+    val tempDir = new File(current.configuration.getString("graph.temporary.directory").get, dir.getName())
+    (dir, tempDir)
+  }
+
+  private def cleanOldVersions(basepath: String): Unit = {
+    val versionsToClean = GraphVersion.getVersionsForCleanup()
+    versionsToClean.foreach { version =>
+      val (dir, tmpdir) = getVersionedGraphDirectories(basepath, version)
+      try {
+        log.info(s"removing old graph directories if they exist: ${dir.getName}, ${tmpdir.getName}")
+        FileUtils.deleteDirectory(dir)
+        FileUtils.deleteDirectory(tmpdir)
+      } catch {
+        case ex: Exception => log.error(s"error in removing old graph directories: ${dir.getName}, ${tmpdir.getName}")
+      }
+    }
+  }
+
 }
 
 case class SimpleGraphProdModule() extends SimpleGraphModule {
 
   @Provides @Singleton
-  def simpleGraphDirectory(graphStore: GraphStore): SimpleGraphDirectory = {
+  def simpleGraphDirectory(graphStore: GraphStore, serviceDiscovery: ServiceDiscovery): SimpleGraphDirectory = {
     val path = current.configuration.getString("graph.simple.directory").get
-    getArchivedSimpleGraphDirectory(path, graphStore: GraphStore)
+    getArchivedSimpleGraphDirectory(path, graphStore: GraphStore, serviceDiscovery)
   }
 }
 
 case class SimpleGraphDevModule() extends SimpleGraphModule {
 
   @Provides @Singleton
-  def simpleGraphDirectory(graphStore: GraphStore): SimpleGraphDirectory = {
+  def simpleGraphDirectory(graphStore: GraphStore, serviceDiscovery: ServiceDiscovery): SimpleGraphDirectory = {
     current.configuration.getString("graph.simple.directory") match {
-      case Some(path) => getArchivedSimpleGraphDirectory(path, graphStore: GraphStore)
+      case Some(path) => getArchivedSimpleGraphDirectory(path, graphStore: GraphStore, serviceDiscovery)
       case None => new RatherUselessSimpleGraphDirectory()
     }
   }
