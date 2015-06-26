@@ -63,10 +63,11 @@
     - common-session
     - common-session-noninteractive
 
-- name: check if ansible has run before
-  stat: path="~{{ ansible_ssh_user }}/.ansible"
-  register: ssh_user_ansible_dir
+- name: register user forytwo's crontab
+  command: crontab -u fortytwo -l
+  changed_when: False
+  register: fortytwo_crontab
 
-- name: delete existing fortytwo crontab if ansible has not run
+- name: delete user fortytwo's crontab if ansible not altered it before
   command: crontab -u fortytwo -r
-  when: not ssh_user_ansible_dir.stat.isdir
+  when: "'#Ansible' not in fortytwo_crontab.stdout"
