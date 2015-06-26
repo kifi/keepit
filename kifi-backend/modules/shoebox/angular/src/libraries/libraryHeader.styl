@@ -965,15 +965,39 @@ collabImageDiam2 = 3.6em
       &:active
         background-color: alpha(#fff, .05)
 
-.kf-lh-buttons
-  padding-top: 1.8em
-  text-align: center
-
-buttonHeight = 32px
+buttonHeight = 20px
 buttonFontSize = 13px
 buttonBorderRadius = 12px
 buttonSidePad = 15px
 followBtnWidth = 7.6em
+
+.kf-lh-buttons
+  wrapper()
+  padding-top: 1.8em
+  text-align: center
+  display: flex
+  justify-content: space-between
+
+  ul
+    li
+      display: inline-block
+
+  button
+    border: 0px
+    background-color: transparent
+    color: accentGreen
+    font-size: buttonFontSize
+
+    figure
+      width: buttonHeight
+      height: buttonHeight
+      background-size: cover
+      background-repeat: no-repeat
+      display: inline-block
+      vertical-align: middle
+
+/* Elements for styles below may disappear after toolbar refactorization */
+/* (begin) */
 
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
@@ -1128,6 +1152,7 @@ subsDur = .4s
   @media (min-width: 796px)
     padding-right: 234px  // rightColWidth + colGapWidth
 
+/* (end) */
 
 .kf-lh-invite-search-button
   height: buttonHeight
@@ -1148,4 +1173,3 @@ subsDur = .4s
     height: 16px
     background-size: cover
     margin-right: 5px
-

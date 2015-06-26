@@ -132,20 +132,41 @@
     </button>
 
   </div>
-  <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
-    <button class="kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
+  <div class="kf-lh-buttons" ng-if="isOwnerOrCollaborator()">
+    <ul>
+      <li>
+        <button>
+          <figure class="svg-view-gallery"></figure>
+        </button>
+      </li>
+      <li>
+        <button>
+          <figure class="svg-view-list"></figure>
+        </button>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <button ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">
+          <figure class="svg-edit-keeps"></figure>
+          {{editMode ? 'Done editing' : 'Edit keeps'}}
+        </button>
+      </li>
+      <li>
+        <button>
+          <figure class="svg-add-followers"></figure>
+          Invite Followers
+          </button>
+      </li>
+    </ul>
+
+
+    <!-- <button class="kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
     <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem">
       <div class="svg-share-arrow-green"></div>
       Invite followers
-    </button>
+    </button> -->
   </div>
 
-
-  <ul>
-    <li>
-      <div class="svg-notes" style="width: 16px; height: 16px; background-size: cover; display: inline-block; margin-right: 5px;"></div>
-      Notes
-    </li>
-  </ul>
 
 </div>
