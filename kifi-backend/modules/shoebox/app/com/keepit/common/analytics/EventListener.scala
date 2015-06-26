@@ -51,8 +51,9 @@ class SliderShownListener @Inject() (
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
       val (user, normUri) = db.readWrite(attempts = 2) { implicit s =>
         val user = userRepo.get(externalUser)
-        val normUri = (metaData \ "url").asOpt[String].collect { case url if url.length < URLFactory.MAX_URL_SIZE =>
-          normalizedURIInterner.internByUri(url, candidates = NormalizationCandidate.fromJson(metaData))
+        val normUri = (metaData \ "url").asOpt[String].collect {
+          case url if url.length < URLFactory.MAX_URL_SIZE =>
+            normalizedURIInterner.internByUri(url, candidates = NormalizationCandidate.fromJson(metaData))
         }
         (user, normUri)
       }
