@@ -1,5 +1,6 @@
 package com.keepit.graph.model
 
+import com.keepit.classify.Domain
 import com.keepit.common.service.IpAddress
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -48,4 +49,7 @@ object VertexDataId {
 
   implicit def fromIpAddress(ipAddr: IpAddress): VertexDataId[IpAddressReader] = VertexDataId(ipAddr)
   implicit def toIpAddress(ipReaderId: VertexDataId[IpAddressReader]): IpAddress = ipReaderId.id
+
+  implicit def fromDomainId(domainId: Id[Domain]): VertexDataId[DomainReader] = VertexDataId(domainId.id)
+  implicit def toDomainId(domainReaderId: VertexDataId[DomainReader]): Id[Domain] = Id(domainReaderId.id)
 }

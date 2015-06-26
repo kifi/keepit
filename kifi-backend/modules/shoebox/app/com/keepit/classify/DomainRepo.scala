@@ -37,7 +37,8 @@ class DomainRepoImpl @Inject() (
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
-    def * = (id.?, hostname, autoSensitive, manualSensitive, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
+    def isEmailProvider = column[Boolean]("is_email_provider", O.NotNull)
+    def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
 
   def table(tag: Tag) = new DomainTable(tag)

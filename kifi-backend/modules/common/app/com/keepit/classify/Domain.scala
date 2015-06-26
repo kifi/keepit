@@ -15,6 +15,7 @@ case class Domain(
     hostname: String,
     autoSensitive: Option[Boolean] = None,
     manualSensitive: Option[Boolean] = None,
+    isEmailProvider: Boolean = false,
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
@@ -33,6 +34,7 @@ object Domain {
     (__ \ 'hostname).format[String] and
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
+    (__ \ 'isEmailProvider).format[Boolean] and
     (__ \ 'state).format(State.format[Domain]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime]

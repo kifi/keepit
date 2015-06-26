@@ -1,5 +1,6 @@
 package com.keepit.common.routes
 
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
@@ -160,6 +161,7 @@ object Shoebox extends Service {
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
     def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
+    def getDomainIdsByDomainNames() = ServiceRoute(POST, "internal/shoebox/database/getDomainIdsByDomainNames")
   }
 }
 

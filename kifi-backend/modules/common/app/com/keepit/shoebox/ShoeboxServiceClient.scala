@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.classify.Domain
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
@@ -123,6 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
+  def getDomainIdsByDomainNames(domainNames: Seq[String]): Future[Seq[Option[Id[Domain]]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -773,5 +775,10 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
     call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
+  }
+
+  def getDomainIdsByDomainNames(domainNames: Seq[String]): Future[Seq[Option[Id[Domain]]]] = {
+    val payload = Json.toJson(domainNames)
+    call(Shoebox.internal.getDomainIdsByDomainNames(), payload).map { _.json.as[Seq[Option[Id[Domain]]]] }
   }
 }

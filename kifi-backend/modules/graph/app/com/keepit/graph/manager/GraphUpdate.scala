@@ -1,6 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.common.service.IpAddress
@@ -108,7 +109,7 @@ case object LDAOldVersionCleanupGraphUpdate extends GraphUpdateKind[LDAOldVersio
   val code = "lda_old_version_cleanup_graph_update"
 }
 
-case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
+case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[Domain]], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
   type U = NormalizedUriGraphUpdate
   def kind = NormalizedUriGraphUpdate
   def seq = kind.seq(uriSeq.value)
@@ -116,10 +117,10 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[Normaliz
 
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
-  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
+  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.domainId, indexableUri.state, indexableUri.seq)
 }
 
-case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
+case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], domainId: Option[Id[Domain]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
   type U = EmailAccountGraphUpdate
   def kind = EmailAccountGraphUpdate
   def seq = kind.seq(emailSeq.value)
@@ -128,7 +129,7 @@ case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId:
 case object EmailAccountGraphUpdate extends GraphUpdateKind[EmailAccountGraphUpdate] {
   val code = "email_account_graph_update"
   def apply(emailAccount: EmailAccountInfo): EmailAccountGraphUpdate = {
-    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.verified, emailAccount.seq)
+    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.domainId, emailAccount.verified, emailAccount.seq)
   }
 }
 

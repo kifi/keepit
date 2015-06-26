@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.classify.Domain
+
 import scala.concurrent.duration._
 
 import org.joda.time.DateTime
@@ -129,6 +131,7 @@ case class IndexableUri(
   id: Option[Id[NormalizedURI]] = None,
   title: Option[String] = None,
   url: String,
+  domainId: Option[Id[Domain]] = None,
   restriction: Option[Restriction] = None,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
   shouldHaveContent: Boolean,
@@ -136,12 +139,13 @@ case class IndexableUri(
 
 object IndexableUri {
 
-  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.shouldHaveContent, uri.seq)
+  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(id = uri.id, title = uri.title, url = uri.url, domainId = None, restriction = uri.restriction, state = uri.state, shouldHaveContent = uri.shouldHaveContent, seq = uri.seq)
 
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
+    (__ \ 'domainId).formatNullable(Id.format[Domain]) and
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'state).format(State.format[NormalizedURI]) and
     (__ \ 'shouldHaveContent).format[Boolean] and

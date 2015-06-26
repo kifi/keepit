@@ -1,5 +1,8 @@
 package com.keepit.graph.manager
 
+import com.keepit.abook.model.EmailAccountInfo
+import com.keepit.classify.Domain
+
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -9,9 +12,9 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ IndexableUri, NormalizedURI }
 import com.keepit.common.core._
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.core.ModelVersion
 
@@ -64,9 +67,19 @@ class GraphUpdateFetcherImpl @Inject() (
         }
       }
 
-      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
+      case NormalizedUriGraphUpdate => {
+        shoebox.getIndexableUris(seq.copy(), fetchSize).flatMap { indexableUris: Seq[IndexableUri] =>
+          val domainNames: Seq[String] = indexableUris.map { indexableUri => indexableUri.url.split("/")(2) } // fetches domainName for any URI matching http(s?)://{domainName}{/omit/this/stuff/}
+          val fDomainIds = shoebox.getDomainIdsByDomainNames(domainNames)
+          fDomainIds.imap { domainIds => indexableUris.zip(domainIds).map { case (indexableUri, domainId) => indexableUri.copy(domainId = domainId) }.map(NormalizedUriGraphUpdate.apply) }
+        }
+      }
 
-      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).imap(_.map(EmailAccountGraphUpdate.apply))
+      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailInfos: Seq[EmailAccountInfo] =>
+        val domainNames: Seq[String] = emailInfos.map { info => info.address.address.split("@")(1) }
+        val fDomainIds = shoebox.getDomainIdsByDomainNames(domainNames)
+        fDomainIds.imap { domainIds => emailInfos.zip(domainIds).map { case (emailInfo, domainId) => emailInfo.copy(domainId = domainId) }.map(EmailAccountGraphUpdate.apply) }
+      }
 
       case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
 
