@@ -13,7 +13,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val response = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
         response must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = response.right.get.newOrg
 
@@ -30,7 +30,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
@@ -68,7 +68,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
@@ -108,7 +108,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 

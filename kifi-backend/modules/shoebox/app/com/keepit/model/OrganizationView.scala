@@ -76,23 +76,25 @@ sealed abstract class OrganizationRequest
 
 @json
 case class OrganizationCreateRequest(
-  userId: Id[User],
-  orgName: String) extends OrganizationRequest
+  requesterId: Id[User],
+  orgName: String,
+  orgDescription: Option[String] = None) extends OrganizationRequest
+
 @json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
 @json
 case class OrganizationModifyRequest(
-  orgId: Id[Organization],
   requesterId: Id[User],
+  orgId: Id[Organization],
   modifications: OrganizationModifications) extends OrganizationRequest
 @json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
 @json
 case class OrganizationDeleteRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User]) extends OrganizationRequest
+  requesterId: Id[User],
+  orgId: Id[Organization]) extends OrganizationRequest
 @json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
 
