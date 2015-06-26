@@ -36,48 +36,61 @@ sealed abstract class OrganizationMembershipRequest {
   def targetId: Id[User]
 }
 
+@json
 case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipRemoveRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User]) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
+
+@json
+case class OrganizationModifications(
+  newName: Option[String] = None,
+  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationRequest
 
+@json
 case class OrganizationCreateRequest(
   userId: Id[User],
   orgName: String) extends OrganizationRequest
+@json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
+@json
 case class OrganizationModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   modifications: OrganizationModifications) extends OrganizationRequest
+@json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
+@json
 case class OrganizationDeleteRequest(
   orgId: Id[Organization],
   requesterId: Id[User]) extends OrganizationRequest
+@json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
-
-case class OrganizationModifications(
-  newName: Option[String] = None,
-  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
