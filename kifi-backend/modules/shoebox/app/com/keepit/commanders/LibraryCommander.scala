@@ -1586,6 +1586,21 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  def updateStarredLibrary(userId: Id[User], libraryId: Id[Library], isStarred: Boolean): Either[LibraryFail, LibraryMembership] = {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+    } match {
+      case None => Left(LibraryFail(NOT_FOUND, "need_to_follow_to_star"))
+      case Some(mem) if mem.starred == isStarred => Right(mem)
+      case Some(mem) => {
+        val updatedMembership = db.readWrite { implicit s =>
+          libraryMembershipRepo.save(mem.copy(starred = isStarred))
+        }
+        Right(updatedMembership)
+      }
+    }
+  }
+
   ///////////////////
   // Collaborators!
   ///////////////////
