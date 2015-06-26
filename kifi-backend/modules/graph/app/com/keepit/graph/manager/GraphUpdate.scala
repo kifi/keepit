@@ -168,7 +168,29 @@ case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
   def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
 }
 
-case class UserIpAddressGraphUpdate(userId: Id[User], ipAddr: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
+case class OrganizationGraphUpdate(orgId: Id[Organization], state: State[Organization], orgSeq: SequenceNumber[Organization]) extends GraphUpdate {
+  type U = OrganizationGraphUpdate
+  def kind = OrganizationGraphUpdate
+  def seq = kind.seq(orgSeq.value)
+}
+
+case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpdate] {
+  val code = "organization_graph_update"
+  def apply(org: IngestableOrganization): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
+}
+
+case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
+  type U = OrganizationMembershipGraphUpdate
+  def kind = OrganizationMembershipGraphUpdate
+  def seq = kind.seq(orgMemSeq.value)
+}
+
+case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
+  val code = "organization_membership_graph_update"
+  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+}
+
+case class UserIpAddressGraphUpdate(userId: Id[User], ipAddress: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
   type U = UserIpAddressGraphUpdate
   def kind = UserIpAddressGraphUpdate
   def seq = kind.seq(ipSeq.value)
@@ -178,4 +200,3 @@ case object UserIpAddressGraphUpdate extends GraphUpdateKind[UserIpAddressGraphU
   val code = "user_ip_addr_update"
   def apply(userIpAddress: IngestableUserIpAddress): UserIpAddressGraphUpdate = UserIpAddressGraphUpdate(userIpAddress.userId, userIpAddress.ipAddress, userIpAddress.updatedAt, userIpAddress.seqNum)
 }
-

@@ -23,6 +23,7 @@ class LibraryInviteEmailSender @Inject() (
     keepRepo: KeepRepo,
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     libraryImageCommander: LibraryImageCommander,
     localUserExperimentCommander: LocalUserExperimentCommander,
     implicit val executionContext: ExecutionContext,
@@ -37,10 +38,11 @@ class LibraryInviteEmailSender @Inject() (
     toRecipientOpt map { toRecipient =>
       val (library, libraryInfo) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
+        val org = library.organizationId.map { id => orgRepo.get(id) }
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, Some(inviter))
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
         (library, libraryInfo)
 
       }

@@ -24,6 +24,7 @@ class KeepDecorator @Inject() (
     collectionCommander: CollectionCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
@@ -35,7 +36,14 @@ class KeepDecorator @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+    val keeps = keepsSeq match {
+      case k: List[Keep] => k
+      case other =>
+        // Make sure we're not dealing with a lazy structure here, which doesn't play nice with a database session...
+        airbrake.notify("[decorateKeepsIntoKeepInfos] Found it! Grab Léo, Yingjie, and Andrew", new Exception())
+        other.toList
+    }
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
@@ -47,6 +55,13 @@ class KeepDecorator @Inject() (
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
+
+        val libIdToOrg = {
+          val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
+          val orgId2org = db.readOnlyMaster { implicit s => orgRepo.getByIds(libId2orgId.values.toSet) }
+          libId2orgId.mapValues { orgId => orgId2org.get(orgId) }.collect { case (id, Some(org)) => id -> org }
+        }
+
         val idToBasicUser = {
           val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
@@ -54,7 +69,11 @@ class KeepDecorator @Inject() (
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+        val idToBasicLibrary = idToLibrary.mapValues { library =>
+          val orgOpt = libIdToOrg.get(library.id.get)
+          val user = idToBasicUser(library.ownerId)
+          BasicLibrary(library, user, orgOpt)
+        }
 
         (idToBasicUser, idToBasicLibrary)
       }

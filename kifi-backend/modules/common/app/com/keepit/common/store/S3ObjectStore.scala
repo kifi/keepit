@@ -5,10 +5,8 @@ import com.keepit.common.logging.Access.S3
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.strings._
 import com.amazonaws.services.s3._
-import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model._
 import com.amazonaws.AmazonServiceException
-import com.amazonaws.services.s3.model.AmazonS3Exception
-import com.amazonaws.services.s3.model.S3Object
 import play.api.libs.json._
 import play.api.Play.current
 import play.api.Play
@@ -115,6 +113,31 @@ trait S3ObjectStore[A, B] extends ObjectStore[A, B] with MetadataAccess[A, B] wi
     t
   }
 
+  def copy(sourceId: A, destinationId: A): Boolean = {
+    val timer = accessLog.timer(S3)
+    val sourceKey = idToKey(sourceId)
+    val destinationKey = idToKey(destinationId)
+    val hasBeenCopied = doWithS3Client("copying an item in S3Store") { s3Client =>
+      try {
+        s3Client.copyObject(bucketName, sourceKey, bucketName, destinationKey)
+        true
+      } catch {
+        case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => false
+        case ase: AmazonServiceException =>
+          val error = """Error Message: %s    " + );
+                         HTTP Status Code: %s
+                         AWS Error Code: %s
+                         Error Type: %s
+                         Request ID: %s""".format(
+            ase.getMessage(), ase.getStatusCode(), ase.getErrorCode(), ase.getErrorType(), ase.getRequestId())
+          throw new Exception(s"Could not copy object from $sourceKey to $destinationKey in bucket $bucketName: $error", ase)
+        case e: Exception =>
+          throw new Exception(s"Could not copy object from $sourceKey to $destinationKey in bucket $bucketName.", e)
+      }
+    }
+    accessLog.add(timer.done(space = bucketName.name, key = s"$sourceKey -> $destinationKey", method = "COPY"))
+    hasBeenCopied
+  }
 }
 
 class S3ObjectJsonParsinException(message: String) extends Exception(message)

@@ -15,6 +15,8 @@ import com.keepit.common.json
 import play.api.libs.json._
 import com.keepit.model.OrganizationPermission._
 
+import scala.util.control.NoStackTrace
+
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
 
 object MaybeOrganizationMember {
@@ -30,10 +32,17 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
+  def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
+
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean]
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
+
+  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]]
+  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]]
+  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]]
 }
 
 @Singleton
@@ -102,59 +111,110 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+    val org = organizationRepo.get(request.orgId)
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
     requesterOpt exists { requester =>
       request match {
         case OrganizationMembershipAddRequest(_, _, _, newRole) =>
-          targetOpt.isEmpty && (newRole <= requester.role) &&
+          val isInviteOrPromotion = !targetOpt.exists(_.role > newRole)
+          isInviteOrPromotion && (newRole <= requester.role) &&
             requester.permissions.contains(INVITE_MEMBERS)
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-          targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
+          val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          requesterIsOwner || requesterOutranksTarget
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
-          targetOpt.exists(_.role < requester.role) &&
-            requester.permissions.contains(REMOVE_MEMBERS)
+          val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
+          val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
+          requesterRemovingSelf || requesterOutranksTarget
       }
     }
   }
 
-  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
-    db.readWrite { implicit session =>
-      if (validRequest(request)) {
-        val org = organizationRepo.get(request.orgId)
-        val newMembership = organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
-        Right(OrganizationMembershipAddResponse(request, newMembership))
-      } else {
-        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-      }
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean] = {
+    db.readOnlyReplica { implicit session =>
+      requests.map(r => r -> isValidRequest(r)).toMap
     }
   }
 
-  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
-    db.readWrite { implicit session =>
-      if (validRequest(request)) {
-        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        val org = organizationRepo.get(request.orgId)
-        val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
-        Right(OrganizationMembershipModifyResponse(request, newMembership))
-      } else {
-        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+  private def addMembershipHelper(request: OrganizationMembershipAddRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
+    if (!isValidRequest(request)) {
+      Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else {
+      val org = organizationRepo.get(request.orgId)
+      val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
+      val newMembership = targetOpt match {
+        case None => organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
+        case Some(membership) => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
       }
+      Right(OrganizationMembershipAddResponse(request, newMembership))
     }
   }
-  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
-    db.readWrite { implicit session =>
-      if (validRequest(request)) {
-        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        organizationMembershipRepo.deactivate(membership.id.get)
-        Right(OrganizationMembershipRemoveResponse(request))
-      } else {
-        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-      }
+  private def modifyMembershipHelper(request: OrganizationMembershipModifyRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
+    if (!isValidRequest(request)) {
+      Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else {
+      val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+      val org = organizationRepo.get(request.orgId)
+      val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+      Right(OrganizationMembershipModifyResponse(request, newMembership))
+    }
+  }
+  private def removeMembershipHelper(request: OrganizationMembershipRemoveRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
+    if (!isValidRequest(request)) {
+      Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else {
+      val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+      organizationMembershipRepo.deactivate(membership.id.get)
+      Right(OrganizationMembershipRemoveResponse(request))
+    }
+  }
+
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] =
+    db.readWrite { implicit session => addMembershipHelper(request) }
+
+  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] =
+    db.readWrite { implicit session => modifyMembershipHelper(request) }
+
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] =
+    db.readWrite { implicit session => removeMembershipHelper(request) }
+
+  // Accumulates the A -> B results in a Map. If any of the results fail, throw an exception
+  case class OrganizationFailException(failure: OrganizationFail) extends Exception with NoStackTrace
+  def accumulateWithFail[A, B](f: (A => Either[OrganizationFail, B]), xs: Seq[A]): Map[A, B] = {
+    def g(accum: Map[A, B], x: A) = f(x) match {
+      case Left(failure) => throw OrganizationFailException(failure)
+      case Right(y) => accum + (x -> y)
+    }
+    xs.foldLeft(Map.empty[A, B])(g)
+  }
+
+  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]] = {
+    try {
+      db.readWrite { implicit session => Right(accumulateWithFail(addMembershipHelper, requests)) }
+    } catch {
+      case OrganizationFailException(failure) => Left(failure)
+    }
+  }
+
+  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]] = {
+    try {
+      db.readWrite { implicit session => Right(accumulateWithFail(modifyMembershipHelper, requests)) }
+    } catch {
+      case OrganizationFailException(failure) => Left(failure)
+    }
+  }
+
+  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]] = {
+    try {
+      db.readWrite { implicit session => Right(accumulateWithFail(removeMembershipHelper, requests)) }
+    } catch {
+      case OrganizationFailException(failure) => Left(failure)
     }
   }
 }

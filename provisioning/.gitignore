@@ -1,0 +1,4 @@
+.vagrant/
+roles/*
+!roles/kifi*
+.cache/

@@ -10,7 +10,7 @@
     </h1>
     <div class="dialog-body" kf-wheel-allow>
 
-      <div ng-class="{'manage-lib-content': !onSubscriptionExperiment, 'manage-lib-content-subs': onSubscriptionExperiment}">
+      <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Name</span>
@@ -60,7 +60,7 @@
           </div>
 
 
-          <div class="manage-lib-input-wrapper" ng-if="onSubscriptionExperiment">
+          <div class="manage-lib-input-wrapper">
             <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
               <div class="manage-lib-integrations-arrow" ng-class="{'active':showIntegrations}"></div>
               <span class="manage-lib-integrations-title" ng-class="{'active':showIntegrations}">Integrations</span>

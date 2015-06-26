@@ -25,6 +25,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
     case libUpdate: LibraryGraphUpdate => processLibraryGraphUpdate(libUpdate)
     case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
+    case orgUpdate: OrganizationGraphUpdate => processOrganizationGraphUpdate(orgUpdate)
+    case orgMemUpdate: OrganizationMembershipGraphUpdate => processOrganizationMembershipGraphUpdate(orgMemUpdate)
     case userIpAddressUpdate: UserIpAddressGraphUpdate => processUserIpAddressGraphUpdate(userIpAddressUpdate)
   }
 
@@ -233,10 +235,28 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.removeEdgeIfExists(update.libId, update.userId, EmptyEdgeReader)
   }
 
+  private def processOrganizationGraphUpdate(update: OrganizationGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationStates.INACTIVE =>
+      writer.removeVertexIfExists(update.orgId)
+    case OrganizationStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+  }
+
+  private def processOrganizationMembershipGraphUpdate(update: OrganizationMembershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationMembershipStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+    case OrganizationMembershipStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+  }
+
   private def processUserIpAddressGraphUpdate(update: UserIpAddressGraphUpdate)(implicit writer: GraphWriter) = {
-    writer.saveVertex(IpAddressData(update.ipAddr))
+    writer.saveVertex(IpAddressData(update.ipAddress))
     writer.saveVertex(UserData(update.userId))
-    writer.saveEdge(update.userId, update.ipAddr, TimestampEdgeData(update.updatedAt.getMillis))
-    writer.saveEdge(update.ipAddr, update.userId, TimestampEdgeData(update.updatedAt.getMillis))
+    writer.saveEdge(update.userId, update.ipAddress, TimestampEdgeData(update.updatedAt.getMillis))
+    writer.saveEdge(update.ipAddress, update.userId, TimestampEdgeData(update.updatedAt.getMillis))
   }
 }

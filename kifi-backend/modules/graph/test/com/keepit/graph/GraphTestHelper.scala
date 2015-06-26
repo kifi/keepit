@@ -9,6 +9,7 @@ import com.keepit.model._
 import org.joda.time.DateTime
 
 trait GraphTestHelper {
+
   val t1 = new DateTime(2015, 6, 23, 10, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
   val u42: Id[User] = Id[User](42)
@@ -35,6 +36,8 @@ trait GraphTestHelper {
   val keepid3: Id[Keep] = Id[Keep](3)
   val keepid4: Id[Keep] = Id[Keep](4)
   val keepid5: Id[Keep] = Id[Keep](5)
+
+  val orgId1: Id[Organization] = Id[Organization](1)
 
   val ipAddress1: IpAddress = IpAddress("108.60.110.146")
 
@@ -68,5 +71,10 @@ trait GraphTestHelper {
   val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
   val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates
+  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
+  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
+  val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates
+
 }

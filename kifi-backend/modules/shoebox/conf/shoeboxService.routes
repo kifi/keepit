@@ -216,6 +216,8 @@ GET     /m/1/user/:username/connections             @com.keepit.controllers.mobi
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
+GET     /m/2/user/:id/libraries                 @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibrariesV2(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12, filter: String ?= "own", ordering: Option[LibraryOrdering])
+
 POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
 POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
 POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
@@ -283,8 +285,13 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
-POST    /m/1/teams/:id/members/invites/accept @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization])
-POST    /m/1/teams/:id/members/invites/decline @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
+GET     /m/1/teams/:id                          @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
+GET     /m/1/teams/create                       @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+GET     /m/1/user/:id/teams                     @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
+POST    /m/1/teams/:id/members/invite           @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])
+POST    /m/1/teams/:id/members/invites/accept   @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
+POST    /m/1/teams/:id/members/invites/decline  @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
+POST    /m/1/teams/:id/members/invites/link     @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 
 ##########################################
 # Website
@@ -456,7 +463,6 @@ POST    /site/user/password         @com.keepit.controllers.website.UserControll
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/import-status    @com.keepit.controllers.website.UserController.importStatus()
-GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
@@ -494,7 +500,6 @@ POST    /site/user/close            @com.keepit.controllers.website.UserControll
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int])
 
-GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
@@ -885,6 +890,8 @@ GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
 GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
 GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.keepit.controllers.internal.ShoeboxDataPipeController.dumpLibraryURIIds(libId: Id[Library])
+GET     /internal/shoebox/database/getIngestableOrganizations                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int)
+GET     /internal/shoebox/database/getIngestableOrganizationMemberships                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
 POST     /internal/shoebox/database/getDomainIdsByDomainNames               @com.keepit.controllers.internal.ShoeboxDataPipeController.getDomainIdsByDomainNames()
 
@@ -968,7 +975,8 @@ GET     /me/followers              @com.keepit.controllers.website.KifiSiteRoute
 GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
 GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
 GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
-GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
+GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /:name                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)

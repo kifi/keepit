@@ -162,6 +162,8 @@ object Shoebox extends Service {
     def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
     def getDomainIdsByDomainNames() = ServiceRoute(POST, "internal/shoebox/database/getDomainIdsByDomainNames")
+    def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -276,7 +278,9 @@ object Heimdal extends Service {
     def updateAllReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateAllReKeepStats")
     def processSearchHitAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processSearchHitAttribution")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
-    def getOwnerLibraryViewStats(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/data/libraryView", Param("userId", userId))
+    def getEligibleGratData() = ServiceRoute(POST, "/internal/heimdal/data/getEligibleGratData")
+    def getGratData(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/data/getGratData", Param("userId", userId))
+    def getGratDatas() = ServiceRoute(POST, "/internal/heimdal/data/getGratDatas")
   }
 }
 

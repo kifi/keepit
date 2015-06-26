@@ -2,7 +2,7 @@ package com.keepit.rover.model
 
 import com.keepit.common.db.{ VersionNumber, SequenceNumber, Id }
 import com.keepit.common.time.DateTimeJsonFormat
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ UrlHash, NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._
@@ -14,17 +14,19 @@ case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Ar
   override def toString = s"$major.$minor"
 }
 
-case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)
+case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], urlHash: UrlHash, kind: ArticleKind[A], version: ArticleVersion)
 
 trait ArticleInfoHolder {
   type A <: Article
   def articleKind: ArticleKind[A]
   def uriId: Id[NormalizedURI]
+  def url: String
+  def urlHash: UrlHash
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
   def getLatestKey: Option[ArticleKey[A]] = latestVersion.map(toKey)
   def getBestKey: Option[ArticleKey[A]] = bestVersion.map(toKey)
-  private def toKey(version: ArticleVersion): ArticleKey[A] = ArticleKey(uriId, articleKind, version)
+  private def toKey(version: ArticleVersion): ArticleKey[A] = ArticleKey(uriId, urlHash, articleKind, version)
 }
 
 trait ArticleKindHolder {
@@ -38,6 +40,8 @@ case class ArticleInfo(
   isDeleted: Boolean,
   seq: SequenceNumber[ArticleInfo],
   uriId: Id[NormalizedURI],
+  url: String,
+  urlHash: UrlHash,
   kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
   bestVersion: Option[ArticleVersion],
   latestVersion: Option[ArticleVersion]) extends ArticleInfoHolder with ArticleKindHolder
@@ -47,6 +51,8 @@ object ArticleInfo {
     (__ \ 'isDeleted).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[ArticleInfo]) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'url).format[String] and
+    (__ \ 'urlHash).format[UrlHash] and
     (__ \ 'kind).format[String] and
     (__ \ 'bestVersion).formatNullable[ArticleVersion] and
     (__ \ 'latestVersion).formatNullable[ArticleVersion]
