@@ -21,6 +21,9 @@ case class OrganizationMembership(
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
   def withPermissions(newPermissions: Set[OrganizationPermission]): OrganizationMembership = this.copy(permissions = newPermissions)
+  def sanitizeForDelete: OrganizationMembership = this.copy(
+    state = OrganizationMembershipStates.INACTIVE
+  )
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 

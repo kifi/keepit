@@ -9,13 +9,14 @@ object OrganizationFactoryHelper {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
       val org = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.OWNER))
-      for( member <- partialOrganization.members ) {
+      for (member <- partialOrganization.members) {
         injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
       }
-      for( invitedUser <- partialOrganization.invitedUsers ) {
+      for (invitedUser <- partialOrganization.invitedUsers) {
         injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, userId = Some(invitedUser.id.get), role = OrganizationRole.MEMBER))
+
       }
-      for( invitedEmail <- partialOrganization.invitedEmails ) {
+      for (invitedEmail <- partialOrganization.invitedEmails) {
         injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))
       }
       org
