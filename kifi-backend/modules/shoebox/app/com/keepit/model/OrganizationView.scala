@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
@@ -21,6 +21,10 @@ case class OrganizationNotificationInfo(
   name: String,
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
+
+@json
+case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
+  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
 
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
@@ -72,23 +76,25 @@ sealed abstract class OrganizationRequest
 
 @json
 case class OrganizationCreateRequest(
-  userId: Id[User],
-  orgName: String) extends OrganizationRequest
+  requesterId: Id[User],
+  orgName: String,
+  orgDescription: Option[String] = None) extends OrganizationRequest
+
 @json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
 @json
 case class OrganizationModifyRequest(
-  orgId: Id[Organization],
   requesterId: Id[User],
+  orgId: Id[Organization],
   modifications: OrganizationModifications) extends OrganizationRequest
 @json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
 @json
 case class OrganizationDeleteRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User]) extends OrganizationRequest
+  requesterId: Id[User],
+  orgId: Id[Organization]) extends OrganizationRequest
 @json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
 

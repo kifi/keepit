@@ -1,16 +1,18 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ VIEW_ORGANIZATION, EDIT_ORGANIZATION }
 import com.keepit.model._
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def get(orgId: Id[Organization]): Organization
+  def getFullOrganizationInfo(orgId: Id[Organization]): FullOrganizationInfo
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -22,18 +24,43 @@ class OrganizationCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
+    libraryRepo: LibraryRepo,
+    userRepo: UserRepo,
     orgInviteRepo: OrganizationInviteRepo,
+    organizationAvatarCommander: OrganizationAvatarCommander,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
   def get(orgId: Id[Organization]): Organization = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
 
+  def getFullOrganizationInfo(orgId: Id[Organization]): FullOrganizationInfo = {
+    val org = get(orgId)
+    val orgHandle = org.getHandle
+    val orgName = org.name
+    val description = org.description
+    val (externalIds, memberCount, libraries) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
+      val externalIds = userRepo.getUsers(members).values.map(_.externalId).toSeq
+      val memberCount = orgMembershipRepo.countByOrgId(orgId)
+      val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
+      (externalIds, memberCount, libraries)
+    }
+
+    // TODO: how big should avatars be?
+    val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
+    val publicLibs = libraries(LibraryVisibility.PUBLISHED)
+    val orgLibs = libraries(LibraryVisibility.ORGANIZATION)
+    val privLibs = libraries(LibraryVisibility.SECRET)
+    FullOrganizationInfo(handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, members = externalIds,
+      memberCount = memberCount, publicLibraries = publicLibs, organizationLibraries = orgLibs, secretLibraries = privLibs)
+  }
+
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
     request match {
-      case OrganizationCreateRequest(createrId, orgName) => true // TODO: can we check ahead of time that an org handle is available?
-      case OrganizationModifyRequest(orgId, requesterId, modifications) =>
+      case OrganizationCreateRequest(createrId, _, _) => true // TODO: can we check ahead of time that an org handle is available?
+      case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
         permissions.exists { _.contains(EDIT_ORGANIZATION) } && areAllValidModifications(modifications)
-      case OrganizationDeleteRequest(orgId, requesterId) =>
+      case OrganizationDeleteRequest(requesterId, orgId) =>
         requesterId == orgRepo.get(orgId).ownerId
     }
   }
@@ -51,11 +78,11 @@ class OrganizationCommanderImpl @Inject() (
     try {
       db.readWrite { implicit session =>
         if (isValidRequest(request)) {
-          val orgPrototype = orgRepo.save(Organization(ownerId = request.userId, name = request.orgName, handle = None))
+          val orgPrototype = orgRepo.save(Organization(ownerId = request.requesterId, name = request.orgName, handle = None))
           val org = handleCommander.autoSetOrganizationHandle(orgPrototype) getOrElse {
             throw new Exception(s"COULD NOT CREATE ORGANIZATION [$request.orgName] SINCE WE DIDN'T FIND A HANDLE!!!")
           }
-          orgMembershipRepo.save(org.newMembership(userId = request.userId, role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
           Right(OrganizationCreateResponse(request, org))
         } else {
           Left(OrganizationFail.HANDLE_UNAVAILABLE)
