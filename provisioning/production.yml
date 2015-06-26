@@ -54,7 +54,9 @@
         mode: 0774
     - name: enable kifi-register-host service
       command: "update-rc.d kifi-register-host start 90 3 4 5 ."
+      changed_when: False
     - command: /etc/init.d/kifi-register-host
+      changed_when: False
       register: kifi_hostname
     - set_fact:
         ansible_fqdn: "{{ kifi_hostname.stdout_lines.0 }}"
