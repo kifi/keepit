@@ -339,21 +339,3 @@ object LibraryColor {
   }
 
 }
-
-sealed trait LibrarySpace
-
-object LibrarySpace {
-  case class UserSpace(id: Id[User]) extends LibrarySpace
-  case class OrganizationSpace(id: Id[Organization]) extends LibrarySpace
-
-  implicit def fromUserId(userId: Id[User]) = UserSpace(userId)
-  implicit def fromOrganizationId(organizationId: Id[Organization]) = OrganizationSpace(organizationId)
-
-  def apply(ownerId: Id[User], organizationId: Option[Id[Organization]]): LibrarySpace = organizationId.map(OrganizationSpace(_)) getOrElse UserSpace(ownerId)
-
-
-  def prettyPrint(space: LibrarySpace): String = space match {
-    case OrganizationSpace(orgId) => s"organization $orgId"
-    case UserSpace(userId) => s"user $userId"
-  }
-}
