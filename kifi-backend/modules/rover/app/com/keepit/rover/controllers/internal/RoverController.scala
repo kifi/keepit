@@ -36,7 +36,7 @@ class RoverController @Inject() (
     val uriId = (request.body \ "uriId").asOpt[Id[NormalizedURI]] getOrElse (request.body \ "id").as[Id[NormalizedURI]]
     val url = (request.body \ "url").as[String]
     val refresh = (request.body \ "refresh").asOpt[Boolean] getOrElse false
-    articleCommander.fetchAsap(uriId, url, refresh).map(_ => Ok)
+    articleCommander.fetchAsap(url, uriId, refresh).map(_ => Ok)
   }
 
   def getBestArticlesByUris() = Action.async(parse.json) { request =>
@@ -80,7 +80,7 @@ class RoverController @Inject() (
     val uriId = (request.body \ "uriId").asOpt[Id[NormalizedURI]] getOrElse (request.body \ "id").as[Id[NormalizedURI]]
     val url = (request.body \ "url").as[String]
     val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
-    roverCommander.getOrElseFetchArticleSummaryAndImages(uriId, url)(kind).map { articleSummaryAndImagesOption =>
+    roverCommander.getOrElseFetchArticleSummaryAndImages(url, uriId)(kind).map { articleSummaryAndImagesOption =>
       implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, BasicImages]
       val json = Json.toJson(articleSummaryAndImagesOption)
       Ok(json)

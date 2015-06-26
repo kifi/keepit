@@ -4,7 +4,8 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionConte
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.google.inject.{ Injector, Module }
 import java.io.File
-import com.keepit.rover.model.ArticleInfoRepo
+import com.keepit.rover.article.ArticleCommander
+import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
 import com.keepit.test.{ TestInjectorProvider, DbInjectionHelper, TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
@@ -52,5 +53,6 @@ trait RoverTestInjector extends TestInjector with DbInjectionHelper with RoverIn
 trait RoverInjectionHelpers { self: TestInjectorProvider =>
 
   def articleInfoRepo(implicit injector: Injector) = inject[ArticleInfoRepo]
+  def articleInfoHelper(implicit injector: Injector) = inject[ArticleInfoHelper]
   def clock(implicit injector: Injector) = inject[Clock]
 }
