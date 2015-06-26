@@ -675,20 +675,20 @@ class LibraryCommanderImpl @Inject() (
         }
 
         // Update visibility of keeps
-        def updateKeepVisibility(iter: Int): Future[Unit] = Future {
-          val (keeps, visibility) = db.readOnlyMaster { implicit s =>
+        def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
+          val (keeps, curViz) = db.readOnlyMaster { implicit s =>
             val viz = libraryRepo.get(targetLib.id.get).visibility // It may have changed, re-check
             val keeps = keepRepo.getByLibraryIdAndExcludingVisibility(libraryId, Some(viz), 1000)
             (keeps, viz)
           }
-          if (keeps.nonEmpty) {
+          if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
-              keepRepo.save(k.copy(visibility = visibility))(s)
+              keepRepo.save(k.copy(visibility = curViz))(s)
             }
             if (iter < 200) { // to prevent infinite loops if there's an issue updating keeps.
-              updateKeepVisibility(iter + 1)
+              updateKeepVisibility(changedVisibility, iter + 1)
             } else {
-              val msg = s"[updateKeepVisibility] Problems updating visibility on $libraryId to $visibility, $iter"
+              val msg = s"[updateKeepVisibility] Problems updating visibility on $libraryId to $curViz, $iter"
               airbrake.notify(msg)
               Future.failed(new Exception(msg))
             }
@@ -696,7 +696,7 @@ class LibraryCommanderImpl @Inject() (
             Future.successful(())
           }
         }.flatMap(m => m)
-        updateKeepVisibility(0).onComplete { _ => searchClient.updateKeepIndex() }
+        updateKeepVisibility(newVisibility, 0).onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
           "title" -> (newName != targetLib.name),
