@@ -339,6 +339,7 @@ object LibraryColor {
   }
 
 }
+
 sealed trait LibrarySpace
 
 object LibrarySpace {
