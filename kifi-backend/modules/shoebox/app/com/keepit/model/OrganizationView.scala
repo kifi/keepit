@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
@@ -21,6 +21,10 @@ case class OrganizationNotificationInfo(
   name: String,
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
+
+@json
+case class FullOrganizationInfo(handle: OrganizationHandle, name: String, description: Option[String], avatar: Option[OrganizationAvatar], members: Seq[ExternalId[User]],
+  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, privateLibraries: Int)
 
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
