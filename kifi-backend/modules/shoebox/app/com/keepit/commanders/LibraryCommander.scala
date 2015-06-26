@@ -112,6 +112,7 @@ class LibraryCommanderImpl @Inject() (
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     orgRepo: OrganizationRepo,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -602,7 +603,8 @@ class LibraryCommanderImpl @Inject() (
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
       (lib, mem)
     }
-    if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
+
+    if (!targetMembershipOpt.exists(_.canWrite)) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       val targetMembership = targetMembershipOpt.get
@@ -643,11 +645,20 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
+      def validOrg(newOrg: Option[OrganizationMoveRequest]): Either[LibraryFail, Option[Id[Organization]]] = {
+        newOrg match {
+          case None => Right(targetLib.organizationId)
+          case Some(orgMoveReq) if (canMoveToOrg(userId = userId, libId = libraryId, to = orgMoveReq.destination)) => Right(orgMoveReq.destination)
+          case _ => Left(LibraryFail(BAD_REQUEST, "invalid_org_id"))
+        }
+      }
+
       val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {
         newName <- validName(modifyReq.name).right
         newSlug <- validSlug(modifyReq.slug).right
+        newOrgId <- validOrg(modifyReq.orgId).right
       } yield {
         val newDescription = modifyReq.description.orElse(targetLib.description)
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
@@ -665,6 +676,7 @@ class LibraryCommanderImpl @Inject() (
 
         val lib = db.readWrite { implicit s =>
           if (targetLib.slug != newSlug) {
+            // TODO: update alias for organization updates and/or owner updates. (Need to do all updates in one go - only create a single alias)
             val ownerId = targetLib.ownerId
             libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
@@ -673,7 +685,7 @@ class LibraryCommanderImpl @Inject() (
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
 
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId))
         }
 
         // Update visibility of keeps
@@ -707,7 +719,8 @@ class LibraryCommanderImpl @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
+          "orgId" -> (newOrgId != targetLib.organizationId)
         )
         (lib, edits)
       }
@@ -793,16 +806,14 @@ class LibraryCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libId)
       val from: Option[Id[Organization]] = library.organizationId
-      (library.ownerId == userId) &&
-        (from match {
-          case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
-            organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
-          case None => true // Can move libraries from Personal space to Organization Space.
-        }) && (to match {
-          case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
-            organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
-          case None => true // Can move from Organization Space to Personal space.
-        })
+      (from match {
+        case Some(fromOrg) =>
+          organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
+        case None => (library.ownerId == userId) // Can move libraries from Personal space to Organization Space.
+      }) && (to match {
+        case Some(toOrg) => organizationMembershipCommander.getPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
+        case None => (library.ownerId == userId) // Can move from Organization Space to Personal space.
+      })
     }
   }
 

@@ -247,54 +247,120 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
 
     }
+    "when modify library is called:" in {
+      "allow changing organizationId of library" in {
+        withDb(modules: _*) { implicit injector =>
+          val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
-    "modify library" in {
-      withDb(modules: _*) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+          val libraryCommander = inject[LibraryCommander]
+          val orgMemberRepo = inject[OrganizationMembershipRepo]
 
-        val libraryCommander = inject[LibraryCommander]
-        val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-          LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER)))
-        mod1.isRight === true
-        mod1.right.get.description === Some("Samuel L. Jackson was here")
-        mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER)
+          val (org, starkOrg) = db.readWrite { implicit session =>
+            val org = inject[OrganizationRepo].save(Organization(name = "Earth", ownerId = userAgent.id.get, handle = None))
+            val starkTowersOrg = inject[OrganizationRepo].save(Organization(name = "Stark Towers", ownerId = userIron.id.get, handle = None))
+            (org, starkTowersOrg)
+          }
+          // no privs on org, cannot move from personal space.
+          val cannotMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+          cannotMoveOrg.isLeft === true
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.get(libShield.id.get).organizationId === None
+          }
 
-        val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
-          LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
-        mod2.isRight === true
-        mod2.right.get.name === "MURICA #1!!!!!"
-        mod2.right.get.slug === LibrarySlug("murica_#1")
+          db.readWrite { implicit s => orgMemberRepo.save(org.newMembership(userAgent.id.get, OrganizationRole.OWNER)) }
 
-        val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
-        mod3.isRight === true
-        mod3.right.get.visibility === LibraryVisibility.PUBLISHED
+          // move from personal space to org space
+          val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+          canMoveOrg.isRight === true
+          canMoveOrg.right.get.organizationId === org.id
 
-        val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
-        mod3NoChange.isRight === true
-        mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
+          // prevent move from org to one without privs
+          val attemptToStealLibrary = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+          attemptToStealLibrary.isLeft === true
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.get(libShield.id.get).organizationId === org.id
+          }
 
-        val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
-          LibraryModifyRequest(name = Some("HULK SMASH")))
-        mod4.isRight === false
-        val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          LibraryModifyRequest(name = Some("")))
-        mod5.isRight === false
+          // move from one org to another where you have invite/remove privs.
+          db.readWrite { implicit session =>
+            orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.OWNER)) // how did he pull that off.
+          }
+          val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+          moveOrganization.isRight === true
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
+          }
 
-        val mod6 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
-          LibraryModifyRequest(color = Some(LibraryColor.SKY_BLUE)))
-        mod6.isRight === true
-        mod6.right.get.color === Some(LibraryColor.SKY_BLUE)
+          // try to move library back to owner out of org space.
+          val moveHome = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userIron.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+          moveHome.isLeft === true // only the owner can move a library out right now.
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
+          }
 
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.length === 3
-          allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
-          allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
-          allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
-          allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
-          allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
+          // owner moves the library home.
+          val moveHomeSucceeds = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+          moveHomeSucceeds.isRight === true // only the owner can move a library out right now.
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.get(libShield.id.get).organizationId === None
+          }
+        }
+      }
+
+      "allow other modifications" in {
+        withDb(modules: _*) { implicit injector =>
+          val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+          val libraryCommander = inject[LibraryCommander]
+          val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
+            LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER)))
+          mod1.isRight === true
+          mod1.right.get.description === Some("Samuel L. Jackson was here")
+          mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER)
+
+          val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
+            LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
+          mod2.isRight === true
+          mod2.right.get.name === "MURICA #1!!!!!"
+          mod2.right.get.slug === LibrarySlug("murica_#1")
+
+          val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+            LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
+          mod3.isRight === true
+          mod3.right.get.visibility === LibraryVisibility.PUBLISHED
+
+          val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+            LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
+          mod3NoChange.isRight === true
+          mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
+
+          val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
+            LibraryModifyRequest(name = Some("HULK SMASH")))
+          mod4.isRight === false
+          val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+            LibraryModifyRequest(name = Some("")))
+          mod5.isRight === false
+
+          val mod6 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+            LibraryModifyRequest(color = Some(LibraryColor.SKY_BLUE)))
+          mod6.isRight === true
+          mod6.right.get.color === Some(LibraryColor.SKY_BLUE)
+
+          db.readOnlyMaster { implicit s =>
+            val allLibs = libraryRepo.all
+            allLibs.length === 3
+            allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
+            allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
+            allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
+            allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
+            allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
+          }
         }
       }
     }
@@ -459,7 +525,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // User does not own the library
-        libraryCommander.canMoveToOrg(Id[User](0), newLibrary.id.get, organization.id) must equalTo(false)
+        libraryCommander.canMoveToOrg(Id[User](0), newLibrary.id.get, organization.id) === false
 
         // User owns the library
         // Can move libraries to organizations you are part of.
