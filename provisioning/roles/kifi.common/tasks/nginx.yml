@@ -27,5 +27,6 @@
   register: nginx_service_conf
 - name: verify correct nginx syntax
   command: nginx -t
+  changed_when: False
 - service: name=nginx state=reloaded enabled=yes
   when: nginx_conf.changed or nginx_common_conf.changed or nginx_service_conf.changed
