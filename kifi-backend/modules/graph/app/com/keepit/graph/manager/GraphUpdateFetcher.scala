@@ -70,38 +70,28 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case NormalizedUriGraphUpdate => {
         shoebox.getIndexableUris(seq.copy(), fetchSize).flatMap { indexableUris: Seq[IndexableUri] =>
-          val uriByDomainName: Map[String, Seq[IndexableUri]] = indexableUris.foldLeft(Map.empty[String, Seq[IndexableUri]]) { (map, uri) =>
-            val domainName = URI.parseDomain(uri.url)
-            map + (domainName.getOrElse("") -> { map.getOrElse(domainName.getOrElse(""), Seq.empty[IndexableUri]) ++ Seq(uri) })
-          }
+          val uriByDomainName: Map[String, Seq[IndexableUri]] = indexableUris.groupBy[String](uri => URI.parseDomain(uri.url).getOrElse(""))
 
-          val fDomainIdByDomainName: Future[Map[String, Option[Id[Domain]]]] = shoebox.getDomainIdsByDomainNames(uriByDomainName.keys.toSeq)
-
-          val fIndexableUriWithDomainId: Future[Seq[IndexableUri]] = fDomainIdByDomainName.map {
+          shoebox.internDomainIdsByDomainNames(uriByDomainName.keys.toSeq).imap {
             _.flatMap {
               case (domainName, id) =>
                 uriByDomainName(domainName).map(_.copy(domainId = id))
-            }.toSeq
+            }.map(NormalizedUriGraphUpdate.apply).toSeq
           }
-          fIndexableUriWithDomainId.map(_.map(NormalizedUriGraphUpdate.apply))
         }
       }
 
-      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailInfos: Seq[EmailAccountInfo] =>
-        val emailInfoByDomainName: Map[String, Seq[EmailAccountInfo]] = emailInfos.foldLeft(Map.empty[String, Seq[EmailAccountInfo]]) { (map, info) =>
-          val domainName = info.address.address.split("@")(1)
-          map + (domainName -> { map.getOrElse(domainName, Seq.empty[EmailAccountInfo]) ++ Seq(info) })
-        }
+      case EmailAccountGraphUpdate => {
+        abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailInfos: Seq[EmailAccountInfo] =>
+          val emailInfoByDomainName: Map[String, Seq[EmailAccountInfo]] = emailInfos.groupBy[String](emailInfo => emailInfo.address.address.split("@")(1))
 
-        val fDomainIdByDomainName: Future[Map[String, Option[Id[Domain]]]] = shoebox.getDomainIdsByDomainNames(emailInfoByDomainName.keys.toSeq)
-
-        val emailAccountInfoWithDomainId: Future[Seq[EmailAccountInfo]] = fDomainIdByDomainName.map {
-          _.flatMap {
-            case (domainName, id) =>
-              emailInfoByDomainName(domainName).map(_.copy(domainId = id))
-          }.toSeq
+          shoebox.internDomainIdsByDomainNames(emailInfoByDomainName.keys.toSeq).imap {
+            _.flatMap {
+              case (domainName, id) =>
+                emailInfoByDomainName(domainName).map(_.copy(domainId = id))
+            }.map(EmailAccountGraphUpdate.apply).toSeq
+          }
         }
-        emailAccountInfoWithDomainId.map(_.map(EmailAccountGraphUpdate.apply))
       }
 
       case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
