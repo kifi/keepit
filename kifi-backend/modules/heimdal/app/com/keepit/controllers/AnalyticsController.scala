@@ -6,11 +6,11 @@ import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.heimdal.{ SpecificEventSet, _ }
+import com.keepit.heimdal._
 import com.keepit.model.User
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsNumber, JsObject, Json }
+import play.api.libs.json.{ JsArray, JsNumber, JsObject, Json }
 import play.api.mvc.Action
 import views.html
 
@@ -117,7 +117,7 @@ class AnalyticsController @Inject() (
 
     infoOptions.foreach {
       case (Some(desc), name) => {
-        val data = Await.result(metricManager.getMetric(name), 20 second)
+        val data = Seq.empty[String]
         if (data.isEmpty) {
           errors = errors + "No Data for Metric: " + name + "\n"
         } else {
@@ -135,74 +135,8 @@ class AnalyticsController @Inject() (
     else Ok(html.storedMetricChart(json.toString, errors))
   }
 
-  def getMetricData(repo: String, name: String) = Action.async { request =>
-    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
-    metricManager.getMetricInfo(name).flatMap { infoOption =>
-      infoOption.map { desc =>
-        metricManager.getMetric(name).map { data =>
-          if (data.isEmpty) {
-            Ok(Json.obj(
-              "header" -> ("No Data for Metric: " + name),
-              "data" -> Json.arr()
-            ))
-          } else {
-            Ok(Json.obj(
-              "header" -> s"[$name] ${desc.description}",
-              "data" -> Json.toJson(data)
-            ))
-          }
-        }
-      } getOrElse {
-        Promise.successful(Ok(Json.obj(
-          "header" -> ("Unknown Metric: " + name),
-          "data" -> Json.arr()
-        ))).future
-      }
-    }
-  }
-
-  def adhocMetric(repo: String, from: String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, as: String) = Action.async { request =>
-    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
-    if (request.queryString.get("help").nonEmpty) resolve(Ok(adhocHelp))
-    else {
-      val doBreakDown = if (breakDown != "false" && groupBy.startsWith("context")) true else false
-      val fromTime = if (from == "") currentDateTime.minusHours(1) else DateTime.parse(from)
-      val toTime = if (to == "now") currentDateTime else DateTime.parse(to)
-      val eventsToConsider = if (events == "all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-      val contextRestriction = AndContextRestriction(filters.split(",").map(metricManager.definedRestrictions): _*)
-
-      val jsonFuture = if (mode == "users") {
-        val definition = new GroupedUserCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as == "hist")
-        metricManager.computeAdHocMteric(fromTime, toTime, definition)
-      } else {
-        val definition = new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(groupBy), doBreakDown, as == "hist")
-        metricManager.computeAdHocMteric(fromTime, toTime, definition)
-      }
-
-      if (as == "json") {
-        jsonFuture.map { json => Ok(json) }
-      } else if (as == "pie") {
-        jsonFuture.map { json =>
-          var title = (if (mode == "users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
-          Ok(html.adhocPieChart(Json.stringify(json), title))
-        }
-      } else if (as == "hist") {
-        jsonFuture.map { json =>
-          var title = (if (mode == "users") "'Distinct User Count " else "'Event Count ") + s"for Events:$events from $from to $to'"
-          Ok(html.adhocHistChart(Json.stringify(json), title))
-        }
-      } else {
-        resolve(BadRequest("'as' paramter must be either 'pie' or 'json'."))
-      }
-    }
-  }
-
   def rawEvents(repo: String, events: String, limit: Int, window: Int) = Action.async { request =>
-    if (request.queryString.get("help").nonEmpty) resolve(Ok(rawHelp))
-    else {
-      val eventsToConsider = if (events == "all") AllEvents else SpecificEventSet(events.split(",").map(EventType(_)).toSet)
-      getRepo(repo).getLatestRawEvents(eventsToConsider, limit, window).map(Ok(_))
-    }
+    resolve(Ok(rawHelp))
   }
 
   def getEventDescriptors(repo: String) = Action.async { request =>

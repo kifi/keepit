@@ -4,8 +4,6 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import reactivemongo.bson.{ BSONDocument, BSONLong }
-import reactivemongo.api.collections.default.BSONCollection
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
@@ -27,7 +25,6 @@ trait UserEventLoggingRepo extends EventRepo[UserEvent] {
 }
 
 class ProdUserEventLoggingRepo(
-  val collection: BSONCollection,
   val mixpanel: MixpanelClient,
   val descriptors: UserEventDescriptorRepo,
   shoeboxClient: ShoeboxServiceClient,
@@ -43,17 +40,6 @@ class ProdUserEventLoggingRepo(
     new UserSegmentAugmentor(shoeboxClient),
     new UserValuesAugmentor(shoeboxClient),
     new UserKifiCampaignIdAugmentor(shoeboxClient))
-
-  def toBSON(event: UserEvent): BSONDocument = {
-    val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
-    val fields = EventRepo.eventToBSONFields(event) ++ Seq(
-      "userBatch" -> BSONLong(userBatch),
-      "userId" -> BSONLong(event.userId.id)
-    )
-    BSONDocument(fields)
-  }
-
-  def fromBSON(bson: BSONDocument): UserEvent = ???
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
   def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = mixpanel.setUserProperties(userId, properties)
@@ -133,11 +119,6 @@ class UserAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[
 }
 
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
-
-class ProdUserEventDescriptorRepo(val collection: BSONCollection, cache: UserEventDescriptorNameCache, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[UserEvent] with UserEventDescriptorRepo {
-  override def upsert(obj: EventDescriptor) = super.upsert(obj) map { _ tap { _ => cache.set(UserEventDescriptorNameKey(obj.name), obj) } }
-  override def getByName(name: EventType) = cache.getOrElseFutureOpt(UserEventDescriptorNameKey(name)) { super.getByName(name) }
-}
 
 class UserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
