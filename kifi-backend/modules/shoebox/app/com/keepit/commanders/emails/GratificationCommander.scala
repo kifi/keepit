@@ -14,6 +14,7 @@ import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 @Singleton
 class GratificationCommander @Inject() (
@@ -71,10 +72,13 @@ class GratificationCommander @Inject() (
     val numBatches = userCount / BATCH_SIZE
     (0 to numBatches).foreach { batchNum =>
       val userIds: Seq[Id[User]] = generateUserBatch(batchNum).filter(filter)
+      log.info(s"[GratData] userIds ${userIds.head}-${userIds.tail} generated, getting data from heimdal")
       val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map { _.map { augmentData }.filter { _.isEligible } }
-      fGratData.foreach { log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(_, sendTo) }
-      fGratData.onFailure {
-        case t: Throwable => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum")
+      fGratData.onComplete {
+        case Success(gratDatas) =>
+          log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails")
+          emailSenderProvider.gratification.sendToUsersWithData(gratDatas, sendTo)
+        case Failure(t) => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum", t)
       }
     }
   }

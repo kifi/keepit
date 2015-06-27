@@ -19,7 +19,6 @@ class GratificationStatsCommander @Inject() (
     rekeepRepo: ReKeepRepo) extends Logging {
 
   def getLibraryCountData(userId: Id[User]): CountData[Library] = {
-
     val since = currentDateTime.minusWeeks(1)
     val cnt = libViewCmdr.getTotalViews(userId, since)
     val map = libViewCmdr.getTopViewedLibrariesAndCounts(userId, since, LIST_LIMIT)

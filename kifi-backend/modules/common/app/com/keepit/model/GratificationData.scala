@@ -6,7 +6,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class CountData[T](totalCount: Int, countById: Map[Id[T], Int]) {
-  val sortedCountById = countById.toList.sortBy(-_._2)
+  def sortedCountById = countById.toList.sortBy(-_._2)
 }
 
 object CountData {
