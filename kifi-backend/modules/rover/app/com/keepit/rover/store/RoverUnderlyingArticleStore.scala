@@ -21,7 +21,7 @@ private[store] class UriIdArticleStoreKey(key: ArticleKey[_]) extends ArticleSto
 }
 
 private[store] object UriIdArticleStoreKey {
-  implicit def apply[A <: Article](key: ArticleKey[A]): UriIdArticleStoreKey = new UriIdArticleStoreKey(key)
+  def apply[A <: Article](key: ArticleKey[A]): UriIdArticleStoreKey = new UriIdArticleStoreKey(key)
 }
 
 private[store] trait RoverUnderlyingArticleStore extends ObjectStore[ArticleStoreKey, Article]
