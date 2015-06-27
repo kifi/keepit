@@ -657,19 +657,28 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val user1 = UserFactory.user().withName("Clark", "Kent").withUsername("ckent").withEmailAddress(toEmail).saved
           val user2 = UserFactory.user().withName("Bruce", "Wayne").withUsername("bwayne").saved
           connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
-          val lib = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))
-          libMemRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          val lib1 = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))
+          val lib2 = libraryRepo.save(Library(name = "Batman's Epic Fails", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("only-human"), memberCount = 1))
+          libMemRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          libMemRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
           (user1, user2)
         }
         val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
         val html = email.htmlBody.value
         html must contain("Hey Clark,")
         html must contain("The Kifi Team")
+        html must contain("Favorite Comic Books")
+        html must not contain ("Batman's Epic Fails")
         html must not contain ("0 views")
         html must not contain ("0 followers")
         html must not contain ("0 connections")
         html must not contain ("0 total rekeeps")
         html must not contain ("0 rekeeps")
+        html must not contain ("1 views")
+        html must not contain ("1 followers")
+        html must not contain ("1 connections")
+        html must not contain ("1 total rekeeps")
+        html must not contain ("1 rekeeps")
       }
     }
   }

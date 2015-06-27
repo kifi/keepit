@@ -48,8 +48,8 @@ class GratificationEmailSender @Inject() (
       to = toAddress.map(Right.apply).getOrElse(Left(gratData.userId)),
       subject = "People have been viewing your content on Kifi!",
       category = NotificationCategory.User.GRATIFICATION_EMAIL,
-      htmlTemplate = views.html.email.black.gratification(gratData.userId, gratData.libraryFollows, gratData.libraryViews, gratData.keepViews, gratData.rekeeps, gratData.connections),
-      textTemplate = Some(views.html.email.black.gratificationText(gratData.userId, gratData.libraryFollows, gratData.libraryViews, gratData.keepViews, gratData.rekeeps, gratData.connections)),
+      htmlTemplate = views.html.email.black.gratification(gratData.userId, gratData.libraryFollows, gratData.libraryViews, gratData.keepViews, gratData.rekeeps),
+      textTemplate = Some(views.html.email.black.gratificationText(gratData.userId, gratData.libraryFollows, gratData.libraryViews, gratData.keepViews, gratData.rekeeps)),
       templateOptions = Map("layout" -> CustomLayout),
       tips = Seq.empty)
   }

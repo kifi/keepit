@@ -10,7 +10,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.{ Library, LibrarySlug, LibraryVisibility, NotificationCategory }
+import com.keepit.model.{ KeepSource, URLFactory, NormalizedURI, Keep, Library, LibrarySlug, LibraryVisibility, NotificationCategory }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -43,9 +43,15 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         }
 
         val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val library = db.readWrite { implicit rw =>
-          libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
+        val (library, keep) = db.readWrite { implicit rw =>
+          val library = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
             visibility = LibraryVisibility.SECRET, ownerId = user1.id.get, createdAt = t1, memberCount = 1))
+          val uri = uriRepo.save(NormalizedURI.withHash("http://www.avengers.org/", Some("Avengers")))
+          val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
+          val keep = keepRepo.save(Keep(title = Some("Avengers.org"), userId = user1.id.get, url = url.url, urlId = url.id.get,
+            uriId = uri.id.get, source = KeepSource.default, createdAt = t1, keptAt = t1, visibility = LibraryVisibility.PUBLISHED,
+            libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+          (library, keep)
         }
 
         val (id1, id2, id3, id4) = (user1.id.get, user2.id.get, user3.id.get, user4.id.get)
@@ -58,6 +64,8 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
           |Join my library: ${libraryName(library.id.get)}
           |liburl: ${libraryUrl(library.id.get, "")}
+          |Look at this keep: ${keepName(keep.id.get)}
+          |keepurl: ${keepUrl(keep.id.get, "")}
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
@@ -68,6 +76,8 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |${firstName(id2)} ${lastName(id2)} and ${fullName(id1)} joined!
           |Join my library: ${libraryName(library.id.get)}
           |liburl: ${libraryUrl(library.id.get, "")}
+          |Look at this keep: ${keepName(keep.id.get)}
+          |keepurl: ${keepUrl(keep.id.get, "")}          |
           |${avatarUrl(id3)}
           |unsub1 $unsubscribeUrl
           |unsub2 ${unsubscribeUrl(id3)}
@@ -99,15 +109,21 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("Join my library: Avengers Missions")
         output must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
+        output must contain("Look at this keep: Avengers.org")
+        output must contain("keepurl: http://www.avengers.org/")
         output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
         output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
         output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
         output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
 
+        println(processed.textBody.get.value)
+
         val text = processed.textBody.get.value
         text must contain("Bryan Cranston and Aaron Paul joined!")
         text must contain("Join my library: Avengers Missions")
         text must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
+        text must contain("Look at this keep: Avengers.org")
+        text must contain("keepurl: http://www.avengers.org/")
         text must contain("https://cloudfront/users/3/pics/100/0.jpg")
         text must contain("unsub1 https://www.kifi.com/unsubscribe/")
         text must contain("unsub2 https://www.kifi.com/unsubscribe/")
