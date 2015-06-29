@@ -7,6 +7,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec.RichWord2VecURIFeatureUpdatePlugin
 import com.keepit.cortex.nlp.POSTagger
+import com.keepit.cortex.tagcloud.TagCloudPlugin
 import play.api.Application
 import play.api.Mode.Prod
 import com.keepit.cortex.dbmodel.CortexDataIngestionPlugin
@@ -38,6 +39,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[LDACommander] != null)
     require(injector.instance[LDARelatedLibraryPlugin] != null)
     require(injector.instance[CortexDataIngestionPlugin] != null)
+    require(injector.instance[TagCloudPlugin] != null)
     require(POSTagger.enabled)
   }
 }
