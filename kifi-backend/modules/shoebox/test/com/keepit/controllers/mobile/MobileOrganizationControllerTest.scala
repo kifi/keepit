@@ -134,22 +134,117 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           val createResponseJson = Json.parse(contentAsString(result))
           val createResponse = createResponseJson.as[FullOrganizationInfo]
-          implicit val config = inject[PublicIdConfiguration]
           Organization.decodePublicId(createResponse.pubId) must haveClass[Success[Id[Organization]]]
           createResponse.name === orgName
           createResponse.description === Some(orgDescription)
         }
       }
     }
+
+    "when modifyOrganization is called:" in {
+      def setupModify(implicit injector: Injector) = db.readWrite { implicit session =>
+        val owner = UserFactory.user().withName("Captain", "America").saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("Earth"), normalized = OrganizationHandle("earth"))).saved
+        (org, owner)
+      }
+
+      "succeed for valid name" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setupModify
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """{ "name": "bob" }"""
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          status(response) === OK
+        }
+      }
+
+      "succeed for valid modifications" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setupModify
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """ {"none":["view_organization"],"owner":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          status(response) === OK
+        }
+      }
+
+      "fail on invalid modifications" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setupModify
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """{ "basePermissions": {"member":[]} }""" // all members must at least be able to view the organization
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          response === OrganizationFail.BAD_PARAMETERS
+        }
+      }
+
+      "fail for missing role in basePermissions" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setupModify
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """{ "basePermissions": {"owner": [], "none": []} }"""
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          response === OrganizationFail.BAD_PARAMETERS
+        }
+      }
+    }
+
+    "when deleteOrganization is called:" in {
+      def setupDelete(implicit injector: Injector) = db.readWrite { implicit session =>
+        val owner = UserFactory.user().withName("Dr", "Papaya").saved
+        val member = UserFactory.user().withName("Hansel", "Schmidt").saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("papaya_republic"), normalized = OrganizationHandle("earth"))).saved
+        inject[OrganizationMembershipRepo].save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
+        (org, owner, member)
+      }
+
+      "succeed for owner" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, _) = setupDelete
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val request = route.deleteOrganization(publicId)
+          val result = controller.deleteOrganization(publicId)(request)
+          status(result) === NO_CONTENT
+        }
+      }
+
+      "fail for non-owners" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, _, member) = setupDelete
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(member, Set(ExperimentType.ORGANIZATION))
+          val request = route.deleteOrganization(publicId)
+          val result = controller.deleteOrganization(publicId)(request)
+
+          result === OrganizationFail.INSUFFICIENT_PERMISSIONS
+        }
+      }
+    }
   }
 
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[MobileOrganizationController]
   private def route = com.keepit.controllers.mobile.routes.MobileOrganizationController
   implicit class ResultWrapper(result: Future[Result]) {
     def ===(failure: OrganizationFail) = {
       status(result) must equalTo(failure.status)
-      contentType(result) must beSome("application/json")
       (Json.parse(contentAsString(result)) \ "error").as[String] === failure.message
+      contentType(result) must beSome("application/json")
     }
   }
 }
