@@ -145,11 +145,7 @@ class SliderAdminController @Inject() (
     val domain = db.readOnlyReplica { implicit s =>
       domainRepo.get(hostname, None)
     }
-
-    // TODO this is for testing the form with seed data, remove for production
-    val domainSeeded = domain.orElse(Some(Domain(id = Some(Id(1)), hostname = hostname, state = DomainStates.INACTIVE)))
-
-    domainSeeded.map { domain => Redirect(routes.SliderAdminController.getDomain(domain.id.get)) }.getOrElse(NotFound)
+    domain.map { domain => Redirect(routes.SliderAdminController.getDomain(domain.id.get)) }.getOrElse(NotFound)
   }
 
   def getDomain(id: Id[Domain]) = AdminUserPage { implicit request =>
