@@ -1,4 +1,4 @@
-package com.keepit.rover.tagcloud
+package com.keepit.cortex.tagcloud
 
 import org.specs2.mutable.Specification
 

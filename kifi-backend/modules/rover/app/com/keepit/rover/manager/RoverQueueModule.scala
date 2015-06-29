@@ -75,18 +75,6 @@ case class ProdRoverQueueModule() extends RoverQueueModule with Logging {
     ArticleImageProcessingTaskQueue.CatchUp(queue)
   }
 
-  @Singleton @Provides
-  def autotagRequestQueue(client: SQSClient): SQSQueue[LibrarySuggestedSearchRequest] = {
-    val name = QueueName("library-autotag-request-prod")
-    client.formatted[LibrarySuggestedSearchRequest](name)
-  }
-
-  @Singleton @Provides
-  def suggestedSearchTermsQueue(client: SQSClient): SQSQueue[SuggestedSearchTermsWithLibraryId] = {
-    val name = QueueName("library-autotag-result-prod")
-    client.formatted[SuggestedSearchTermsWithLibraryId](name)
-  }
-
 }
 
 @Singleton
@@ -109,11 +97,5 @@ case class DevRoverQueueModule() extends RoverQueueModule with Logging {
 
   @Provides @Singleton
   def catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp = ArticleImageProcessingTaskQueue.CatchUp(new FakeSQSQueue[ArticleImageProcessingTask] {})
-
-  @Singleton @Provides
-  def autotagRequestQueue(): SQSQueue[LibrarySuggestedSearchRequest] = new FakeSQSQueue[LibrarySuggestedSearchRequest] {}
-
-  @Singleton @Provides
-  def suggestedSearchTermsQueue(): SQSQueue[SuggestedSearchTermsWithLibraryId] = new FakeSQSQueue[SuggestedSearchTermsWithLibraryId] {}
 
 }

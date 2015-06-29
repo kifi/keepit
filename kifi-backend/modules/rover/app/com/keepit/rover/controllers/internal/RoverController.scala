@@ -10,7 +10,6 @@ import com.keepit.model.{ Library, NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
 import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
-import com.keepit.rover.tagcloud.TagCloudCommander
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
@@ -22,7 +21,6 @@ import scala.concurrent.{ ExecutionContext }
 class RoverController @Inject() (
     roverCommander: RoverCommander,
     articleCommander: ArticleCommander,
-    tagCloudCommander: TagCloudCommander,
     implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = Action.async { request =>
@@ -106,9 +104,5 @@ class RoverController @Inject() (
       val json = Json.toJson(signatureOpt)
       Ok(json)
     }
-  }
-
-  def dumpTagCloud(libId: Id[Library], experiment: Boolean) = Action.async { request =>
-    tagCloudCommander.generateTagCloud(libId, experiment).map { res => Ok(Json.toJson(res)) }
   }
 }
