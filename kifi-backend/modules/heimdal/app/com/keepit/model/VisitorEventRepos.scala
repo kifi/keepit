@@ -12,13 +12,6 @@ import scala.concurrent.duration.Duration
 
 trait VisitorEventLoggingRepo extends EventRepo[VisitorEvent]
 
-class ProdVisitorEventLoggingRepo(val mixpanel: MixpanelClient, val descriptors: VisitorEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
-    extends MongoEventRepo[VisitorEvent] with VisitorEventLoggingRepo {
-  val warnBufferSize = 2000
-  val maxBufferSize = 10000
-
-}
-
 trait VisitorEventDescriptorRepo extends EventDescriptorRepo[VisitorEvent]
 
 class VisitorEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -29,5 +22,3 @@ case class VisitorEventDescriptorNameKey(name: EventType) extends Key[EventDescr
   val namespace = "visitor_event_descriptor"
   def toKey(): String = name.name
 }
-
-class DevVisitorEventLoggingRepo extends DevEventRepo[VisitorEvent] with VisitorEventLoggingRepo

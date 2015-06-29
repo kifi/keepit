@@ -17,16 +17,8 @@ import views.html
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, Promise }
 
-class AnalyticsController @Inject() (
-  userEventLoggingRepo: UserEventLoggingRepo,
-  systemEventLoggingRepo: SystemEventLoggingRepo,
-  anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
-  visitorEventLoggingRepo: VisitorEventLoggingRepo,
-  nonUserEventLoggingRepo: NonUserEventLoggingRepo,
-  metricManager: MetricManager)
+class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, metricManager: MetricManager)
     extends HeimdalServiceController {
-
-  private def getRepo(repoEventTypeCode: String) = EventRepo.findByEventTypeCode(userEventLoggingRepo, systemEventLoggingRepo, anonymousEventLoggingRepo, nonUserEventLoggingRepo, visitorEventLoggingRepo)(repoEventTypeCode).get
 
   val adhocHelp = """
     | Returns simple event statistics
@@ -139,19 +131,9 @@ class AnalyticsController @Inject() (
     resolve(Ok(rawHelp))
   }
 
-  def getEventDescriptors(repo: String) = Action.async { request =>
-    getRepo(repo).descriptors.getAll().map(descriptors => Ok(Json.toJson(descriptors)))
-  }
-
-  def updateEventDescriptors(repo: String) = Action.async { request =>
-    val updatedDescriptors = Json.fromJson[Seq[EventDescriptor]](request.body.asJson.get).get
-    val descriptors = getRepo(repo).descriptors
-    Future.sequence(updatedDescriptors.map(descriptors.upsert)).map(counts => Ok(JsNumber(counts.sum)))
-  }
-
   def deleteUser(userId: Id[User]) = Action.async { request =>
     SafeFuture {
-      userEventLoggingRepo.delete(userId)
+      mixpanelClient.delete(userId)
       Ok
     }
   }
@@ -159,7 +141,7 @@ class AnalyticsController @Inject() (
   def incrementUserProperties(userId: Id[User]) = Action.async { request =>
     val increments = request.body.asJson.get.as[JsObject].value.mapValues(_.as[Double]).toMap
     SafeFuture {
-      userEventLoggingRepo.incrementUserProperties(userId, increments)
+      mixpanelClient.incrementUserProperties(userId, increments)
       Ok
     }
   }
@@ -167,14 +149,14 @@ class AnalyticsController @Inject() (
   def setUserProperties(userId: Id[User]) = Action.async { request =>
     val properties = Json.fromJson[HeimdalContext](request.body.asJson.get).get
     SafeFuture {
-      userEventLoggingRepo.setUserProperties(userId, properties)
+      mixpanelClient.setUserProperties(userId, properties)
       Ok
     }
   }
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = Action.async { request =>
     SafeFuture {
-      userEventLoggingRepo.setUserAlias(userId, externalId)
+      mixpanelClient.alias(userId, externalId)
       Ok
     }
   }

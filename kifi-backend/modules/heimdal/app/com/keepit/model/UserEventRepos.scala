@@ -17,41 +17,6 @@ import com.keepit.heimdal._
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-trait UserEventLoggingRepo extends EventRepo[UserEvent] {
-  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit
-  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit
-  def delete(userId: Id[User]): Unit
-  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
-}
-
-class ProdUserEventLoggingRepo(
-  val mixpanel: MixpanelClient,
-  val descriptors: UserEventDescriptorRepo,
-  shoeboxClient: ShoeboxServiceClient,
-  protected val airbrake: AirbrakeNotifier)
-    extends MongoEventRepo[UserEvent] with UserEventLoggingRepo {
-
-  val warnBufferSize = 2000
-  val maxBufferSize = 10000
-  private val augmentors = Seq(
-    UserIdAugmentor,
-    new UserAugmentor(shoeboxClient),
-    new ExtensionVersionAugmentor(shoeboxClient),
-    new UserSegmentAugmentor(shoeboxClient),
-    new UserValuesAugmentor(shoeboxClient),
-    new UserKifiCampaignIdAugmentor(shoeboxClient))
-
-  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = mixpanel.incrementUserProperties(userId, increments)
-  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = mixpanel.setUserProperties(userId, properties)
-  def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
-  def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit = mixpanel.alias(userId, externalId)
-
-  override def persist(userEvent: UserEvent): Future[Unit] =
-    EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).flatMap { augmentedContext =>
-      super.persist(userEvent.copy(context = augmentedContext))
-    }
-}
-
 class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
   def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String]("extensionVersion").filter(_.nonEmpty).isEmpty
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
@@ -127,11 +92,4 @@ case class UserEventDescriptorNameKey(name: EventType) extends Key[EventDescript
   override val version = 1
   val namespace = "user_event_descriptor"
   def toKey(): String = name.name
-}
-
-class DevUserEventLoggingRepo extends DevEventRepo[UserEvent] with UserEventLoggingRepo {
-  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Unit = {}
-  def setUserProperties(userId: Id[User], properties: HeimdalContext): Unit = {}
-  def delete(userId: Id[User]): Unit = {}
-  def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 }

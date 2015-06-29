@@ -15,10 +15,6 @@ GET  /internal/heimdal/:repo/getAvailableMetrics       @com.keepit.controllers.A
 
 GET  /internal/heimdal/:repo/getMetric                 @com.keepit.controllers.AnalyticsController.getMetric(repo: String, name: String ?= "all", as: String ?="line")
 
-GET  /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.AnalyticsController.getEventDescriptors(repo: String)
-
-POST /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.AnalyticsController.updateEventDescriptors(repo: String)
-
 GET  /internal/heimdal/user/delete                     @com.keepit.controllers.AnalyticsController.deleteUser(userId: Id[User])
 POST /internal/heimdal/user/set                        @com.keepit.controllers.AnalyticsController.setUserProperties(userId: Id[User])
 POST /internal/heimdal/user/increment                  @com.keepit.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])

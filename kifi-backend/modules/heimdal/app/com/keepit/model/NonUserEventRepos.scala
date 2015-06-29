@@ -13,19 +13,6 @@ import scala.concurrent.Future
 
 trait NonUserEventLoggingRepo extends EventRepo[NonUserEvent]
 
-class ProdNonUserEventLoggingRepo(val mixpanel: MixpanelClient, val descriptors: NonUserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
-    extends MongoEventRepo[NonUserEvent] with NonUserEventLoggingRepo {
-  val warnBufferSize = 2000
-  val maxBufferSize = 10000
-
-  private val augmentors = Seq(NonUserIdentifierAugmentor)
-
-  override def persist(nonUserEvent: NonUserEvent): Future[Unit] =
-    EventAugmentor.safelyAugmentContext(nonUserEvent, augmentors: _*).flatMap { augmentedContext =>
-      super.persist(nonUserEvent.copy(context = augmentedContext))
-    }
-}
-
 trait NonUserEventDescriptorRepo extends EventDescriptorRepo[NonUserEvent]
 
 object NonUserIdentifierAugmentor extends EventAugmentor[NonUserEvent] {
@@ -45,4 +32,3 @@ case class NonUserEventDescriptorNameKey(name: EventType) extends Key[EventDescr
   def toKey(): String = name.name
 }
 
-class DevNonUserEventLoggingRepo extends DevEventRepo[NonUserEvent] with NonUserEventLoggingRepo

@@ -14,10 +14,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait SystemEventLoggingRepo extends EventRepo[SystemEvent]
 
-class ProdSystemEventLoggingRepo(val mixpanel: MixpanelClient, val descriptors: SystemEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
-    extends MongoEventRepo[SystemEvent] with SystemEventLoggingRepo {
-}
-
 trait SystemEventDescriptorRepo extends EventDescriptorRepo[SystemEvent]
 
 class SystemEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -29,4 +25,3 @@ case class SystemEventDescriptorNameKey(name: EventType) extends Key[EventDescri
   def toKey(): String = name.name
 }
 
-class DevSystemEventLoggingRepo extends DevEventRepo[SystemEvent] with SystemEventLoggingRepo

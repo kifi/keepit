@@ -550,8 +550,6 @@ GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminCont
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
 GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
-GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
-POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()

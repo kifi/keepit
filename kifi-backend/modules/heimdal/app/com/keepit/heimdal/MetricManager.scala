@@ -1,6 +1,5 @@
 package com.keepit.heimdal
 
-import com.keepit.model.{ UserEventLoggingRepo }
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
@@ -21,7 +20,6 @@ object MetricDescriptor {
 }
 
 class MetricManager @Inject() (
-    userEventLoggingRepo: UserEventLoggingRepo,
     serviceDiscovery: ServiceDiscovery) {
 
   var updateInProgress: Boolean = false

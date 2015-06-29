@@ -11,7 +11,7 @@ import scala.concurrent.{ Future, Promise }
 trait EventRepo[E <: HeimdalEvent] {
   def persist(event: E): Future[Unit]
   def getEventCompanion: HeimdalEventCompanion[E]
-  def descriptors: EventDescriptorRepo[E]
+  def descriptors: Set[EventType]
 }
 
 trait EventAugmentor[E <: HeimdalEvent] extends PartialFunction[E, Future[Seq[(String, ContextData)]]]
@@ -36,23 +36,22 @@ object EventAugmentor extends Logging {
   }
 }
 
-abstract class MongoEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends EventRepo[E] {
+abstract class MongoEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends EventRepo[E] with Logging {
   val getEventCompanion = implicitly[HeimdalEventCompanion[E]]
   val mixpanel: MixpanelClient
   def persist(event: E): Future[Unit] = {
-    val trackF = descriptors.getByName(event.eventType) flatMap {
-      case None => descriptors.upsert(EventDescriptor(event.eventType)) map (_ => ())
-      case Some(description) if description.mixpanel => mixpanel.track(event)
+    if (descriptors.contains(event.eventType)) {
+      mixpanel.track(event)
+    } else {
+      log.info(s"[EventRepo] Event discarded: $event")
+      Future.successful((): Unit)
     }
-
-    trackF
   }
 }
 
 abstract class DevEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends EventRepo[E] {
   val getEventCompanion = implicitly[HeimdalEventCompanion[E]]
   def persist(event: E): Future[Unit] = Future.successful(())
-  lazy val descriptors: EventDescriptorRepo[E] = new DevEventDescriptorRepo[E] {}
 }
 
 object EventRepo {
