@@ -6,6 +6,7 @@ import com.keepit.cortex.article.CortexArticleProvider
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
 import com.keepit.cortex.nlp.Stopwords
+import com.keepit.cortex.tagcloud.{ TagCloudPluginImpl, TagCloudPlugin }
 import com.keepit.search.ArticleStore
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
@@ -23,6 +24,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
     bind[LDAInfoUpdatePlugin].to[LDAInfoUpdatePluginImpl].in[AppScoped]
     bind[LDALibraryUpdaterPlugin].to[LDALibraryUpdaterPluginImpl].in[AppScoped]
     bind[LDARelatedLibraryPlugin].to[LDARelatedLibraryPluginImpl].in[AppScoped]
+    bind[TagCloudPlugin].to[TagCloudPluginImpl].in[AppScoped]
   }
 
   @Singleton
