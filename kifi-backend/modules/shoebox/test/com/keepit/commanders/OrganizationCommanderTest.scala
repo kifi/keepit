@@ -13,9 +13,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
-        response must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
-        val org = response.right.get.newOrg
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createResponse = orgCommander.createOrganization(createRequest)
+        createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+        val org = createResponse.right.get.newOrg
 
         orgCommander.get(org.id.get) === org
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
@@ -30,7 +31,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
@@ -40,19 +42,19 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         // Random non-members shouldn't be able to modify the org
         val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](42),
-          modifications = OrganizationModifications(newName = Some("User 42 Rules!")))
+          modifications = OrganizationModifications(name = Some("User 42 Rules!")))
         val nonmemberModifyResponse = orgCommander.modifyOrganization(nonmemberModifyRequest)
         nonmemberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // Neither should a generic member
         val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](2),
-          modifications = OrganizationModifications(newName = Some("User 2 Rules!")))
+          modifications = OrganizationModifications(name = Some("User 2 Rules!")))
         val memberModifyResponse = orgCommander.modifyOrganization(memberModifyRequest)
         memberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // An owner can do whatever they want
         val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
-          modifications = OrganizationModifications(newName = Some("The view is nice from up here")))
+          modifications = OrganizationModifications(name = Some("The view is nice from up here")))
         val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
         ownerModifyResponse must haveClass[Right[OrganizationModifyRequest, Organization]]
         ownerModifyResponse.right.get.request === ownerModifyRequest
@@ -68,7 +70,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
@@ -85,7 +88,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         // An owner can change the base permissions so that members CAN do this
         val betterBasePermissions = org.basePermissions.modified(OrganizationRole.MEMBER, added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
         val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
-          modifications = OrganizationModifications(newBasePermissions = Some(betterBasePermissions)))
+          modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
 
         val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
         orgModifyResponse must haveClass[Right[OrganizationFail, OrganizationModifyResponse]]
@@ -108,7 +111,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = Id[User](1), "Kifi"))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
@@ -141,7 +145,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val (deactivatedOrg, memberships) = db.readOnlyMaster { implicit session =>
           (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
         }
-        deactivatedOrg.state == OrganizationStates.INACTIVE
+        deactivatedOrg.state === OrganizationStates.INACTIVE
         memberships.length === 0
       }
     }
