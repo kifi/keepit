@@ -136,6 +136,19 @@ class SliderAdminController @Inject() (
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
+  def findDomain = AdminUserPage { implicit request =>
+    Ok(html.admin.domainFind())
+  }
+
+  def getDomain(hostname: String) = AdminUserPage { implicit request =>
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(hostname, None)
+    }
+      // TODO this is for testing the form, remove for production
+      .orElse(Some(Domain(id = Some(Id(1)), hostname = hostname)))
+    domain.map { d => Ok(html.admin.domain(d)) }.getOrElse(NotFound)
+  }
+
   def getVersionForm = AdminUserPage { implicit request =>
     val details = kifiInstallationStore.getRaw()
 

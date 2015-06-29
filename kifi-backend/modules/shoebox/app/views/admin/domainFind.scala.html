@@ -1,0 +1,11 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Find Domain", stylesheets = List("admin_slider")) {
+    <form action="/admin/slider/domain" method="GET" class="form-inline">
+        <div class="form-group">
+            <label for="hostname" class="control-label">Domain hostname</label>
+            <input type="text" name="hostname" class="form-control" placeholder="Hostname">
+        </div>
+        <button type="submit" class="btn btn-primary">Find by hostname</button>
+    </form>
+}
