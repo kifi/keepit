@@ -59,7 +59,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[FakeUserActionsHelper].setUser(members.head)
+          inject[FakeUserActionsHelper].setUser(members.head, Set(ExperimentType.ORGANIZATION))
           val request = route.getMembers(publicOrgId)
           val result = controller.getMembers(publicOrgId, offset = 0, limit = n)(request)
           status(result) === OK
@@ -81,7 +81,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
 
-          inject[FakeUserActionsHelper].setUser(members.head)
+          inject[FakeUserActionsHelper].setUser(members.head, Set(ExperimentType.ORGANIZATION))
           val memberRequest = route.getMembers(publicOrgId)
           val memberResult = controller.getMembers(publicOrgId, offset = n, limit = n)(memberRequest)
           status(memberResult) === OK
@@ -93,14 +93,13 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
             resultInviteesList.length === 0
           }
 
-          inject[FakeUserActionsHelper].setUser(owner)
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val ownerRequest = route.getMembers(publicOrgId)
           val ownerResult = controller.getMembers(publicOrgId, offset = n, limit = n)(ownerRequest)
           status(ownerResult) === OK
 
           {
             val json = Json.parse(contentAsString(ownerResult))
-            println(json)
             val resultInviteesList = (json \ "members").as[Seq[JsValue]]
             resultInviteesList.length === n
             (json \ "members" \\ "id").length === n
@@ -119,13 +118,12 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
 
-          inject[FakeUserActionsHelper].setUser(owner)
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val ownerRequest = route.getMembers(publicOrgId)
           val ownerResult = controller.getMembers(publicOrgId, offset = 2 * n, limit = n)(ownerRequest)
           status(ownerResult) === OK
 
           val json = Json.parse(contentAsString(ownerResult))
-          println(json)
           val resultInviteesList = (json \ "members").as[Seq[JsValue]]
           resultInviteesList.length === n
           (json \ "members" \\ "id").length === 0 // no user ids, only emails
