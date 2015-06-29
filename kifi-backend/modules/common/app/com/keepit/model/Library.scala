@@ -19,6 +19,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.duration.Duration
 
@@ -151,6 +152,37 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
     seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
+}
+
+abstract class LibraryFilter(val value: String)
+object LibraryFilter {
+  case object OWN_FILTER extends LibraryFilter("own")
+  case object FOLLOWING_FILTER extends LibraryFilter("following")
+  case object INVITED_FILTER extends LibraryFilter("invited")
+  case object ALL_FILTER extends LibraryFilter("all")
+
+  def apply(value: String) = {
+    value match {
+      case OWN_FILTER.value => OWN_FILTER
+      case FOLLOWING_FILTER.value => FOLLOWING_FILTER
+      case INVITED_FILTER.value => INVITED_FILTER
+      case ALL_FILTER.value => ALL_FILTER
+    }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryFilter] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LibraryFilter]] = {
+      stringBinder.bind(key, params) map {
+        case Right(str) =>
+          Right(LibraryFilter(str))
+        case _ => Left("Unable to bind a LibraryFilter")
+      }
+    }
+
+    override def unbind(key: String, ordering: LibraryFilter): String = {
+      stringBinder.unbind(key, ordering.value)
+    }
+  }
 }
 
 object LibraryPathHelper {
