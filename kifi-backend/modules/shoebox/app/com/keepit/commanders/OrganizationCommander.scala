@@ -66,7 +66,7 @@ class OrganizationCommanderImpl @Inject() (
   def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationCreateRequest(createrId, initialParameters) =>
-        if (initialParameters.name.isDefined && areAllValidModifications(initialParameters)) None else Some(OrganizationFail.BAD_PARAMETERS)
+        if (!initialParameters.name.isDefined || !areAllValidModifications(initialParameters)) Some(OrganizationFail.BAD_PARAMETERS) else None
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
         if (!permissions.exists(_.contains(EDIT_ORGANIZATION))) {
@@ -77,7 +77,7 @@ class OrganizationCommanderImpl @Inject() (
           None
         }
       case OrganizationDeleteRequest(requesterId, orgId) =>
-        if (requesterId == orgRepo.get(orgId).ownerId) None else Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS) else None
     }
   }
 
@@ -126,7 +126,7 @@ class OrganizationCommanderImpl @Inject() (
           val modifiedOrg = organizationWithModifications(org, request.modifications)
           if (request.modifications.basePermissions.nonEmpty) {
             val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
-            applyNewBasePermissionsToMembers(memberships, org.basePermissions, request.modifications.basePermissions.get)
+            applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
           }
 
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
