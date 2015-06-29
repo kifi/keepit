@@ -1,55 +1,50 @@
 @(domain: com.keepit.classify.Domain)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("View Domain", stylesheets = List("admin_slider")) {
-    <form class="domain-overrides" action="@* insert POST route here *@" method="POST">
-        <table class="table table-bordered">
-            <tr>
-                <th>ID</th><td>@domain.id.get.id</td>
-            </tr>
-            <tr>
-                <th>Hostname</th><td>@domain.hostname</td>
-            </tr>
-            <tr>
-                <th>Auto Sensitive</th><td>@domain.autoSensitive.getOrElse(false)</td>
-            </tr>
-            <tr>
-                <th>Manual Sensitive</th><td>@domain.manualSensitive.getOrElse(false)</td>
-            </tr>
-            <tr>
-                <th>State (active?)</th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="state" class="checkbox modifies-form" @if(domain.isActive) {
-                            checked="checked" }>
-                        @domain.state.value
-                    </label>
-                </td>
-            </tr>
-            <tr>
-                <th>Email provider?</th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="emailProvider" class="checkbox modifies-form" checked="checked">
-                        <!-- TODO fill with actual email provider -->
-                        true
-                    </label>
-                </td>
-            </tr>
-            <tr>
-                <th>Created At</th><td>@adminHelper.dateTimeDisplay(domain.createdAt)</td>
-            </tr>
-            <tr>
-                <th>Updated At</th><td>@adminHelper.dateTimeDisplay(domain.updatedAt)</td>
-            </tr>
-        </table>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <span class="unsaved-changes"></span>
-    </form>
+    <table class="table table-bordered">
+        <tr>
+            <th>ID</th><td>@domain.id.get.id</td>
+        </tr>
+        <tr>
+            <th>Hostname</th><td>@domain.hostname</td>
+        </tr>
+        <tr>
+            <th>Auto Sensitive</th><td>@domain.autoSensitive.getOrElse(false)</td>
+        </tr>
+        <tr>
+            <th>Manual Sensitive</th><td>@domain.manualSensitive.getOrElse(false)</td>
+        </tr>
+        <tr>
+            <th>State (active?)</th>
+            <td>
+                <label>
+                    @domain.state.value
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <th>Email provider</th>
+            <td>
+                <form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.domainToggleEmailProvider(domain.id.get)" method="POST">
+                    @*TODO uncomment to fill in with actual data*@
+                    @* @domain.emailProvider *@
+                    true
+                    <button type="submit" class="btn btn-default btn-small">
+                        @* @if(domain.emailProvider) { *@
+                        @if(true) {
+                            Make email provider
+                        } else {
+                            Un-make email provider
+                        }
+                    </button>
+                </form>
+            </td>
+        </tr>
+        <tr>
+            <th>Created At</th><td>@adminHelper.dateTimeDisplay(domain.createdAt)</td>
+        </tr>
+        <tr>
+            <th>Updated At</th><td>@adminHelper.dateTimeDisplay(domain.updatedAt)</td>
+        </tr>
+    </table>
 }
-<script>
-$(function () {
-    $('.modifies-form').on('change', function () {
-        $('.unsaved-changes').html('(Unsaved Changes)')
-    })
-});
-</script>

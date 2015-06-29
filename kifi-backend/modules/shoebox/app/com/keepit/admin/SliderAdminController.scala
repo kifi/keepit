@@ -136,16 +136,37 @@ class SliderAdminController @Inject() (
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
-  def findDomain = AdminUserPage { implicit request =>
+  def searchDomain = AdminUserPage { implicit request =>
     Ok(html.admin.domainFind())
   }
 
-  def getDomain(hostname: String) = AdminUserPage { implicit request =>
-    val domainOpt = db.readOnlyReplica { implicit s =>
+  def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
+    val hostname = request.body.get("hostname").get.head
+    val domain = db.readOnlyReplica { implicit s =>
       domainRepo.get(hostname, None)
     }
 
-    domainOpt.map { domain => Ok(html.admin.domain(domain)) }.getOrElse(NotFound)
+    // TODO this is for testing the form with seed data, remove for production
+    val domainSeeded = domain.orElse(Some(Domain(id = Some(Id(1)), hostname = hostname, state = DomainStates.INACTIVE)))
+
+    domainSeeded.map { domain => Redirect(routes.SliderAdminController.getDomain(domain.id.get)) }.getOrElse(NotFound)
+  }
+
+  def getDomain(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(id)
+    }
+    Ok(html.admin.domain(domain))
+  }
+
+  def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readWrite { implicit s =>
+      val domain = domainRepo.get(id)
+      // TODO waiting on email provider
+      val domainToggled = /*domain.withEmailProvider(!domain.emailProvider)*/ domain
+      domainRepo.save(domainToggled)
+    }
+    Redirect(routes.SliderAdminController.getDomain(id))
   }
 
   def getVersionForm = AdminUserPage { implicit request =>
