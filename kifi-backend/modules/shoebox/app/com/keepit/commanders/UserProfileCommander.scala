@@ -44,10 +44,10 @@ class UserProfileCommander @Inject() (
     implicit val config: PublicIdConfiguration) {
 
   def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
-    getOwnLibrariesForSelf(user, page, idealSize, List())
+    getOwnLibrariesForSelf(user, page, idealSize, None)
   }
 
-  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: List[LibraryOrdering]): ParSeq[LibraryCardInfo] = {
+  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering]): ParSeq[LibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering)
       val libOwnerIds = libs.map(_.ownerId).toSet
@@ -82,7 +82,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: List[LibraryOrdering] = List()): ParSeq[LibraryCardInfo] = {
+  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
@@ -96,7 +96,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: List[LibraryOrdering] = List()): ParSeq[LibraryCardInfo] = {
+  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>

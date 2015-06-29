@@ -121,7 +121,7 @@ class MobileUserProfileController @Inject() (
   // more readily available via mobile clients, I assume desktop would
   // benefit as well - @jaredpetker
   def getProfileLibrariesV2(id: ExternalId[User], page: Int, pageSize: Int,
-    filter: LibraryFilter, ordering: List[LibraryOrdering] = List()) = MaybeUserAction.async { implicit request =>
+    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None) = MaybeUserAction.async { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         val viewer = request.userOpt
