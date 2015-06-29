@@ -11,6 +11,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{Success, Failure}
 
 @Singleton
 class MobileOrganizationController @Inject() (
@@ -39,6 +40,33 @@ class MobileOrganizationController @Inject() (
               Ok(Json.toJson(orgCommander.getFullOrganizationInfo(response.newOrg.id.get)))
           }
       }
+    }
+  }
+
+  def modifyOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    request.request.userIdOpt match {
+      case None => BadRequest(Json.obj("error" -> "insufficient_permissions"))
+      case Some(requesterId) =>
+        request.body.validate[OrganizationModifications] match {
+          case _: JsError => BadRequest(Json.obj("error" -> "badly_formed_modifications"))
+          case JsSuccess(modifications, _) =>
+            orgCommander.modifyOrganization(OrganizationModifyRequest(requesterId, request.orgId, modifications)) match {
+              case Left(failure) => failure.asErrorResponse
+              case Right(response) => Ok(Json.toJson(orgCommander.getFullOrganizationInfo(request.orgId)))
+            }
+        }
+    }
+  }
+
+  def deleteOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    request.request.userIdOpt match {
+      case None => BadRequest(Json.obj("error" -> "insufficient_permissions"))
+      case Some(requesterId) =>
+        val deleteRequest = OrganizationDeleteRequest(requesterId = requesterId, orgId = request.orgId)
+        orgCommander.deleteOrganization(deleteRequest) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) => NoContent
+        }
     }
   }
 
