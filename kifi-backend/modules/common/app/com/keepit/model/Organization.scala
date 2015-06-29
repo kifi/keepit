@@ -35,7 +35,7 @@ case class Organization(
   def withName(newName: String): Organization = this.copy(name = newName)
   def withDescription(newDescription: Option[String]): Organization = this.copy(description = newDescription)
   def withBasePermissions(newBasePermissions: BasePermissions): Organization = {
-    this.copy(basePermissions = basePermissions.copy(permissionsMap = basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
+    this.copy(basePermissions = new BasePermissions(basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
   }
 
   def getNonmemberPermissions = basePermissions.forNonmember
