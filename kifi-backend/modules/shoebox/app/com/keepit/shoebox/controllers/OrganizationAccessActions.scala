@@ -40,7 +40,8 @@ trait OrganizationAccessActions {
               }
             case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
           }
-        case _ => Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
+        case _ =>
+          Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
       }
     }
   }
