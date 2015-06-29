@@ -8,11 +8,9 @@ import com.keepit.common.db.ExternalId
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import play.api.libs.json.{ Json, JsSuccess, JsError }
-import play.api.mvc.Result
+import play.api.libs.json.{ JsError, JsSuccess, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
 
 @Singleton
 class MobileOrganizationController @Inject() (
@@ -24,21 +22,19 @@ class MobileOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   // TODO: add to commander:
-  // getOrganizationView
   // getOrganizationCard
 
-  def createOrganization = UserAction.async(parse.tolerantJson) { request =>
+  def createOrganization = UserAction(parse.tolerantJson) { request =>
     request.body.validate[OrganizationModifications] match {
       case _: JsError =>
-        Future.successful(BadRequest)
+        BadRequest
       case JsSuccess(initialValues, _) =>
         val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
         orgCommander.createOrganization(createRequest) match {
           case Left(failure) =>
-            Future.successful(failure.asErrorResponse)
+            failure.asErrorResponse
           case Right(response) =>
-            val orgView = orgCommander.getFullOrganizationInfo(response.newOrg.id.get)
-            Future.successful(Ok(Json.toJson(orgView)))
+            Ok(Json.toJson(orgCommander.getFullOrganizationInfo(response.newOrg.id.get)))
         }
     }
   }

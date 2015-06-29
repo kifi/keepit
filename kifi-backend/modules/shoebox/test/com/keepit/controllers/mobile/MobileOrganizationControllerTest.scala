@@ -104,7 +104,17 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
           inject[FakeUserActionsHelper].setUser(user)
-          val request = route.createOrganization().withBody(JsString("{i am really horrible at json}"))
+          val request = route.createOrganization().withBody(Json.parse("""{"asdf": "qwer"}"""))
+          val result = controller.createOrganization(request)
+          status(result) === BAD_REQUEST
+        }
+      }
+      "reject empty names" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
+
+          inject[FakeUserActionsHelper].setUser(user)
+          val request = route.createOrganization().withBody(Json.parse("""{"name": ""}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
         }

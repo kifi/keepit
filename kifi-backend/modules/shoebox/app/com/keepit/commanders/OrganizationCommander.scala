@@ -10,6 +10,8 @@ import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ VIEW_ORGANIZATION, EDIT_ORGANIZATION }
 import com.keepit.model._
 
+import scala.util.{ Success, Failure, Try }
+
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def get(orgId: Id[Organization]): Organization
@@ -84,23 +86,25 @@ class OrganizationCommanderImpl @Inject() (
       .withDescription(modifications.description.orElse(org.description))
       .withBasePermissions(modifications.basePermissions.getOrElse(org.basePermissions))
   }
+
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
-    try {
+    Try {
       db.readWrite { implicit session =>
-        if (isValidRequest(request)) {
+        if (!isValidRequest(request)) None
+        else {
           val protoOrg = Organization(ownerId = request.requesterId, name = request.initialValues.name.get, handle = None)
           val orgTemplate = organizationWithModifications(protoOrg, request.initialValues)
           val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-            throw new Exception(s"COULD NOT CREATE ORGANIZATION [$request.orgName] SINCE WE DIDN'T FIND A HANDLE!!!")
+            throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
           }
           orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
-          Right(OrganizationCreateResponse(request, org))
-        } else {
-          Left(OrganizationFail.BAD_PARAMETERS)
+          Some(OrganizationCreateResponse(request, org))
         }
       }
-    } catch {
-      case e: Exception => Left(OrganizationFail.HANDLE_UNAVAILABLE)
+    } match {
+      case Success(Some(response)) => Right(response)
+      case Success(None) => Left(OrganizationFail.BAD_PARAMETERS)
+      case Failure(ex) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
     }
   }
 
