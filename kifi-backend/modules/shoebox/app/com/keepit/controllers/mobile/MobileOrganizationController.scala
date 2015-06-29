@@ -25,17 +25,20 @@ class MobileOrganizationController @Inject() (
   // getOrganizationCard
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
-    request.body.validate[OrganizationModifications] match {
-      case _: JsError =>
-        BadRequest
-      case JsSuccess(initialValues, _) =>
-        val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
-        orgCommander.createOrganization(createRequest) match {
-          case Left(failure) =>
-            failure.asErrorResponse
-          case Right(response) =>
-            Ok(Json.toJson(orgCommander.getFullOrganizationInfo(response.newOrg.id.get)))
-        }
+    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    else {
+      request.body.validate[OrganizationModifications] match {
+        case _: JsError =>
+          BadRequest
+        case JsSuccess(initialValues, _) =>
+          val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
+          orgCommander.createOrganization(createRequest) match {
+            case Left(failure) =>
+              failure.asErrorResponse
+            case Right(response) =>
+              Ok(Json.toJson(orgCommander.getFullOrganizationInfo(response.newOrg.id.get)))
+          }
+      }
     }
   }
 
