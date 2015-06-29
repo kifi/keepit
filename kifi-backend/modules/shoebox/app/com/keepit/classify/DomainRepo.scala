@@ -7,12 +7,15 @@ import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.DBSession
 
+import scala.collection.parallel.mutable
+
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
 }
 
 @Singleton
@@ -60,5 +63,17 @@ class DomainRepoImpl @Inject() (
     val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())
     domainIds foreach { id => invalidateCache(get(id)) }
     count
+  }
+
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
+    val foundDomains = (for (d <- rows if d.hostname.inSet(domainNames))
+      yield (d.hostname -> d)).toMap
+
+    val domainsToSave = (foundDomains.keys.toSet).diff(domainNames)
+    val savedDomains = domainsToSave.map { domainName =>
+      (domainName -> super.save(Domain(hostname = domainName)))
+    }.toMap
+
+    foundDomains ++ savedDomains
   }
 }

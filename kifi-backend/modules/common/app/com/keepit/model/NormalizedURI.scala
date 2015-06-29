@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import com.keepit.classify.{ IngestableWithDomain, Domain }
 import com.keepit.common.net.URI
 
 import scala.concurrent.duration._
@@ -130,14 +129,14 @@ object NormalizedURIStates extends States[NormalizedURI] {
 }
 
 case class IndexableUri(
-  id: Option[Id[NormalizedURI]] = None,
-  title: Option[String] = None,
-  url: String,
-  restriction: Option[Restriction] = None,
-  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  shouldHaveContent: Boolean,
-  seq: SequenceNumber[NormalizedURI]) extends IngestableWithDomain {
-    def getDomainName = URI.parseDomain(url).get
+    id: Option[Id[NormalizedURI]] = None,
+    title: Option[String] = None,
+    url: String,
+    restriction: Option[Restriction] = None,
+    state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+    shouldHaveContent: Boolean,
+    seq: SequenceNumber[NormalizedURI]) {
+  def getDomainName = URI.parseDomain(url).get
 }
 
 object IndexableUri {

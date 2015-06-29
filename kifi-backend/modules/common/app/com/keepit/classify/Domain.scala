@@ -54,10 +54,6 @@ case class DomainInfo(
   hostname: String,
   isEmailProvider: Boolean)
 
-trait IngestableWithDomain {
-  def getDomainName: String
-}
-
 object DomainStates extends States[Domain]
 
 case class DomainKey(hostname: String) extends Key[Domain] {

@@ -1,7 +1,6 @@
 package com.keepit.graph.manager
 
-import com.keepit.abook.model.EmailAccountInfo
-import com.keepit.classify.{ DomainInfo, IngestableWithDomain, Domain }
+import com.keepit.classify.{ DomainInfo }
 import com.keepit.common.net.URI
 
 import scala.concurrent.Future
@@ -70,19 +69,13 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case NormalizedUriGraphUpdate => {
         shoebox.getIndexableUris(seq.copy(), fetchSize).flatMap { indexableUris =>
-          internDomainsByDomainNames(indexableUris).imap { domainInfos: Seq[DomainInfo] =>
-            val domainIdOpts = indexableUris.map { uri =>
-              domainInfos.find { domain =>
-                uri.getDomainName == domain.hostname && !domain.isEmailProvider
-              } match {
-                case Some(domain: DomainInfo) => domain.id
-                case None => None
-              }
-            }
 
-            indexableUris.zip(domainIdOpts).map {
-              case (indexableUri, domainIdOpt) =>
-                NormalizedUriGraphUpdate.apply(indexableUri, domainIdOpt)
+          shoebox.internDomainsByDomainNames(indexableUris.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
+            indexableUris.map { uri =>
+              domainInfoByName.get(uri.getDomainName) match {
+                case Some(domain: DomainInfo) if !domain.isEmailProvider => NormalizedUriGraphUpdate.apply(uri, domain.id)
+                case _ => NormalizedUriGraphUpdate(uri, None)
+              }
             }
           }
         }
@@ -90,19 +83,12 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case EmailAccountGraphUpdate => {
         abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailAccounts =>
-          internDomainsByDomainNames(emailAccounts).imap { domainInfos: Seq[DomainInfo] =>
-            val domainIdOpts = emailAccounts.map { email =>
-              domainInfos.find { domain =>
-                domain.hostname == email.getDomainName && !domain.isEmailProvider
-              } match {
-                case Some(domain: DomainInfo) => domain.id // domain was just interned, must have an id
-                case None => None
+          shoebox.internDomainsByDomainNames(emailAccounts.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
+            emailAccounts.map { email =>
+              domainInfoByName.get(email.getDomainName) match {
+                case Some(domain: DomainInfo) if !domain.isEmailProvider => EmailAccountGraphUpdate.apply(email, domain.id)
+                case _ => EmailAccountGraphUpdate(email, None)
               }
-            }
-
-            emailAccounts.zip(domainIdOpts).map {
-              case (emailAccount, domainIdOpt) =>
-                EmailAccountGraphUpdate.apply(emailAccount, domainIdOpt)
             }
           }
         }
@@ -120,10 +106,5 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case UserIpAddressGraphUpdate => shoebox.getIngestableUserIpAddresses(seq.copy(), fetchSize).imap(_.map(UserIpAddressGraphUpdate.apply))
     }
-  }
-
-  protected def internDomainsByDomainNames[T <: IngestableWithDomain](ingestables: Seq[T]): Future[Seq[DomainInfo]] = {
-    val domainNames = ingestables.groupBy[String] { _.getDomainName }.keys.toSeq
-    shoebox.internDomainsByDomainNames(domainNames)
   }
 }

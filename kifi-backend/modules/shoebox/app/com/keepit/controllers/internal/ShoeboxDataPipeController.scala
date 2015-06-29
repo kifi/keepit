@@ -272,17 +272,12 @@ class ShoeboxDataPipeController @Inject() (
 
   def internDomainsByDomainNames() = Action.async(parse.json) { request =>
     SafeFuture {
-      val domainNames = (request.body \ "domainNames").as[Seq[String]]
+      val domainNames = (request.body \ "domainNames").as[Set[String]]
 
-      val domainInfos: Seq[DomainInfo] = db.readWrite { implicit session =>
-        domainNames.map { name =>
-          (name, domainRepo.get(name, excludeState = None))
-        }.map {
-          case (_, Some(domain: Domain)) => domain.toDomainInfo
-          case (name: String, None) => domainRepo.save(Domain(hostname = name)).toDomainInfo
-        }
+      val domainInfoByName: Map[String, DomainInfo] = db.readWrite { implicit session =>
+        domainRepo.internAllByNames(domainNames).map { case (name: String, domain: Domain) => (name, domain.toDomainInfo) }
       }
-      Ok(Json.toJson(domainInfos))
+      Ok(Json.toJson(domainInfoByName))
     }
   }
 }
