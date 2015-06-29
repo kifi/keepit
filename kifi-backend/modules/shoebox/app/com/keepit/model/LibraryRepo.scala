@@ -27,7 +27,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getBySpaceAndName(space: LibrarySpace, name: String, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
-  def getBySpaceAndNameOrSlug(space: LibrarySpace, name: String, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
@@ -188,19 +187,6 @@ class LibraryRepoImpl @Inject() (
     space match {
       case UserSpace(userId) => getByUserIdAndSlug(userId, slug, excludeStates)
       case OrganizationSpace(orgId) => getByOrgIdAndSlug(orgId, slug, excludeStates)
-    }
-  }
-
-  private def getByUserIdAndNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.ownerId === userId && (b.slug === slug || b.name === name) && !b.state.inSet(excludeStates)) yield b).firstOption
-  }
-  private def getByOrgIdAndNameOrSlug(orgId: Id[Organization], name: String, slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.orgId === orgId && (b.slug === slug || b.name === name) && !b.state.inSet(excludeStates)) yield b).firstOption
-  }
-  def getBySpaceAndNameOrSlug(space: LibrarySpace, name: String, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
-    space match {
-      case UserSpace(userId) => getByUserIdAndNameOrSlug(userId, name, slug, excludeStates)
-      case OrganizationSpace(orgId) => getByOrgIdAndNameOrSlug(orgId, name, slug, excludeStates)
     }
   }
 

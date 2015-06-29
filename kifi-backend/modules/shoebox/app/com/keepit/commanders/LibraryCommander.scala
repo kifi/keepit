@@ -542,12 +542,16 @@ class LibraryCommanderImpl @Inject() (
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
-        db.readOnlyReplica { implicit s => libraryRepo.getBySpaceAndNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
-          case Some(lib) if lib.name == libAddReq.name =>
+        db.readOnlyReplica { implicit s =>
+          val sameNameOpt = libraryRepo.getBySpaceAndName(ownerId, libAddReq.name)
+          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(ownerId, validSlug)
+          (sameNameOpt, sameSlugOpt)
+        } match {
+          case (Some(sameName), _) =>
             Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
-          case Some(lib) if lib.slug == validSlug =>
+          case (_, Some(sameSlug)) =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-          case None =>
+          case (None, None) =>
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
