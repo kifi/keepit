@@ -29,6 +29,7 @@ abstract class CortexModule(
     val modelModule: CortexModelModule,
     val ldaInfoModule: LDAInfoStoreModule,
     val dataIngestionModule: CortexDataIngestionModule,
+    val queueModule: CortexQueueModule,
     val nlpModule: NLPModule) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val curatorServiceClientModule = ProdCuratorServiceClientModule()

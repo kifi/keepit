@@ -60,21 +60,30 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
+    getValidationError(request).isEmpty
+  }
+
+  def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationCreateRequest(createrId, initialParameters) =>
-        initialParameters.name.isDefined && areAllValidModifications(initialParameters)
-
+        if (!initialParameters.name.isDefined || !areAllValidModifications(initialParameters)) Some(OrganizationFail.BAD_PARAMETERS) else None
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
-        permissions.exists { _.contains(EDIT_ORGANIZATION) } && areAllValidModifications(modifications)
-
+        if (!permissions.exists(_.contains(EDIT_ORGANIZATION))) {
+          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        } else if (!areAllValidModifications(modifications)) {
+          Some(OrganizationFail.BAD_PARAMETERS)
+        } else {
+          None
+        }
       case OrganizationDeleteRequest(requesterId, orgId) =>
-        requesterId == orgRepo.get(orgId).ownerId
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS) else None
     }
   }
+
   private def areAllValidModifications(modifications: OrganizationModifications): Boolean = {
-    lazy val badName = modifications.name.exists(_.isEmpty)
-    lazy val badBasePermissions = modifications.basePermissions.exists { bps =>
+    val badName = modifications.name.exists(_.isEmpty)
+    val badBasePermissions = modifications.basePermissions.exists { bps =>
       // Are there any members that can't even see the organization?
       OrganizationRole.all exists { role => !bps.forRole(role).contains(VIEW_ORGANIZATION) }
     }
@@ -110,18 +119,18 @@ class OrganizationCommanderImpl @Inject() (
 
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse] = {
     db.readWrite { implicit session =>
-      if (isValidRequest(request)) {
-        val org = orgRepo.get(request.orgId)
+      getValidationError(request) match {
+        case None =>
+          val org = orgRepo.get(request.orgId)
 
-        val modifiedOrg = organizationWithModifications(org, request.modifications)
-        if (request.modifications.basePermissions.nonEmpty) {
-          val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
-          applyNewBasePermissionsToMembers(memberships, org.basePermissions, request.modifications.basePermissions.get)
-        }
+          val modifiedOrg = organizationWithModifications(org, request.modifications)
+          if (request.modifications.basePermissions.nonEmpty) {
+            val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
+            applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
+          }
 
-        Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
-      } else {
-        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+          Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
+        case Some(orgFail) => Left(orgFail)
       }
     }
   }

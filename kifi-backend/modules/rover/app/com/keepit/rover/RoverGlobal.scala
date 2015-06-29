@@ -23,6 +23,6 @@ trait RoverServices { self: FortyTwoGlobal =>
   def startRoverServices(): Unit = {
     require(injector.instance[RoverManagerPlugin] != null)
     require(injector.instance[ArticleInfoSequencingPlugin] != null)
-    require(injector.instance[TagCloudPlugin] != null)
+    //require(injector.instance[TagCloudPlugin] != null)
   }
 }

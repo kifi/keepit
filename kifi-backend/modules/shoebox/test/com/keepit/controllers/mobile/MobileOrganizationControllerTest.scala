@@ -49,7 +49,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
           status(response) === OK
@@ -74,7 +74,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           implicit val config = inject[PublicIdConfiguration]
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
 
@@ -103,7 +103,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(Json.parse("""{"asdf": "qwer"}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -113,7 +113,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(Json.parse("""{"name": ""}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -127,7 +127,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val orgDescription = "Fun for the whole family"
           val createRequestJson = Json.parse(s"""{"name": "$orgName", "description": "$orgDescription"}""")
 
-          inject[FakeUserActionsHelper].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(createRequestJson)
           val result = controller.createOrganization(request)
           status(result) === OK
