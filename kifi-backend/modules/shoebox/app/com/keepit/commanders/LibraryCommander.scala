@@ -542,7 +542,7 @@ class LibraryCommanderImpl @Inject() (
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
-        db.readOnlyReplica { implicit s => libraryRepo.getByNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
+        db.readOnlyReplica { implicit s => libraryRepo.getBySpaceAndNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
           case Some(lib) if lib.name == libAddReq.name =>
             Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
           case Some(lib) if lib.slug == validSlug =>
@@ -618,7 +618,7 @@ class LibraryCommanderImpl @Inject() (
               Left(LibraryFail(BAD_REQUEST, "invalid_name"))
             } else {
               db.readOnlyMaster { implicit s =>
-                libraryRepo.getByNameAndUserId(userId, name)
+                libraryRepo.getBySpaceAndName(newSpace, name)
               } match {
                 case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
                 case _ => Right(name)
@@ -646,9 +646,9 @@ class LibraryCommanderImpl @Inject() (
             } else {
               val slug = LibrarySlug(slugStr)
               db.readOnlyMaster { implicit s =>
-                libraryAliasRepo.getBySpaceAndSlug(newSpace, slug)
+                libraryRepo.getBySpaceAndSlug(newSpace, slug)
               } match {
-                case Some(other) if other.libraryId != libraryId => Left(LibraryFail(BAD_REQUEST, "library_alias_exists"))
+                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
                 case _ => Right(slug)
               }
             }
@@ -1418,7 +1418,7 @@ class LibraryCommanderImpl @Inject() (
 
   def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      libraryRepo.getBySlugAndUserId(ownerId, slug).map((_, false)) orElse
+      libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(ownerId), slug).map((_, false)) orElse
         libraryAliasRepo.getBySpaceAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
   }
