@@ -93,7 +93,7 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
-
+    $scope.galleryView = true;
 
     //
     // Scope methods.

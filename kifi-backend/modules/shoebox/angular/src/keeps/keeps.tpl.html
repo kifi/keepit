@@ -38,6 +38,10 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
     <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
+
+      <p ng-if="galleryView">GALLERYVIEW</p>
+      <p ng-if="!galleryView">COMPACTVIEW</p>
+
       <div class="kf-keep-checkbox-wrap">
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
