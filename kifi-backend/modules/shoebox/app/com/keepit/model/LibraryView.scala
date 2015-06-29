@@ -62,7 +62,8 @@ case class LibraryModifyRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   // We can move the library from org to user space.
-  // User space is defined as having None for OrganizationId.
+  // If the move request's orgId is None, the move is treated as going to the
+  // owner's personal LibrarySpace
   orgId: Option[OrganizationMoveRequest] = None)
 
 case class LibraryInfo(
