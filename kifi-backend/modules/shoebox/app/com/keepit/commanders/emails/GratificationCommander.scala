@@ -78,7 +78,7 @@ class GratificationCommander @Inject() (
         case Success(gratDatas) =>
           log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails")
           emailSenderProvider.gratification.sendToUsersWithData(gratDatas, sendTo)
-        case Failure(t) => log.error(s"Grat Data batch retrieval failed for batchNum $batchNum. Exception: ${t.getMessage}", t)
+        case Failure(t) => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum", t)
       }
     }
   }
