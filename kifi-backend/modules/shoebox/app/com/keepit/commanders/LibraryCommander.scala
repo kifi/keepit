@@ -608,6 +608,7 @@ class LibraryCommanderImpl @Inject() (
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       val targetMembership = targetMembershipOpt.get
+      val currentSpace = LibrarySpace(userId, organizationId = targetLib.organizationId)
       val newSpace = LibrarySpace(userId, organizationId = modifyReq.orgId.flatMap(_.destination).orElse(targetLib.organizationId))
 
       def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
@@ -677,11 +678,9 @@ class LibraryCommanderImpl @Inject() (
         }
 
         val lib = db.readWrite { implicit s =>
-          if (targetLib.slug != newSlug) {
-            // TODO: update alias for organization updates and/or owner updates. (Need to do all updates in one go - only create a single alias)
-            val ownerId = targetLib.ownerId
-            libraryAliasRepo.reclaim(ownerId, newSlug)
-            libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
+          if (newSpace != currentSpace || newSlug != targetLib.slug) {
+            libraryAliasRepo.reclaim(currentSpace, newSlug)
+            libraryAliasRepo.alias(newSpace, targetLib.slug, targetLib.id.get)
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
