@@ -178,32 +178,6 @@ class AdminAnalyticsController @Inject() (
     }
   }
 
-  def getEventDescriptors() = AdminUserPage.async { implicit request =>
-    Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
-      heimdal.getEventDescriptors(companion).map { descriptors =>
-        companion.typeCode -> descriptors
-      }
-    }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
-  }
-
-  def updateEventDescriptors() = AdminUserPage.async { implicit request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    val descriptorsWithCode = body.keys.collect {
-      case key if key.endsWith(":description") =>
-        val Seq(code, name, _): Seq[String] = key.split(":")
-        val description = Some(body(s"$code:$name:description")).filter(_.nonEmpty)
-        val mixpanel = body.contains(s"$code:$name:mixpanel")
-        val eventName = EventType(name)
-        code -> EventDescriptor(eventName, description, mixpanel)
-    }
-
-    Future.sequence(
-      descriptorsWithCode.groupBy(_._1).mapValues(_.map(_._2)).map {
-        case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEventCompanion.byTypeCode(code))
-      }
-    ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
-  }
-
   def getEvents(repo: String, events: Option[String], limit: Int, window: Int) = AdminUserPage.async { request =>
     val eventNames = events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
     heimdal.getRawEvents(window, limit, eventNames: _*)(HeimdalEventCompanion.byTypeCode(repo)).map(Ok(_))

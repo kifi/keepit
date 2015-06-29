@@ -57,10 +57,6 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray]
 
-  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]]
-
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int]
-
   def deleteUser(userId: Id[User]): Unit
 
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit
@@ -164,16 +160,6 @@ class HeimdalServiceClientImpl @Inject() (
       Json.parse(response.body).as[JsArray]
     }
   }
-
-  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]] =
-    call(Heimdal.internal.getEventDescriptors(companion.typeCode)).map { response =>
-      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
-    }
-
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int] =
-    call(Heimdal.internal.updateEventDescriptor(companion.typeCode), Json.toJson(eventDescriptors)).map { response =>
-      Json.parse(response.body).as[JsNumber].value.toInt
-    }
 
   def deleteUser(userId: Id[User]): Unit = call(Heimdal.internal.deleteUser(userId))
 
