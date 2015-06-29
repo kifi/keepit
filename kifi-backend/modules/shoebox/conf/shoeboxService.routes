@@ -216,7 +216,7 @@ GET     /m/1/user/:username/connections             @com.keepit.controllers.mobi
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
-GET     /m/2/user/:id/libraries                 @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibrariesV2(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12, filter: LibraryFilter ?= LibraryFilter.OWN_FILTER, ordering: List[LibraryOrdering] ?= List())
+GET     /m/2/user/:id/libraries                 @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibrariesV2(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12, filter: LibraryFilter ?= LibraryFilter.OWN, ordering: Option[LibraryOrdering] ?= None)
 
 POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
 POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
