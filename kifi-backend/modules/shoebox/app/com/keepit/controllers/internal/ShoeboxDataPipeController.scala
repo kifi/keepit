@@ -1,6 +1,7 @@
 package com.keepit.controllers.internal
 
-import com.keepit.classify.{ DomainRepo, Domain }
+import com.amazonaws.services.simpleworkflow.model.DomainInfos
+import com.keepit.classify.{ DomainInfo, DomainStates, DomainRepo, Domain }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -269,20 +270,19 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def internDomainIdsByDomainNames() = Action.async(parse.json) { request =>
+  def internDomainsByDomainNames() = Action.async(parse.json) { request =>
     SafeFuture {
-      val domainNames = Json.fromJson[Seq[String]](request.body).get
-      val domainIdByDomainName: Map[String, Option[Id[Domain]]] = db.readWrite { implicit session =>
-        domainNames.map { domainName =>
-          domainRepo.get(domainName) match {
-            case Some(domain: Domain) if !domain.isEmailProvider => (domainName, domain.id)
-            case Some(domain: Domain) if domain.isEmailProvider => (domainName, Option.empty[Id[Domain]])
-            case None if domainName.nonEmpty => (domainName, domainRepo.save(Domain(hostname = domainName)).id)
-            case None if domainName.isEmpty => (domainName, Option.empty[Id[Domain]])
-          }
-        }.toMap
+      val domainNames = (request.body \ "domainNames").as[Seq[String]]
+
+      val domainInfos: Seq[DomainInfo] = db.readWrite { implicit session =>
+        domainNames.map { name =>
+          (name, domainRepo.get(name, excludeState = None))
+        }.map {
+          case (_, Some(domain: Domain)) => domain.toDomainInfo
+          case (name: String, None) => domainRepo.save(Domain(hostname = name)).toDomainInfo
+        }
       }
-      Ok(Json.toJson(domainIdByDomainName))
+      Ok(Json.toJson(domainInfos))
     }
   }
 }

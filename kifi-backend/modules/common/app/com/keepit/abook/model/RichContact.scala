@@ -1,6 +1,6 @@
 package com.keepit.abook.model
 
-import com.keepit.classify.Domain
+import com.keepit.classify.{ IngestableWithDomain, Domain }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ ABookInfo, User }
@@ -10,13 +10,14 @@ import play.api.libs.functional.syntax._
 
 @json case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 
-case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], domainId: Option[Id[Domain]] = None, verified: Boolean, seq: SequenceNumber[EmailAccountInfo])
+case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[EmailAccountInfo]) extends IngestableWithDomain {
+  def getDomainName = address.address.split("@")(1)
+}
 object EmailAccountInfo {
   implicit val format = (
     (__ \ 'emailAccountId).format(Id.format[EmailAccountInfo]) and
     (__ \ 'address).format[EmailAddress] and
     (__ \ 'userId).formatNullable(Id.format[User]) and
-    (__ \ 'domainId).formatNullable(Id.format[Domain]) and
     (__ \ 'verified).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[EmailAccountInfo])
   )(EmailAccountInfo.apply, unlift(EmailAccountInfo.unapply))

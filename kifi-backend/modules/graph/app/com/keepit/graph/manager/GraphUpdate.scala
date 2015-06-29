@@ -1,7 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
-import com.keepit.classify.Domain
+import com.keepit.classify.{ DomainInfo, Domain }
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.common.service.IpAddress
@@ -117,7 +117,7 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[D
 
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
-  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.domainId, indexableUri.state, indexableUri.seq)
+  def apply(indexableUri: IndexableUri, domainId: Option[Id[Domain]]): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, domainId, indexableUri.state, indexableUri.seq)
 }
 
 case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], domainId: Option[Id[Domain]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
@@ -128,8 +128,8 @@ case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId:
 
 case object EmailAccountGraphUpdate extends GraphUpdateKind[EmailAccountGraphUpdate] {
   val code = "email_account_graph_update"
-  def apply(emailAccount: EmailAccountInfo): EmailAccountGraphUpdate = {
-    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.domainId, emailAccount.verified, emailAccount.seq)
+  def apply(emailAccount: EmailAccountInfo, domainId: Option[Id[Domain]]): EmailAccountGraphUpdate = {
+    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, domainId, emailAccount.verified, emailAccount.seq)
   }
 }
 
