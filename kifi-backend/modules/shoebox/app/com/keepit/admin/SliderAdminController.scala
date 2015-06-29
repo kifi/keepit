@@ -141,12 +141,11 @@ class SliderAdminController @Inject() (
   }
 
   def getDomain(hostname: String) = AdminUserPage { implicit request =>
-    val domain = db.readOnlyReplica { implicit s =>
+    val domainOpt = db.readOnlyReplica { implicit s =>
       domainRepo.get(hostname, None)
     }
-      // TODO this is for testing the form, remove for production
-      .orElse(Some(Domain(id = Some(Id(1)), hostname = hostname)))
-    domain.map { d => Ok(html.admin.domain(d)) }.getOrElse(NotFound)
+
+    domainOpt.map { domain => Ok(html.admin.domain(domain)) }.getOrElse(NotFound)
   }
 
   def getVersionForm = AdminUserPage { implicit request =>
