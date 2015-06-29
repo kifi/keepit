@@ -988,9 +988,6 @@ followBtnWidth = 7.6em
     color: #909090
     font-size: buttonFontSize
 
-    &:hover
-      color: accentGreen
-
     figure
       width: buttonHeight
       height: buttonHeight
@@ -998,6 +995,26 @@ followBtnWidth = 7.6em
       background-repeat: no-repeat
       display: inline-block
       vertical-align: middle
+
+    // TODO (Adam): DRY
+    .svg-edit-keeps,
+    .svg-add-followers
+      display: inline-block
+
+    .svg-edit-keeps-green,
+    .svg-add-followers-green
+      display: none
+
+    &:hover, &.active
+      color: accentGreen
+
+      .svg-edit-keeps,
+      .svg-add-followers
+        display: none
+
+      .svg-edit-keeps-green,
+      .svg-add-followers-green
+        display: inline-block
 
 /* Elements for styles below may disappear after toolbar refactorization */
 /* (begin) */
