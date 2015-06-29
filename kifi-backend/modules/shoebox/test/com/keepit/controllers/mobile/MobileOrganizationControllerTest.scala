@@ -134,15 +134,35 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           val createResponseJson = Json.parse(contentAsString(result))
           val createResponse = createResponseJson.as[FullOrganizationInfo]
-          implicit val config = inject[PublicIdConfiguration]
           Organization.decodePublicId(createResponse.pubId) must haveClass[Success[Id[Organization]]]
           createResponse.name === orgName
           createResponse.description === Some(orgDescription)
         }
       }
     }
+
+    "when modifyOrganization is called:" in {
+      "fail on invalid modifications" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().withName("Captain", "America").saved
+            val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("Earth"), normalized = OrganizationHandle("earth"))).saved
+            (org, owner)
+          }
+          inject[FakeUserActionsHelper].setUser(owner)
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """{ "basePermissions": "invalid" }"""
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          status(response) === BAD_REQUEST
+          contentAsJson(response) === Json.obj("error" -> "badly_formed_modifications")
+        }
+      }
+    }
   }
 
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[MobileOrganizationController]
   private def route = com.keepit.controllers.mobile.routes.MobileOrganizationController
   implicit class ResultWrapper(result: Future[Result]) {

@@ -285,8 +285,10 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
+POST    /m/1/teams/:id/modify                   @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
 GET     /m/1/teams/:id                          @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 POST    /m/1/teams/create                       @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+POST    /m/1/teams/:id/modify                   @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
 GET     /m/1/user/:id/teams                     @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 GET     /m/1/teams/:id/members                  @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST    /m/1/teams/:id/members/invite           @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])
