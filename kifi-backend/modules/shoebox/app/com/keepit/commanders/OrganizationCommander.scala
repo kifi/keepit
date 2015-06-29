@@ -76,7 +76,7 @@ class OrganizationCommanderImpl @Inject() (
     lazy val badName = modifications.name.exists(_.isEmpty)
     lazy val badBasePermissions = modifications.basePermissions.exists { bps =>
       // Are there any members that can't even see the organization?
-      OrganizationRole.all exists { role => !(bps.permissionsMap.contains(Some(role)) && bps.forRole(role).contains(VIEW_ORGANIZATION)) }
+      OrganizationRole.all exists { role => !bps.forRole(role).contains(VIEW_ORGANIZATION) }
     }
     !badName && !badBasePermissions
   }
