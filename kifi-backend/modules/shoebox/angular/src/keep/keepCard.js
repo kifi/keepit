@@ -73,6 +73,7 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=kfKeepCard',
+        galleryView: '=',
         boxed: '@',
         currentPageOrigin: '@',
         keepCallback: '&',
