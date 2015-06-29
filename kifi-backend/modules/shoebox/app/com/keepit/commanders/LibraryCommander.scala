@@ -30,6 +30,7 @@ import play.api.http.Status._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import views.html.admin.{ libraries, library }
+import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
@@ -653,18 +654,8 @@ class LibraryCommanderImpl @Inject() (
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         val newInviteToCollab = modifyReq.whoCanInvite.orElse(targetLib.whoCanInvite)
-        Future {
-          val keeps = db.readOnlyMaster { implicit s =>
-            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
-          }
-          if (keeps.nonEmpty) {
-            db.readWriteBatch(keeps) { (s, k) =>
-              keepRepo.save(k.copy(visibility = newVisibility))(s)
-            }
-            searchClient.updateKeepIndex()
-          }
-        }
 
+        // New library subscriptions
         newSubKeysOpt match {
           case Some(newSubKeys) => db.readWrite { implicit s =>
             librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
@@ -684,6 +675,30 @@ class LibraryCommanderImpl @Inject() (
 
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
+
+        // Update visibility of keeps
+        def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
+          val (keeps, curViz) = db.readOnlyMaster { implicit s =>
+            val viz = libraryRepo.get(targetLib.id.get).visibility // It may have changed, re-check
+            val keeps = keepRepo.getByLibraryIdAndExcludingVisibility(libraryId, Some(viz), 1000)
+            (keeps, viz)
+          }
+          if (keeps.nonEmpty && curViz == changedVisibility) {
+            db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
+              keepRepo.save(k.copy(visibility = curViz))(s)
+            }
+            if (iter < 200) { // to prevent infinite loops if there's an issue updating keeps.
+              updateKeepVisibility(changedVisibility, iter + 1)
+            } else {
+              val msg = s"[updateKeepVisibility] Problems updating visibility on $libraryId to $curViz, $iter"
+              airbrake.notify(msg)
+              Future.failed(new Exception(msg))
+            }
+          } else {
+            Future.successful(())
+          }
+        }.flatMap(m => m)
+        updateKeepVisibility(newVisibility, 0).onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
           "title" -> (newName != targetLib.name),
@@ -992,10 +1007,18 @@ class LibraryCommanderImpl @Inject() (
             if (toBeNotified.size > 100) {
               airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
             }
+            val libTrunc = if (library.name.length > 30) { library.name.take(30) + "…" } else { library.name }
+            val message = newKeep.title match {
+              case Some(title) =>
+                val trunc = if (title.length > 30) { title.take(30) + "…" } else { title }
+                s"“$trunc” added to $libTrunc"
+              case None =>
+                s"New keep added to $libTrunc"
+            }
             FutureHelpers.sequentialExec(toBeNotified) { userId =>
               elizaClient.sendLibraryPushNotification(
                 userId,
-                message = s"New Keep in ${library.name}",
+                message = message,
                 libraryId = library.id.get,
                 libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
@@ -1381,7 +1404,7 @@ class LibraryCommanderImpl @Inject() (
   def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
     db.readOnlyMaster { implicit session =>
       libraryRepo.getBySlugAndUserId(ownerId, slug).map((_, false)) orElse
-        libraryAliasRepo.getByOwnerIdAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
+        libraryAliasRepo.getBySpaceAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
   }
 

@@ -59,6 +59,8 @@ case class Library(
   }
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+
+  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -255,18 +257,6 @@ object LibraryKind {
       case USER_CREATED.value => USER_CREATED
     }
   }
-}
-
-case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembershipView])
-
-object LibraryAndMemberships {
-  implicit val format = Json.format[LibraryAndMemberships]
-}
-
-case class LibraryAndMembershipsIds(library: Library, memberships: Seq[Id[LibraryMembership]])
-
-object LibraryAndMembershipsIds {
-  implicit val format = Json.format[LibraryAndMembershipsIds]
 }
 
 case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)

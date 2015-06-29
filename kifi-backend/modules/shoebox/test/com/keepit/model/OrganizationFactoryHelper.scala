@@ -14,6 +14,7 @@ object OrganizationFactoryHelper {
       }
       for (invitedUser <- partialOrganization.invitedUsers) {
         injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, userId = Some(invitedUser.id.get), role = OrganizationRole.MEMBER))
+
       }
       for (invitedEmail <- partialOrganization.invitedEmails) {
         injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))

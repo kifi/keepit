@@ -90,7 +90,7 @@ class ImageCommander @Inject() (
   def processLatestArticleImages(articleInfo: RoverArticleInfo): Future[Unit] = {
     val futureImageProcessedVersion = articleInfo.getLatestKey match {
       case None => Future.successful(None)
-      case Some(latestArticleKey) => processArticleImages(latestArticleKey).imap(_ => Some(latestArticleKey.version))
+      case Some(latestArticleKey) => processArticleImages(articleInfo.url, articleInfo.uriId, latestArticleKey).imap(_ => Some(latestArticleKey.version))
     }
 
     futureImageProcessedVersion.imap { imageProcessedVersion =>
@@ -100,10 +100,10 @@ class ImageCommander @Inject() (
     }
   }
 
-  private def processArticleImages(key: ArticleKey[_ <: Article]): Future[Unit] = {
+  private def processArticleImages(url: String, uriId: Id[NormalizedURI], key: ArticleKey[_ <: Article]): Future[Unit] = {
     getRemoteImageUrls(key).flatMap { remoteImageUrls =>
       FutureHelpers.sequentialExec(remoteImageUrls) { remoteImageUrl =>
-        processRemoteArticleImage(key.uriId, key.kind, key.version, remoteImageUrl)
+        processRemoteArticleImage(url, uriId, key.kind, key.version, remoteImageUrl)
       }
     }
   }
@@ -115,13 +115,13 @@ class ImageCommander @Inject() (
     }
   }
 
-  private def processRemoteArticleImage(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
+  private def processRemoteArticleImage(url: String, uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
     import com.keepit.rover.image.ArticleImageConfiguration._
     val result = imageFetcher.fetchAndStoreRemoteImage(remoteImageUrl, ImageSource.RoverArticle(kind), imagePathPrefix, scaleSizes, cropSizes).map {
       case Right(sourceImageHash) => {
         try {
           db.readWrite(attempts = 3) { implicit session =>
-            articleImageRepo.intern(uriId, kind, sourceImageHash, remoteImageUrl, version)
+            articleImageRepo.intern(url, uriId, kind, sourceImageHash, remoteImageUrl, version)
           }
           Right(())
         } catch {

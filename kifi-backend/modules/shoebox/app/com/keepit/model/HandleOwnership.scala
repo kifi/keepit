@@ -1,17 +1,13 @@
 package com.keepit.model
 
-import java.net.URLEncoder
-
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.HandleOps
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
-import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.HandleOwner.{ UserOwner, OrganizationOwner }
-import com.kifi.macros.json
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 

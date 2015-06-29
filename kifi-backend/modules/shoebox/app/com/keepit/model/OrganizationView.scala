@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
@@ -22,6 +22,10 @@ case class OrganizationNotificationInfo(
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
 
+@json
+case class FullOrganizationInfo(pubId: PublicId[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[ExternalId[User]],
+  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
+
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
     OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo(_)))
@@ -36,48 +40,63 @@ sealed abstract class OrganizationMembershipRequest {
   def targetId: Id[User]
 }
 
+@json
 case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
   newRole: OrganizationRole) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipRemoveRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User]) extends OrganizationMembershipRequest
 
+@json
 case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
+@json
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
+
+@json
+case class OrganizationModifications(
+  name: Option[String] = None,
+  description: Option[String] = None,
+  basePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationRequest
 
+@json
 case class OrganizationCreateRequest(
-  userId: Id[User],
-  orgName: String) extends OrganizationRequest
+  requesterId: Id[User],
+  initialValues: OrganizationModifications) extends OrganizationRequest
+
+@json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
+@json
 case class OrganizationModifyRequest(
-  orgId: Id[Organization],
   requesterId: Id[User],
+  orgId: Id[Organization],
   modifications: OrganizationModifications) extends OrganizationRequest
+@json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
+@json
 case class OrganizationDeleteRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User]) extends OrganizationRequest
+  requesterId: Id[User],
+  orgId: Id[Organization]) extends OrganizationRequest
+@json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
-
-case class OrganizationModifications(
-  newName: Option[String] = None,
-  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
@@ -90,6 +109,7 @@ object OrganizationFail {
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
   case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
+  case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -98,6 +118,7 @@ object OrganizationFail {
       case NOT_A_MEMBER.message => NOT_A_MEMBER
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
+      case BAD_PARAMETERS.message => BAD_PARAMETERS
     }
   }
 }

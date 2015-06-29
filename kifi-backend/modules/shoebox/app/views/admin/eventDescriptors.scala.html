@@ -2,7 +2,7 @@
 
 @admin("Heimdal Events", stylesheets = List("admin_analytics")) {
 
-<form class="descriptors" action="@com.keepit.controllers.admin.routes.AdminAnalyticsController.updateEventDescriptors" method="POST">
+<form class="descriptors" action="" method="POST">
     @for((eventTypeCode, descriptors) <- descriptorsByRepo) {
         <h3>@eventTypeCode.capitalize</h3>
         <table class="table table-condensed table-striped">

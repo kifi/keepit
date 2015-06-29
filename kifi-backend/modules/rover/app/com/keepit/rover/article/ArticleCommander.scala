@@ -5,6 +5,7 @@ import java.net.SocketTimeoutException
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.core._
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -27,6 +28,7 @@ import scala.util.{ Failure, Try }
 class ArticleCommander @Inject() (
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
+    articleInfoHelper: ArticleInfoHelper,
     articleInfoCache: ArticleInfoUriCache,
     articleStore: RoverArticleStore,
     topPriorityQueue: FetchTaskQueue.TopPriority,
@@ -119,8 +121,8 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](url: String, uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfos(url, uriId, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
 
@@ -134,14 +136,14 @@ class ArticleCommander @Inject() (
     }
   }
 
-  private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  private def internArticleInfos(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     // natural race condition with the regular ingestion, hence the 3 attempts
     db.readWrite(attempts = 3) { implicit session =>
-      articleInfoRepo.internByUri(uriId, url, kinds)
+      articleInfoHelper.intern(url, uriId, kinds)
     }
   }
 
-  private def getArticleInfoByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+  def getArticleInfoByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A]): Option[RoverArticleInfo] = {
     db.readOnlyMaster { implicit session =>
       articleInfoRepo.getByUrlAndKind(url, kind)
     }
@@ -184,9 +186,9 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean): Future[Unit] = {
+  def fetchAsap(url: String, uriId: Id[NormalizedURI], refresh: Boolean): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
-    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
+    val interned = internArticleInfos(url, uriId, toBeInternedByPolicy)
 
     val toBeFetched = interned.collect { case (kind, info) if refresh || info.lastFetchedAt.isEmpty => (info.id.get -> info) }
 

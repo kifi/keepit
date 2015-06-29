@@ -21,5 +21,6 @@ case class CortexProdModule()
     modelModule = CortexProdModelModule(),
     ldaInfoModule = LDAInfoStoreProdModule(),
     dataIngestionModule = CortexDataIngestionProdModule(),
+    queueModule = CortexProdQueueModule(),
     nlpModule = NLPProdModule()
   ) with CommonProdModule
