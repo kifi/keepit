@@ -20,6 +20,7 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         edit: '=',
+        galleryView: '=',
         currentPageOrigin: '@'
       },
       templateUrl: 'keeps/keeps.tpl.html',

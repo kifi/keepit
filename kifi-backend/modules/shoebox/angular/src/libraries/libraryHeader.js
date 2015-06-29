@@ -18,6 +18,7 @@ angular.module('kifi')
         librarySlug: '=',
         imageLoaded: '=',
         editMode: '=',
+        galleryView: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
@@ -597,6 +598,14 @@ angular.module('kifi')
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
           scope.editMode = !scope.editMode;
+        };
+
+        scope.setGalleryView = function() {
+          scope.galleryView = true;
+        };
+
+        scope.setCompactView = function() {
+          scope.galleryView = false;
         };
 
         scope.showFollowers = function () {
