@@ -85,7 +85,7 @@ class OrganizationCommanderImpl @Inject() (
     val badName = modifications.name.exists(_.isEmpty)
     val badBasePermissions = modifications.basePermissions.exists { bps =>
       // Are there any members that can't even see the organization?
-      OrganizationRole.all exists { role => !bps.forRole(role).contains(VIEW_ORGANIZATION) }
+      OrganizationRole.all exists { role => !(bps.permissionsMap.contains(Some(role)) && bps.forRole(role).contains(VIEW_ORGANIZATION)) }
     }
     !badName && !badBasePermissions
   }
@@ -152,20 +152,20 @@ class OrganizationCommanderImpl @Inject() (
 
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse] = {
     db.readWrite { implicit session =>
-      if (isValidRequest(request)) {
-        val org = orgRepo.get(request.orgId)
+      getValidationError(request) match {
+        case None =>
+          val org = orgRepo.get(request.orgId)
 
-        val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
-        memberships.foreach { membership => orgMembershipRepo.deactivate(membership) }
+          val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
+          memberships.foreach { membership => orgMembershipRepo.deactivate(membership) }
 
-        val invites = orgInviteRepo.getAllByOrganization(org.id.get)
-        invites.foreach { invite => orgInviteRepo.deactivate(invite.id.get) }
+          val invites = orgInviteRepo.getAllByOrganization(org.id.get)
+          invites.foreach { invite => orgInviteRepo.deactivate(invite.id.get) }
 
-        orgRepo.save(org.sanitizeForDelete)
-        handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
-        Right(OrganizationDeleteResponse(request))
-      } else {
-        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+          orgRepo.save(org.sanitizeForDelete)
+          handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
+          Right(OrganizationDeleteResponse(request))
+        case Some(orgFail) => Left(orgFail)
       }
     }
   }

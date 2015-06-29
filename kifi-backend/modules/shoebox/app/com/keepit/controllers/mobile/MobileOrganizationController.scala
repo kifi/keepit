@@ -45,7 +45,7 @@ class MobileOrganizationController @Inject() (
 
   def modifyOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
     request.request.userIdOpt match {
-      case None => OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse
+      case None => OrganizationFail.NOT_A_MEMBER.asErrorResponse
       case Some(requesterId) =>
         request.body.asOpt[OrganizationModifications] match {
           case Some(modifications) =>
@@ -53,7 +53,7 @@ class MobileOrganizationController @Inject() (
               case Left(failure) => failure.asErrorResponse
               case Right(response) => Ok(Json.toJson(orgCommander.getFullOrganizationInfo(request.orgId)))
             }
-          case _ => BadRequest(Json.obj("error" -> "badly_formed_modifications"))
+          case _ => OrganizationFail.BAD_PARAMETERS.asErrorResponse
         }
     }
   }
