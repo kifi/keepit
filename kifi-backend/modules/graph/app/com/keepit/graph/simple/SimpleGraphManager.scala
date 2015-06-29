@@ -35,6 +35,7 @@ class SimpleGraphManager(
     if (serviceDiscovery.thisInstance.exists(_.instanceInfo.capabilities.contains("backup"))) {
       val start = System.currentTimeMillis
       graphDirectory.synchronized {
+        graphDirectory.scheduleBackup()
         graphDirectory.doBackup()
         graphDirectory.asFile.foreach { dir =>
           statsd.gauge("graph.directory.size", FileUtils.sizeOfDirectory(dir))
