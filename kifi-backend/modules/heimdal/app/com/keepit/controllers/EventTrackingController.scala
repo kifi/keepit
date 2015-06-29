@@ -9,10 +9,11 @@ import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.tracking.LibraryViewTrackingCommander
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
@@ -25,14 +26,11 @@ trait VisitorEventHandler {
 }
 
 class EventTrackingController @Inject() (
-    userEventLoggingRepo: UserEventLoggingRepo,
-    systemEventLoggingRepo: SystemEventLoggingRepo,
-    anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
-    visitorEventLoggingRepo: VisitorEventLoggingRepo,
-    nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
     eventTrackingCommander: HelpRankEventTrackingCommander,
     libraryViewTrackingCommander: LibraryViewTrackingCommander,
+    shoeboxClient: ShoeboxServiceClient,
+    mixpanelClient: MixpanelClient,
     airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
 
@@ -41,27 +39,61 @@ class EventTrackingController @Inject() (
   private val userEventHandlers: Seq[UserEventHandler] = Seq(eventTrackingCommander, libraryViewTrackingCommander)
   private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
 
-  private def trackInternalEvent(event: HeimdalEvent): Unit = event match {
-    case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
-    case userEvent: UserEvent => handleUserEvent(userEvent)
-    case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
-    case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent)
-    case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
+  private def trackInternalEvent(event: HeimdalEvent): Unit = {
+    val augmentedEventF = event match {
+      case userEvent: UserEvent =>
+        handleUserEvent(userEvent).map(e => mixpanelClient.track(e))
+      case visitorEvent: VisitorEvent =>
+        handleVisitorEvent(visitorEvent).map(e => mixpanelClient.track(e))
+      case nonUserEvent: NonUserEvent =>
+        handleNonUserEvent(nonUserEvent).map(e => mixpanelClient.track(e))
+      case anonEvent: AnonymousEvent =>
+        mixpanelClient.track(anonEvent)
+      case systemEvent: SystemEvent =>
+        mixpanelClient.track(systemEvent)
+    }
   }
 
   private def handleUserEvent(rawUserEvent: UserEvent) = {
+    val augmentors = Seq(
+      UserIdAugmentor,
+      new UserAugmentor(shoeboxClient),
+      new ExtensionVersionAugmentor(shoeboxClient),
+      new UserSegmentAugmentor(shoeboxClient),
+      new UserValuesAugmentor(shoeboxClient),
+      new UserKifiCampaignIdAugmentor(shoeboxClient))
+
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
-    SafeFuture { userEventLoggingRepo.persist(userEvent) }
-    userEventHandlers.foreach { handler =>
-      SafeFuture { handler.handleUserEvent(userEvent) }
+
+    val userEventF = EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).map { ctx =>
+      userEvent.copy(context = ctx)
     }
+
+    userEventF.onSuccess {
+      case augmentedUserEvent =>
+        userEventHandlers.foreach { handler =>
+          handler.handleUserEvent(augmentedUserEvent)
+        }
+    }
+    userEventF
+  }
+
+  private def handleNonUserEvent(rawNonUserEvent: NonUserEvent) = {
+    val augmentors = Seq(NonUserIdentifierAugmentor)
+
+    val nonUserEventF = EventAugmentor.safelyAugmentContext(rawNonUserEvent, augmentors: _*).map { ctx =>
+      rawNonUserEvent.copy(context = ctx)
+    }
+    nonUserEventF
   }
 
   private def handleVisitorEvent(event: VisitorEvent) = {
-    visitorEventLoggingRepo.persist(event)
-    visitorEventHandlers.foreach { handler =>
-      SafeFuture { handler.handleVisitorEvent(event) }
+    SafeFuture {
+      visitorEventHandlers.foreach { handler =>
+        handler.handleVisitorEvent(event)
+      }
     }
+    Future.successful(event)
   }
 
   def readIncomingEvent(): Unit = {
