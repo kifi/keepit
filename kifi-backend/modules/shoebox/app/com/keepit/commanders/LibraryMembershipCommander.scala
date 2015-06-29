@@ -14,7 +14,7 @@ trait LibraryMembershipCommander {
 
 case class ModifyLibraryMembershipRequest(userId: Id[User], libraryId: Id[Library],
   subscription: Option[Boolean] = None,
-  starred: Option[Boolean] = None,
+  starred: Option[String] = None,
   listed: Option[Boolean] = None,
   access: Option[LibraryAccess] = None)
 

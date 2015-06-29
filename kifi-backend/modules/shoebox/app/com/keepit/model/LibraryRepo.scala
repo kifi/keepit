@@ -333,7 +333,7 @@ class LibraryRepoImpl @Inject() (
       case LibraryOrdering.ALPHABETICAL => "lib.name asc, lib.id desc"
       case LibraryOrdering.MEMBER_COUNT => "lib.member_count desc"
       case LibraryOrdering.LAST_KEPT_INTO => "lib.last_kept desc"
-      case LibraryOrdering.STARRED => "lm.starred"
+      case LibraryOrdering.STARRED => "CASE lm.starred WHEN \"starred\" THEN 1 ELSE 0 END"
     }.mkString(",")
   }
 
