@@ -40,29 +40,29 @@ class MobileOrganizationController @Inject() (
     }
   }
 
-  def modifyOrganization(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
-    Organization.decodePublicId(pubId) match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_organization_id")))
-      case Success(orgId) =>
+  def modifyOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    request.request.userIdOpt match {
+      case None => BadRequest(Json.obj("error" -> "insufficient_permissions"))
+      case Some(requesterId) =>
         request.body.validate[OrganizationModifications] match {
-          case _: JsError => Future.successful(BadRequest(Json.obj("error" -> "badly_formed_modifications")))
+          case _: JsError => BadRequest(Json.obj("error" -> "badly_formed_modifications"))
           case JsSuccess(modifications, _) =>
-            orgCommander.modifyOrganization(OrganizationModifyRequest(request.userId, orgId, modifications)) match {
-              case Left(failure) => Future.successful(failure.asErrorResponse)
-              case Right(response) => Future.successful(Ok(Json.toJson(response)))
+            orgCommander.modifyOrganization(OrganizationModifyRequest(requesterId, request.orgId, modifications)) match {
+              case Left(failure) => failure.asErrorResponse
+              case Right(response) => Ok(Json.toJson(orgCommander.getFullOrganizationInfo(request.orgId)))
             }
         }
     }
   }
 
-  def deleteOrganization(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
-    Organization.decodePublicId(pubId) match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_organization_id")))
-      case Success(orgId) =>
-        val deleteRequest = OrganizationDeleteRequest(requesterId = request.userId, orgId = orgId)
+  def deleteOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    request.request.userIdOpt match {
+      case None => BadRequest(Json.obj("error" -> "insufficient_permissions"))
+      case Some(requesterId) =>
+        val deleteRequest = OrganizationDeleteRequest(requesterId = requesterId, orgId = request.orgId)
         orgCommander.deleteOrganization(deleteRequest) match {
-          case Left(fail) => Future.successful(fail.asErrorResponse)
-          case Right(response) => Future.successful(Ok(Json.toJson(response)))
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) => NoContent
         }
     }
   }
