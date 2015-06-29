@@ -10,3 +10,5 @@
 img/sprites.png
 src/common/spritesClasses.styl
 src/common/build-css/sprites.styl
+img/symbol-sprites/dist
+img/symbol-sprites/test.html

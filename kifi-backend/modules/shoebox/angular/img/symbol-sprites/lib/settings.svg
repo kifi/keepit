@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512px" height="512px" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="settings">
+            <g id="Guide" transform="translate(-3.000000, -3.000000)"></g>
+            <path d="M255,388.852746 C332.474396,388.852746 389.288953,330.397538 389.288953,256 C389.288953,181.602462 332.474396,123.147254 255,123.147254 C177.525604,123.147254 120.711047,181.602462 120.711047,256 C120.711047,330.397538 177.525604,388.852746 255,388.852746 Z M255.377509,300.892201 C281.556841,300.892201 300.755018,281.139633 300.755018,256 C300.755018,230.860367 281.556841,211.107799 255.377509,211.107799 C229.198177,211.107799 210,230.860367 210,256 C210,281.139633 229.198177,300.892201 255.377509,300.892201 Z" id="Path-Copy-2" fill="#909090"></path>
+            <g id="Rectangle-21-+-Rectangle-21-+-Rectangle-21-+-Rectangle-21-Copy" transform="translate(72.000000, 73.000000)" fill="#909090">
+                <g id="Rectangle-21-+-Rectangle-21" transform="translate(146.000000, 0.000000)">
+                    <rect id="Rectangle-21" x="0.664054969" y="0" width="72.6718901" height="72.4999657"></rect>
+                    <rect id="Rectangle-21" x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+                </g>
+                <g id="Rectangle-21-+-Rectangle-21-Copy" transform="translate(183.000000, 182.500000) rotate(-270.000000) translate(-183.000000, -182.500000) translate(146.000000, 0.000000)">
+                    <rect id="Rectangle-21" x="0.664054969" y="0" width="72.6718901" height="72.4999657"></rect>
+                    <rect id="Rectangle-21" x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+                </g>
+            </g>
+            <g id="Rectangle-21-+-Rectangle-21-+-Rectangle-21-+-Rectangle-21-Copy-2" transform="translate(255.707107, 254.792893) rotate(-315.000000) translate(-255.707107, -254.792893) translate(72.707107, 71.292893)" fill="#909090">
+                <g id="Rectangle-21-+-Rectangle-21" transform="translate(146.000000, 1.000000)">
+                    <rect id="Rectangle-21" x="0.664054969" y="1" width="72.6718901" height="72.4999657"></rect>
+                    <rect id="Rectangle-21" x="0.664054969" y="293.214854" width="72.6718901" height="72.4999657"></rect>
+                </g>
+                <g id="Rectangle-21-+-Rectangle-21-Copy" transform="translate(183.000000, 184.500000) rotate(-270.000000) translate(-183.000000, -184.500000) translate(146.000000, 2.000000)">
+                    <rect id="Rectangle-21" x="0.664054969" y="-1.13686838e-13" width="72.6718901" height="72.4999657"></rect>
+                    <rect id="Rectangle-21" x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
