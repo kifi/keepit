@@ -159,7 +159,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
 
-        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.FOLLOWING_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.FOLLOWING, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -179,7 +179,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         // user 2 currently owns the library, user 1 follows
         // let's have user2 look at user1
 
-        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.FOLLOWING_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.FOLLOWING, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -198,7 +198,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
         // user 2 currently owns the library, user 1 follows
 
-        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.FOLLOWING_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.FOLLOWING, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -216,7 +216,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.OWN_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.OWN, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -234,7 +234,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.OWN_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.OWN, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -252,7 +252,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN_FILTER, List(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, List(LibraryOrdering.ALPHABETICAL))
         status(result1)
         var res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         var resStr = contentAsString(result1)
@@ -263,7 +263,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         privateLibrary must greaterThan(-1)
         publicLibrary must greaterThan(privateLibrary)
 
-        val result2 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN_FILTER, List(LibraryOrdering.MEMBER_COUNT))
+        val result2 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, List(LibraryOrdering.MEMBER_COUNT))
         status(result2)
         res = Await.result(result2, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result2)
@@ -274,7 +274,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         privateLibrary must greaterThan(-1)
         publicLibrary must lessThan(privateLibrary)
 
-        val result3 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN_FILTER, List(LibraryOrdering.LAST_KEPT_INTO))
+        val result3 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, List(LibraryOrdering.LAST_KEPT_INTO))
         status(result3)
         res = Await.result(result3, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result3)
@@ -284,7 +284,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         publicLibrary must greaterThan(-1)
         publicLibrary must lessThan(privateLibrary)
 
-        val result4 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN_FILTER, List())
+        val result4 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, List())
         status(result4)
         res = Await.result(result4, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result4)

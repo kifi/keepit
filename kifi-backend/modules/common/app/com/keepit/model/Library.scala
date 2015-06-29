@@ -156,17 +156,17 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
 abstract class LibraryFilter(val value: String)
 object LibraryFilter {
-  case object OWN_FILTER extends LibraryFilter("own")
-  case object FOLLOWING_FILTER extends LibraryFilter("following")
-  case object INVITED_FILTER extends LibraryFilter("invited")
-  case object ALL_FILTER extends LibraryFilter("all")
+  case object OWN extends LibraryFilter("own")
+  case object FOLLOWING extends LibraryFilter("following")
+  case object INVITED extends LibraryFilter("invited")
+  case object ALL extends LibraryFilter("all")
 
   def apply(value: String) = {
     value match {
-      case OWN_FILTER.value => OWN_FILTER
-      case FOLLOWING_FILTER.value => FOLLOWING_FILTER
-      case INVITED_FILTER.value => INVITED_FILTER
-      case ALL_FILTER.value => ALL_FILTER
+      case OWN.value => OWN
+      case FOLLOWING.value => FOLLOWING
+      case INVITED.value => INVITED
+      case ALL.value => ALL
     }
   }
 
