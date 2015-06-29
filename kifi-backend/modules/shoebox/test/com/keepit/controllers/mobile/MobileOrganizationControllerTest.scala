@@ -152,11 +152,11 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """{ "basePermissions": "invalid" }"""
+          val json = """{ "basePermissions": {"member" : [], "owner": [], "none": []} }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          status(response) === BAD_REQUEST
-          contentAsJson(response) === Json.obj("error" -> "badly_formed_modifications")
+          // OrganizationCommander#modifyOrganization should probably be able to return a failure based on what went wrong instead of always INSUFFICIENT_PERMISSIONS
+          response === OrganizationFail.INSUFFICIENT_PERMISSIONS
         }
       }
     }
