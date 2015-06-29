@@ -608,6 +608,7 @@ class LibraryCommanderImpl @Inject() (
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       val targetMembership = targetMembershipOpt.get
+      val newSpace = LibrarySpace(userId, organizationId = modifyReq.orgId.flatMap(_.destination).orElse(targetLib.organizationId))
 
       def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
         newNameOpt match {
@@ -625,6 +626,15 @@ class LibraryCommanderImpl @Inject() (
             }
         }
       }
+
+      def validOrg(newOrg: Option[OrganizationMoveRequest]): Either[LibraryFail, Option[Id[Organization]]] = {
+        newOrg match {
+          case None => Right(targetLib.organizationId)
+          case Some(orgMoveReq) if canMoveToOrg(userId = userId, libId = libraryId, to = orgMoveReq.destination) => Right(orgMoveReq.destination)
+          case _ => Left(LibraryFail(BAD_REQUEST, "invalid_org_id"))
+        }
+      }
+
       def validSlug(newSlugOpt: Option[String]): Either[LibraryFail, LibrarySlug] = {
         newSlugOpt match {
           case None => Right(targetLib.slug)
@@ -636,20 +646,12 @@ class LibraryCommanderImpl @Inject() (
             } else {
               val slug = LibrarySlug(slugStr)
               db.readOnlyMaster { implicit s =>
-                libraryRepo.getBySlugAndUserId(userId, slug)
+                libraryAliasRepo.getBySpaceAndSlug(newSpace, slug)
               } match {
-                case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
+                case Some(other) if other.libraryId != libraryId => Left(LibraryFail(BAD_REQUEST, "library_alias_exists"))
                 case _ => Right(slug)
               }
             }
-        }
-      }
-
-      def validOrg(newOrg: Option[OrganizationMoveRequest]): Either[LibraryFail, Option[Id[Organization]]] = {
-        newOrg match {
-          case None => Right(targetLib.organizationId)
-          case Some(orgMoveReq) if (canMoveToOrg(userId = userId, libId = libraryId, to = orgMoveReq.destination)) => Right(orgMoveReq.destination)
-          case _ => Left(LibraryFail(BAD_REQUEST, "invalid_org_id"))
         }
       }
 
@@ -710,6 +712,7 @@ class LibraryCommanderImpl @Inject() (
             Future.successful(())
           }
         }.flatMap(m => m)
+
         updateKeepVisibility(newVisibility, 0).onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
@@ -724,6 +727,7 @@ class LibraryCommanderImpl @Inject() (
         )
         (lib, edits)
       }
+
       Future {
         if (result.isRight) {
           val editedLibrary = result.right.get._1
