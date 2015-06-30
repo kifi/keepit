@@ -10,7 +10,7 @@ import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.model._
 import org.joda.time.{ DateTime, Period }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -38,17 +38,17 @@ class UserIpAddressCommander @Inject() (
     if (agentType == "NONE") {
       log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + userAgent)
     }
-    val model = UserIpAddress(None, now, now, UserIpAddressStates.ACTIVE, userId, ip, agentType)
+    val model = UserIpAddress(userId = userId, ipAddress = ip, agentType = agentType)
 
-    val oldCluster = db.readWrite { implicit session =>
+    val cluster = db.readWrite { implicit session =>
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(ip, now.minus(clusterMemoryTime))
       userIpAddressRepo.saveIfNew(model)
-      currentCluster
+      currentCluster.toSet + userId
     }
 
-    if (reportNewClusters && !oldCluster.isEmpty && !oldCluster.contains(userId)) {
-      log.info("[IPTRACK NOTIFY] Cluster " + oldCluster + " has new member " + userId)
-      notifySlackChannelAboutCluster(ip)
+    if (reportNewClusters && cluster.size > 1) {
+      log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + userId)
+      notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = cluster, newUserId = Some(userId))
     }
   }
 
@@ -60,23 +60,40 @@ class UserIpAddressCommander @Inject() (
     logUser(userId, ip, userAgent)
   }
 
-  def formatCluster(ip: IpAddress, users: Seq[User]): BasicSlackMessage = {
-    val clusterDeclaration = s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"
-    val userDeclarations = (for { u <- users } yield s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>").toList
-    BasicSlackMessage((clusterDeclaration :: userDeclarations).mkString("\n"))
+  def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], company: Option[String] = None): BasicSlackMessage = {
+    val clusterDeclaration = Seq(
+      Some(s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"),
+      company.map("I think the company is '" + _ + "'")
+    ).flatten
+
+    val userDeclarations = users.map { u =>
+      val userDeclaration = s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>"
+      if (newUserId.contains(u.id.get)) {
+        "*" + userDeclaration + " <-- New Member!!!*"
+      }
+      else userDeclaration
+    }
+
+    BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
   }
 
-  def notifySlackChannelAboutCluster(clusterIp: IpAddress): Unit = {
+  def heuristicsSayThisClusterIsRelevant(ipInfo: Option[JsObject]): Boolean = {
+    val companyOpt = ipInfo flatMap { obj => (obj \ "company").asOpt[String] }
+    val blacklistCompanies = Set.empty[String]
+
+    !companyOpt.exists(company => blacklistCompanies.contains(company))
+  }
+  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Future[Unit] = SafeFuture {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
-      val userIds = userIpAddressRepo.getUsersFromIpAddressSince(clusterIp, DateTime.now.minus(clusterMemoryTime))
-      userRepo.getUsers(userIds).values.toSeq
+      userRepo.getUsers(clusterMembers.toSeq).values.toSeq
     }
-    if (usersFromCluster.length > 1) {
-      val msg = formatCluster(clusterIp, usersFromCluster)
+    val ipInfo = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject]
+    log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfo)
+
+    if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
+      val msg = formatCluster(clusterIp, usersFromCluster, newUserId)
       httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
-    } else {
-      log.info("[IPTRACK NONOTIFY] Opted not to notify channel about " + clusterIp + " with " + usersFromCluster.length + " users")
     }
   }
 

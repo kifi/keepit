@@ -37,9 +37,6 @@ class UserIpAddressClusterCronPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val everyDay = "0 0 0 * * ?"
-    cronTaskOnLeader(quartz, actor.ref, everyDay, SearchForClusters(Period.days(1), numClusters = 10))
-
     val everyWeek = "0 0 0 * * SUN"
     cronTaskOnLeader(quartz, actor.ref, everyWeek, SearchForClusters(Period.weeks(1), numClusters = 50))
   }
@@ -53,9 +50,11 @@ class UserIpAddressClusterActor @Inject() (
   def receive = {
     case SearchForClusters(timePeriod, numClusters) =>
       log.info("[IP CRON]: Searching over the past " + timePeriod + " for the largest " + numClusters + " clusters")
-      val clusterIps = userIpAddressCommander.findIpClustersSince(time = currentDateTime.minus(timePeriod), limit = numClusters)
-      clusterIps foreach {
-        userIpAddressCommander.notifySlackChannelAboutCluster(_)
+      val timeCutoff = currentDateTime.minus(timePeriod)
+      val clusterIps = userIpAddressCommander.findIpClustersSince(time = timeCutoff, limit = numClusters)
+      clusterIps foreach { ip =>
+        val usersAtCluster = userIpAddressCommander.getUsersByIpAddressSince(ip, time = timeCutoff)
+        userIpAddressCommander.notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = usersAtCluster.toSet)
       }
   }
 }

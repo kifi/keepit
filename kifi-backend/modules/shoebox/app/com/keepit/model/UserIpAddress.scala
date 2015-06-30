@@ -4,7 +4,7 @@ import com.keepit.common.cache.{ Key, CacheStatistics, FortyTwoCachePlugin, Json
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.service.IpAddress
-import com.keepit.common.time.DateTimeJsonFormat
+import com.keepit.common.time._
 import com.keepit.model.UserIpAddress._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import org.joda.time.DateTime
@@ -15,10 +15,10 @@ import play.api.libs.json._
 import scala.concurrent.duration.Duration
 
 case class UserIpAddress(
-    id: Option[Id[UserIpAddress]],
-    createdAt: DateTime,
-    updatedAt: DateTime,
-    state: State[UserIpAddress],
+    id: Option[Id[UserIpAddress]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[UserIpAddress] = UserIpAddressStates.ACTIVE,
     userId: Id[User],
     ipAddress: IpAddress,
     // TODO: Turn agentType into an Enum?
