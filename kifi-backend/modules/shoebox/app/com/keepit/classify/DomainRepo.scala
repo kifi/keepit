@@ -71,7 +71,7 @@ class DomainRepoImpl @Inject() (
 
     val domainsToSave = domainNames.diff(foundDomains.keys.toSet)
     val savedDomains = domainsToSave.map { domainName =>
-      (domainName -> super.save(Domain(hostname = domainName)))
+      (domainName -> save(Domain(hostname = domainName)))
     }.toMap
 
     foundDomains ++ savedDomains
