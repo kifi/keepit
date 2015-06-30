@@ -159,7 +159,7 @@ class SliderAdminController @Inject() (
   def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
     val domain = db.readWrite { implicit s =>
       val domain = domainRepo.get(id)
-      val domainToggled = domain.copy(emailProvider = !domain.emailProvider) //domain
+      val domainToggled = domain.copy(isEmailProvider = !domain.isEmailProvider) //domain
       domainRepo.save(domainToggled)
     }
     Redirect(routes.SliderAdminController.getDomain(id))
