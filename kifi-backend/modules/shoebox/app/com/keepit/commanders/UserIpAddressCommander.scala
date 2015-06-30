@@ -43,12 +43,12 @@ class UserIpAddressCommander @Inject() (
     val cluster = db.readWrite { implicit session =>
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(ip, now.minus(clusterMemoryTime))
       userIpAddressRepo.saveIfNew(model)
-      currentCluster.toSet + userId
+      currentCluster.toSet
     }
 
-    if (reportNewClusters && cluster.size > 1) {
+    if (reportNewClusters && !cluster.contains(userId) && cluster.size >= 1) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + userId)
-      notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = cluster, newUserId = Some(userId))
+      notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = cluster + userId, newUserId = Some(userId))
     }
   }
 
@@ -60,9 +60,10 @@ class UserIpAddressCommander @Inject() (
     logUser(userId, ip, userAgent)
   }
 
-  def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], company: Option[String] = None): BasicSlackMessage = {
+  def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], location: Option[String] = None, company: Option[String] = None): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       Some(s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"),
+      location.map("I think the company is in " + _),
       company.map("I think the company is '" + _ + "'")
     ).flatten
 
@@ -89,10 +90,12 @@ class UserIpAddressCommander @Inject() (
     }
     val ipInfo = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject]
     log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfo)
+
     val companyOpt = ipInfo.flatMap(info => (info \ "org").asOpt[String])
+    val countryOpt = ipInfo.flatMap(info => (info \ "country").asOpt[String])
 
     if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-      val msg = formatCluster(clusterIp, usersFromCluster, newUserId, companyOpt)
+      val msg = formatCluster(clusterIp, usersFromCluster, newUserId, company = companyOpt, location = countryOpt)
       httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
     }
   }
