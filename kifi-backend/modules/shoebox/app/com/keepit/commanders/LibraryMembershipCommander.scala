@@ -58,7 +58,7 @@ class LibraryMembershipCommanderImpl @Inject() (
       }
 
       for {
-        starred <- modifySelfCheck(request.starred, targetMembership.starred).right
+        starred <- modifySelfCheck(Some(request.starred), targetMembership.starred).right
         subscribed <- modifySelfCheck(request.subscription, targetMembership.subscribedToUpdates).right
         isListed <- modifySelfCheck(request.listed, targetMembership.listed).right
         access <- canChangeAccess(request.access).right

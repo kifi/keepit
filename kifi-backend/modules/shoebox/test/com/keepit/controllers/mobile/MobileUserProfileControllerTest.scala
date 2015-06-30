@@ -32,6 +32,7 @@ import play.api.libs.json._
 import play.api.mvc.{ Result, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
 
@@ -227,6 +228,33 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         publicLibrary must greaterThan(-1)
         privateLibrary must equalTo(-1)
 
+      }
+    }
+
+    "show starred first" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user, starredMemberships, starredLibs) = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val unstarred1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
+          val starredLibs = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
+          val unstarred2 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
+
+          val star = (lib: Library, starred: String) => LibraryMembershipFactory.membership().withLibraryOwner(lib).withStarred(Some(starred)).saved
+          unstarred1.foreach(star(_, "unstarred"))
+          val starredMemberships = starredLibs.map(star(_, "starred"))
+          unstarred2.foreach(star(_, "unstarred"))
+          (user, starredMemberships, starredLibs)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+
+        val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, true)
+        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
+        infos foreach println
+        val publicIds = starredLibs.map { lib => Library.publicId(lib.id.get) }
+        publicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
+        publicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
+        infos.length === 6
+        // TODO: this test is failing, apparently we are returning each result twice.
       }
     }
 
@@ -513,7 +541,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileUserProfileController.getProfileLibraries(user.username, page, size, filter)))
   }
 
-  private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
+  private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering], sortDirection: Option[SortDirection] = None, starredFirst: Boolean = false)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
   }
