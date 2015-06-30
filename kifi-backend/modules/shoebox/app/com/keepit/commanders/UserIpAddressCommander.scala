@@ -70,15 +70,14 @@ class UserIpAddressCommander @Inject() (
       val userDeclaration = s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>"
       if (newUserId.contains(u.id.get)) {
         "*" + userDeclaration + " <-- New Member!!!*"
-      }
-      else userDeclaration
+      } else userDeclaration
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
   }
 
   def heuristicsSayThisClusterIsRelevant(ipInfo: Option[JsObject]): Boolean = {
-    val companyOpt = ipInfo flatMap { obj => (obj \ "company").asOpt[String] }
+    val companyOpt = ipInfo flatMap { obj => (obj \ "org").asOpt[String] }
     val blacklistCompanies = Set.empty[String]
 
     !companyOpt.exists(company => blacklistCompanies.contains(company))
@@ -90,9 +89,10 @@ class UserIpAddressCommander @Inject() (
     }
     val ipInfo = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject]
     log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfo)
+    val companyOpt = ipInfo.flatMap(info => (info \ "org").asOpt[String])
 
     if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-      val msg = formatCluster(clusterIp, usersFromCluster, newUserId)
+      val msg = formatCluster(clusterIp, usersFromCluster, newUserId, companyOpt)
       httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
     }
   }
