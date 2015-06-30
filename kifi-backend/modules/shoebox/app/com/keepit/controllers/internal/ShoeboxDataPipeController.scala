@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.classify.{ DomainInfo, DomainRepo, Domain }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -34,6 +35,7 @@ class ShoeboxDataPipeController @Inject() (
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     userIpAddressRepo: UserIpAddressRepo,
+    domainRepo: DomainRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -264,6 +266,17 @@ class ShoeboxDataPipeController @Inject() (
         _.toIngestableUserIpAddress
       }
       Ok(Json.toJson(ipAddresses))
+    }
+  }
+
+  def internDomainsByDomainNames() = Action.async(parse.json) { request =>
+    SafeFuture {
+      val domainNames = (request.body \ "domainNames").as[Set[String]]
+
+      val domainInfoByName: Map[String, DomainInfo] = db.readWrite { implicit session =>
+        domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
+      }
+      Ok(Json.toJson(domainInfoByName))
     }
   }
 }

@@ -2,8 +2,12 @@
 
 # --- !Ups
 
-ALTER TABLE `library_membership` ADD COLUMN starred varchar(16) default 0;
+-- MySQL:
+-- ALTER TABLE domain ADD is_email_provider tinyint(1) DEFAULT 0;
+-- UPDATE domain SET is_email_provider = 1 WHERE hostname IN ${ set of email providers };
 
-insert into evolutions (name, description) values('349.sql', 'add starred to library_membership');
+ALTER TABLE domain ADD is_email_provider tinyint(1) DEFAULT 0;
+
+insert into evolutions (name, description) values('349.sql', 'add is_email_provider to domain');
 
 # --- !Downs

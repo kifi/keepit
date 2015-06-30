@@ -1,0 +1,47 @@
+@(domain: com.keepit.classify.Domain)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("View Domain", stylesheets = List("admin_slider")) {
+    <table class="table table-bordered">
+        <tr>
+            <th>ID</th><td>@domain.id.get.id</td>
+        </tr>
+        <tr>
+            <th>Hostname</th><td>@domain.hostname</td>
+        </tr>
+        <tr>
+            <th>Auto Sensitive</th><td>@domain.autoSensitive.getOrElse(false)</td>
+        </tr>
+        <tr>
+            <th>Manual Sensitive</th><td>@domain.manualSensitive.getOrElse(false)</td>
+        </tr>
+        <tr>
+            <th>State (active?)</th>
+            <td>
+                <label>
+                    @domain.state.value
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <th>Email provider</th>
+            <td>
+                <form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.domainToggleEmailProvider(domain.id.get)" method="POST">
+                    @domain.isEmailProvider
+                    <button type="submit" class="btn btn-default btn-small">
+                        @if(domain.isEmailProvider) {
+                            Un-make email provider
+                        } else {
+                            Make email provider
+                        }
+                    </button>
+                </form>
+            </td>
+        </tr>
+        <tr>
+            <th>Created At</th><td>@adminHelper.dateTimeDisplay(domain.createdAt)</td>
+        </tr>
+        <tr>
+            <th>Updated At</th><td>@adminHelper.dateTimeDisplay(domain.updatedAt)</td>
+        </tr>
+    </table>
+}

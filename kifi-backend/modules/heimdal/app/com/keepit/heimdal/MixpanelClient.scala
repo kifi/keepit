@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.google.inject.ImplementedBy
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.ws.WS
@@ -12,7 +13,15 @@ import play.api.Play.current
 
 import scala.concurrent.Future
 
-class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
+trait MixpanelClient {
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit]
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Future[Unit]
+  def setUserProperties(userId: Id[User], properties: HeimdalContext): Future[Unit]
+  def delete(userId: Id[User]): Future[Unit]
+  def alias(userId: Id[User], externalId: ExternalId[User]): Future[Unit]
+}
+
+class MixpanelClientImpl(projectToken: String, shoebox: ShoeboxServiceClient) extends MixpanelClient {
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
@@ -36,7 +45,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     case anonymousEvent: AnonymousEvent => AnonymousEvent.typeCode
   }
 
-  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
+  def incrementUserProperties(userId: Id[User], increments: Map[String, Double]): Future[Unit] = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
@@ -46,7 +55,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/engage", data)
   }
 
-  def setUserProperties(userId: Id[User], properties: HeimdalContext) = {
+  def setUserProperties(userId: Id[User], properties: HeimdalContext): Future[Unit] = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
@@ -56,7 +65,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/engage", data)
   }
 
-  def delete(userId: Id[User]) = {
+  def delete(userId: Id[User]): Future[Unit] = {
     val data = Json.obj(
       "$token" -> JsString(projectToken),
       "$distinct_id" -> JsString(getDistinctId(userId)),
@@ -66,7 +75,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/engage", data + ("$ignore_alias" -> JsBoolean(true)))
   }
 
-  def alias(userId: Id[User], externalId: ExternalId[User]) = {
+  def alias(userId: Id[User], externalId: ExternalId[User]): Future[Unit] = {
     val data = Json.obj(
       "event" -> "$create_alias",
       "properties" -> Json.obj(
@@ -78,12 +87,12 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/track", data)
   }
 
-  private def sendData(url: String, data: JsObject) = {
+  private def sendData(url: String, data: JsObject): Future[Unit] = {
     val request = WS.url(url).withQueryString(("data", Base64.encodeBase64String(Json.stringify(data).getBytes)))
     new SafeFuture(
       request.get().map {
         case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data")
         case response => response
-      }, Some("Mixpanel Event Forwarding"))
+      }, Some("Mixpanel Event Forwarding")).map(_ => ())
   }
 }

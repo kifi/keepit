@@ -72,13 +72,13 @@ class GratificationCommander @Inject() (
     val numBatches = userCount / BATCH_SIZE
     (0 to numBatches).foreach { batchNum =>
       val userIds: Seq[Id[User]] = generateUserBatch(batchNum).filter(filter)
-      log.info(s"[GratData] userIds ${userIds.head}-${userIds.tail} generated, getting data from heimdal")
+      log.info(s"[GratData] userIds ${userIds.head}-${userIds.last} generated, getting data from heimdal")
       val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map { _.map { augmentData }.filter { _.isEligible } }
       fGratData.onComplete {
         case Success(gratDatas) =>
           log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails")
           emailSenderProvider.gratification.sendToUsersWithData(gratDatas, sendTo)
-        case Failure(t) => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum", t)
+        case Failure(t) => log.error(s"Grat Data batch retrieval failed for batchNum $batchNum. Exception: ${t.getMessage}", t)
       }
     }
   }

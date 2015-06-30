@@ -65,6 +65,28 @@ ec2:
       zone: us-west-1b
       instance_type: m3.large
     - tags:
+        Name: graph-demand-6
+        Service: graph
+        Mode: primary
+        Ansible: v1
+        Capabilities: backup
+      zone: us-west-1a
+      instance_type: r3.xlarge
+    - tags:
+        Name: graph-demand-7
+        Service: graph
+        Mode: primary
+        Ansible: v1
+      zone: us-west-1b
+      instance_type: r3.xlarge
+    - tags:
+        Name: graph-demand-8
+        Service: graph
+        Mode: primary
+        Ansible: v1
+      zone: us-west-1b
+      instance_type: r3.xlarge
+    - tags:
         Name: heimdal-demand-1
         Service: heimdal
         Mode: primary
@@ -107,4 +129,22 @@ ec2:
         ELB: shoebox-b-1
         Ansible: v1
       zone: us-west-1a
+      instance_type: m3.xlarge
+    - tags:
+        Name: search-demand-5
+        Service: search
+        Mode: primary
+        ELB: search-b
+        Ansible: v1
+        ShardSpec: "0, 1/4"
+      zone: us-west-1a
+      instance_type: m3.xlarge
+    - tags:
+        Name: search-demand-6
+        Service: search
+        Mode: primary
+        ELB: search-b
+        Ansible: v1
+        ShardSpec: "2,3/4"
+      zone: us-west-1b
       instance_type: m3.xlarge

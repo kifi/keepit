@@ -1,4 +1,4 @@
-package com.keepit.rover.tagcloud
+package com.keepit.cortex.tagcloud
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.queue.messages.SuggestedSearchTerms

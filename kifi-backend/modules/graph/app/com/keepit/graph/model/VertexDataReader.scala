@@ -212,3 +212,15 @@ case object IpAddressReader extends VertexKind[IpAddressReader] {
   implicit val writes = Writes[IpAddressReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[IpAddressReader]] { json => (json \ "id").validate.map(IpAddressData(_)) }
 }
+
+trait DomainReader extends VertexDataReader {
+  type V = DomainReader
+  def kind = DomainReader
+}
+
+case object DomainReader extends VertexKind[DomainReader] {
+  val header = 14.toByte
+  def apply(rawDataReader: RawDataReader): DomainReader = ???
+  implicit val writes = Writes[DomainReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[DomainReader]] { json => (json \ "id").validate.map(DomainData(_)) }
+}
