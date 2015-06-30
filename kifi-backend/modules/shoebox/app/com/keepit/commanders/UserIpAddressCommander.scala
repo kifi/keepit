@@ -61,16 +61,18 @@ class UserIpAddressCommander @Inject() (
   }
 
   def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], company: Option[String] = None): BasicSlackMessage = {
-    val clusterDeclaration = Map(
-      true -> s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>",
-      company.isDefined -> s"I think the company is '$company'"
-    ).filterKeys(b => b).values.toList
+    val clusterDeclaration = Seq(
+      Some(s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"),
+      company.map("I think the company is '" + _ + "'")
+    ).flatten
 
     val userDeclarations = users.map { u =>
       val userDeclaration = s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>"
-      if (newUserId.contains(u.id.get)) "*" + userDeclaration + " <-- New Member!!!*"
+      if (newUserId.contains(u.id.get)) {
+        "*" + userDeclaration + " <-- New Member!!!*"
+      }
       else userDeclaration
-    }.toList
+    }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
   }
@@ -81,12 +83,13 @@ class UserIpAddressCommander @Inject() (
 
     !companyOpt.exists(company => blacklistCompanies.contains(company))
   }
-  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
+  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Future[Unit] = SafeFuture {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(clusterMembers.toSeq).values.toSeq
     }
     val ipInfo = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject]
+    log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfo)
 
     if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
       val msg = formatCluster(clusterIp, usersFromCluster, newUserId)
