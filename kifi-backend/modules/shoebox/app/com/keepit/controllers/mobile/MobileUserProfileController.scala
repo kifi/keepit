@@ -130,24 +130,24 @@ class MobileUserProfileController @Inject() (
         filter match {
           case LibraryFilter.OWN =>
             val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq)
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection).seq)
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq)
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
           case LibraryFilter.FOLLOWING =>
-            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
           case LibraryFilter.INVITED =>
             val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case LibraryFilter.ALL if page == 0 =>
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection).seq))
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection).seq))
             }
-            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq)
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
