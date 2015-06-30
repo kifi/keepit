@@ -9,7 +9,9 @@ import play.api.libs.functional.syntax._
 
 @json case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 
-case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[EmailAccountInfo])
+case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[EmailAccountInfo]) {
+  def getDomainName = address.address.split("@")(1)
+}
 object EmailAccountInfo {
   implicit val format = (
     (__ \ 'emailAccountId).format(Id.format[EmailAccountInfo]) and

@@ -1,17 +1,18 @@
 package com.keepit.graph.manager
 
+import com.keepit.classify.{ DomainInfo }
+import com.keepit.common.net.URI
+
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.common.core._
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.core.ModelVersion
 
@@ -64,9 +65,32 @@ class GraphUpdateFetcherImpl @Inject() (
         }
       }
 
-      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
+      case NormalizedUriGraphUpdate => {
+        shoebox.getIndexableUris(seq.copy(), fetchSize).flatMap { indexableUris =>
 
-      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).imap(_.map(EmailAccountGraphUpdate.apply))
+          shoebox.internDomainsByDomainNames(indexableUris.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
+            indexableUris.map { uri =>
+              domainInfoByName.get(uri.getDomainName) match {
+                case Some(domain: DomainInfo) if !domain.isEmailProvider => NormalizedUriGraphUpdate.apply(uri, domain.id)
+                case _ => NormalizedUriGraphUpdate(uri, None)
+              }
+            }
+          }
+        }
+      }
+
+      case EmailAccountGraphUpdate => {
+        abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailAccounts =>
+          shoebox.internDomainsByDomainNames(emailAccounts.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
+            emailAccounts.map { email =>
+              domainInfoByName.get(email.getDomainName) match {
+                case Some(domain: DomainInfo) if !domain.isEmailProvider => EmailAccountGraphUpdate.apply(email, domain.id)
+                case _ => EmailAccountGraphUpdate(email, None)
+              }
+            }
+          }
+        }
+      }
 
       case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
 

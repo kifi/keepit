@@ -16,3 +16,4 @@ case class AddressBookData(id: VertexDataId[AddressBookReader]) extends AddressB
 case class LibraryData(id: VertexDataId[LibraryReader]) extends LibraryReader with VertexData[LibraryReader]
 case class OrganizationData(id: VertexDataId[OrganizationReader]) extends OrganizationReader with VertexData[OrganizationReader]
 case class IpAddressData(id: VertexDataId[IpAddressReader]) extends IpAddressReader with VertexData[IpAddressReader]
+case class DomainData(id: VertexDataId[DomainReader]) extends DomainReader with VertexData[DomainReader]

@@ -894,6 +894,7 @@ GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.
 GET     /internal/shoebox/database/getIngestableOrganizations                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableOrganizationMemberships                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
+POST     /internal/shoebox/database/internDomainsByDomainNames               @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()

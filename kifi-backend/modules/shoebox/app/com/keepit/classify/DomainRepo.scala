@@ -5,7 +5,6 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
@@ -13,6 +12,7 @@ trait DomainRepo extends Repo[Domain] {
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
 }
 
 @Singleton
@@ -37,7 +37,8 @@ class DomainRepoImpl @Inject() (
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
-    def * = (id.?, hostname, autoSensitive, manualSensitive, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
+    def isEmailProvider = column[Boolean]("is_email_provider", O.NotNull)
+    def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
 
   def table(tag: Tag) = new DomainTable(tag)
@@ -59,5 +60,17 @@ class DomainRepoImpl @Inject() (
     val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())
     domainIds foreach { id => invalidateCache(get(id)) }
     count
+  }
+
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
+    val foundDomains = (for (d <- rows if d.hostname.inSet(domainNames))
+      yield (d.hostname -> d)).toMap
+
+    val domainsToSave = domainNames.diff(foundDomains.keys.toSet)
+    val savedDomains = domainsToSave.map { domainName =>
+      (domainName -> save(Domain(hostname = domainName)))
+    }.toMap
+
+    foundDomains ++ savedDomains
   }
 }

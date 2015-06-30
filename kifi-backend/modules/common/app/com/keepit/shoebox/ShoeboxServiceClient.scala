@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.classify.{ DomainInfo, Domain }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
@@ -125,6 +126,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
+  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -774,14 +776,19 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = {
-    call(Shoebox.internal.getIngestableOrganizations(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganization]] }
+    call(Shoebox.internal.getIngestableOrganizations(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganization]] }
   }
 
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = {
-    call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganizationMembership]] }
+    call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationMembership]] }
   }
 
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
-    call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
+    call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableUserIpAddress]] }
+  }
+
+  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
+    val payload = Json.obj("domainNames" -> domainNames)
+    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
   }
 }
