@@ -4,6 +4,8 @@ import com.keepit.classify.{ DomainInfo }
 import com.keepit.common.net.URI
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
