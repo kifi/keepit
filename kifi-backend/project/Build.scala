@@ -73,7 +73,9 @@ object ApplicationBuild extends Build {
     "org.apache.commons" % "commons-math3" % "3.4.1"
   )
 
-  lazy val roverDependencies = Seq()
+  lazy val roverDependencies = Seq(
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2"
+  )
 
   lazy val commonSettings =
     Global.settings ++
@@ -157,7 +159,7 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= scraperDependencies,
     javaOptions in Test += "-Dconfig.resource=application-scraper.conf"
-  ).dependsOn(common % "test->test;compile->compile")
+  ).dependsOn(common % "test->test;compile->compile").dependsOn(rover)
 
   lazy val cortex = Project("cortex", file("modules/cortex")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
