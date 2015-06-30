@@ -154,12 +154,37 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
 }
 
+sealed abstract class SortDirection(val value: String)
+object SortDirection {
+  case object ASCENDING extends SortDirection("asc")
+  case object DESCENDING extends SortDirection("desc")
+  def apply(value: String) = value match {
+    case ASCENDING.value => ASCENDING
+    case DESCENDING.value => DESCENDING
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[SortDirection] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SortDirection]] = {
+      stringBinder.bind(key, params) map {
+        case Right(str) =>
+          Right(SortDirection(str))
+        case _ => Left("Unable to bind a SortDirection")
+      }
+    }
+
+    override def unbind(key: String, ordering: SortDirection): String = {
+      stringBinder.unbind(key, ordering.value)
+    }
+  }
+}
+
 abstract class LibraryFilter(val value: String)
 object LibraryFilter {
   case object OWN extends LibraryFilter("own")
   case object FOLLOWING extends LibraryFilter("following")
   case object INVITED extends LibraryFilter("invited")
   case object ALL extends LibraryFilter("all")
+  case object INVALID_FILTER extends LibraryFilter("")
 
   def apply(value: String) = {
     value match {
@@ -167,6 +192,7 @@ object LibraryFilter {
       case FOLLOWING.value => FOLLOWING
       case INVITED.value => INVITED
       case ALL.value => ALL
+      case _ => INVALID_FILTER
     }
   }
 

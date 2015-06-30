@@ -121,7 +121,7 @@ class MobileUserProfileController @Inject() (
   // more readily available via mobile clients, I assume desktop would
   // benefit as well - @jaredpetker
   def getProfileLibrariesV2(id: ExternalId[User], page: Int, pageSize: Int,
-    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None) = MaybeUserAction.async { implicit request =>
+    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None, sortDirection: Option[SortDirection] = None, starredFirst: Boolean) = MaybeUserAction.async { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         val viewer = request.userOpt
@@ -162,7 +162,7 @@ class MobileUserProfileController @Inject() (
             }
           case LibraryFilter.ALL if page != 0 =>
             Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
-          case _ =>
+          case LibraryFilter.INVALID_FILTER =>
             Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
       } getOrElse {
