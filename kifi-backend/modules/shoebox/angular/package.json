@@ -64,6 +64,7 @@
     "protractor": "1.0.0",
     "requirejs": "2.1.14",
     "run-sequence": "0.3.6",
+    "shelljs": "^0.5.1",
     "through": "2.3.4",
     "vinyl-map": "1.0.1"
   }
