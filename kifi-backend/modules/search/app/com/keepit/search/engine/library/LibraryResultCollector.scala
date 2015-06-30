@@ -19,7 +19,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
-  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val networkHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
 
   @inline private def isUserCreated(libId: Long): Boolean = {
@@ -43,8 +43,8 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         val visibility = ctx.visibility
         val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
           myHits
-        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          friendsHits
+        } else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+          networkHits
         } else {
           othersHits
         }
@@ -53,7 +53,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
           libraryQualityEvaluator.getPopularityBoost(memberCount)
         }
         score = score * popularityBoost
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
+        if ((visibility & (Visibility.OWNER | Visibility.FOLLOWER)) != 0) { score = score * myLibraryBoost }
         else {
           //todo(Léo): boost libraries if isUserCreated
           val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
@@ -70,5 +70,5 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
     }
   }
 
-  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, networkHits, othersHits)
 }

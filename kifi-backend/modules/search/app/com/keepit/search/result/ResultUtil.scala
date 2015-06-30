@@ -86,7 +86,7 @@ object ResultUtil {
         Id[NormalizedURI](hit.id),
         hit.finalScore,
         hit.score,
-        (hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0,
+        (hit.visibility & (Visibility.OWNER | Visibility.FOLLOWER)) != 0,
         (hit.visibility & Visibility.NETWORK) != 0)
     }
 

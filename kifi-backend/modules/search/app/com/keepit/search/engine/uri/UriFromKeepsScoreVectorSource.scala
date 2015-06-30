@@ -67,7 +67,7 @@ class UriFromKeepsScoreVectorSource(
 
           val boost = {
             if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) + 0.2f // recency boost [1.0, recencyBoost]
-            else if ((visibility & Visibility.MEMBER) != 0) 1.1f
+            else if ((visibility & Visibility.FOLLOWER) != 0) 1.1f
             else 1.0f
           }
 
