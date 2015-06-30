@@ -287,7 +287,7 @@ class LibraryRepoImpl @Inject() (
            and (lm.access='owner' or lm.access='read_write')
            and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0
            and lm.listed and lib.visibility = 'published')
-           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+           order by #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -300,7 +300,7 @@ class LibraryRepoImpl @Inject() (
            and lm.state = 'active' and ((lib.keep_count > 0 and lm.listed
            and lib.visibility = 'published') or
            (lib.id in (select lm.library_id from library_membership lm where lm.user_id = $friendId and lm.state = 'active')))
-           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+           order by #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -317,26 +317,18 @@ class LibraryRepoImpl @Inject() (
                   and lib.id = lm.library_id and lib.state='active' and lm.state='active'
                   and (lm.access='owner' or lm.access='read_write')
                   order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
-                  #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+                  #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
-  def getOwnerLibrariesForUserIdWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""select lib.* from library lib inner join library_membership lm on lm.library_id = lib.id and lm.user_id = $userId and (lm.access='owner' or lm.access='read_write')
-         order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}
-       """.as[Library].list
-  }
-
-  def getOrderBySql(orderingOpt: Option[LibraryOrdering]) = {
+  def getOrderBySql(orderingOpt: Option[LibraryOrdering], tableName: String, direction: Option[SortDirection] = None) = {
     orderingOpt match {
       case Some(ordering) => ordering match {
-        case LibraryOrdering.ALPHABETICAL => "lib.name asc, lib.id desc"
-        case LibraryOrdering.MEMBER_COUNT => "lib.member_count desc"
-        case LibraryOrdering.LAST_KEPT_INTO => "lib.last_kept desc"
-        case LibraryOrdering.STARRED => "CASE lm.starred WHEN \"starred\" THEN 1 ELSE 0 END"
+        case LibraryOrdering.ALPHABETICAL => s"$tableName.name ${direction.getOrElse(SortDirection.ASCENDING).value}, $tableName.id desc"
+        case LibraryOrdering.MEMBER_COUNT => s"$tableName.member_count ${direction.getOrElse(SortDirection.DESCENDING).value}"
+        case LibraryOrdering.LAST_KEPT_INTO => s"$tableName.last_kept ${direction.getOrElse(SortDirection.DESCENDING).value}"
       }
-      case None => "lib.member_count desc, lib.last_kept desc, lib.id desc"
+      case None => s"$tableName.member_count desc, $tableName.last_kept desc, $tableName.id desc"
     }
   }
 
@@ -363,7 +355,7 @@ class LibraryRepoImpl @Inject() (
            where lm.library_id = lib.id and lm.user_id = $userId
            and lib.state = 'active' and lm.state = 'active'
            and lm.listed and lib.visibility = 'published' and lm.access = 'read_only'
-           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+           order by #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -380,7 +372,7 @@ class LibraryRepoImpl @Inject() (
            where lm.library_id = lib.id and lm.user_id = $userId
            and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only'
            and ((lm.listed and lib.visibility = 'published' and lm.access = 'read_only') #$libVisibility)
-           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+           order by #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -390,7 +382,7 @@ class LibraryRepoImpl @Inject() (
       sql"""select lib.* from library_membership lm, library lib
            where lm.library_id = lib.id and lm.user_id = $userId
            and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only'
-           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+           order by #${getOrderBySql(ordering, "lib")} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -503,14 +495,12 @@ object LibraryOrdering {
   case object LAST_KEPT_INTO extends LibraryOrdering("last_kept_into")
   case object ALPHABETICAL extends LibraryOrdering("alphabetical")
   case object MEMBER_COUNT extends LibraryOrdering("member_count")
-  case object STARRED extends LibraryOrdering("starred")
 
   def fromStr(str: String): LibraryOrdering = {
     str match {
       case LAST_KEPT_INTO.value => LAST_KEPT_INTO
       case ALPHABETICAL.value => ALPHABETICAL
       case MEMBER_COUNT.value => MEMBER_COUNT
-      case STARRED.value => STARRED
     }
   }
 
