@@ -44,7 +44,7 @@ class GratificationStatsCommander @Inject() (
     val libraryViews = getLibraryCountData(userId)
     val keepViews = getKeepCountData(userId)
     val rekeeps = getRekeepCountData(userId)
-    GratificationData(userId, libraryViews, keepViews, rekeeps)
+    GratificationData(userId = userId, libraryViews = libraryViews, keepViews = keepViews, rekeeps = rekeeps)
   }
 
 }
