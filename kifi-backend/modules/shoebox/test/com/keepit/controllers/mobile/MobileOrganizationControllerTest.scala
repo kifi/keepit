@@ -15,7 +15,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -33,8 +33,25 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
   )
 
   "MobileOrganizationController" should {
-    "when getOrganization is called:" in {
-      "succeed with user that has view permissions" in {
+    "serve up organization views" in {
+      "fail on bad public id" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (user, org) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            (user, org)
+          }
+
+          val publicId = PublicId[Organization]("2267")
+
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          val request = route.getOrganization(publicId)
+          val response = controller.getOrganization(publicId)(request)
+
+          response === OrganizationFail.INVALID_PUBLIC_ID
+        }
+      }
+      "give an organization view to a user that has view permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (user, org) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
@@ -46,9 +63,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
             (user, org)
           }
 
-          implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
-
           inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
@@ -57,28 +72,32 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "name").as[String] === "Forty Two Kifis"
           (jsonResponse \ "handle").as[String] === "Kifi"
-          (jsonResponse \ "publicLibraries").as[Int] === 10
-          (jsonResponse \ "organizationLibraries").as[Int] === 15
-          (jsonResponse \ "secretLibraries").as[Int] === 20
+          (jsonResponse \ "numLibraries").as[Int] === 10
         }
       }
-
-      "fail on bad public id" in {
+    }
+    "serve up organization cards" in {
+      "give a user a list of organizations they belong to" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (user, org) = db.readWrite { implicit session =>
+          val user = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(user).saved
-            (user, org)
+            for (i <- 1 to 10) {
+              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").saved
+              LibraryFactory.libraries(i).map(_.published().withOrganization(org.id)).saved
+            }
+            user
           }
 
-          implicit val config = inject[PublicIdConfiguration]
-          val publicId = PublicId[Organization]("2267")
-
           inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
-          val request = route.getOrganization(publicId)
-          val response = controller.getOrganization(publicId)(request)
+          val request = route.getOrganizationsForUser(user.externalId)
+          val response = controller.getOrganizationsForUser(user.externalId)(request)
+          status(response) === OK
 
-          response === OrganizationFail.INVALID_PUBLIC_ID
+          val jsonResponse = Json.parse(contentAsString(response))
+          jsonResponse must haveClass[JsArray]
+          val cards = jsonResponse.as[Seq[JsObject]]
+          cards.foreach { card => (card \ "name").as[String] === "Justice League" }
+          cards.map { card => (card \ "numLibraries").as[Int] }.toSet === (1 to 10).toSet
         }
       }
     }
@@ -133,10 +152,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          val createResponse = createResponseJson.as[FullOrganizationInfo]
-          Organization.decodePublicId(createResponse.pubId) must haveClass[Success[Id[Organization]]]
-          createResponse.name === orgName
-          createResponse.description === Some(orgDescription)
+          (createResponseJson \ "name").as[String] === orgName
+          (createResponseJson \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }

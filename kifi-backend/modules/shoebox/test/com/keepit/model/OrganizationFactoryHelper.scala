@@ -1,13 +1,19 @@
 package com.keepit.model
 
 import com.google.inject.Injector
+import com.keepit.commanders.HandleCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.OrganizationFactory.PartialOrganization
 
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      val org = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
+      val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
+      val org = if (orgTemplate.handle.isEmpty) {
+        injector.getInstance(classOf[HandleCommander]).autoSetOrganizationHandle(orgTemplate).get
+      } else {
+        orgTemplate
+      }
       injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.OWNER))
       for (member <- partialOrganization.members) {
         injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(member.id.get, OrganizationRole.MEMBER))

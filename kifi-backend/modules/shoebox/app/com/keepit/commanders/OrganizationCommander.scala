@@ -14,8 +14,8 @@ import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
-  def get(orgId: Id[Organization]): Organization
-  def getFullOrganizationInfo(orgId: Id[Organization]): FullOrganizationInfo
+  def getOrganizationView(orgId: Id[Organization]): OrganizationView
+  def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard]
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -34,29 +34,45 @@ class OrganizationCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
-  def get(orgId: Id[Organization]): Organization = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+  def getOrganizationView(orgId: Id[Organization]): OrganizationView = {
+    db.readOnlyReplica { implicit session =>
+      val org = orgRepo.get(orgId)
+      val orgHandle = org.getHandle
+      val orgName = org.name
+      val description = org.description
 
-  def getFullOrganizationInfo(orgId: Id[Organization]): FullOrganizationInfo = {
-    val org = get(orgId)
-    val pubId = Organization.publicId(orgId)
+      val members = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
+      val memberCount = orgMembershipRepo.countByOrgId(orgId)
+      val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
+
+      val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
+
+      // TODO: actually find the number of libraries
+      val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
+      OrganizationView(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, members = members,
+        numMembers = memberCount, numLibraries = numPublicLibs)
+    }
+  }
+
+  private def getOrganizationCardHelper(orgId: Id[Organization])(implicit session: RSession): OrganizationCard = {
+    val org = orgRepo.get(orgId)
     val orgHandle = org.getHandle
     val orgName = org.name
     val description = org.description
-    val (externalIds, memberCount, libraries) = db.readOnlyReplica { implicit session =>
-      val members = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
-      val externalIds = userRepo.getUsers(members).values.map(_.externalId).toSeq
-      val memberCount = orgMembershipRepo.countByOrgId(orgId)
-      val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
-      (externalIds, memberCount, libraries)
-    }
 
-    // TODO: how big should avatars be?
+    val numMembers = orgMembershipRepo.countByOrgId(orgId)
+    val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
+
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
-    val publicLibs = libraries(LibraryVisibility.PUBLISHED)
-    val orgLibs = libraries(LibraryVisibility.ORGANIZATION)
-    val privLibs = libraries(LibraryVisibility.SECRET)
-    FullOrganizationInfo(pubId = pubId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, members = externalIds,
-      memberCount = memberCount, publicLibraries = publicLibs, organizationLibraries = orgLibs, secretLibraries = privLibs)
+
+    // TODO: actually find the number of libraries
+    val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
+    OrganizationCard(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, numMembers = numMembers, numLibraries = numPublicLibs)
+  }
+  def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard] = {
+    db.readOnlyReplica { implicit session =>
+      orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId) }.toMap
+    }
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {

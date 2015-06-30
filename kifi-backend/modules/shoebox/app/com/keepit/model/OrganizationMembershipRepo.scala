@@ -14,7 +14,8 @@ import play.api.libs.json._
 
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
-  def getByUserId(userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
+  def getByUserId(userId: Id[User], limit: Limit, offset: Offset, excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
+  def getAllByUserId(userId: Id[User], excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
@@ -126,19 +127,11 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     }
   }
 
-  def getByUserIdCompiled = Compiled { (userId: Column[Id[User]]) =>
-    (for { row <- rows if row.userId === userId } yield row)
+  def getAllByUserId(userId: Id[User], excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+    (for { row <- rows if row.userId === userId && !row.state.inSet(excludeStates) } yield row).list
   }
-
-  def getByUserIdWithExcludeCompiled = Compiled { (userId: Column[Id[User]], excludeState: Column[State[OrganizationMembership]]) =>
-    (for { row <- rows if row.userId === userId && row.state =!= excludeState } yield row)
-  }
-
-  def getByUserId(userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
-    excludeState match {
-      case None => getByUserIdCompiled(userId).list
-      case Some(exclude) => getByUserIdWithExcludeCompiled(userId, exclude).list
-    }
+  def getByUserId(userId: Id[User], limit: Limit, offset: Offset, excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+    (for { row <- rows if row.userId === userId && !row.state.inSet(excludeStates) } yield row).drop(offset.value).take(limit.value).list
   }
 
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {

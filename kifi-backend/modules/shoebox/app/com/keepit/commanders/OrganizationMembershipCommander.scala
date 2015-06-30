@@ -30,6 +30,8 @@ object MaybeOrganizationMember {
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
+  def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
+  def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
@@ -82,6 +84,17 @@ class OrganizationMembershipCommanderImpl @Inject() (
         case false => Seq.empty[OrganizationInvite]
       }
       buildMaybeMembers(members, invitees)
+    }
+  }
+
+  def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getByUserId(userId, limit, offset).map(_.organizationId)
+    }
+  }
+  def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
     }
   }
 
