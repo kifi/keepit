@@ -44,7 +44,7 @@ class ResultDecorator(
     val highlightedHits = highlight(hits)
 
     val mayHaveMoreHits = {
-      val total = (if (searchFilter.includeMine) result.myTotal else 0) + (if (searchFilter.includeFriends) result.friendsTotal else 0) + (if (searchFilter.includeOthers) result.othersTotal else 0)
+      val total = (if (searchFilter.includeMine) result.myTotal else 0) + (if (searchFilter.includeNetwork) result.friendsTotal else 0) + (if (searchFilter.includeOthers) result.othersTotal else 0)
       result.hits.size < total
     }
 

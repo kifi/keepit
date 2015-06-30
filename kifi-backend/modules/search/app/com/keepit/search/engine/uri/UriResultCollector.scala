@@ -25,7 +25,7 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
-  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val networkHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory * OVER_FETCH_BOOST)
 
   private[this] lazy val clickBoosts: ResultClickBoosts = clickBoostsProvider()
@@ -55,8 +55,8 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
         if ((visibility & Visibility.OWNER) != 0) {
           queue = myHits
           actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
-        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          queue = friendsHits
+        } else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+          queue = networkHits
           actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
         } else {
           queue = othersHits
@@ -72,7 +72,7 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
     }
   }
 
-  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, networkHits, othersHits)
 }
 
 class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float, explanation: Option[UriSearchExplanationBuilder]) extends UriResultCollector with Logging {
@@ -83,7 +83,7 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
-  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val networkHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory * OVER_FETCH_BOOST)
 
   override def collect(ctx: ScoreContext): Unit = {
@@ -98,8 +98,8 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
         val visibility = ctx.visibility
         if ((visibility & Visibility.OWNER) != 0) {
           myHits.insert(id, score, visibility, ctx.secondaryId)
-        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          friendsHits.insert(id, score, visibility, ctx.secondaryId)
+        } else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+          networkHits.insert(id, score, visibility, ctx.secondaryId)
         } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)
         }
@@ -111,7 +111,7 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
     }
   }
 
-  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, networkHits, othersHits)
 }
 
 class NonUserUriResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float, explanation: Option[UriSearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {

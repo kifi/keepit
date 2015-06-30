@@ -163,14 +163,14 @@ class UriFromLibraryScoreVectorSource(
       // memberLibraryIds includes myOwnLibraryIds
       lastTotal = output.size
       memberLibraryIds.foreachLong { libId =>
-        if (libsSeen.findIndex(libId) < 0 && myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER)
+        if (libsSeen.findIndex(libId) < 0 && myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.FOLLOWER)
       }
       memberLibraryKeepCount += output.size - lastTotal
 
-      // load URIs from an authorized library as MEMBER
+      // load URIs from an authorized library as FOLLOWER
       lastTotal = output.size
       authorizedLibraryIds.foreachLong { libId =>
-        if (libsSeen.findIndex(libId) < 0 && memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER)
+        if (libsSeen.findIndex(libId) < 0 && memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.FOLLOWER)
       }
       authorizedLibraryKeepCount += output.size - lastTotal
     }
@@ -220,7 +220,7 @@ class UriFromLibraryScoreVectorSource(
         if (iterator.docID == docId) {
           val libId = idMapper.getId(docId)
 
-          val visibility = if (myOwnLibraryIds.contains(libId)) Visibility.OWNER else Visibility.MEMBER
+          val visibility = if (myOwnLibraryIds.contains(libId)) Visibility.OWNER else Visibility.FOLLOWER
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, libraryNameBoost)

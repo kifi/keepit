@@ -36,12 +36,12 @@ class LibrarySearch(
 
   def execute(): LibraryShardResult = {
 
-    val ((myHits, friendsHits, othersHits), explanation) = executeTextSearch()
+    val ((myHits, networkHits, othersHits), explanation) = executeTextSearch()
     debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
-    debugLog(s"friendsHits: ${friendsHits.size()}/${friendsHits.totalHits}")
+    debugLog(s"networkHits: ${networkHits.size()}/${networkHits.totalHits}")
     debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
-    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config, explanation)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
+    val libraryShardResult = LibrarySearch.merge(myHits, networkHits, othersHits, numHitsToReturn, filter, config, explanation)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
     debugLog(s"libraryShardResult: ${libraryShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
@@ -86,7 +86,7 @@ class LibrarySearch(
 }
 
 object LibrarySearch extends Logging {
-  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[LibrarySearchExplanation])(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
+  def merge(myHits: HitQueue, networkHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[LibrarySearchExplanation])(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
@@ -99,7 +99,7 @@ object LibrarySearch extends Logging {
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     val highScore = {
-      val highScore = max(myHits.highScore, friendsHits.highScore)
+      val highScore = max(myHits.highScore, networkHits.highScore)
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
@@ -111,11 +111,11 @@ object LibrarySearch extends Logging {
       }
     }
 
-    if (friendsHits.size > 0 && filter.includeFriends) {
+    if (networkHits.size > 0 && filter.includeNetwork) {
       val queue = UriSearch.createQueue(maxHits - min(minMyLibraries, hits.size))
       hits.discharge(hits.size - minMyLibraries).foreach { h => queue.insert(h) }
 
-      friendsHits.toRankedIterator.foreach {
+      networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
@@ -152,21 +152,21 @@ object LibrarySearch extends Logging {
   def partition(libraryShardHits: Seq[LibraryShardHit]): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
     val maxHitsPerCategory = libraryShardHits.length
     val myHits = UriSearch.createQueue(maxHitsPerCategory)
-    val friendsHits = UriSearch.createQueue(maxHitsPerCategory)
+    val networkHits = UriSearch.createQueue(maxHitsPerCategory)
     val othersHits = UriSearch.createQueue(maxHitsPerCategory)
 
     val keepRecords = libraryShardHits.map { hit =>
       val visibility = hit.visibility
       val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
         myHits
-      } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-        friendsHits
+      } else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+        networkHits
       } else {
         othersHits
       }
       relevantQueue.insert(hit.id.id, hit.score, visibility, hit.keep.map(_._1.id).getOrElse(-1))
       hit.keep
     }.flatten.toMap
-    (myHits, friendsHits, othersHits, keepRecords)
+    (myHits, networkHits, othersHits, keepRecords)
   }
 }

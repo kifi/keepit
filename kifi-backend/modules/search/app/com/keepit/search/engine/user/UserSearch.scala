@@ -97,7 +97,7 @@ object UserSearch extends Logging {
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
-    if (myHits.size > 0 && (filter.includeMine || filter.includeFriends)) {
+    if (myHits.size > 0 && (filter.includeMine || filter.includeNetwork)) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
@@ -132,7 +132,7 @@ object UserSearch extends Logging {
 
     userShardHits.foreach { hit =>
       val visibility = hit.visibility
-      val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+      val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
         myHits
       } else {
         othersHits

@@ -9,7 +9,7 @@ abstract class SearchFilter(val userFilter: Option[Id[User]], val libraryContext
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
   def includeMine: Boolean
-  def includeFriends: Boolean
+  def includeNetwork: Boolean
   def includeOthers: Boolean
   def isDefault = false
 }
@@ -21,7 +21,7 @@ object SearchFilter {
       case Some(Right("m")) =>
         SearchFilter.mine(None, library, context)
       case Some(Right("f")) =>
-        SearchFilter.friends(None, library, context)
+        SearchFilter.network(None, library, context)
       case Some(Right("a")) =>
         SearchFilter.all(None, library, context)
       case Some(Left(userId)) =>
@@ -33,7 +33,7 @@ object SearchFilter {
   def default(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
     new SearchFilter(user, library, context) {
       def includeMine = true
-      def includeFriends = true
+      def includeNetwork = true
       def includeOthers = true
       override def isDefault = true
     }
@@ -42,7 +42,7 @@ object SearchFilter {
   def all(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
     new SearchFilter(user, library, context) {
       def includeMine = true
-      def includeFriends = true
+      def includeNetwork = true
       def includeOthers = true
     }
   }
@@ -50,15 +50,15 @@ object SearchFilter {
   def mine(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
     new SearchFilter(user, library, context) {
       def includeMine = true
-      def includeFriends = false
+      def includeNetwork = false
       def includeOthers = false
     }
   }
 
-  def friends(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
+  def network(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
     new SearchFilter(user, library, context) {
       def includeMine = false
-      def includeFriends = true
+      def includeNetwork = true
       def includeOthers = false
     }
   }

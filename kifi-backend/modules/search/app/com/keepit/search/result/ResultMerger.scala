@@ -40,20 +40,20 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig, isFinalMerg
 
   private def mergeHits(results: Seq[PartialSearchResult], maxHits: Int): Seq[DetailedSearchHit] = {
     val myHits = createQueue(maxHits * 5)
-    val friendsHits = createQueue(maxHits * 5)
+    val networkHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)
 
     results.foreach { res =>
       res.hits.foreach { hit =>
         val scoring = hit.scoring
-        (if (hit.isMyBookmark) myHits else if (hit.isFriendsBookmark) friendsHits else othersHits).insert(scoring.textScore, scoring, hit)
+        (if (hit.isMyBookmark) myHits else if (hit.isFriendsBookmark) networkHits else othersHits).insert(scoring.textScore, scoring, hit)
       }
     }
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     // and others high score (used for tailcutting of others hits)
     val (highScore, othersHighScore) = {
-      var highScore = max(myHits.highScore, friendsHits.highScore)
+      var highScore = max(myHits.highScore, networkHits.highScore)
       val othersHighScore = max(othersHits.highScore, highScore)
       if (highScore < 0.0f) highScore = othersHighScore
       (highScore, othersHighScore)
@@ -77,11 +77,11 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig, isFinalMerg
       }
     }
 
-    if (friendsHits.size > 0) {
+    if (networkHits.size > 0) {
       val queue = createQueue(maxHits - min(minMyBookmarks, hits.size))
       hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
 
-      friendsHits.toRankedIterator.forall {
+      networkHits.toRankedIterator.forall {
         case (hit, rank) =>
           val scoring = hit.scoring
           val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank

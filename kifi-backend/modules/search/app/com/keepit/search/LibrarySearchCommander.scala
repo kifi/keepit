@@ -94,8 +94,8 @@ class LibrarySearchCommanderImpl @Inject() (
   private def toLibrarySearchResult(libraryShardResults: Seq[LibraryShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): LibrarySearchResult = {
     val uniqueHits = libraryShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
     val bestExplanation = libraryShardResults.flatMap(_.explanation).sortBy(_.score).lastOption
-    val (myHits, friendsHits, othersHits, keepRecords) = LibrarySearch.partition(uniqueHits)
-    val LibraryShardResult(hits, show, explanation) = LibrarySearch.merge(myHits, friendsHits, othersHits, maxHits, filter, config, bestExplanation)(keepRecords(_))
+    val (myHits, networkHits, othersHits, keepRecords) = LibrarySearch.partition(uniqueHits)
+    val LibraryShardResult(hits, show, explanation) = LibrarySearch.merge(myHits, networkHits, othersHits, maxHits, filter, config, bestExplanation)(keepRecords(_))
     val idFilter = filter.idFilter.toSet ++ hits.map(_.id.id)
     LibrarySearchResult(hits, show, idFilter, searchExperimentId, explanation)
   }
