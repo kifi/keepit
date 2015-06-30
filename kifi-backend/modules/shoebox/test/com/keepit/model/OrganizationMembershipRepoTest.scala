@@ -64,7 +64,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
           orgs
         }
 
-        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByUserId(Id[User](1)) }
+        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getAllByUserId(Id[User](1)) }
         memberships.length === orgs.length
         memberships.map(_.organizationId).diff(orgs.map(_.id.get)) === List.empty[Id[Organization]]
       }

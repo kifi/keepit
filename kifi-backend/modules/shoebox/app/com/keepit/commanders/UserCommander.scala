@@ -742,6 +742,9 @@ class UserCommander @Inject() (
   def getByExternalIds(externalIds: Seq[ExternalId[User]]): Map[ExternalId[User], User] = {
     db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(externalIds) }
   }
+  def getByExternalId(externalId: ExternalId[User]): User = {
+    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(Seq(externalId)).values.head }
+  }
 
   def getAllFakeUsers(): Set[Id[User]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess

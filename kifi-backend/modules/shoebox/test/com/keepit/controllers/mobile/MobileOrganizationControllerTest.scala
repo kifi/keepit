@@ -133,10 +133,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          val createResponse = createResponseJson.as[FullOrganizationInfo]
-          Organization.decodePublicId(createResponse.pubId) must haveClass[Success[Id[Organization]]]
-          createResponse.name === orgName
-          createResponse.description === Some(orgDescription)
+          (createResponseJson \ "name").as[String] === orgName
+          (createResponseJson \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }
