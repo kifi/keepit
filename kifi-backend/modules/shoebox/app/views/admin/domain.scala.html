@@ -25,13 +25,11 @@
         <tr>
             <th>Email provider</th>
             <td>
-                <form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.domainToggleEmailProvider(domain.id.get)" method="POST">
-                    @*TODO uncomment to fill in with actual data*@
-                    @* @domain.emailProvider *@
+                <form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.domainToggleEmailProvider(domain.id.get)" method="POST"
+                    @domain.emailProvider
                     true
                     <button type="submit" class="btn btn-default btn-small">
-                        @* @if(domain.emailProvider) { *@
-                        @if(true) {
+                        @if(domain.emailProvider) {
                             Make email provider
                         } else {
                             Un-make email provider

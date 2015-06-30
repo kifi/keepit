@@ -145,6 +145,7 @@ class SliderAdminController @Inject() (
     val domain = db.readOnlyReplica { implicit s =>
       domainRepo.get(hostname, None)
     }
+
     domain.map { domain => Redirect(routes.SliderAdminController.getDomain(domain.id.get)) }.getOrElse(NotFound)
   }
 
@@ -158,8 +159,7 @@ class SliderAdminController @Inject() (
   def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
     val domain = db.readWrite { implicit s =>
       val domain = domainRepo.get(id)
-      // TODO waiting on email provider
-      val domainToggled = /*domain.withEmailProvider(!domain.emailProvider)*/ domain
+      val domainToggled = domain.copy(emailProvider = !domain.emailProvider) //domain
       domainRepo.save(domainToggled)
     }
     Redirect(routes.SliderAdminController.getDomain(id))
