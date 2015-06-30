@@ -1,7 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.amazonaws.services.simpleworkflow.model.DomainInfos
-import com.keepit.classify.{ DomainInfo, DomainStates, DomainRepo, Domain }
+import com.keepit.classify.{ DomainInfo, DomainRepo, Domain }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -275,7 +274,7 @@ class ShoeboxDataPipeController @Inject() (
       val domainNames = (request.body \ "domainNames").as[Set[String]]
 
       val domainInfoByName: Map[String, DomainInfo] = db.readWrite { implicit session =>
-        domainRepo.internAllByNames(domainNames).map { case (name: String, domain: Domain) => (name, domain.toDomainInfo) }
+        domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
       }
       Ok(Json.toJson(domainInfoByName))
     }

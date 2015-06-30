@@ -8,6 +8,6 @@
 
 ALTER TABLE domain ADD is_email_provider tinyint(1) DEFAULT 0;
 
-insert into evolutions (name, description) values('348.sql', 'add is_email_provider to domain');
+insert into evolutions (name, description) values('349.sql', 'add is_email_provider to domain');
 
 # --- !Downs

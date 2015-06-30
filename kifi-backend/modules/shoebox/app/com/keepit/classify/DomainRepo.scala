@@ -5,9 +5,6 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.DBSession
-
-import scala.collection.parallel.mutable
 
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {

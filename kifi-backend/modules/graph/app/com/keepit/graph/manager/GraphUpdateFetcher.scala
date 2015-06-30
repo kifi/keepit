@@ -4,17 +4,15 @@ import com.keepit.classify.{ DomainInfo }
 import com.keepit.common.net.URI
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ IndexableUri, NormalizedURI }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.common.core._
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.core.ModelVersion
 
