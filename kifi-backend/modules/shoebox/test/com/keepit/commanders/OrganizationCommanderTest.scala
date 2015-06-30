@@ -10,6 +10,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
   "organization commander" should {
     "create an organization" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
@@ -18,7 +19,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
-        orgCommander.get(org.id.get) === org
+        db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === org
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         memberships.length === 1
         memberships.head.userId === Id[User](1)
@@ -28,6 +29,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
     "modify an organization" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
@@ -60,7 +62,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         ownerModifyResponse.right.get.request === ownerModifyRequest
         ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
 
-        orgCommander.get(org.id.get) === ownerModifyResponse.right.get.modifiedOrg
+        db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === ownerModifyResponse.right.get.modifiedOrg
       }
     }
 

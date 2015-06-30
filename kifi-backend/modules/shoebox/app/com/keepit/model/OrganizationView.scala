@@ -22,12 +22,15 @@ case class OrganizationNotificationInfo(
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
 
-case class FullOrganizationInfo(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[Id[User]],
-  memberCount: Int, publicLibraries: Int, organizationLibraries: Int, secretLibraries: Int)
+case class OrganizationView(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[Id[User]],
+  numMembers: Int, numLibraries: Int)
+
+case class OrganizationCard(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath],
+  numMembers: Int, numLibraries: Int)
 
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo(_)))
+    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo))
   }
 }
 

@@ -25,28 +25,26 @@ class MobileOrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  private def serializeFullOrganizationInfo(fullInfo: FullOrganizationInfo): JsValue = {
+  private def serializeOrganizationView(view: OrganizationView): JsValue = {
     Json.obj(
-      "id" -> Organization.publicId(fullInfo.orgId),
-      "handle" -> fullInfo.handle,
-      "name" -> fullInfo.name,
-      "description" -> fullInfo.description,
-      "avatarPath" -> fullInfo.avatarPath.map(_.getUrl),
-      "members" -> fullInfo.members,
-      "memberCount" -> fullInfo.memberCount,
-      "publicLibraries" -> fullInfo.publicLibraries,
-      "organizationLibraries" -> fullInfo.organizationLibraries,
-      "secretLibraries" -> fullInfo.secretLibraries
+      "id" -> Organization.publicId(view.orgId),
+      "handle" -> view.handle,
+      "name" -> view.name,
+      "description" -> view.description,
+      "avatarPath" -> view.avatarPath.map(_.getUrl),
+      "members" -> view.members,
+      "numMembers" -> view.numMembers,
+      "numLibraries" -> view.numLibraries
     )
   }
-  private def serializeTinyOrganizationInfo(tinyInfo: FullOrganizationInfo): JsValue = {
+  private def serializeOrganizationCard(tinyInfo: OrganizationCard): JsValue = {
     Json.obj(
       "id" -> Organization.publicId(tinyInfo.orgId),
       "handle" -> tinyInfo.handle,
       "name" -> tinyInfo.name,
       "avatarPath" -> tinyInfo.avatarPath.map(_.getUrl),
-      "memberCount" -> tinyInfo.memberCount,
-      "publicLibraries" -> tinyInfo.publicLibraries
+      "numMembers" -> tinyInfo.numMembers,
+      "numLibraries" -> tinyInfo.numLibraries
     )
   }
 
@@ -62,8 +60,8 @@ class MobileOrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val fullInfo = orgCommander.getFullOrganizationInfo(response.newOrg.id.get)
-              Ok(serializeFullOrganizationInfo(fullInfo))
+              val fullInfo = orgCommander.getOrganizationView(response.newOrg.id.get)
+              Ok(serializeOrganizationView(fullInfo))
           }
       }
     }
@@ -78,8 +76,8 @@ class MobileOrganizationController @Inject() (
             orgCommander.modifyOrganization(OrganizationModifyRequest(requesterId, request.orgId, modifications)) match {
               case Left(failure) => failure.asErrorResponse
               case Right(response) =>
-                val fullInfo = orgCommander.getFullOrganizationInfo(response.modifiedOrg.id.get)
-                Ok(serializeFullOrganizationInfo(fullInfo))
+                val fullInfo = orgCommander.getOrganizationView(response.modifiedOrg.id.get)
+                Ok(serializeOrganizationView(fullInfo))
             }
           case _ => OrganizationFail.BAD_PARAMETERS.asErrorResponse
         }
@@ -99,13 +97,16 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(serializeFullOrganizationInfo(orgCommander.getFullOrganizationInfo(request.orgId)))
+    Ok(serializeOrganizationView(orgCommander.getOrganizationView(request.orgId)))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
-    val user = userCommander.getByExternalIds(Seq(extId)).values.head
-    val publicOrgs = orgMembershipCommander.getAllOrganizationsForUser(user.id.get)
-    val orgInfos = orgCommander.getFullOrganizationInfos(publicOrgs)
-    Ok(JsArray(orgInfos.values.toSeq.map(serializeTinyOrganizationInfo)))
+    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    else {
+      val user = userCommander.getByExternalIds(Seq(extId)).values.head
+      val publicOrgs = orgMembershipCommander.getAllOrganizationsForUser(user.id.get)
+      val orgInfos = orgCommander.getOrganizationCards(publicOrgs)
+      Ok(JsArray(orgInfos.values.toSeq.map(serializeOrganizationCard)))
+    }
   }
 }
