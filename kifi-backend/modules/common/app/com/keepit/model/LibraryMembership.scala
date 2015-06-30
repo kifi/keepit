@@ -27,7 +27,7 @@ case class LibraryMembership(
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
     subscribedToUpdates: Boolean = false,
-    starred: String = "unstarred") extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    starred: Option[String] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -61,7 +61,7 @@ object LibraryMembership {
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
     (__ \ 'subscribedToUpdates).format[Boolean] and
-    (__ \ 'starred).format[String]
+    (__ \ 'starred).formatNullable[String]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
