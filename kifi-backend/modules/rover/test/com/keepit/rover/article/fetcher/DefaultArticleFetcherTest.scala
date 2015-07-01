@@ -63,12 +63,6 @@ class DefaultArticleFetcherTest extends Specification with ArticleFetcherTest[De
     }
 
     "extract keywords" in {
-      //      val extractor = setup("https://cnn.com/url2", "www.cnn.com.health.txt", Some(500))
-      //      extractor.getCanonicalUrl("") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
-      //      extractor.getLinks("canonical") === Set("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
-      //      extractor.getMetadata("og:url") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
-      //      extractor.getKeywords() !== None
-      //      extractor.getKeywords().exists(_.contains("Olympics")) === true
       val scraped = fetch("www.cnn.com.health.txt")
       val normalization = scraped.content.normalization
       normalization.canonicalUrl === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
