@@ -53,9 +53,9 @@ object TikaDocument extends Logging {
     val metadata = new Metadata()
     contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
     val mainHandler = MainContentHandler(metadata, destinationUrl)
-    val linkHandler = new LinkContentHandler()
+    val linkHandler = new RoverLinkContentHandler()
     parseTo(input)(mainHandler, linkHandler)
-    new TikaDocument(metadata, mainHandler.getContent(), mainHandler.getKeywords getOrElse Seq(), linkHandler.getLinks)
+    new TikaDocument(metadata, mainHandler.getContent(), mainHandler.getKeywords getOrElse Seq(), linkHandler.links)
   }
 
   private def parseTo(input: HttpInputStream)(mainHandler: MainContentHandler, moreHandlers: ContentHandler*): Unit = {

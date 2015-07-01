@@ -68,8 +68,6 @@ class MainContentHandler(maxContentChars: Int, output: WriteOutContentHandler, v
     super.startElement(uri, localName, qName, atts)
     val rel = atts.getValue("rel")
     val href = atts.getValue("href")
-
-    if (rel != null && href != null) links.addBinding(rel, href)
   }
 
   // option tag
