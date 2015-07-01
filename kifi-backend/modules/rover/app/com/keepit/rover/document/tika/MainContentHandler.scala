@@ -29,8 +29,6 @@ class MainContentHandler(maxContentChars: Int, output: WriteOutContentHandler, v
 
   def getKeywords: Option[Seq[String]] = keywordValidatorContentHandler.map { _.keywords }
 
-  val links = new mutable.HashMap[String, mutable.Set[String]] with mutable.MultiMap[String, String] // todo(Léo): use Tika's LinkHandler instead
-
   def isWriteLimitReached(t: Throwable): Boolean = output.isWriteLimitReached(t)
 
   override def startDocument() {
@@ -63,13 +61,6 @@ class MainContentHandler(maxContentChars: Int, output: WriteOutContentHandler, v
     inAnchor = false
   }
 
-  // link tag
-  private def startLink(uri: String, localName: String, qName: String, atts: Attributes): Unit = {
-    super.startElement(uri, localName, qName, atts)
-    val rel = atts.getValue("rel")
-    val href = atts.getValue("href")
-  }
-
   // option tag
   private[this] var inOption = false
   private def startOption(uri: String, localName: String, qName: String, atts: Attributes) = {
@@ -81,8 +72,7 @@ class MainContentHandler(maxContentChars: Int, output: WriteOutContentHandler, v
 
   private val startElemProcs: Map[String, (String, String, String, Attributes) => Unit] = Map(
     "a" -> startAnchor,
-    "option" -> startOption,
-    "link" -> startLink
+    "option" -> startOption
   )
 
   private val endElemProcs: Map[String, (String, String, String) => Unit] = Map(
