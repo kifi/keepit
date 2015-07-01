@@ -20,27 +20,25 @@ trait ProtoOrganizationRepo extends Repo[ProtoOrganization] with SeqNumberFuncti
 
 @Singleton
 class ProtoOrganizationRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock) extends ProtoOrganizationRepo with DbRepo[ProtoOrganization] with SeqNumberDbFunction[ProtoOrganization] with Logging {
+    val db: DataBaseComponent,
+    val clock: Clock) extends ProtoOrganizationRepo with DbRepo[ProtoOrganization] with SeqNumberDbFunction[ProtoOrganization] with Logging {
 
   import db.Driver.simple._
 
   type RepoImpl = ProtoOrganizationTable
   class ProtoOrganizationTable(tag: Tag) extends RepoTable[ProtoOrganization](db, tag, "organization") with SeqNumberColumn[ProtoOrganization] {
-
     def name = column[String]("name", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
-    def basePermissions = column[BasePermissions]("base_permissions", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, members, inviteeEmails) <> ((ProtoOrganization.applyFromDbRow _).tupled, ProtoOrganization.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId) <> ((ProtoOrganization.apply _).tupled, ProtoOrganization.unapply)
   }
 
   def table(tag: Tag) = new ProtoOrganizationTable(tag)
   initTable()
 
-  override def deleteCache(org: Organization)(implicit session: RSession) {}
-  override def invalidateCache(org: Organization)(implicit session: RSession) {}
+  override def deleteCache(model: ProtoOrganization)(implicit session: RSession) {}
+  override def invalidateCache(model: ProtoOrganization)(implicit session: RSession) {}
 
   def deactivate(model: ProtoOrganization)(implicit session: RWSession): Unit = {
     save(model.withState(ProtoOrganizationStates.INACTIVE))
@@ -55,5 +53,5 @@ class ProtoOrganizationSequencingPluginImpl @Inject() (
 @Singleton
 class ProtoOrganizationSequenceNumberAssigner @Inject() (db: Database, repo: ProtoOrganizationRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[ProtoOrganization](db, repo, airbrake)
 class ProtoOrganizationSequencingActor @Inject() (
-                                              assigner: ProtoOrganizationSequenceNumberAssigner,
-                                              airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
+  assigner: ProtoOrganizationSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
