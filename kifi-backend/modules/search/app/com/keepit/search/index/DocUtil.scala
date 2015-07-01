@@ -3,7 +3,6 @@ package com.keepit.search.index
 import java.nio.charset.StandardCharsets
 
 import com.keepit.common.time._
-import com.keepit.search.index.graph.collection.CollectionIdList
 import com.keepit.search.index.graph.URIList
 import com.keepit.search.index.graph.Util
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
@@ -93,22 +92,6 @@ object DocUtil {
       val uriList = URIList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
       val printable = toString(uriList.ids, uriList.createdAt)
       "version=%d [%s]".format(uriList.version, printable)
-    }
-  }
-
-  object CollectionIdListDecoder extends FieldDecoder {
-    override def apply(indexableField: IndexableField): String = {
-      var seqno = -1
-      def toString(ids: Array[Long]) = {
-        ids.map { id =>
-          seqno += 1
-          "#%d: %d".format(seqno, id)
-        }.mkString(", ")
-      }
-      val binaryValue = indexableField.binaryValue
-      val idList = CollectionIdList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
-      val printable = toString(idList.ids)
-      "version=%d [%s]".format(idList.version, printable)
     }
   }
 
