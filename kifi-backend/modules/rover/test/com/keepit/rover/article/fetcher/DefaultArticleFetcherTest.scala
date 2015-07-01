@@ -3,9 +3,8 @@ package com.keepit.rover.article.fetcher
 import com.keepit.rover.article.{ ArticleKind, DefaultArticle }
 import org.specs2.mutable.Specification
 
-class DefaultArticleFetcherTest extends Specification with ArticleFetcherTest[DefaultArticle] {
+class DefaultArticleFetcherTest extends Specification with ArticleFetcherTest[DefaultArticle, DefaultArticleFetcher] {
 
-  override type FetcherType = DefaultArticleFetcher
   override val fetcherClass = classOf[DefaultArticleFetcher]
   override val articleKind = DefaultArticle
 

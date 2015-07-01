@@ -6,9 +6,8 @@ import com.keepit.rover.test.RoverTestInjector
 import scala.concurrent.{ ExecutionContext, Await }
 import scala.concurrent.duration._
 
-trait ArticleFetcherTest[A <: Article] extends RoverTestInjector {
+trait ArticleFetcherTest[A <: Article, FetcherType <: ArticleFetcher[A]] extends RoverTestInjector {
 
-  type FetcherType <: ArticleFetcher[A]
   val fetcherClass: Class[FetcherType]
 
   val articleKind: ArticleKind[A]
@@ -27,7 +26,6 @@ trait ArticleFetcherTest[A <: Article] extends RoverTestInjector {
     }
 
     val request = mkRequest(file)
-
     Await.result(articleFetcher.fetch(request).map(_.get), articleFetchDuration)
   }
 
