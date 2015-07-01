@@ -107,6 +107,13 @@
   </div>
 
   <div class="kf-lh-buttons" ng-if="!isOwnerOrCollaborator()">
+    <button class="kf-lh-view-option" ng-click="setGalleryView()">
+      <figure ng-class="galleryView ? 'svg-view-gallery-green' : 'svg-view-gallery'"></figure>
+    </button>
+
+    <button class="kf-lh-view-option" ng-click="setCompactView()">
+      <figure ng-class="galleryView ? 'svg-view-list' : 'svg-view-list-green'"></figure>
+    </button>
 
     <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
       <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
@@ -132,43 +139,21 @@
     </button>
 
   </div>
-  <div class="kf-lh-buttons" ng-if="isOwnerOrCollaborator()">
-    <ul>
-      <li>
-        <button ng-click="setGalleryView()">
-          <figure ng-class="galleryView ? 'svg-view-gallery-green' : 'svg-view-gallery'"></figure>
-        </button>
-      </li>
-      <li>
-        <button ng-click="setCompactView()">
-          <figure ng-class="galleryView ? 'svg-view-list' : 'svg-view-list-green'"></figure>
-        </button>
-      </li>
-    </ul>
-    <ul>
-      <li>
-        <button
-          ng-click="toggleEditKeeps()"
-          ng-if="library.numKeeps > 0 && !librarySearch"
-          ng-class="editMode ? 'active' : ''"
-        >
-          <figure class="svg-edit-keeps"></figure>
-          <figure class="svg-edit-keeps-green"></figure>
-          {{editMode ? 'Done editing' : 'Edit keeps'}}
-        </button>
-      </li>
-      <li>
-        <button
-          ng-if="isOwnerOrCollaborator() && !library.isSystem"
-          ng-click="openInviteModal('follow')"
-        >
-          <figure class="svg-add-followers"></figure>
-          <figure class="svg-add-followers-green"></figure>
-          Invite Followers
-          </button>
-      </li>
-    </ul>
+  <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
+    <button class="kf-lh-view-option" ng-click="setGalleryView()">
+      <figure ng-class="galleryView ? 'svg-view-gallery-green' : 'svg-view-gallery'"></figure>
+    </button>
 
+    <button class="kf-lh-view-option" ng-click="setCompactView()">
+      <figure ng-class="galleryView ? 'svg-view-list' : 'svg-view-list-green'"></figure>
+    </button>
+
+    <button class="kf-lh-edit-keeps svg-edit-keeps-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
+
+    <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem">
+      <div class="svg-share-arrow-green"></div>
+      Invite followers
+    </button>
   </div>
 
 

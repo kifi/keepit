@@ -965,59 +965,15 @@ collabImageDiam2 = 3.6em
       &:active
         background-color: alpha(#fff, .05)
 
-buttonHeight = 20px
+.kf-lh-buttons
+  padding-top: 1.8em
+  text-align: center
+
+buttonHeight = 32px
 buttonFontSize = 13px
 buttonBorderRadius = 12px
 buttonSidePad = 15px
 followBtnWidth = 7.6em
-
-.kf-lh-buttons
-  wrapper()
-  padding-top: 1.8em
-  text-align: center
-  display: flex
-  justify-content: space-between
-
-  ul
-    li
-      display: inline-block
-
-  button
-    border: 0px
-    background-color: transparent
-    color: #909090
-    font-size: buttonFontSize
-
-    figure
-      width: buttonHeight
-      height: buttonHeight
-      background-size: cover
-      background-repeat: no-repeat
-      display: inline-block
-      vertical-align: middle
-
-    // TODO (Adam): DRY
-    .svg-edit-keeps,
-    .svg-add-followers
-      display: inline-block
-
-    .svg-edit-keeps-green,
-    .svg-add-followers-green
-      display: none
-
-    &:hover, &.active
-      color: accentGreen
-
-      .svg-edit-keeps,
-      .svg-add-followers
-        display: none
-
-      .svg-edit-keeps-green,
-      .svg-add-followers-green
-        display: inline-block
-
-/* Elements for styles below may disappear after toolbar refactorization */
-/* (begin) */
 
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
@@ -1142,13 +1098,14 @@ subsDur = .4s
       width: 15px
       margin-right: 2px
 
-.kf-lh-edit-keeps
+.kf-lh-edit-keeps,
+.kf-lh-view-option
   float: left
   border-color: transparent
   border-left: 0
   border-right: 0
-  padding-left: 29px
-  padding-right: 0
+  padding-left: 25px
+  padding-right: 15px
   background-position: left center
   background-size: auto 15px
   background-repeat: no-repeat
@@ -1162,6 +1119,18 @@ subsDur = .4s
   &:hover
     text-decoration: underline
 
+.kf-lh-edit-keeps
+  background-size: 25px 25px
+  margin-left: 20px
+
+.kf-lh-view-option
+  padding-left: 0
+
+  figure
+    background-size: cover
+    width: 20px
+    height: 20px
+
 .kf-lh-buttons.kf-my-lib
   max-width: 538px // matching max-width of .kf-keep
   margin: 0 auto
@@ -1172,7 +1141,6 @@ subsDur = .4s
   @media (min-width: 796px)
     padding-right: 234px  // rightColWidth + colGapWidth
 
-/* (end) */
 
 .kf-lh-invite-search-button
   height: buttonHeight
