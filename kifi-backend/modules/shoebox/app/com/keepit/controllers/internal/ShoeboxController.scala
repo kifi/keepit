@@ -332,13 +332,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>
-    val uris = db.readOnlyReplica(2) { implicit s =>
-      keepToCollectionRepo.getUriIdsInCollection(collectionId)
-    }
-    Ok(Json.toJson(uris))
-  }
-
   def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>
     val res = db.readOnlyMaster { implicit session => //using cache
       sessionRepo.getViewOpt(sessionId)

@@ -3,7 +3,6 @@ package com.keepit.search.index
 import java.nio.charset.StandardCharsets
 
 import com.keepit.common.time._
-import com.keepit.search.index.graph.URIList
 import com.keepit.search.index.graph.Util
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
@@ -77,23 +76,6 @@ object DocUtil {
   object TextFieldDecoder extends FieldDecoder
 
   object IdValueFieldDecoder extends FieldDecoder
-
-  object URIListDecoder extends FieldDecoder {
-    override def apply(indexableField: IndexableField): String = {
-      var seqno = -1
-      def toString(ids: Array[Long], timestamps: Array[Long]) = {
-        ids.zip(timestamps).map {
-          case (id, timestamp) =>
-            seqno += 1
-            "#%d: %d [%s]".format(seqno, id, new DateTime(Util.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
-        }.mkString(", ")
-      }
-      val binaryValue = indexableField.binaryValue
-      val uriList = URIList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
-      val printable = toString(uriList.ids, uriList.createdAt)
-      "version=%d [%s]".format(uriList.version, printable)
-    }
-  }
 
   object LineFieldDecoder extends FieldDecoder {
     override def apply(indexableField: IndexableField): String = {
