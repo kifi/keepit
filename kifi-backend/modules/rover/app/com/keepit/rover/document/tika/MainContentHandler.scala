@@ -8,8 +8,6 @@ import org.apache.tika.sax.{ WriteOutContentHandler, ContentHandlerDecorator }
 import org.xml.sax.Attributes
 import play.api.http.MimeTypes
 
-import scala.collection.mutable
-
 object MainContentHandler {
   val maxContentChars = 100000 // 100K chars
   def apply(metadata: Metadata, url: String): MainContentHandler = {
