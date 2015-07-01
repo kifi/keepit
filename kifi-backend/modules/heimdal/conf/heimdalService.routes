@@ -28,7 +28,7 @@ POST /internal/heimdal/data/reKeep/getReKeepCountsByKeepIds         @com.keepit.
 
 GET  /internal/heimdal/data/userKeepInfo/getReKeepCountsByUserUri @com.keepit.controllers.UserKeepInfoController.getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI])
 
-POST  /internal/heimdal/data/getEligibleGratData         @com.keepit.controllers.GratificationStatsController.getEligibleGratData()
+POST  /internal/heimdal/data/getEligibleGratDatas         @com.keepit.controllers.GratificationStatsController.getEligibleGratDatas()
 GET   /internal/heimdal/data/getGratData                  @com.keepit.controllers.GratificationStatsController.getGratData(userId: Id[User])
 POST /internal/heimdal/data/getGratDatas                @com.keepit.controllers.GratificationStatsController.getGratDatas()
 
