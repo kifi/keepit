@@ -160,7 +160,7 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= scraperDependencies,
     javaOptions in Test += "-Dconfig.resource=application-scraper.conf"
-  ).dependsOn(common % "test->test;compile->compile").dependsOn(rover)
+  ).dependsOn(common % "test->test;compile->compile")
 
   lazy val cortex = Project("cortex", file("modules/cortex")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
