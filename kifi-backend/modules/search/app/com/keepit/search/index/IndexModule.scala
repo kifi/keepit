@@ -214,7 +214,7 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Provides @Singleton
   def organizationIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): OrganizationIndexer = {
-    val version = IndexerVersionProviders.Library.getVersionByStatus(serviceDisovery)
+    val version = IndexerVersionProviders.Organization.getVersionByStatus(serviceDisovery)
     val orgDir = getIndexDirectory("index.organization.directory", noShard, version, backup, conf, IndexerVersionProviders.Organization.getVersionsForCleanup())
     log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgDir")
     new OrganizationIndexer(orgDir, shoebox, airbrake)
