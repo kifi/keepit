@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfKeeps', [
   '$window', '$timeout', '$injector', 'KeepSelection', 'keepActionService', 'libraryService',
-  'modalService', 'undoService', 'profileService',
+  'modalService', 'undoService', 'profileService', '$rootScope',
   function (
     $window, $timeout, $injector, KeepSelection, keepActionService, libraryService,
-    modalService, undoService, profileService) {
+    modalService, undoService, profileService, $rootScope) {
 
     return {
       restrict: 'A',
@@ -159,6 +159,8 @@ angular.module('kifi')
             scope.selection.unselectAll();
           })['catch'](modalService.openGenericErrorModal);
         };
+
+        $rootScope.$on('editKeepNote', function(e, event, keep) { scope.editKeepNote(event, keep); });
 
         scope.editKeepNote = function (event, keep) {
           var keepEl = angular.element(event.target).closest('.kf-keep');

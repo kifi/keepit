@@ -17,7 +17,7 @@
       <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank" ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow" click-action="clickedArticleTitle">{{displayTitle}}</a>
     </div>
     <div class="kf-keep-description" ng-hide="!galleryView && keep.note" kf-ellipsis full-text="::keep.summary.description" max-num-lines="::image.maxDescLines || 4"></div>
-    <div class="kf-keep-note-icon" ng-if="::keep.note">
+    <div class="kf-keep-note-icon" ng-if="::keep.note" ng-click="editKeepNote($event, keep)">
       <span class="svg-note-gray"></span>
     </div>
     <div class="kf-keep-note-compact" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>

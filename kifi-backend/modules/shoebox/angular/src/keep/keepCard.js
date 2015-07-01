@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
-  'modalService', 'keepActionService', 'undoService',
+  'modalService', 'keepActionService', 'undoService', '$rootScope',
   function ($analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService) {
+      modalService, keepActionService, undoService, $rootScope) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -207,6 +207,10 @@ angular.module('kifi')
             //   });
             // });
           }
+        };
+
+        scope.editKeepNote = function (event, keep) {
+          $rootScope.$emit('editKeepNote', event, keep);
         };
 
         scope.trackTweet = function () {

@@ -94,6 +94,9 @@ angular.module('kifi')
       }
     };
     $scope.galleryView = true;
+    $rootScope.$on('prefsChanged', function() {
+      $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+    });
 
     //
     // Scope methods.

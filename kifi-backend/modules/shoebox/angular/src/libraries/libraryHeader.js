@@ -602,10 +602,12 @@ angular.module('kifi')
 
         scope.setGalleryView = function() {
           scope.galleryView = true;
+          profileService.savePrefs({use_minimal_keep_card: false});
         };
 
         scope.setCompactView = function() {
           scope.galleryView = false;
+          profileService.savePrefs({use_minimal_keep_card: true});
         };
 
         scope.showFollowers = function () {
