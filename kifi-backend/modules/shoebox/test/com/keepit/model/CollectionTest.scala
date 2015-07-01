@@ -210,12 +210,11 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           n must be > coll2.seq.value
           n
         }
-        val latestSeqNum = db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(
             keepId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
           val seq = collectionRepo.get(coll1.id.get).seq.value
           seq must be > newSeqNum
-          seq
         }
       }
     }
