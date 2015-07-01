@@ -549,7 +549,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
+          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
@@ -745,7 +745,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
+          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))

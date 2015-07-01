@@ -112,6 +112,7 @@ class LibraryCommanderImpl @Inject() (
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     orgRepo: OrganizationRepo,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -541,12 +542,16 @@ class LibraryCommanderImpl @Inject() (
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
-        db.readOnlyReplica { implicit s => libraryRepo.getByNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
-          case Some(lib) if lib.name == libAddReq.name =>
+        db.readOnlyReplica { implicit s =>
+          val sameNameOpt = libraryRepo.getBySpaceAndName(ownerId, libAddReq.name)
+          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(ownerId, validSlug)
+          (sameNameOpt, sameSlugOpt)
+        } match {
+          case (Some(sameName), _) =>
             Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
-          case Some(lib) if lib.slug == validSlug =>
+          case (_, Some(sameSlug)) =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-          case None =>
+          case (None, None) =>
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
@@ -602,10 +607,13 @@ class LibraryCommanderImpl @Inject() (
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
       (lib, mem)
     }
-    if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
+
+    if (!targetMembershipOpt.exists(_.canWrite)) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       val targetMembership = targetMembershipOpt.get
+      val currentSpace = LibrarySpace(userId, organizationId = targetLib.organizationId)
+      val newSpace = LibrarySpace(userId, organizationId = modifyReq.orgId.flatMap(_.destination).orElse(targetLib.organizationId))
 
       def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
         newNameOpt match {
@@ -615,7 +623,7 @@ class LibraryCommanderImpl @Inject() (
               Left(LibraryFail(BAD_REQUEST, "invalid_name"))
             } else {
               db.readOnlyMaster { implicit s =>
-                libraryRepo.getByNameAndUserId(userId, name)
+                libraryRepo.getBySpaceAndName(newSpace, name)
               } match {
                 case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
                 case _ => Right(name)
@@ -623,6 +631,15 @@ class LibraryCommanderImpl @Inject() (
             }
         }
       }
+
+      def validOrg(newOrg: Option[OrganizationMoveRequest]): Either[LibraryFail, Option[Id[Organization]]] = {
+        newOrg match {
+          case None => Right(targetLib.organizationId)
+          case Some(orgMoveReq) if canMoveToOrg(userId = userId, libId = libraryId, to = orgMoveReq.destination) => Right(orgMoveReq.destination)
+          case _ => Left(LibraryFail(BAD_REQUEST, "invalid_org_id"))
+        }
+      }
+
       def validSlug(newSlugOpt: Option[String]): Either[LibraryFail, LibrarySlug] = {
         newSlugOpt match {
           case None => Right(targetLib.slug)
@@ -634,7 +651,7 @@ class LibraryCommanderImpl @Inject() (
             } else {
               val slug = LibrarySlug(slugStr)
               db.readOnlyMaster { implicit s =>
-                libraryRepo.getBySlugAndUserId(userId, slug)
+                libraryRepo.getBySpaceAndSlug(newSpace, slug)
               } match {
                 case Some(other) if other.id.get != libraryId => Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
                 case _ => Right(slug)
@@ -648,6 +665,7 @@ class LibraryCommanderImpl @Inject() (
       val result = for {
         newName <- validName(modifyReq.name).right
         newSlug <- validSlug(modifyReq.slug).right
+        newOrgId <- validOrg(modifyReq.orgId).right
       } yield {
         val newDescription = modifyReq.description.orElse(targetLib.description)
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
@@ -664,16 +682,15 @@ class LibraryCommanderImpl @Inject() (
         }
 
         val lib = db.readWrite { implicit s =>
-          if (targetLib.slug != newSlug) {
-            val ownerId = targetLib.ownerId
-            libraryAliasRepo.reclaim(ownerId, newSlug)
-            libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
+          if (newSpace != currentSpace || newSlug != targetLib.slug) {
+            libraryAliasRepo.reclaim(currentSpace, newSlug)
+            libraryAliasRepo.alias(newSpace, targetLib.slug, targetLib.id.get)
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
 
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId))
         }
 
         // Update visibility of keeps
@@ -698,6 +715,7 @@ class LibraryCommanderImpl @Inject() (
             Future.successful(())
           }
         }.flatMap(m => m)
+
         updateKeepVisibility(newVisibility, 0).onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
@@ -707,10 +725,12 @@ class LibraryCommanderImpl @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
+          "orgId" -> (newOrgId != targetLib.organizationId)
         )
         (lib, edits)
       }
+
       Future {
         if (result.isRight) {
           val editedLibrary = result.right.get._1
@@ -793,16 +813,14 @@ class LibraryCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libId)
       val from: Option[Id[Organization]] = library.organizationId
-      (library.ownerId == userId) &&
-        (from match {
-          case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
-            organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
-          case None => true // Can move libraries from Personal space to Organization Space.
-        }) && (to match {
-          case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
-            organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
-          case None => true // Can move from Organization Space to Personal space.
-        })
+      (from match {
+        case Some(fromOrg) =>
+          organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
+        case None => (library.ownerId == userId) // Can move libraries from Personal space to Organization Space.
+      }) && (to match {
+        case Some(toOrg) => organizationMembershipCommander.getPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
+        case None => (library.ownerId == userId) // Can move from Organization Space to Personal space.
+      })
     }
   }
 
@@ -1403,7 +1421,7 @@ class LibraryCommanderImpl @Inject() (
 
   def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      libraryRepo.getBySlugAndUserId(ownerId, slug).map((_, false)) orElse
+      libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(ownerId), slug).map((_, false)) orElse
         libraryAliasRepo.getBySpaceAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
   }

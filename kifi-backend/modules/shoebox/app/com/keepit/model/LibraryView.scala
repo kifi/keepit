@@ -13,6 +13,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 sealed abstract class LibraryError(val message: String)
 
@@ -48,6 +49,9 @@ case class LibraryAddRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
 @json
+case class OrganizationMoveRequest(destination: Option[Id[Organization]] = None)
+
+@json
 case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
@@ -56,7 +60,11 @@ case class LibraryModifyRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  // We can move the library from org to user space.
+  // If the move request's orgId is None, the move is treated as going to the
+  // owner's personal LibrarySpace
+  orgId: Option[OrganizationMoveRequest] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],

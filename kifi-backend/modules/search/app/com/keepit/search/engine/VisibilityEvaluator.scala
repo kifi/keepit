@@ -88,11 +88,11 @@ final class KeepVisibilityEvaluator(
         if (keeperId == userId) {
           Visibility.OWNER // the keep in a library I am a member of, and I kept it
         } else {
-          Visibility.MEMBER // the keep is in a library I am a member of
+          Visibility.FOLLOWER // the keep is in a library I am a member of
         }
       }
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-      Visibility.MEMBER // the keep is in an authorized library
+      Visibility.FOLLOWER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
         val keeperId = userIdDocValues.get(docId)
@@ -127,7 +127,7 @@ final class LibraryVisibilityEvaluator(
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
         Visibility.OWNER // my library
       } else {
-        Visibility.MEMBER // a library I am a member of
+        Visibility.FOLLOWER // a library I am a member of
       }
     } else {
       if (visibilityDocValues.get(docId) == published) {

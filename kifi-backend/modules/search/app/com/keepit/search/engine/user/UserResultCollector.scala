@@ -33,7 +33,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
 
       if (score > 0.0f) {
         val visibility = ctx.visibility
-        val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+        val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
           myHits
         } else {
           othersHits
@@ -41,7 +41,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
 
         val libId = ctx.secondaryId
 
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) { score = score * myFriendBoost }
+        if ((visibility & (Visibility.OWNER | Visibility.FOLLOWER | Visibility.NETWORK)) != 0) { score = score * myFriendBoost }
         else { // todo(Léo): user total keep count instead of best library keep count (=> UserQualityEvaluator)
           if (libId > 0) {
             val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, libId)

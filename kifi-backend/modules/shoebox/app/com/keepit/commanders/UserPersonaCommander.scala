@@ -120,7 +120,7 @@ class UserPersonaCommanderImpl @Inject() (
     personaOpt.map { persona =>
       val personaLibName = Persona.libraryNames(persona.name) // find library with persona name
       val libOpt = db.readOnlyMaster { implicit s =>
-        libraryRepo.getByNameAndUserId(userId, personaLibName)
+        libraryRepo.getBySpaceAndName(LibrarySpace.fromUserId(userId), personaLibName)
       }
       val personaKeep = Persona.keeps.getOrElse(persona.name, Persona.defaultKeep) // find keep associated with persona
       (personaKeep, libOpt)

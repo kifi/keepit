@@ -82,16 +82,16 @@ class UriSearchImpl(
     val engine = engineBuilder.build()
     debugLog(s"uri search engine created: ${engine.getQuery()}")
 
-    val (myHits, friendsHits, othersHits) = executeTextSearch(engine)
+    val (myHits, networkHits, othersHits) = executeTextSearch(engine)
 
     val myTotal = myHits.totalHits
-    val friendsTotal = friendsHits.totalHits
+    val networkTotal = networkHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
 
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     val highScore = {
-      val highScore = max(myHits.highScore, friendsHits.highScore)
+      val highScore = max(myHits.highScore, networkHits.highScore)
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
@@ -106,13 +106,13 @@ class UriSearchImpl(
       }
     }
 
-    if (friendsHits.size > 0 && filter.includeFriends) {
+    if (networkHits.size > 0 && filter.includeNetwork) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
 
-      friendsHits.toRankedIterator.foreach {
+      networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.score = hit.score * (if ((hit.visibility & Visibility.FOLLOWER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }
@@ -152,9 +152,9 @@ class UriSearchImpl(
     timeLogs.done()
     timing()
 
-    debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
+    debugLog(s"myTotal=$myTotal networkTotal=$networkTotal othersTotal=$othersTotal show=$show")
 
-    UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
+    UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, networkTotal, othersTotal, show)
   }
 
   def explain(uriId: Id[NormalizedURI]): UriSearchExplanation = {

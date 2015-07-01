@@ -160,7 +160,7 @@ class UriResultCollectorTest extends Specification {
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.FOLLOWER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()

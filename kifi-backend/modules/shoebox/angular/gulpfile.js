@@ -36,6 +36,8 @@ var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
 
+require('shelljs/global');
+
 /********************************************************
   Globals
  ********************************************************/
@@ -264,7 +266,13 @@ gulp.task('sprite-classes', function () {
   return es.merge(img, css);
 });
 
-gulp.task('sprite', ['sprite-imports', 'sprite-classes', 'svg-sprite']);
+gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
+
+gulp.task('symbol-sprites', function() {
+  exec('./build-svgs.rb');
+  return gulp.src(['./img/symbol-sprites/dist/*'])
+    .pipe(gulp.dest('./dist'));
+});
 
 gulp.task('svg-sprite', function() {
   var mapToCss = map(function(code, filename) {
