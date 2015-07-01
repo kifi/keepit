@@ -101,11 +101,32 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
     .kf-keep-note-icon
       cursor: pointer
 
+    .kf-keep-top-r
+      padding-right: 20px
+
   &.compact
+    .kf-hide-compact
+      display: none
+
     .kf-keep-body
       display: flex
       flex-direction: row-reverse
       box-shadow: none
+
+    .kf-keep-footer
+      border-top: 0
+      top: 3px
+      right: 130px
+      position: absolute
+      width: auto
+      margin-top: 0
+
+      .kf-keep-who
+        display: none
+
+    .kf-side-by-side > .kf-keep-image
+      margin-top: 0
+      margin-bottom: 0
 
     .kf-keep-content
       width: calc(100% - 100px)
@@ -115,8 +136,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
       .kf-keep-title
         margin-top: 0
 
-    .kf-keep-meta,
-    .kf-keep-footer
+    .kf-keep-meta
       display: none
 
     .kf-keep-image
@@ -151,10 +171,24 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
         margin-left: 5px
 
     .kf-keep-top-r
-      padding-right: 20px
-
       .kf-keep-keeper-name
         display: none
+
+      .symbol-sprite
+        width: 20px
+        height: 20px
+        display: inline-block
+        vertical-align: middle
+        margin-right: 5px
+        fill: libraryGray
+        cursor: pointer
+
+        &:hover
+          fill: accentGreen
+
+      .kf-keep-time
+        display: inline-block
+        vertical-align: middle
 
     .kf-keep-add-note
       display: none
@@ -338,6 +372,9 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
 .kf-keep-top-r
   display: inline-block
   vertical-align: middle
+
+  .symbol-sprite
+    display: none
 
 .kf-keep-top-l
   .kf-keep-keeper-name

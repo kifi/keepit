@@ -19,7 +19,7 @@ angular.module('kifi')
     var descCharsPerMaxWidthLine = 48;
     var maxSizedImageW = 0.4 * (cardInnerW - gutterW);
 
-    function calcImageSize(summary, title) {
+    function calcImageSize(summary, title, galleryView) {
       var url = summary.imageUrl;
       if (url) {
         var imgNaturalW = summary.imageWidth;
@@ -61,7 +61,14 @@ angular.module('kifi')
             }
             var penalty = imgH > contentH ? (imgH - contentH) * contentW : (contentH - imgH) * imgW;
             if (penalty < (image ? image.penalty : Infinity)) { // jshint ignore:line
-              image = {url: url, w: imgW, h: imgH, penalty: penalty, clipBottom: true, maxDescLines: descLines};
+              image = {
+                url: url,
+                w: galleryView ? imgW : null,
+                h: galleryView ? imgH : null,
+                penalty: penalty,
+                clipBottom: true,
+                maxDescLines: galleryView ? descLines : 2
+              };
             }
           }
           return image;
@@ -91,7 +98,17 @@ angular.module('kifi')
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
-          scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle);
+          scope.defaultDescLines = 4;
+
+          var setImage = function(galleryView) {
+            scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
+            scope.defaultDescLines = galleryView ? 4 : 2;
+          };
+          setImage(scope.galleryView);
+          scope.$watch(
+            function() { return scope.galleryView; },
+            function(galleryView) { setImage(galleryView); }
+          );
 
           if (keep.user) {
             // don't repeat the user at the top of the keep card in the keeper list
@@ -136,6 +153,9 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
+          scope.onWidgetLibraryClicked(args.clickedLibrary);
+        });
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
           if (scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {

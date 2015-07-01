@@ -49,7 +49,6 @@ angular.module('kifi')
         scope.scrollDistance = '100%';
         scope.selection = new KeepSelection();
 
-
         //
         // Scope methods.
         //
@@ -163,6 +162,7 @@ angular.module('kifi')
         $rootScope.$on('editKeepNote', function(e, event, keep) { scope.editKeepNote(event, keep); });
 
         scope.editKeepNote = function (event, keep) {
+          if (keep.user.id !== profileService.me.id) { return; }
           var keepEl = angular.element(event.target).closest('.kf-keep');
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
@@ -217,6 +217,10 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', onWinResize);
         });
+
+        scope.onWidgetLibraryClicked = function(clickedLibrary) {
+          $rootScope.$broadcast('onWidgetLibraryClicked', { clickedLibrary: clickedLibrary });
+        };
       }
     };
   }
