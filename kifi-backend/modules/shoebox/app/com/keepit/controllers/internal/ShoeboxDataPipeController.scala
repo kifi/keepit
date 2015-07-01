@@ -84,14 +84,6 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      Ok(Json.toJson(db.readOnlyReplica { implicit s =>
-        collectionRepo.getCollectionsChanged(seqNum, fetchSize)
-      }))
-    }
-  }
-
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val phrases = db.readOnlyReplica { implicit s =>

@@ -217,16 +217,6 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           seq must be > newSeqNum
           seq
         }
-
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
-        }
-        db.readWrite { implicit s =>
-          keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
-        }
       }
     }
     "ignore case in getting elements" in {
