@@ -7,6 +7,7 @@ GET     /internal/graph/kinds           @com.keepit.graph.controllers.internal.G
 GET     /internal/graph/getUriAndScorePairs @com.keepit.graph.controllers.internal.GraphController.getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean)
 GET     /internal/graph/getUserAndScorePairs @com.keepit.graph.controllers.internal.GraphController.getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean)
 GET     /internal/graph/getSociallyRelatedEntities  @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedEntities(userId: Id[User])
+GET     /internal/graph/getSociallyRelatedEntitiesForUser @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedEntitiesForUser(userId: Id[User])
 POST    /internal/graph/explainFeed                      @com.keepit.graph.controllers.internal.GraphController.explainFeed
 
 ->  / commonService.Routes
