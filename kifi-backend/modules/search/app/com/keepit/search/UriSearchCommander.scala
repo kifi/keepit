@@ -24,19 +24,6 @@ import scala.collection.mutable.ListBuffer
 @ImplementedBy(classOf[UriSearchCommanderImpl])
 trait UriSearchCommander {
 
-  def distSearch(
-    shards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): PartialSearchResult
-
   def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
@@ -95,41 +82,6 @@ class UriSearchCommanderImpl @Inject() (
     imageConfig: S3ImageConfig) extends UriSearchCommander with Sharding with Logging {
 
   implicit private[this] val defaultExecutionContext = fj
-
-  def distSearch(
-    localShards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): PartialSearchResult = {
-
-    val future = distSearchUris(
-      localShards,
-      userId,
-      firstLang,
-      secondLang,
-      experiments,
-      query,
-      filter.map(Right(_)),
-      LibraryContext.None,
-      SearchRanking.default,
-      maxHits,
-      context,
-      predefinedConfig,
-      debug)
-    val friendIdsFuture = searchFactory.getSearchFriends(userId)
-
-    val result = monitoredAwait.result(future, 3 seconds, "getting result")
-    val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-
-    compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
-  }
 
   def searchUris(
     userId: Id[User],

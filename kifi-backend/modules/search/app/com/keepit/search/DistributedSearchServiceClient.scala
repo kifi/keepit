@@ -27,17 +27,6 @@ trait DistributedSearchServiceClient extends ServiceClient {
 
   def distPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
 
-  def distSearch(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]]
-
   def distSearchUris(
     plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
     userId: Id[User],
@@ -83,38 +72,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     distRouter.planRemoteOnly(userId, maxShardsPerInstance)
   }
 
-  def distSearch(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]] = {
-
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter.map(Right(_)), LibraryContext.None, SearchRanking.default, maxHits, context, debug)
-  }
-
   def distSearchUris(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[Either[Id[User], String]],
-    library: LibraryContext,
-    orderBy: SearchRanking,
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]] = {
-
-    distSearch(Search.internal.distSearchUris, plan, userId, firstLang, secondLang, query, filter, library, orderBy, maxHits, context, debug)
-  }
-
-  private def distSearch(
-    path: ServiceRoute,
     plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
     userId: Id[User],
     firstLang: Lang,
@@ -148,7 +106,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
 
-    distRouter.dispatch(plan, path, request).map { f => f.map(_.json) }
+    distRouter.dispatch(plan, Search.internal.distSearchUris(), request).map { f => f.map(_.json) }
   }
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]] = {

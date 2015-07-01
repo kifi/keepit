@@ -36,19 +36,6 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
 
   def setPlainResults(results: Map[String, UriSearchResult]): Unit = { plainResults = results }
 
-  def distSearch(
-    shards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): PartialSearchResult = ???
-
   def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
