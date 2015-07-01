@@ -9,7 +9,6 @@ import com.keepit.search.result._
 import com.keepit.common.db.Id
 import com.keepit.model._
 import scala.concurrent.Future
-import com.keepit.search.result.DecoratedResult
 import com.keepit.search.index.sharding.Shard
 
 case class FixedResultIndexModule() extends IndexModule {
@@ -33,24 +32,9 @@ case class FixedResultIndexModule() extends IndexModule {
 
 class FixedResultUriSearchCommander extends UriSearchCommander {
 
-  private var decoratedResults: Map[String, DecoratedResult] = Map.empty
   private var plainResults: Map[String, UriSearchResult] = Map.empty
 
-  def setDecoratedResults(results: Map[String, DecoratedResult]): Unit = { decoratedResults = results }
   def setPlainResults(results: Map[String, UriSearchResult]): Unit = { plainResults = results }
-
-  def search(
-    userId: Id[User],
-    acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false): DecoratedResult = decoratedResults(query)
 
   def distSearch(
     shards: Set[Shard[NormalizedURI]],

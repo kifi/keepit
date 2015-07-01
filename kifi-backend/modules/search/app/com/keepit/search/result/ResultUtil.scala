@@ -33,46 +33,6 @@ object ResultUtil {
   }
 
   def toArticleSearchResult(
-    res: DecoratedResult,
-    last: Option[String], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
-    mergedResult: PartialSearchResult,
-    millisPassed: Int,
-    pageNumber: Int,
-    previousHits: Int,
-    time: DateTime,
-    lang: String): ArticleSearchResult = {
-
-    def toArticleHit(hit: DetailedSearchHit): ArticleHit = {
-      ArticleHit(
-        hit.uriId,
-        hit.score,
-        hit.textScore,
-        hit.isMyBookmark,
-        hit.users.size > 0)
-    }
-
-    val lastUUID = for { str <- last if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
-
-    ArticleSearchResult(
-      lastUUID,
-      res.query,
-      mergedResult.hits map toArticleHit,
-      mergedResult.myTotal,
-      mergedResult.friendsTotal,
-      mergedResult.othersTotal,
-      res.mayHaveMoreHits,
-      res.idFilter,
-      millisPassed,
-      pageNumber,
-      previousHits,
-      res.uuid,
-      time,
-      mergedResult.show,
-      lang
-    )
-  }
-
-  def toArticleSearchResult(
     res: UriSearchResult,
     last: Option[String], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
     millisPassed: Int,

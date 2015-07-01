@@ -8,7 +8,7 @@ import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
 import com.keepit.search.engine.uri.UriSearchResult
 import com.keepit.search.index.Searcher
-import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
+import com.keepit.search.result.{ KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,7 +19,6 @@ import com.keepit.common.core._
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
 import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable }
 
@@ -52,21 +51,6 @@ trait SearchControllerUtil {
       kifiPlainResult.cutPoint,
       kifiPlainResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)).json
-  }
-
-  def toKifiSearchResultV1(decoratedResult: DecoratedResult, sanitize: Boolean = false): JsObject = {
-    KifiSearchResult.v1(
-      decoratedResult.uuid,
-      decoratedResult.query,
-      ResultUtil.toKifiSearchHits(decoratedResult.hits, sanitize),
-      decoratedResult.myTotal,
-      decoratedResult.friendsTotal,
-      decoratedResult.othersTotal,
-      decoratedResult.mayHaveMoreHits,
-      decoratedResult.show,
-      decoratedResult.searchExperimentId,
-      IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil).json
   }
 
   def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {

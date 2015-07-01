@@ -52,22 +52,6 @@ class MobileSearchController @Inject() (
     libraryIndexer: LibraryIndexer,
     libraryMembershipIndexer: LibraryMembershipIndexer) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
-  def searchV1(
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    withUriSummary: Boolean = false) = UserAction { request =>
-
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-
-    val decoratedResult = uriSearchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, None, withUriSummary)
-
-    Ok(toKifiSearchResultV1(decoratedResult, sanitize = true)).withHeaders("Cache-Control" -> "private, max-age=10")
-  }
-
   def warmUp() = UserAction { request =>
     uriSearchCommander.warmUp(request.userId)
     Ok

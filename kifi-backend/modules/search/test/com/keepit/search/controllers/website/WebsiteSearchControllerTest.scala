@@ -3,7 +3,7 @@ package com.keepit.search.controllers.website
 import com.keepit.search.engine.uri.{ UriShardHit, UriShardResult, UriSearchResult }
 import org.specs2.mutable.SpecificationLike
 import com.keepit.search.test.SearchTestInjector
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ ExternalId }
 import com.keepit.search._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
@@ -15,7 +15,6 @@ import com.keepit.model._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
-import com.keepit.model.Username
 import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjector {
@@ -34,8 +33,8 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
 
     "search keeps with library support and JSON response" in {
       withInjector(modules: _*) { implicit injector =>
-        val path = routes.WebsiteSearchController.search2("test", None, None, 2, None, None, None, None).url
-        path === "/site/search2?q=test&maxHits=2"
+        val path = routes.WebsiteSearchController.search(q = "test", maxUris = 2).url
+        path === "/site/search?q=test&maxUris=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
         val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
