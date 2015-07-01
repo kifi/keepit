@@ -159,21 +159,6 @@ class SearchController @Inject() (
     Ok
   }
 
-  def searchWithConfig() = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val userId = Id[User]((js \ "userId").as[Long])
-    val query = (js \ "query").as[String]
-    val maxHits = (js \ "maxHits").as[Int]
-    val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val res = uriSearchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)))
-    Ok(JsArray(res.hits.map { x =>
-      val id = x.uriId.id
-      val title = x.bookmark.title.getOrElse("")
-      val url = x.bookmark.url
-      Json.obj("uriId" -> id, "title" -> title, "url" -> url)
-    }))
-  }
-
   def searchUsers() = Action(parse.tolerantJson) { request =>
     val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.searchUsers(userSearchRequest)
