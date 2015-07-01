@@ -73,7 +73,6 @@ class UriSearchCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
     articleSearchResultStore: ArticleSearchResultStore,
-    compatibilitySupport: SearchBackwardCompatibilitySupport,
     airbrake: AirbrakeNotifier,
     override val searchClient: DistributedSearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
