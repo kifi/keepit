@@ -57,60 +57,6 @@ class MobileSearchController @Inject() (
     Ok
   }
 
-  def searchLibrariesV1(
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]) = UserAction.async { request =>
-
-    val acceptLangs = getAcceptLangs(request)
-    val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(filter)
-
-    val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
-      val librarySearcher = libraryIndexer.getSearcher
-      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
-      val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-      val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize, Some(userId))
-      for {
-        usersById <- futureUsers
-        libraryDetailsById <- futureLibraryDetails
-      } yield {
-        val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
-          libraryRecordsAndVisibilityById.get(hit.id).map {
-            case (library, visibility, _) =>
-              val owner = usersById(library.ownerId)
-              val path = LibraryPathHelper.formatLibraryPath(owner, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
-              val details = libraryDetailsById(library.id)
-              val description = library.description.getOrElse("")
-              Json.obj(
-                "id" -> Library.publicId(hit.id),
-                "score" -> hit.score,
-                "name" -> library.name,
-                "description" -> description,
-                "color" -> library.color,
-                "path" -> path,
-                "visibility" -> visibility,
-                "owner" -> owner,
-                "memberCount" -> (details.numFollowers + details.numCollaborators),
-                "keepCount" -> details.keepCount
-              )
-          }
-        })
-        val result = Json.obj(
-          "query" -> query,
-          "context" -> IdFilterCompressor.fromSetToBase64(librarySearchResult.idFilter),
-          "experimentId" -> librarySearchResult.searchExperimentId,
-          "hits" -> hitsArray
-        )
-        Ok(result)
-      }
-    }
-  }
-
   def searchV2(
     query: String,
     filter: Option[String],
