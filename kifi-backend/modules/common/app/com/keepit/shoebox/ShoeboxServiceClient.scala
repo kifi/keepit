@@ -60,7 +60,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]]
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
@@ -444,12 +443,6 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
     call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
-  }
-
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
-    call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
-      r.json.as[Seq[Collection]]
-    }
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {

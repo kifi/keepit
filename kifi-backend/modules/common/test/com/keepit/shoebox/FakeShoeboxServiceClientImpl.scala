@@ -414,11 +414,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(collections)
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
-    val collections = allCollections.values.filter(_.userId == userId).toSeq
-    Future.successful(collections)
-  }
-
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[NormalizedURI]] = {
