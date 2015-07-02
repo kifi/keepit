@@ -27,11 +27,12 @@ case class LibraryMembership(
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
     subscribedToUpdates: Boolean = false,
-    starred: LibraryPriority = LibraryPriority.UNSTARRED) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    priority: LibraryPriority = LibraryPriority.UNSTARRED) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
+  def withPriority(newPriority: LibraryPriority): LibraryMembership = this.copy(priority = newPriority)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
@@ -103,6 +104,8 @@ object LibraryAccess {
   def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
 }
 
+// LibraryPriority defines how important a library is
+// A STARRED library should be listed at the top of results, etc.
 sealed abstract class LibraryPriority(val value: String)
 object LibraryPriority {
   case object STARRED extends LibraryPriority("starred")

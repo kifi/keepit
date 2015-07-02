@@ -50,6 +50,8 @@ class UserProfileCommander @Inject() (
   def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], starredFirst: Boolean): ParSeq[LibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, starredFirst)
+      println("Astarred first = " + starredFirst)
+      println("libraries: " + libs.map(_.id.get))
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet

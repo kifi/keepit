@@ -58,12 +58,12 @@ class LibraryMembershipCommanderImpl @Inject() (
       }
 
       for {
-        starred <- modifySelfCheck[LibraryPriority](request.starred, targetMembership.starred).right
+        starred <- modifySelfCheck[LibraryPriority](request.starred, targetMembership.priority).right
         subscribed <- modifySelfCheck(request.subscription, targetMembership.subscribedToUpdates).right
         isListed <- modifySelfCheck(request.listed, targetMembership.listed).right
         access <- canChangeAccess(request.access).right
       } yield {
-        val modifiedLib = targetMembership.copy(starred = starred, subscribedToUpdates = subscribed, listed = isListed, access = access)
+        val modifiedLib = targetMembership.copy(priority = starred, subscribedToUpdates = subscribed, listed = isListed, access = access)
         if (targetMembership != modifiedLib) {
           db.readWrite { implicit session =>
             libraryMembershipRepo.save(modifiedLib)

@@ -239,24 +239,29 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           val starredLibs = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
           val unstarredLibs2 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
 
-          val star = (lib: Library, priority: LibraryPriority) => LibraryMembershipFactory.membership().withLibraryOwner(lib).withPriority(priority).saved
-          unstarredLibs1.foreach(star(_, LibraryPriority.STARRED))
-          val starredMemberships = starredLibs.map(star(_, LibraryPriority.STARRED))
-          unstarredLibs2.foreach(star(_, LibraryPriority.UNSTARRED))
+          val starredMemberships = for (lib <- starredLibs) yield {
+            val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = user.id.get).get
+            libraryMembershipRepo.save(membership.copy(priority = LibraryPriority.STARRED))
+          }
           (user, starredMemberships, starredLibs)
         }
         implicit val config = inject[PublicIdConfiguration]
 
         val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, starredFirst = true)
         val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
-        infos foreach println
+        infos foreach { libCard => println(libCard.id) }
+        println("=========================")
+        starredLibs foreach { lib => println(Library.publicId(lib.id.get)) }
+        println("=========================")
+        infos.take(2) foreach { libCard => println(libCard.id) }
+
         infos.length === 6
 
-        val starredPublicIds = starredLibs.map { lib => Library.publicId(lib.id.get) }
+        val starredPublicIds = starredLibs.map { lib => Library.publicId(lib.id.get) }.toSet
         println(starredPublicIds)
+        starredPublicIds === infos.take(2).map(_.id).toSet
         starredPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
         starredPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
-        // TODO: this test is failing, apparently we are returning each result twice.
       }
     }
 
@@ -545,16 +550,16 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
 
   private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering], sortDirection: Option[SortDirection] = None, starredFirst: Boolean = false)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, starredFirst = starredFirst)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
   }
 
   private def getProfileLibrariesForOtherUser(viewer: User, user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(viewer)
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, starredFirst = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
   }
 
   private def getProfileLibrariesForAnonymous(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, starredFirst = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
   }
 
   private def getProfileFollowers(viewer: User, username: Username, page: Int, size: Int)(implicit injector: Injector): Future[Result] = {

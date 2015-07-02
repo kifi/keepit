@@ -14,7 +14,7 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
           val (owner, member, non_member, lib) = setup
           val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
           result.isRight === true
-          result.right.get.starred === LibraryPriority.STARRED
+          result.right.get.priority === LibraryPriority.STARRED
         }
       }
       "fail for member starring a lib other member" in {
@@ -31,7 +31,7 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
           val (owner, member, non_member, lib) = setup
           val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
           result.isRight === true
-          result.right.get.starred === LibraryPriority.STARRED
+          result.right.get.priority === LibraryPriority.STARRED
         }
       }
       "fail for anyone else changing access" in {

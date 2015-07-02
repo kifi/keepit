@@ -318,6 +318,13 @@ class LibraryRepoImpl @Inject() (
                   and (lm.access='owner' or lm.access='read_write')
                   order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
                   #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit ${page.itemsToDrop}, ${page.size}"""
+    val queryString = s"""select lib.* from library lib
+                  inner join library_membership lm on lm.user_id = $userId
+                  and lib.id = lm.library_id and lib.state='active' and lm.state='active'
+                  and (lm.access='owner' or lm.access='read_write')
+                  order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
+                  #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit ${page.itemsToDrop}, ${page.size}"""
+    println(queryString)
     query.as[Library].list
   }
 
@@ -331,6 +338,8 @@ class LibraryRepoImpl @Inject() (
       case None => s"$tableName.member_count desc, $tableName.last_kept desc, $tableName.id desc"
     }
     val starred = if (starredFirst) s"""CASE $membershipTable.starred WHEN "starred" THEN 1 ELSE 0 END,""" else ""
+    println("starredFirst = " + starredFirst)
+    println(starred + ordering)
     starred + ordering
   }
 
