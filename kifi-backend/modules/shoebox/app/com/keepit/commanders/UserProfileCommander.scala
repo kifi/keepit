@@ -199,7 +199,7 @@ class UserProfileCommander @Inject() (
   }
 
   def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[ConnectedUserId]] = {
-    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
+    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntitiesForUser(viewer)
     val connectionsF = db.readOnlyMasterAsync { implicit s =>
       val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner)) //cached
       (all.getOrElse(viewer, Set.empty), all.getOrElse(owner, Set.empty))
@@ -229,7 +229,7 @@ class UserProfileCommander @Inject() (
   }
 
   def getFollowersSortedByRelationship(viewerOpt: Option[Id[User]], owner: Id[User]): Future[Seq[FollowerUserId]] = {
-    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewerOpt.getOrElse(owner))
+    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntitiesForUser(viewerOpt.getOrElse(owner))
     val followersF = db.readOnlyReplicaAsync { implicit s =>
       getFollowersByViewer(owner, viewerOpt)
     }

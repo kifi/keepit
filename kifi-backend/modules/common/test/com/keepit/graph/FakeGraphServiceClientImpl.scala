@@ -46,18 +46,18 @@ class FakeGraphServiceClientImpl(
     scores
   }
 
-  val sociallyRelatedEntitiesMap = mutable.Map[Id[User], SociallyRelatedEntities]()
+  val sociallyRelatedEntitiesMap = mutable.Map[Id[User], SociallyRelatedEntities[User]]()
 
-  def setSociallyRelatedEntities(userId: Id[User], sociallyRelatedEntities: SociallyRelatedEntities): Unit = {
+  def setSociallyRelatedEntitiesForUser(userId: Id[User], sociallyRelatedEntities: SociallyRelatedEntities[User]): Unit = {
     sociallyRelatedEntitiesMap(userId) = sociallyRelatedEntities
   }
 
-  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
     val rels = sociallyRelatedEntitiesMap.get(userId)
     Future.successful(rels)
   }
 
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
+  def refreshSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Unit] = Future.successful(())
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = Future.successful(Seq.fill(uriIds.size)(GraphFeedExplanation(Map(), Map())))
 }

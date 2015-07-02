@@ -478,7 +478,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
         )
-        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
         // view as owner
         val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
         status(result1) must equalTo(OK)
@@ -540,13 +540,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5)
         }
 
-        val relationship = SociallyRelatedEntities(
+        val relationship = SociallyRelatedEntities[User](
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
         )
-        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
 
         // view as owner
         val result1 = getProfileFollowers(Some(user1), Username("GDubs"), 2)

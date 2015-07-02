@@ -8,7 +8,7 @@ import com.keepit.graph.model._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
-import com.keepit.model.{ SocialUserInfo, User }
+import com.keepit.model.{ Organization, SocialUserInfo, User }
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.collection.mutable.ListBuffer
@@ -18,19 +18,29 @@ import com.keepit.abook.ABookServiceClient
 
 class SocialWanderingCommander @Inject() (
     graph: GraphManager,
-    relatedEntitiesCache: SociallyRelatedEntitiesCache,
+    relatedEntitiesCache: SociallyRelatedEntitiesForUserCache,
     abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
-  private val consolidate = new RequestConsolidator[Id[User], Option[SociallyRelatedEntities]](1 minute)
+  private val consolidateUser = new RequestConsolidator[Id[User], Option[SociallyRelatedEntities[User]]](1 minute)
+  private val consolidateOrg = new RequestConsolidator[Id[Organization], Option[SociallyRelatedEntities[Organization]]](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def getSocialRelatedEntities(id: Id[User]): Future[Option[SociallyRelatedEntities]] = consolidate(id) { userId =>
+  def getSocialRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
+    getSocialRelatedEntitiesForUser(userId)
+  }
+
+  def getSocialRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
+    consolidateUser(userId) { userId => getSocialRelatedEntities[User](userId, { id: Id[User] => VertexId(UserReader)(id.id) })(getIrrelevantVerticesForUser) }
+  }
+
+  private def getSocialRelatedEntities[E](sourceId: Id[E], toVertexId: Id[E] => VertexId)(getIrrelevantVertices: Id[E] => Future[Set[VertexId]]): Future[Option[SociallyRelatedEntities[E]]] = {
+    val vertexId = toVertexId(sourceId)
     lock.withLockFuture {
-      if (graphHasUserVertex(userId)) {
-        getIrrelevantVertices(userId).map { irrelevantVertices =>
-          val journal = wander(userId, irrelevantVertices)
-          val sociallyRelatedPeople = buildSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
+      if (graphHasSourceVertex(vertexId)) {
+        getIrrelevantVertices(sourceId).map { irrelevantVertices =>
+          val journal = wander(vertexId, irrelevantVertices)
+          val sociallyRelatedPeople = buildSociallyRelatedPeople(sourceId, journal, SocialWanderlust.cachedByNetwork)
           Some(sociallyRelatedPeople)
         }
       } else {
@@ -39,12 +49,11 @@ class SocialWanderingCommander @Inject() (
     }
   }
 
-  private def graphHasUserVertex(userId: Id[User]): Boolean = {
-    val vid = VertexId(UserReader)(userId.id)
-    graph.readOnly { reader => reader.getNewVertexReader().hasVertex(vid) }
+  private def graphHasSourceVertex(vertexId: VertexId): Boolean = {
+    graph.readOnly { reader => reader.getNewVertexReader().hasVertex(vertexId) }
   }
 
-  private def buildSociallyRelatedPeople(userId: Id[User], journal: TeleportationJournal, limit: Int) = {
+  private def buildSociallyRelatedPeople[E](sourceId: Id[E], journal: TeleportationJournal, limit: Int) = {
     val relatedUsers = ListBuffer[(Id[User], Double)]()
     val relatedFacebookAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
     val relatedLinkedInAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
@@ -68,23 +77,22 @@ class SocialWanderingCommander @Inject() (
       case _ => // ignore
     }
 
-    SociallyRelatedEntities(
-      users = RelatedEntities.top(userId, relatedUsers, limit),
-      facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
-      linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
-      emailAccounts = RelatedEntities.top(userId, relatedEmailAccounts, limit)
+    SociallyRelatedEntities[E](
+      users = RelatedEntities.top(sourceId, relatedUsers, limit),
+      facebookAccounts = RelatedEntities.top(sourceId, relatedFacebookAccounts, limit),
+      linkedInAccounts = RelatedEntities.top(sourceId, relatedLinkedInAccounts, limit),
+      emailAccounts = RelatedEntities.top(sourceId, relatedEmailAccounts, limit)
     )
   }
 
-  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedEntities): Unit = {
+  private def invalidateUserCache(sociallyRelatedPeople: SociallyRelatedEntities[User]): Unit = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    relatedEntitiesCache.set(SociallyRelatedEntitiesCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople)
+    relatedEntitiesCache.set(SociallyRelatedEntitiesForUserCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople)
   }
 
-  private def wander(userId: Id[User], irrelevantVertices: Set[VertexId]): TeleportationJournal = {
-    val userVertexId = VertexId(userId)
+  private def wander(vertexId: VertexId, irrelevantVertices: Set[VertexId]): TeleportationJournal = {
     val journal = new TeleportationJournal("SocialWanderingJournal", clock)
-    val teleporter = UniformTeleporter(Set(userVertexId)) { Function.const(SocialWanderlust.restartProbability) }
+    val teleporter = UniformTeleporter(Set(vertexId)) { Function.const(SocialWanderlust.restartProbability) }
     val resolver = {
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
         case (source, destination, edge) => !(irrelevantVertices.contains(destination.id))
@@ -101,8 +109,8 @@ class SocialWanderingCommander @Inject() (
     journal
   }
 
-  private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = {
-    abook.getIrrelevantPeople(userId).map { irrelevantPeople =>
+  private def getIrrelevantVerticesForUser(sourceId: Id[User]): Future[Set[VertexId]] = {
+    abook.getIrrelevantPeopleForUser(sourceId).map { irrelevantPeople =>
       irrelevantPeople.irrelevantUsers.map(VertexId(_)) ++ SocialWanderlust.explicitlyExcludedUsers ++
         irrelevantPeople.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
         irrelevantPeople.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++

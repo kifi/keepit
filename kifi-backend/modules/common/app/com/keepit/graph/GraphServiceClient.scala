@@ -35,15 +35,15 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]]
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]]
+  def refreshSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Unit]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
 case class GraphCacheProvider @Inject() (
   userScoreCache: ConnectedUserScoreCache,
   uriScoreCache: ConnectedUriScoreCache,
-  relatedEntitiesCache: SociallyRelatedEntitiesCache)
+  relatedEntitiesCache: SociallyRelatedEntitiesForUserCache)
 
 class GraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -99,23 +99,23 @@ class GraphServiceClientImpl(
     }
   }
 
-  def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]] = {
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
 
-    def needRefresh(cachedEntities: Option[SociallyRelatedEntities]): Boolean = {
+    def needRefresh(cachedEntities: Option[SociallyRelatedEntities[User]]): Boolean = {
       !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
     }
 
     cacheProvider.relatedEntitiesCache.
-      getOrElseFutureOpt(SociallyRelatedEntitiesCacheKey(userId), needRefresh) {
-        call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r =>
-          r.json.asOpt[SociallyRelatedEntities]
+      getOrElseFutureOpt(SociallyRelatedEntitiesForUserCacheKey(userId), needRefresh) {
+        call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => // TODO: change to getSociallyRelatedEntitiesForUser once new graph is deployed
+          r.json.asOpt[SociallyRelatedEntities[User]]
         }
       }
   }
 
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = {
-    cacheProvider.relatedEntitiesCache.remove(SociallyRelatedEntitiesCacheKey(userId))
-    getSociallyRelatedEntities(userId).imap(_ => ())
+  def refreshSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Unit] = {
+    cacheProvider.relatedEntitiesCache.remove(SociallyRelatedEntitiesForUserCacheKey(userId))
+    getSociallyRelatedEntitiesForUser(userId).imap(_ => ())
   }
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {
