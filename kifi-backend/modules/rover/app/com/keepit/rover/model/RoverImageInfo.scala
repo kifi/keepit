@@ -20,7 +20,7 @@ case class RoverImageInfo(
     path: ImagePath,
     source: ImageSource,
     sourceImageHash: ImageHash,
-    sourceImageUrl: Option[String]) extends BaseImage with Model[RoverImageInfo] {
+    sourceImageUrl: Option[String]) extends BaseImage with ModelWithState[RoverImageInfo] {
   def withId(id: Id[RoverImageInfo]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def isOriginal = (kind == ProcessImageOperation.Original)
