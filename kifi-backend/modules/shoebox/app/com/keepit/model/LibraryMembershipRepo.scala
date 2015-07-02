@@ -99,7 +99,6 @@ class LibraryMembershipRepoImpl @Inject() (
   implicit val getLibraryResult = libraryRepo.getLibraryResult
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
-
   initTable()
 
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {

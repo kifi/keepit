@@ -312,19 +312,29 @@ class LibraryRepoImpl @Inject() (
 
   def getOwnerLibrariesForSelfWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection], starredFirst: Boolean)(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val testquery = sql"""select lm.starred from library lib
+                      inner join library_membership lm on lm.user_id = 1
+                      and lib.id = lm.library_id and lib.state='active' and lm.state='active'
+                      and (lm.access='owner' or lm.access='read_write')
+                      order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
+                      CASE lm.starred WHEN 'starred' THEN 1 ELSE 0 END,lib.member_count desc, lib.last_kept desc, lib.id desc limit 0, 100"""
+    println("testquery:")
+    println(testquery.as[String].list)
+    println("done with test query")
+    val queryString = s"""select lib.* from library lib
+                  inner join library_membership lm on lm.user_id = #$userId
+                  and lib.id = lm.library_id and lib.state='active' and lm.state='active'
+                  and (lm.access='owner' or lm.access='read_write')
+                  order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
+                  #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit #${page.itemsToDrop}, #${page.size}"""
+    println(queryString)
     val query = sql"""select lib.* from library lib
                   inner join library_membership lm on lm.user_id = $userId
                   and lib.id = lm.library_id and lib.state='active' and lm.state='active'
                   and (lm.access='owner' or lm.access='read_write')
                   order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
-                  #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit ${page.itemsToDrop}, ${page.size}"""
-    val queryString = s"""select lib.* from library lib
-                  inner join library_membership lm on lm.user_id = $userId
-                  and lib.id = lm.library_id and lib.state='active' and lm.state='active'
-                  and (lm.access='owner' or lm.access='read_write')
-                  order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
-                  #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit ${page.itemsToDrop}, ${page.size}"""
-    println(queryString)
+                  #${getOrderBySql("lib", "lm", ordering, direction, starredFirst)} limit #${page.itemsToDrop}, #${page.size}"""
     query.as[Library].list
   }
 
@@ -337,7 +347,7 @@ class LibraryRepoImpl @Inject() (
       }
       case None => s"$tableName.member_count desc, $tableName.last_kept desc, $tableName.id desc"
     }
-    val starred = if (starredFirst) s"""CASE $membershipTable.starred WHEN "starred" THEN 1 ELSE 0 END,""" else ""
+    val starred = if (starredFirst) s"""CASE $membershipTable.starred WHEN 'starred' THEN 1 ELSE 0 END desc,""" else ""
     println("starredFirst = " + starredFirst)
     println(starred + ordering)
     starred + ordering
