@@ -13,6 +13,7 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[TwitterWaitlistRepoImpl])
 trait TwitterWaitlistRepo extends Repo[TwitterWaitlistEntry] {
   def getByUserAndHandle(id: Id[User], handle: String)(implicit session: RSession): Option[TwitterWaitlistEntry]
+  def getByUser(id: Id[User])(implicit session: RSession): Seq[TwitterWaitlistEntry]
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int
   def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry]
 }
@@ -46,6 +47,13 @@ class TwitterWaitlistRepoImpl @Inject() (
   }
   def getByUserAndHandle(userId: Id[User], handle: String)(implicit session: RSession): Option[TwitterWaitlistEntry] = {
     getByUserAndHandleCompiled(userId, handle).firstOption
+  }
+
+  private val getByUserCompiled = Compiled { (userId: Column[Id[User]]) =>
+    for (r <- rows if r.userId === userId) yield r
+  }
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[TwitterWaitlistEntry] = {
+    getByUserCompiled(userId).list
   }
 
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int = {

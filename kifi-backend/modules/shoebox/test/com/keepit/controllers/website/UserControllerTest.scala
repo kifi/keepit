@@ -17,7 +17,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.{ JsValue, JsObject, JsNull, Json }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
@@ -146,6 +146,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeUserActionsHelper].setUser(user)
         val userController = inject[UserController]
+        db.readOnlyMaster(s => inject[InvitationRepo].all()(s))
         val path = routes.UserController.savePrefs().url
 
         val inputJson1 = Json.obj("show_delighted_question" -> false)
@@ -163,12 +164,20 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result2: Future[Result] = userController.getPrefs()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) === Json.obj(
+        val expected = Json.obj(
           "auto_show_guide" -> JsNull,
           "auto_show_persona" -> JsNull,
           "show_delighted_question" -> false,
           "use_minimal_keep_card" -> JsNull,
           "has_no_password" -> JsNull)
+
+        def subsetOf(json1: JsObject, json2: JsObject): Boolean = {
+          json1.fieldSet.map {
+            case (key, value) =>
+              (json2 \ key).as[JsValue] == value
+          }.reduce(_ && _)
+        }
+        subsetOf(expected, Json.parse(contentAsString(result2)).as[JsObject]) === true
       }
     }
 
