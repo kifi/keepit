@@ -30,10 +30,11 @@ case class OrganizationMembership(
   def isOwner: Boolean = role == OrganizationRole.OWNER
   def hasRole(r: OrganizationRole): Boolean = r == role
 
-  def toIngestableOrganizationMembership = IngestableOrganizationMembership(organizationId, userId, createdAt, state, seq)
+  def toIngestableOrganizationMembership = IngestableOrganizationMembership(id.get, organizationId, userId, createdAt, state, seq)
 }
 
 case class IngestableOrganizationMembership(
+  id: Id[OrganizationMembership],
   orgId: Id[Organization],
   userId: Id[User],
   createdAt: DateTime,
