@@ -7,7 +7,6 @@ import com.keepit.scraper.fetcher.DeprecatedHttpFetcherModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ProdShoeboxScraperClientModule, ProdShoeboxServiceClientModule }
-import com.keepit.common.store.StoreModule
 import com.keepit.common.concurrent.{ ExecutionContextModule, ForkJoinContextMonitorModule }
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
@@ -20,7 +19,6 @@ case class ScraperServiceTypeModule() extends ServiceTypeModule {
 abstract class ScraperModule(
     val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
-    val storeModule: StoreModule,
     val fjMonitorModule: ForkJoinContextMonitorModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
   val serviceTypeModule = ScraperServiceTypeModule()
