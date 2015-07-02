@@ -8,12 +8,16 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
+import com.keepit.rover.article.content.{ NormalizationInfo, LinkedInProfile, LinkedInProfileContent }
+import com.keepit.rover.article.{ LinkedInProfileArticle, Article }
+import com.keepit.rover.fetcher.FetchContext
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.scraper.FakeSignatureBuilder
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
+import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.Await
@@ -21,16 +25,51 @@ import scala.concurrent.duration._
 
 class NormalizationServiceTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
-  //  val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
+  val timeNow = DateTime.now()
+
+  def mkLinkedInArticle(url: String, name: String, id: String) =
+    LinkedInProfileArticle(
+      createdAt = timeNow,
+      url = url,
+      content = LinkedInProfileContent(
+        destinationUrl = url,
+        title = Some(name),
+        description = Some(name),
+        keywords = List(),
+        authors = List(),
+        openGraphType = None,
+        publishedAt = Some(timeNow),
+        profile = LinkedInProfile(
+          id = Some(id),
+          title = name,
+          overview = "",
+          sections = ""
+        ),
+        http = FetchContext.ok(url),
+        normalization = NormalizationInfo(
+          canonicalUrl = Some(url),
+          openGraphUrl = Some(url),
+          alternateUrls = Set(),
+          shortUrl = None
+        )
+      ))
+
+  val fakeArticleData = Set(
+    ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", "leonard grimaldi", "17558679"),
+    ("http://www.linkedin.com/in/viviensaulue", "vivien", "136123062")
+  )
+
   //    case (url @ "http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = fakeSignature("whatever"), destinationUrl = url)
   //    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = fakeSignature("17558679"), destinationUrl = url)
   //    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
   //    case (url @ "http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
   //    case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062", signature = fakeSignature("136123062"), destinationUrl = url)
-  //  }
 
   def setupArticles(implicit injector: Injector): Unit = {
     val rover = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
+    fakeArticleData.foreach {
+      case (url, name, id) => rover.setArticlesForUrl(url, Set(mkLinkedInArticle(url, name, id)))
+    }
   }
 
   private def fakeSignature(text: String): Signature = {
@@ -156,57 +195,62 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
         updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) === None
       }
     }
-    //    "normalize a LinkedIn private profile to its public url if ids match" in {
-    //      withDb(modules: _*) { implicit injector =>
-    //        val httpsPublicUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", normalization = Some(Normalization.HTTPSWWW))) }
-    //        val privateUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
-    //        val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
-    //        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.get(privateUri.id.get) }
-    //        val latestHttpsPublicUri = db.readOnlyMaster { implicit session => uriRepo.get(httpsPublicUri.id.get) }
-    //        publicUri.normalization === Some(Normalization.CANONICAL)
-    //        latestPrivateUri.redirect === Some(publicUri.id.get)
-    //        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
-    //        latestHttpsPublicUri.redirect === Some(publicUri.id.get)
-    //        latestHttpsPublicUri.state === NormalizedURIStates.REDIRECTED
-    //      }
-    //    }
-    //    "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in {
-    //      withDb(modules: _*) { implicit injector =>
-    //        val publicUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
-    //        updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)) === None
-    //        db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInCanonicalPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
-    //        val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
-    //        val latestPublicUri = db.readOnlyMaster { implicit session => uriRepo.get(publicUri.id.get) }
-    //        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
-    //
-    //        vanityUri.normalization === Some(Normalization.CANONICAL)
-    //        vanityUri.url === "http://www.linkedin.com/in/leo"
-    //        latestPrivateUri.redirect === Some(vanityUri.id.get)
-    //        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
-    //        latestPublicUri.redirect === Some(vanityUri.id.get)
-    //        latestPublicUri.state === NormalizedURIStates.REDIRECTED
-    //      }
-    //    }
-    //    "normalize a French LinkedIn private profile to a vanity public url" in {
-    //      withDb(modules: _*) { implicit injector =>
-    //        val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://fr.linkedin.com/profile/view?id=136123062")) }
-    //        val vanityUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).get
-    //        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.get(privateUri.id.get) }
-    //        vanityUri.normalization === Some(Normalization.CANONICAL)
-    //        vanityUri.url === "http://www.linkedin.com/in/viviensaulue"
-    //        latestPrivateUri.redirect === Some(vanityUri.id.get)
-    //        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
-    //      }
-    //    }
-    //    "find a variation with an upgraded normalization" in {
-    //      withDb(modules: _*) { implicit injector =>
-    //        val canonicalVariation = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/in/viviensaulue").get }
-    //        val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/in/viviensaulue")) }
-    //        updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).map(_.id) === Some(canonicalVariation.id)
-    //        val latestHttpsUri = db.readOnlyMaster { implicit session => uriRepo.get(httpsUri.id.get) }
-    //        latestHttpsUri.redirect === Some(canonicalVariation.id.get)
-    //        latestHttpsUri.state === NormalizedURIStates.REDIRECTED
-    //      }
-    //    }
+
+    "normalize a LinkedIn private profile to its public url if ids match" in {
+      withDb(modules: _*) { implicit injector =>
+        val httpsPublicUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", normalization = Some(Normalization.HTTPSWWW))) }
+        val privateUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
+        val publicUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)).get
+        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.get(privateUri.id.get) }
+        val latestHttpsPublicUri = db.readOnlyMaster { implicit session => uriRepo.get(httpsPublicUri.id.get) }
+        publicUri.normalization === Some(Normalization.CANONICAL)
+        latestPrivateUri.redirect === Some(publicUri.id.get)
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
+        latestHttpsPublicUri.redirect === Some(publicUri.id.get)
+        latestHttpsPublicUri.state === NormalizedURIStates.REDIRECTED
+      }
+    }
+
+    "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in {
+      withDb(modules: _*) { implicit injector =>
+        val publicUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3").get }
+        updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)) === None
+        db.readWrite { implicit session => urlPatternRuleRepo.save(UrlPatternRule(pattern = LinkedInNormalizer.linkedInCanonicalPublicProfile.toString(), trustedDomain = Some("""^https?://([a-z]{2,3})\.linkedin\.com/.*"""))) }
+        val vanityUri = updateNormalizationNow(publicUri, UntrustedCandidate("http://www.linkedin.com/in/leo/", Normalization.CANONICAL)).get
+        val latestPublicUri = db.readOnlyMaster { implicit session => uriRepo.get(publicUri.id.get) }
+        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("https://www.linkedin.com/profile/view?id=17558679").get }
+
+        vanityUri.normalization === Some(Normalization.CANONICAL)
+        vanityUri.url === "http://www.linkedin.com/in/leo"
+        latestPrivateUri.redirect === Some(vanityUri.id.get)
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
+        latestPublicUri.redirect === Some(vanityUri.id.get)
+        latestPublicUri.state === NormalizedURIStates.REDIRECTED
+      }
+    }
+
+    "normalize a French LinkedIn private profile to a vanity public url" in {
+      withDb(modules: _*) { implicit injector =>
+        val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://fr.linkedin.com/profile/view?id=136123062")) }
+        val vanityUri = updateNormalizationNow(privateUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).get
+        val latestPrivateUri = db.readOnlyMaster { implicit session => uriRepo.get(privateUri.id.get) }
+        vanityUri.normalization === Some(Normalization.CANONICAL)
+        vanityUri.url === "http://www.linkedin.com/in/viviensaulue"
+        latestPrivateUri.redirect === Some(vanityUri.id.get)
+        latestPrivateUri.state === NormalizedURIStates.REDIRECTED
+      }
+    }
+
+    "find a variation with an upgraded normalization" in {
+      withDb(modules: _*) { implicit injector =>
+        val canonicalVariation = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("http://www.linkedin.com/in/viviensaulue").get }
+        val httpsUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/in/viviensaulue")) }
+        updateNormalizationNow(httpsUri, UntrustedCandidate("http://fr.linkedin.com/in/viviensaulue", Normalization.CANONICAL)).map(_.id) === Some(canonicalVariation.id)
+        val latestHttpsUri = db.readOnlyMaster { implicit session => uriRepo.get(httpsUri.id.get) }
+        latestHttpsUri.redirect === Some(canonicalVariation.id.get)
+        latestHttpsUri.state === NormalizedURIStates.REDIRECTED
+      }
+    }
   }
+
 }
