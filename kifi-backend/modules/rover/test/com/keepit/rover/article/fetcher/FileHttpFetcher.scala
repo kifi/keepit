@@ -10,14 +10,13 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 class FileHttpFetcher extends HttpFetcher {
 
-  override def fetch[A](request: FetchRequest)(f: (FetchResult[HttpInputStream]) => A)(implicit ec: ExecutionContext): Future[A] =
-    request.url match {
-      case FileFetcherFormat(file, url) =>
-        val stream = new HttpInputStream(new FileInputStream(file))
-        val context = FetchContext.ok(url)
-        val result = FetchResult(context, Some(stream))
-        Future.successful(f(result))
-    }
+  override def fetch[A](request: FetchRequest)(f: (FetchResult[HttpInputStream]) => A)(implicit ec: ExecutionContext): Future[A] = {
+    val FileFetcherFormat(file, url) = request.url
+    val stream = new HttpInputStream(new FileInputStream(file))
+    val context = FetchContext.ok(url)
+    val result = FetchResult(context, Some(stream))
+    Future.successful(f(result))
+  }
 
 }
 
