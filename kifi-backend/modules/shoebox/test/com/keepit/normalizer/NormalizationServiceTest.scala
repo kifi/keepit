@@ -8,6 +8,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
+import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.scraper.{ BasicArticle, FakeSignatureBuilder }
 import com.keepit.scraper.extractor.ExtractorProviderType
@@ -27,6 +28,10 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
     case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
     case (url @ "http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
     case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062", signature = fakeSignature("136123062"), destinationUrl = url)
+  }
+
+  def setupArticles(implicit injector: Injector): Unit = {
+    val rover = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
   }
 
   private def fakeSignature(text: String): Signature = {
