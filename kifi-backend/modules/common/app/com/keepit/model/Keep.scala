@@ -186,17 +186,6 @@ object Keep {
   }
 }
 
-case class KeepUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
-
-object KeepUriAndTime {
-  import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
-
-  implicit def bookmarkUriAndTimeFormat = (
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'createdAt).format(DateTimeJsonLongFormat)
-  )(KeepUriAndTime.apply, unlift(KeepUriAndTime.unapply))
-}
-
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
   override val version = 4
   val namespace = "bookmark_count"

@@ -341,7 +341,11 @@ angular.module('kifi')
             }
           });
           xhr.addEventListener('load', function () {
-            deferred.resolve(xhr.response);
+            if (xhr.response && xhr.response.path) {
+              deferred.resolve(xhr.response);
+            } else {
+              deferred.reject();
+            }
           });
           xhr.addEventListener('loadend', function () {
             deferred.reject(); // harmless if resolved

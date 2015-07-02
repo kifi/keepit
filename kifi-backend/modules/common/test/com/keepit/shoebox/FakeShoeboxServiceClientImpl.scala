@@ -90,9 +90,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   private val bookmarkSeqCounter = new AtomicInteger(0)
   private def nextBookmarkSeqNum() = { SequenceNumber[Keep](bookmarkSeqCounter.incrementAndGet()) }
 
-  private val collectionSeqCounter = new AtomicInteger(0)
-  private def nextCollectionSeqNum() = { SequenceNumber[Collection](collectionSeqCounter.incrementAndGet()) }
-
   private val userConnSeqCounter = new AtomicInteger(0)
   private def nextUserConnSeqNum() = SequenceNumber[UserConnection](userConnSeqCounter.incrementAndGet())
 
@@ -236,20 +233,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
   }
 
-  def saveCollections(collections: Collection*): Seq[Collection] = {
-    collections.map { c =>
-      val id = c.id.getOrElse(nextCollectionId())
-      val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum())
-      allCollections(id) = updatedCollection
-      updatedCollection
-    }
-  }
-
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*) {
-    allCollectionBookmarks(collectionId) = allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get)
-    allCollections(collectionId) = allCollections(collectionId).copy(seq = nextCollectionSeqNum())
-  }
-
   private def internLibrary(userId: Id[User], isPrivate: Boolean): Library = {
     val visibility = Keep.isPrivateToVisibility(isPrivate)
     allLibraries.values.find(library => library.ownerId == userId && library.visibility == visibility) getOrElse {
@@ -281,10 +264,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
-  }
-
-  def getCollection(collectionId: Id[Collection]): Collection = {
-    allCollections(collectionId)
   }
 
   def saveUserExperiment(experiment: UserExperiment): UserExperiment = {
@@ -429,23 +408,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = ???
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
-
-  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]] = {
-    val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(collections)
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
-    val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
-    Future.successful(bookmarks map { b => KeepUriAndTime(b.uriId, b.createdAt) })
-  }
-
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
-    val collections = allCollections.values.filter(_.userId == userId).toSeq
-    Future.successful(collections)
-  }
-
-  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[NormalizedURI]] = {
     val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)

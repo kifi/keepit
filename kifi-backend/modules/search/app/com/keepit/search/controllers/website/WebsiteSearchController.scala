@@ -56,49 +56,6 @@ class WebsiteSearchController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
-  def search2(
-    query: String,
-    userFilter: Option[String],
-    libraryFilter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    auth: Option[String],
-    debug: Option[String] = None) = MaybeUserAction.async { request =>
-
-    val libraryContextFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), auth, request)
-    val acceptLangs = getAcceptLangs(request)
-    val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(userFilter)
-
-    val orderBy = SearchRanking.default
-
-    val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
-
-      getWebsiteUriSearchResults(userId, uriSearchResult, None).imap {
-        case (hits, users, libraries) =>
-          val librariesJson = libraries.map { library =>
-            Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
-          }
-          val result = Json.obj(
-            "uuid" -> uriSearchResult.uuid,
-            "context" -> IdFilterCompressor.fromSetToBase64(uriSearchResult.idFilter),
-            "experimentId" -> uriSearchResult.searchExperimentId,
-            "mayHaveMore" -> uriSearchResult.mayHaveMoreHits,
-            "myTotal" -> uriSearchResult.myTotal,
-            "friendsTotal" -> uriSearchResult.friendsTotal,
-            "othersTotal" -> uriSearchResult.othersTotal,
-            "hits" -> hits,
-            "libraries" -> librariesJson,
-            "users" -> users
-          )
-          Ok(result)
-      }
-    }
-  }
-
   private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, idealImageSize: Option[ImageSize]): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))

@@ -22,20 +22,23 @@ class GratificationStatsController @Inject() (
     reKeepRepo: ReKeepRepo,
     airbrake: AirbrakeNotifier) extends HeimdalServiceController with Logging {
 
-  def getEligibleGratData = Action(parse.json) { request =>
+  def getEligibleGratDatas = Action(parse.json) { request =>
     val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }.filter { _.isEligible }
-    Ok(Json.toJson(gratDatas))
+    log.info(s"[GratData] Eligible Grat Datas collected. Sending: ${Json.toJson(gratDatas)}")
+    Ok(Json.obj("gratDatas" -> gratDatas))
   }
 
   def getGratData(userId: Id[User]) = Action { request =>
     val gratData = gratStatsCommander.getGratData(userId)
-    Ok(Json.toJson(gratData))
+    log.info(s"[GratData] Grat Data collected. Sending: ${Json.toJson(gratData)}")
+    Ok(Json.obj("gratData" -> gratData))
   }
 
   def getGratDatas = Action(parse.json) { request =>
     val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }
-    Ok(Json.toJson(gratDatas))
+    log.info(s"[GratData] Grat Datas collected. Sending: ${Json.toJson(gratDatas)}")
+    Ok(Json.obj("gratDatas" -> gratDatas))
   }
 }

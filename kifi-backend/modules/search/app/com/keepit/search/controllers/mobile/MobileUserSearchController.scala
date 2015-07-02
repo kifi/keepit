@@ -42,20 +42,4 @@ class MobileUserSearchController @Inject() (
 
     Ok(JsArray(jsVals))
   }
-
-  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = UserAction { request =>
-    val userId = request.userId
-    val userSearchResult = userSearchCommander.searchUsers(Some(userId), queryText, maxHits, context = context, filter = filter, excludeSelf = true)
-    val json = Json.obj(
-      "context" -> userSearchResult.context,
-      "hits" -> JsArray(userSearchResult.hits.map { hit =>
-        Json.obj(
-          "isFriend" -> hit.isFriend,
-          "basicUser" -> hit.basicUser
-        )
-      })
-    )
-    Ok(Json.toJson(json))
-  }
-
 }

@@ -63,7 +63,7 @@ class GratificationCommander @Inject() (
       val users = userIds.filter { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.GRATIFICATION_EMAIL) }
       remoteCallQueue.withLockFuture { heimdal.getGratDatas(users) }
     } else {
-      remoteCallQueue.withLockFuture { heimdal.getEligibleGratData(userIds) }
+      remoteCallQueue.withLockFuture { heimdal.getEligibleGratDatas(userIds) }
     }
   }
 

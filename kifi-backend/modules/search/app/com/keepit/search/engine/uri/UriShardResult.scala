@@ -3,6 +3,9 @@ package com.keepit.search.engine.uri
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.model.Keep
+import com.keepit.search.Lang
+import com.keepit.search.index.{ Analyzer, DefaultAnalyzer }
+import com.keepit.search.result.Highlighter
 import play.api.libs.json._
 
 import scala.math.BigDecimal.{ double2bigDecimal, int2bigDecimal, long2bigDecimal }
@@ -92,6 +95,25 @@ object UriShardHit extends Logging {
         log.error(s"can't serialize KifiShardHit [id=$id][score=$score][visibility=$visibility]", e)
         throw e
     }
+  }
+
+  def getMatches(query: String, lang: Lang, hits: Seq[UriShardHit]): Map[UriShardHit, Option[JsObject]] = {
+    val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
+    val terms = Highlighter.getQueryTerms(query, analyzer)
+    hits.map(hit => hit -> getMatches(analyzer, terms, hit)).toMap
+  }
+
+  def getMatches(analyzer: Analyzer, terms: Set[String], hit: UriShardHit): Option[JsObject] = {
+    var matchesJson = Json.obj()
+
+    def add(name: String, content: String) = {
+      val matches = Highlighter.highlight(content, analyzer, "", terms)
+      if (matches.nonEmpty) { matchesJson = matchesJson + (name -> Highlighter.formatMatches(matches)) }
+    }
+
+    add("title", hit.title)
+    add("url", hit.url)
+    Some(matchesJson).filter(_.keys.nonEmpty)
   }
 }
 
