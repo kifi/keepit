@@ -110,7 +110,7 @@ angular.module('kifi', [
       responseError: function (response) {
         // This SHOULD only be called for all HTTP 400-599 status codes.
         response = response || {}; // make sure response is defined
-        $exceptionHandler(new Error('Server Error: ' + response.status), response);
+        $exceptionHandler(new Error(response.status), response);
 
         // Continue treating the response as an error.
         return $q.reject(response);
