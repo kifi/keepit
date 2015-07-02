@@ -32,7 +32,6 @@ import play.api.libs.json._
 import play.api.mvc.{ Result, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import scala.collection.parallel.ParSeq
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
 
@@ -160,7 +159,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
 
-        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, "following", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -180,7 +179,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         // user 2 currently owns the library, user 1 follows
         // let's have user2 look at user1
 
-        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, "following", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -199,7 +198,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
         // user 2 currently owns the library, user 1 follows
 
-        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesV2(user1, 0, 10, "following", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -217,7 +216,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, "own", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -231,39 +230,11 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       }
     }
 
-    "order libraries by priority" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user, highPriorityMemberships, highPriorityLibs) = db.readWrite { implicit session =>
-          val user = UserFactory.user().saved
-          val libs1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
-          val libs2 = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
-          val libs3 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
-
-          val highPriorityMemberships = for (lib <- libs2) yield {
-            val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = user.id.get).get
-            libraryMembershipRepo.save(membership.copy(priority = 1))
-          }
-          (user, highPriorityMemberships, libs2)
-        }
-        implicit val config = inject[PublicIdConfiguration]
-
-        val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, orderedByPriority = true)
-        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
-
-        infos.length === 6
-
-        val highPriorityPublicIds = highPriorityLibs.map { lib => Library.publicId(lib.id.get) }.toSet
-        highPriorityPublicIds === infos.take(2).map(_.id).toSet
-        highPriorityPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
-        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
-      }
-    }
-
     "get profile libraries for other user" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, "own", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         val resStr = contentAsString(result1)
@@ -281,7 +252,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2) = createUsersWithLibraries()
 
-        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        val result1 = getProfileLibrariesV2(user1, 0, 10, "own", Some(LibraryOrdering.ALPHABETICAL))
         status(result1)
         var res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
         var resStr = contentAsString(result1)
@@ -292,7 +263,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         privateLibrary must greaterThan(-1)
         publicLibrary must greaterThan(privateLibrary)
 
-        val result2 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.MEMBER_COUNT))
+        val result2 = getProfileLibrariesV2(user1, 0, 10, "own", Some(LibraryOrdering.MEMBER_COUNT))
         status(result2)
         res = Await.result(result2, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result2)
@@ -303,7 +274,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         privateLibrary must greaterThan(-1)
         publicLibrary must lessThan(privateLibrary)
 
-        val result3 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.LAST_KEPT_INTO))
+        val result3 = getProfileLibrariesV2(user1, 0, 10, "own", Some(LibraryOrdering.LAST_KEPT_INTO))
         status(result3)
         res = Await.result(result3, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result3)
@@ -313,7 +284,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         publicLibrary must greaterThan(-1)
         publicLibrary must lessThan(privateLibrary)
 
-        val result4 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, None)
+        val result4 = getProfileLibrariesV2(user1, 0, 10, "own", None)
         status(result4)
         res = Await.result(result4, Duration.apply(1, TimeUnit.SECONDS))
         resStr = contentAsString(result4)
@@ -542,18 +513,18 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileUserProfileController.getProfileLibraries(user.username, page, size, filter)))
   }
 
-  private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering], sortDirection: Option[SortDirection] = None, orderedByPriority: Boolean = false)(implicit injector: Injector): Future[Result] = {
+  private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: String, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = orderedByPriority)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)))
   }
 
-  private def getProfileLibrariesForOtherUser(viewer: User, user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
+  private def getProfileLibrariesForOtherUser(viewer: User, user: User, page: Int, size: Int, filter: String, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(viewer)
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)))
   }
 
-  private def getProfileLibrariesForAnonymous(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
-    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+  private def getProfileLibrariesForAnonymous(user: User, page: Int, size: Int, filter: String, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering)))
   }
 
   private def getProfileFollowers(viewer: User, username: Username, page: Int, size: Int)(implicit injector: Injector): Future[Result] = {
