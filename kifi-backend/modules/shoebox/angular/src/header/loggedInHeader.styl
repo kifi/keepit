@@ -226,7 +226,7 @@ input.kf-lih-search-input
 
 .kf-lih-right
   display: table-cell
-  width: btn-diam * 4 + btn-space * 4 + 12px
+  width: (btn-diam + btn-space) * 5 + 12px
   vertical-align: middle
   text-align: right
   font-size: 0
@@ -277,6 +277,7 @@ input.kf-lih-search-input
 .kf-lih-tags
 .kf-lih-friends
 .kf-lih-profile
+.kf-lih-settings
   display: inline-block
   width: btn-diam
   height: btn-diam
@@ -288,6 +289,7 @@ input.kf-lih-search-input
 
 .kf-lih-tags
 .kf-lih-friends
+.kf-lih-settings
   background-color: btn-color
 
   &:hover
@@ -326,3 +328,23 @@ input.kf-lih-search-input
 
 .kf-lih-profile
   background-size: cover
+
+.kf-lih-settings
+  position: relative
+  margin-left: btn-space
+  z-index: 1  // to cover invisible ::before pseudo-element on :hover parent
+
+  &:hover
+    background-color: btn-color-hover
+
+  &>.svg-settings-gear-filled-gray
+    display: inline-block
+    width: 100%
+    height: 100%
+    vertical-align: top
+    background-position: 8px 8px
+    background-size: auto 15px
+    background-repeat: no-repeat
+
+  &:not(:hover)>.svg-settings-gear-filled-gray
+    opacity: .7
