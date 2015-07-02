@@ -8,8 +8,6 @@ import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
 import com.keepit.search.engine.uri.UriSearchResult
 import com.keepit.search.index.Searcher
-import com.keepit.search.result.{ KifiSearchResult }
-import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
@@ -19,7 +17,6 @@ import com.keepit.common.core._
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.json.JsObject
 import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable }
 
 import scala.util.{ Try, Failure, Success }
@@ -37,21 +34,6 @@ trait SearchControllerUtil {
   implicit val publicIdConfig: PublicIdConfiguration
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
-
-  def toKifiSearchResultV2(kifiPlainResult: UriSearchResult): JsObject = {
-    KifiSearchResult.v2(
-      kifiPlainResult.uuid,
-      kifiPlainResult.query,
-      kifiPlainResult.firstLang,
-      kifiPlainResult.hits,
-      kifiPlainResult.myTotal,
-      kifiPlainResult.friendsTotal,
-      kifiPlainResult.mayHaveMoreHits,
-      kifiPlainResult.show,
-      kifiPlainResult.cutPoint,
-      kifiPlainResult.searchExperimentId,
-      IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)).json
-  }
 
   def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit =>

@@ -9,8 +9,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.{ SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
@@ -58,7 +60,31 @@ class ExtSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt)
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+    val jsonResultFuture = plainResultFuture.imap { result =>
+      val textMatchesByHit = UriShardHit.getMatches(result.query, result.firstLang, result.hits)
+      val experimentIdJson = result.searchExperimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+      Json.obj(
+        "uuid" -> JsString(result.uuid.toString),
+        "query" -> JsString(query),
+        "hits" -> JsArray(result.hits.map { hit =>
+          json.minify(Json.obj(
+            "title" -> hit.titleJson,
+            "url" -> hit.urlJson,
+            "keepId" -> hit.externalIdJson,
+            "matches" -> textMatchesByHit(hit)
+          ))
+        }),
+        "myTotal" -> JsNumber(result.myTotal),
+        "friendsTotal" -> JsNumber(result.friendsTotal),
+        "mayHaveMore" -> JsBoolean(result.mayHaveMoreHits),
+        "show" -> JsBoolean(result.show),
+        "cutPoint" -> JsNumber(result.cutPoint),
+        "experimentId" -> experimentIdJson,
+        "context" -> JsString(IdFilterCompressor.fromSetToBase64(result.idFilter))
+      )
+    }
+
+    val plainResultEnumerator = safelyFlatten(jsonResultFuture.map(r => Enumerator(r.toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
