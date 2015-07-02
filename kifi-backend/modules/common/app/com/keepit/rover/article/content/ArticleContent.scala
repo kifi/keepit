@@ -1,7 +1,6 @@
 package com.keepit.rover.article.content
 
 import com.keepit.rover.article.Article
-import com.keepit.rover.document.utils.{ Signature, SignatureBuilder }
 import com.keepit.rover.fetcher.HttpRedirect
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -15,20 +14,6 @@ trait ArticleContent[A <: Article] {
   def authors: Seq[PageAuthor]
   def contentType: Option[String]
   def publishedAt: Option[DateTime]
-}
-
-object ArticleContent {
-  def defaultSignature[A <: Article](articleContent: ArticleContent[A]): Signature = {
-    new SignatureBuilder().add(
-      Seq(
-        articleContent.title.toSeq,
-        articleContent.description.toSeq,
-        articleContent.content.toSeq,
-        articleContent.keywords,
-        articleContent.authors.map(_.name)
-      ).flatten
-    ).build
-  }
 }
 
 trait HttpInfoHolder {

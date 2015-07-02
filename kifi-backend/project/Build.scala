@@ -73,7 +73,10 @@ object ApplicationBuild extends Build {
     "org.apache.commons" % "commons-math3" % "3.4.1"
   )
 
-  lazy val roverDependencies = Seq()
+  lazy val roverDependencies = Seq(
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
+    "org.apache.tika" % "tika-parsers" % "1.5"
+  )
 
   lazy val commonSettings =
     Global.settings ++

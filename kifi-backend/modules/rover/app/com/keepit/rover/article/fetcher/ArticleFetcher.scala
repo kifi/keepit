@@ -3,6 +3,7 @@ package com.keepit.rover.article.fetcher
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.rover.article._
 import com.keepit.rover.article.content.{ ArticleContent, NormalizationInfoHolder }
+import com.keepit.rover.document.utils.SignatureBuilder
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.model.ArticleKey
 import com.keepit.rover.store.RoverArticleStore
@@ -48,8 +49,8 @@ object ArticleFetcher {
 
   private val defaultSignatureSimilarityThreshold = 0.75
   private def haveSimilarySignatures[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
-    val thisArticleSignature = ArticleContent.defaultSignature(thisArticle.content)
-    val thatArticleSignature = ArticleContent.defaultSignature(thatArticle.content)
+    val thisArticleSignature = SignatureBuilder.defaultSignature(thisArticle.content)
+    val thatArticleSignature = SignatureBuilder.defaultSignature(thatArticle.content)
     val similarity = thisArticleSignature similarTo thatArticleSignature
     similarity > defaultSignatureSimilarityThreshold
   }
