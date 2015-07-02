@@ -55,7 +55,7 @@ class GratificationEmailActor @Inject() (
     emailCommander: GratificationCommander,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  val testDestinationEmail = EmailAddress("qa.test@kifi.com") // while in QA, send all emails to Jo
+  val testDestinationEmail = EmailAddress("cam@kifi.com") // while in QA, send all emails to Cam
 
   def receive = {
     case SendEmails =>
