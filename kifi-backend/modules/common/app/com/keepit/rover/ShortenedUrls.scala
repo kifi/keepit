@@ -1,4 +1,4 @@
-package com.keepit.scraper
+package com.keepit.rover
 
 object ShortenedUrls {
   val domains = Set(
