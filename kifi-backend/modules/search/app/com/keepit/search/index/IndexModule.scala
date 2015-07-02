@@ -3,6 +3,7 @@ package com.keepit.search.index
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexerPluginImpl, LibraryMembershipIndexerPlugin, LibraryMembershipIndexer }
+import com.keepit.search.index.graph.organization.{ OrganizationIndexerPluginImpl, OrganizationIndexerPlugin, OrganizationIndexer }
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,7 +12,6 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.inject.AppScoped
 import com.keepit.model.NormalizedURI
-import com.keepit.search.ArticleStore
 import com.keepit.search.index.article._
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
@@ -75,6 +75,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped]
     bind[LibraryMembershipIndexerPlugin].to[LibraryMembershipIndexerPluginImpl].in[AppScoped]
     bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped]
+    bind[OrganizationIndexerPlugin].to[OrganizationIndexerPluginImpl].in[AppScoped]
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -210,6 +211,15 @@ trait IndexModule extends ScalaModule with Logging {
     val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
     new ShardedArticleIndexer(indexShards.toMap, shoebox, rover, airbrake, executionContext)
   }
+
+  @Provides @Singleton
+  def organizationIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): OrganizationIndexer = {
+    val version = IndexerVersionProviders.Organization.getVersionByStatus(serviceDisovery)
+    val orgDir = getIndexDirectory("index.organization.directory", noShard, version, backup, conf, IndexerVersionProviders.Organization.getVersionsForCleanup())
+    log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgDir")
+    new OrganizationIndexer(orgDir, shoebox, airbrake)
+  }
+
 }
 
 case class ProdIndexModule() extends IndexModule {
