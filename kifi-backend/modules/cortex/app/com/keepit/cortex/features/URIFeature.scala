@@ -1,12 +1,10 @@
 package com.keepit.cortex.features
 
-import com.keepit.cortex.article.{ CortexArticleProvider, BasicCortexArticle, CortexArticle }
+import com.keepit.cortex.article.{ CortexArticleProvider, CortexArticle }
 import com.keepit.cortex.core.FeatureRepresenter
 import com.keepit.cortex.core.StatModel
 import com.keepit.model.NormalizedURI
-import com.keepit.search.ArticleStore
 import com.keepit.cortex.core.FeatureRepresentation
-import com.keepit.search.Article
 import com.keepit.cortex.core.FloatVecFeature
 
 trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[NormalizedURI, M]] extends FeatureRepresenter[NormalizedURI, M, FT] {

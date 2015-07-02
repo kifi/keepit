@@ -1,11 +1,9 @@
 package com.keepit.cortex.models.lda
 
-import com.keepit.cortex.article.StoreBasedArticleProvider
+import com.keepit.cortex.article.FakeCortexArticleProvider
 import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
-import com.keepit.cortex.features.URIFeatureTestHelper
 import com.keepit.cortex.core._
-import com.keepit.search.InMemoryArticleStoreImpl
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.Id
@@ -136,7 +134,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
   }
 }
 
-trait LDADbTestHelper extends URIFeatureTestHelper {
+trait LDADbTestHelper {
   val dim = 20
   val mapper = (0 until 20).map { i =>
     val w = "word" + i
@@ -151,8 +149,8 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
   val docRep = new LDADocRepresenter(wordRep, Stopwords(Set())) {
     override val minValidTerms = 1
   }
-  val articleStore = new InMemoryArticleStoreImpl()
-  val uriRep = LDAURIRepresenter(docRep, new StoreBasedArticleProvider(articleStore))
+  val articleProvider = new FakeCortexArticleProvider()
+  val uriRep = LDAURIRepresenter(docRep, articleProvider)
   val uriReps = MultiVersionedLDAURIRepresenter(uriRep)
 
   def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE) = {
@@ -172,8 +170,7 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
   def setup(num: Int, lang: Lang = Lang("en")) = {
     (0 until num).map { i =>
       val uri = makeURI(i + 1)
-      val a = mkArticle(uri.id.get, title = "no title", content = makeContent(i), contentLang = lang)
-      articleStore.+=(uri.id.get, a)
+      articleProvider.setArticle(uri.id.get, makeContent(i), lang)
       uri
     }
   }
