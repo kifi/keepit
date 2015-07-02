@@ -22,7 +22,7 @@ trait ArticleFetcherTest[A <: Article, FetcherType <: ArticleFetcher[A]] extends
 
     val request = {
       val actualUrl = if (url == "") file else url
-      val fileLocation = s"test/com/keepit/rover/article/fetcher/fixtures/$file:::$actualUrl"
+      val fileLocation = FileFetcherFormat("test/com/keepit/rover/article/fetcher/fixtures/" + file, actualUrl)
       ArticleFetchRequest(articleKind, fileLocation)
     }
 
