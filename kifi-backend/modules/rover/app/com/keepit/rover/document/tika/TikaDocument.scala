@@ -49,10 +49,10 @@ class TikaDocument(
 
 object TikaDocument extends Logging {
 
-  def parse(input: HttpInputStream, destinationUrl: String, contentType: Option[String]): TikaDocument = {
+  def parse(input: HttpInputStream, destinationUrl: String, contentType: Option[String], maxContentChars: Int): TikaDocument = {
     val metadata = new Metadata()
     contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
-    val mainHandler = MainContentHandler(metadata, destinationUrl)
+    val mainHandler = MainContentHandler(maxContentChars, metadata, destinationUrl)
     val linkHandler = new RoverLinkContentHandler()
     parseTo(input)(mainHandler, linkHandler)
     new TikaDocument(metadata, mainHandler.getContent(), mainHandler.getKeywords getOrElse Seq(), linkHandler.links)

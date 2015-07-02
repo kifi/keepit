@@ -9,8 +9,10 @@ import org.xml.sax.Attributes
 import play.api.http.MimeTypes
 
 object MainContentHandler {
-  val maxContentChars = 100000 // 100K chars
-  def apply(metadata: Metadata, url: String): MainContentHandler = {
+
+  val defaultMaxContentChars = 100000 // 100K chars
+
+  def apply(maxContentChars: Int, metadata: Metadata, url: String): MainContentHandler = {
     val output = new WriteOutContentHandler(maxContentChars)
     new MainContentHandler(maxContentChars, output, metadata, url)
   }
