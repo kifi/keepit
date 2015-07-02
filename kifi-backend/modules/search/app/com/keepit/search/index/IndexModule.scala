@@ -3,7 +3,7 @@ package com.keepit.search.index
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexerPluginImpl, LibraryMembershipIndexerPlugin, LibraryMembershipIndexer }
-import com.keepit.search.index.graph.organization.{ OrganizationIndexerPluginImpl, OrganizationIndexerPlugin, OrganizationIndexer }
+import com.keepit.search.index.graph.organization._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -74,6 +74,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[LibraryMembershipIndexerPlugin].to[LibraryMembershipIndexerPluginImpl].in[AppScoped]
     bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped]
     bind[OrganizationIndexerPlugin].to[OrganizationIndexerPluginImpl].in[AppScoped]
+    bind[OrganizationMembershipIndexerPlugin].to[OrganizationMembershipIndexerPluginImpl].in[AppScoped]
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -202,6 +203,14 @@ trait IndexModule extends ScalaModule with Logging {
     val orgDir = getIndexDirectory("index.organization.directory", noShard, version, backup, conf, IndexerVersionProviders.Organization.getVersionsForCleanup())
     log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgDir")
     new OrganizationIndexer(orgDir, shoebox, airbrake)
+  }
+
+  @Provides @Singleton
+  def organizationMembershipIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): OrganizationMembershipIndexer = {
+    val version = IndexerVersionProviders.OrganizationMembership.getVersionByStatus(serviceDisovery)
+    val orgMemDir = getIndexDirectory("index.organizationMembership.directory", noShard, version, backup, conf, IndexerVersionProviders.OrganizationMembership.getVersionsForCleanup())
+    log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgMemDir")
+    new OrganizationMembershipIndexer(orgMemDir, shoebox, airbrake)
   }
 
 }

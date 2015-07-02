@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.model.Organization
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexerPlugin
-import com.keepit.search.index.graph.organization.OrganizationIndexerPlugin
+import com.keepit.search.index.graph.organization.{ OrganizationMembershipIndexerPlugin, OrganizationIndexerPlugin }
 import com.keepit.search.index.message.MessageIndexerPlugin
 import com.keepit.search.index.article.{ ArticleIndexerPlugin }
 import play.api.Mode._
@@ -45,5 +45,6 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[LibraryMembershipIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[OrganizationIndexerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[OrganizationMembershipIndexerPlugin] != null) //make sure its not lazy loaded
   }
 }
