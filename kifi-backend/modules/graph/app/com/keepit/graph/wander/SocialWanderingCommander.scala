@@ -31,11 +31,11 @@ class SocialWanderingCommander @Inject() (
   }
 
   def getSocialRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
-    consolidateUser(userId) { userId => getSocialRelatedEntities[User](userId)(getIrrelevantVerticesForUser) }
+    consolidateUser(userId) { userId => getSocialRelatedEntities[User](userId, { id: Id[User] => VertexId(UserReader)(id.id) })(getIrrelevantVerticesForUser) }
   }
 
-  private def getSocialRelatedEntities[E](sourceId: Id[E])(getIrrelevantVertices: Id[E] => Future[Set[VertexId]]): Future[Option[SociallyRelatedEntities[E]]] = {
-    val vertexId = VertexId(sourceId.id)
+  private def getSocialRelatedEntities[E](sourceId: Id[E], toVertexId: Id[E] => VertexId)(getIrrelevantVertices: Id[E] => Future[Set[VertexId]]): Future[Option[SociallyRelatedEntities[E]]] = {
+    val vertexId = toVertexId(sourceId)
     lock.withLockFuture {
       if (graphHasSourceVertex(vertexId)) {
         getIrrelevantVertices(sourceId).map { irrelevantVertices =>
