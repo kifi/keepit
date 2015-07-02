@@ -1,35 +1,29 @@
 package com.keepit.cortex.features
 
-import com.keepit.cortex.article.{ StoreBasedArticleProvider, CortexArticle }
+import com.keepit.cortex.article.{ FakeCortexArticleProvider, CortexArticle }
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.model.UrlHash
-import com.keepit.search.Article
-import com.keepit.search.InMemoryArticleStoreImpl
 import com.keepit.search.Lang
 
-class URIFeatureTest extends Specification with WordFeatureTestHelper with URIFeatureTestHelper {
+class URIFeatureTest extends Specification with WordFeatureTestHelper {
   "uri feature representer " should {
 
     "work" in {
-      val articleStore = new InMemoryArticleStoreImpl()
+      val articleProvider = new FakeCortexArticleProvider()
 
       val uri1 = NormalizedURI(id = Some(Id[NormalizedURI](1)), url = "http://intel.com", urlHash = UrlHash("intel"))
-      val a1 = mkArticle(uri1.id.get, title = "intel", content = "intel and amd are bros")
+      val a1 = articleProvider.setArticle(uri1.id.get, "intel and amd are bros")
 
       val uri2 = NormalizedURI(id = Some(Id[NormalizedURI](2)), url = "http://baidu.com", urlHash = UrlHash("baidu"))
-      val a2 = mkArticle(uri1.id.get, title = "baidu", content = "东风夜放花千树", contentLang = Lang("zh"))
+      val a2 = articleProvider.setArticle(uri2.id.get, "东风夜放花千树", Lang("zh"))
 
       val uri3 = NormalizedURI(id = Some(Id[NormalizedURI](3)), url = "http://random.com", urlHash = UrlHash("random"))
-      val a3 = mkArticle(uri1.id.get, title = "random", content = "blah blah blah ...", contentLang = english)
+      val a3 = articleProvider.setArticle(uri3.id.get, "blah blah blah ...")
 
-      articleStore.+=(uri1.id.get, a1)
-      articleStore.+=(uri2.id.get, a2)
-      articleStore.+=(uri3.id.get, a3)
-
-      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, new StoreBasedArticleProvider(articleStore)) {
+      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, articleProvider) {
         protected def isDefinedAt(article: CortexArticle): Boolean = article.contentLang.isDefined && article.contentLang.get == Lang("en")
         protected def toDocument(article: CortexArticle): Document = Document(article.content.split(" "))
       }

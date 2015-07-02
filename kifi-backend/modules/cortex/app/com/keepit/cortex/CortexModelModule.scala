@@ -7,7 +7,6 @@ import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
 import com.keepit.cortex.nlp.Stopwords
 import com.keepit.cortex.tagcloud.{ TagCloudPluginImpl, TagCloudPlugin }
-import com.keepit.search.ArticleStore
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.common.logging.Logging

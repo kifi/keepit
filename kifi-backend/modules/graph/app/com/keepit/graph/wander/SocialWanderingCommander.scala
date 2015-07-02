@@ -137,7 +137,17 @@ object SocialWanderlust {
     Component(UserReader, AddressBookReader, EmptyEdgeReader),
     Component(AddressBookReader, UserReader, EmptyEdgeReader),
     Component(EmailAccountReader, AddressBookReader, EmptyEdgeReader),
-    Component(AddressBookReader, EmailAccountReader, EmptyEdgeReader)
+    Component(AddressBookReader, EmailAccountReader, EmptyEdgeReader),
+    Component(EmailAccountReader, DomainReader, EmptyEdgeReader),
+    Component(DomainReader, EmailAccountReader, EmptyEdgeReader),
+
+    // Organizations Graph
+    Component(UserReader, OrganizationReader, TimestampEdgeReader),
+    Component(OrganizationReader, UserReader, TimestampEdgeReader),
+
+    // Ip Address Graph
+    Component(UserReader, IpAddressReader, TimestampEdgeReader),
+    Component(IpAddressReader, UserReader, TimestampEdgeReader)
   )
 
   val explicitlyExcludedUsers = Seq(

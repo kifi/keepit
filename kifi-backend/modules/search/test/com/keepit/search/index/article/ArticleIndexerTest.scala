@@ -1,15 +1,37 @@
 package com.keepit.search.index.article
 
 import com.google.inject.Injector
+import com.google.inject.Injector
+import com.keepit.common.db.Id
 import com.keepit.common.db._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time._
+import com.keepit.common.util.PlayAppConfigurationModule
+import com.keepit.model.IndexableUri
+import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
+import com.keepit.model.NormalizedURIStates._
+import com.keepit.model.UserFactory
 import com.keepit.model._
-import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
+import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
+import com.keepit.search._
+import com.keepit.search.engine.parser.DefaultSyntax
+import com.keepit.search.engine.parser.KQueryExpansion
+import com.keepit.search.engine.parser.QueryParser
+import com.keepit.search.index.Analyzer
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.Indexable
+import com.keepit.search.index.SearcherHit
+import com.keepit.search.index.VolatileIndexDirectory
+import com.keepit.search.index.sharding.{ Shard, ShardSpecParser, ActiveShards }
+import com.keepit.search.test.SearchTestInjector
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.engine.parser._
 import com.keepit.search.test.SearchTestInjector
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.keepit.shoebox.ShoeboxServiceClient
 import org.specs2.mutable._
 import org.specs2.specification.Scope
 import scala.collection.JavaConversions._
@@ -17,9 +39,9 @@ import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.keepit.search.index._
 import com.keepit.common.util.PlayAppConfigurationModule
 
-class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector {
+import scala.concurrent.ExecutionContext
 
-  val helperModules = Seq(PlayAppConfigurationModule())
+class ArticleIndexerTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   private[this] val en = Lang("en")
   private[this] val analyzer = DefaultAnalyzer.getAnalyzer(en)
@@ -38,53 +60,31 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
   private class IndexerScope(injector: Injector) extends Scope {
     implicit val inj = injector
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    val ramDir = new VolatileIndexDirectory()
-    val store = new InMemoryArticleStoreImpl()
-    val uriIdArray = new Array[Long](3)
-    var indexer = new DeprecatedStandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val fakeRoverServiceClientImpl = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
 
-    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(
-      UserFactory.user().withName("Joe", "Smith").withUsername("test").get,
-      UserFactory.user().withName("Moo", "Brown").withUsername("test").get
-    )
+    val singleShard = Shard[NormalizedURI](0, 1)
+    implicit val activeShards: ActiveShards = ActiveShards(Set(singleShard))
+    val ramDir = new VolatileIndexDirectory()
+
+    def newIndexer = new ArticleIndexer(ramDir, singleShard, null)
+    var indexer = newIndexer
+    val shardedIndexer = new ShardedArticleIndexer(Map(singleShard -> indexer), fakeShoeboxServiceClient, fakeRoverServiceClientImpl, null, inject[ExecutionContext])
+
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
       NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1").withContentRequest(true),
       NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2").withContentRequest(true),
       NormalizedURI.withHash(title = Some("title3 titles"), normalizedUrl = "http://www.find-it.com/article3").withContentRequest(true)
     )
-    store += (uri1.id.get -> mkArticle(uri1.id.get, uri1.title.get, "content1 alldocs body soul"))
-    store += (uri2.id.get -> mkArticle(uri2.id.get, uri2.title.get, "content2 alldocs bodies soul"))
-    store += (uri3.id.get -> mkArticle(uri3.id.get, uri3.title.get, "content3 alldocs bodies souls"))
 
-    // saving ids for the search test
-    uriIdArray(0) = uri1.id.get.id
-    uriIdArray(1) = uri2.id.get.id
-    uriIdArray(2) = uri3.id.get.id
+    fakeRoverServiceClientImpl.setArticlesForUri(uri1.id.get, Set(mkEmbedlyArticle(uri1.url, uri1.title.get, "content1 alldocs body soul this is in English")))
+    fakeRoverServiceClientImpl.setArticlesForUri(uri2.id.get, Set(mkEmbedlyArticle(uri2.url, uri2.title.get, "content2 alldocs body soul this is in English")))
+    fakeRoverServiceClientImpl.setArticlesForUri(uri3.id.get, Set(mkEmbedlyArticle(uri3.url, uri3.title.get, "content3 alldocs body soul this is in English")))
+
+    val uriIdArray = Array(uri1.id.get.id, uri2.id.get.id, uri3.id.get.id)
 
     lazy val shoeboxClient = inject[ShoeboxServiceClient]
 
-    def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-      Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        author = None,
-        publishedAt = None,
-        canonicalUrl = None,
-        alternateUrls = Set.empty,
-        keywords = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = ACTIVE,
-        message = None,
-        titleLang = Some(en),
-        contentLang = Some(en))
-    }
-
-    class Searchable(indexer: DeprecatedArticleIndexer) {
+    class Searchable(indexer: ArticleIndexer) {
       def search(queryString: String): Seq[SearcherHit] = {
         val searcher = indexer.getSearcher
         (new TstQueryParser).parse(queryString) match {
@@ -93,7 +93,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
         }
       }
     }
-    implicit def toSearchable(indexer: DeprecatedArticleIndexer) = new Searchable(indexer)
+    implicit def toSearchable(indexer: ArticleIndexer) = new Searchable(indexer)
   }
 
   "ArticleIndexer" should {
@@ -104,29 +104,35 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(REDIRECTED)).head
           uri3 = fakeShoeboxServiceClient.saveURIs(uri3.copy(shouldHaveContent = false)).head
 
-          indexer.update()
-          indexer.numDocs === 0
+          var currentSeqNum = -1L
 
-          var currentSeqNum = indexer.sequenceNumber.value
+          shardedIndexer.sequenceNumber.value === currentSeqNum
+
+          updateNow(shardedIndexer)
+          currentSeqNum = Seq(uri1, uri2, uri3).map(_.seq).max.value
+          shardedIndexer.sequenceNumber.value === currentSeqNum
+          indexer.sequenceNumber.value === -1
+          indexer.numDocs === 0
 
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(ACTIVE)).head
 
-          indexer.sequenceNumber.value === currentSeqNum
-          indexer.update()
+          updateNow(shardedIndexer)
           currentSeqNum += 1
+          shardedIndexer.sequenceNumber.value === currentSeqNum
           indexer.sequenceNumber.value === currentSeqNum
           indexer.numDocs === 1
 
           uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
           uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withContentRequest(true)).head
 
-          indexer.update()
+          updateNow(shardedIndexer)
           currentSeqNum += 2
+          shardedIndexer.sequenceNumber.value === currentSeqNum
           indexer.sequenceNumber.value === currentSeqNum
           indexer.numDocs === 3
           indexer.close()
 
-          indexer = new DeprecatedStandaloneArticleIndexer(ramDir, store, null, shoeboxClient)
+          indexer = newIndexer
           indexer.sequenceNumber.value === currentSeqNum
         }
       }
@@ -135,7 +141,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "search documents (hits in contents)" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           indexer.search("alldocs").size === 3
 
@@ -157,7 +163,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "search documents (hits in titles)" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           var res = indexer.search("title1")
           res.size === 1
@@ -177,7 +183,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "search documents (hits in contents and titles)" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           var res = indexer.search("title1 alldocs")
           res.size === 3
@@ -197,7 +203,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "search documents using stemming" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           indexer.search("alldoc").size === 3
           indexer.search("title").size === 3
@@ -212,7 +218,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "limit the result by site" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           var res = indexer.search("alldocs")
           res.size === 3
@@ -247,7 +253,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "match on the URI" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
 
           var res = indexer.search("keepit")
           res.size === 2
@@ -267,27 +273,14 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
       }
     }
 
-    "be able to dump Lucene Document" in {
-      withInjector(helperModules: _*) { injector =>
-        new IndexerScope(injector) {
-          indexer.update()
-
-          store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
-
-          val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
-          doc.getFields.forall { f => Indexable.getFieldDecoder(ArticleFields.decoders)(f.name).apply(f).length > 0 } === true
-        }
-      }
-    }
-
     "delete documents of uris that are inactive, redirected, or active without content" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
           indexer.numDocs === 3
 
           uri1 = fakeShoeboxServiceClient.saveURIs(uri1.copy(shouldHaveContent = false)).head
-          indexer.update()
+          updateNow(shardedIndexer)
           indexer.numDocs === 2
           indexer.search("content1").size === 0
           indexer.search("content2").size === 1
@@ -296,7 +289,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withContentRequest(true)).head
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
 
-          indexer.update()
+          updateNow(shardedIndexer)
           indexer.numDocs === 2
           indexer.search("content1").size === 1
           indexer.search("content2").size === 0
@@ -305,7 +298,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(ACTIVE)).head
           uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(REDIRECTED)).head
 
-          indexer.update()
+          updateNow(shardedIndexer)
           indexer.numDocs === 2
           indexer.search("content1").size === 1
           indexer.search("content2").size === 1
@@ -317,7 +310,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     "retrieve article records from index" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
-          indexer.update()
+          updateNow(shardedIndexer)
           indexer.numDocs === 3
 
           val searcher = indexer.getSearcher

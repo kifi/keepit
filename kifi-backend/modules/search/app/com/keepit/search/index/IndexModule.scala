@@ -13,7 +13,6 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.inject.AppScoped
 import com.keepit.model.NormalizedURI
 import com.keepit.search.index.article._
-import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
 import com.keepit.search.index.phrase.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
@@ -67,7 +66,6 @@ trait IndexModule extends ScalaModule with Logging {
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
-    bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
@@ -107,20 +105,6 @@ trait IndexModule extends ScalaModule with Logging {
       throw new Exception("no shard spec found")
     }
     ActiveShards(shards)
-  }
-
-  @Singleton
-  @Provides
-  def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedCollectionIndexer = {
-    val version = IndexerVersionProviders.Collection.getVersionByStatus(serviceDisovery)
-    def collectionIndexer(shard: Shard[NormalizedURI]): CollectionIndexer = {
-      val dir = getIndexDirectory("index.collection.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
-      log.info(s"storing CollectionIndex${indexNameSuffix(shard, version)} in $dir")
-      new CollectionIndexer(dir, airbrake)
-    }
-
-    val indexShards = activeShards.local.map { shard => (shard, collectionIndexer(shard)) }
-    new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton

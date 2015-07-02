@@ -9,8 +9,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.{ SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
@@ -39,30 +41,6 @@ class ExtSearchController @Inject() (
 
   import ExtSearchController._
 
-  def search(
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = UserAction { request =>
-
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-
-    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, None, debugOpt, withUriSummary)
-
-    Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
-  }
-
   def search2(
     query: String,
     maxHits: Int,
@@ -82,7 +60,31 @@ class ExtSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt)
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+    val jsonResultFuture = plainResultFuture.imap { result =>
+      val textMatchesByHit = UriShardHit.getMatches(result.query, result.firstLang, result.hits)
+      val experimentIdJson = result.searchExperimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+      Json.obj(
+        "uuid" -> JsString(result.uuid.toString),
+        "query" -> JsString(query),
+        "hits" -> JsArray(result.hits.map { hit =>
+          json.minify(Json.obj(
+            "title" -> hit.titleJson,
+            "url" -> hit.urlJson,
+            "keepId" -> hit.externalIdJson,
+            "matches" -> textMatchesByHit(hit)
+          ))
+        }),
+        "myTotal" -> JsNumber(result.myTotal),
+        "friendsTotal" -> JsNumber(result.friendsTotal),
+        "mayHaveMore" -> JsBoolean(result.mayHaveMoreHits),
+        "show" -> JsBoolean(result.show),
+        "cutPoint" -> JsNumber(result.cutPoint),
+        "experimentId" -> experimentIdJson,
+        "context" -> JsString(IdFilterCompressor.fromSetToBase64(result.idFilter))
+      )
+    }
+
+    val plainResultEnumerator = safelyFlatten(jsonResultFuture.map(r => Enumerator(r.toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>

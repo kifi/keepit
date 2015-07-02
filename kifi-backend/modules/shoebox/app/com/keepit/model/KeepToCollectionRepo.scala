@@ -18,7 +18,6 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection]
   def getByCollection(collId: Id[Collection],
@@ -140,19 +139,6 @@ class KeepToCollectionRepoImpl @Inject() (
     q.list.map { ktc => //there should be only [0, 1], iterating on possibly more for safty
       save(ktc.inactivate())
     }
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime] = {
-    import keepRepo.db.Driver.simple._
-    val res = (
-      for {
-        kc <- rows if kc.collectionId === collectionId && kc.state === KeepToCollectionStates.ACTIVE
-        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
-      } yield (k.uriId, k.createdAt)
-    ).list
-
-    res map { r => KeepUriAndTime(r._1, r._2) }
   }
 
   def insertAll(k2c: Seq[KeepToCollection])(implicit session: RWSession): Unit = {

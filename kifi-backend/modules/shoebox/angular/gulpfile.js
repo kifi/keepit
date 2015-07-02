@@ -90,6 +90,7 @@ var libJsFiles = [
   ['lib/jquery/dist/jquery.js', 'lib/jquery/dist/jquery.min.js'],
   ['lib/angular/angular.js', 'lib/angular/angular.min.js'],
   ['lib/angular-cookies/angular-cookies.js', 'lib/angular-cookies/angular-cookies.min.js'],
+  'lib/airbrake-js-client/dist/client.js',
   ['lib/angular-resource/angular-resource.js', 'lib/angular-resource/angular-resource.min.js'],
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],
   ['lib/angular-animate/angular-animate.js', 'lib/angular-animate/angular-animate.min.js'],
