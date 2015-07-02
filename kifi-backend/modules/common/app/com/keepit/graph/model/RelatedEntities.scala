@@ -25,31 +25,30 @@ object RelatedEntities {
   def empty[E, R](id: Id[E]) = RelatedEntities(id, Seq.empty[(Id[R], Double)])
 }
 
-case class SociallyRelatedEntities[E](
-  users: RelatedEntities[E, User],
-  facebookAccounts: RelatedEntities[E, SocialUserInfo],
-  linkedInAccounts: RelatedEntities[E, SocialUserInfo],
-  emailAccounts: RelatedEntities[E, EmailAccountInfo],
+case class SociallyRelatedEntities(
+  users: RelatedEntities[User, User],
+  facebookAccounts: RelatedEntities[User, SocialUserInfo],
+  linkedInAccounts: RelatedEntities[User, SocialUserInfo],
+  emailAccounts: RelatedEntities[User, EmailAccountInfo],
   createdAt: DateTime = currentDateTime)
 
 object SociallyRelatedEntities {
-
-  implicit def format[E]: Format[SociallyRelatedEntities[E]] = (
-    (__ \ 'users).format[RelatedEntities[E, User]] and
-    (__ \ 'facebookAccounts).format[RelatedEntities[E, SocialUserInfo]] and
-    (__ \ 'linkedInAccounts).format[RelatedEntities[E, SocialUserInfo]] and
-    (__ \ 'emailAccounts).format[RelatedEntities[E, EmailAccountInfo]] and
+  implicit val format = (
+    (__ \ 'users).format[RelatedEntities[User, User]] and
+    (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
+    (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
+    (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
     (__ \ 'createdAt).format[DateTime]
-  )(SociallyRelatedEntities.apply[E] _, unlift(SociallyRelatedEntities.unapply[E]))
+  )(SociallyRelatedEntities.apply _, unlift(SociallyRelatedEntities.unapply))
 
-  def empty[E](sourceId: Id[E]): SociallyRelatedEntities[E] = SociallyRelatedEntities[E](RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId))
+  def empty(userId: Id[User]): SociallyRelatedEntities = SociallyRelatedEntities(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
-case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities[User]] {
+case class SociallyRelatedEntitiesCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities] {
   override val version = 3
   val namespace = "socially_related_entities"
   def toKey(): String = id.id.toString
 }
 
-class SociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SociallyRelatedEntitiesForUserCacheKey, SociallyRelatedEntities[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class SociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SociallyRelatedEntitiesCacheKey, SociallyRelatedEntities](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

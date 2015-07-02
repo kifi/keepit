@@ -43,13 +43,7 @@ class ABookRecommendationController @Inject() (
   }
 
   def getIrrelevantPeople(userId: Id[User]) = Action.async { request =>
-    abookRecommendationCommander.getIrrelevantPeopleForUser(userId).map { irrelevantPeople =>
-      Ok(Json.toJson(irrelevantPeople))
-    }
-  }
-
-  def getIrrelevantPeopleForUser(userId: Id[User]) = Action.async { request =>
-    abookRecommendationCommander.getIrrelevantPeopleForUser(userId).map { irrelevantPeople =>
+    abookRecommendationCommander.getIrrelevantPeople(userId).map { irrelevantPeople =>
       Ok(Json.toJson(irrelevantPeople))
     }
   }

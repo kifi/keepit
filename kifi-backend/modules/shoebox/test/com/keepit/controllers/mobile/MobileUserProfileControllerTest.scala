@@ -403,7 +403,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
         )
-        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
         // view as owner
         val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
         status(result1) must equalTo(OK)
