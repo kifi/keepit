@@ -295,6 +295,8 @@ POST    /m/1/teams/:id/members/invite           @com.keepit.controllers.mobile.M
 POST    /m/1/teams/:id/members/invites/accept   @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
 POST    /m/1/teams/:id/members/invites/decline  @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST    /m/1/teams/:id/members/invites/link     @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
+POST    /m/1/teams/:id/members/modify           @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMembers(id: PublicId[Organization])
+POST    /m/1/teams/:id/members/remove           @com.keepit.controllers.mobile.MobileOrganizationMembershipController.removeMembers(id: PublicId[Organization])
 
 ##########################################
 # Website
