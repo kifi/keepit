@@ -12,7 +12,6 @@ CREATE TABLE proto_organization (
 	owner_id bigint(20) NOT NULL,
 
 	PRIMARY KEY(id),
-	INDEX `proto_organization_i_seq` (`seq`),
 	CONSTRAINT `proto_organization_f_user` FOREIGN KEY (`owner_id`) REFERENCES user(`id`)
 );
 
