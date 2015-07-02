@@ -9,7 +9,6 @@ import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ProdShoeboxScraperClientModule, ProdShoeboxServiceClientModule }
 import com.keepit.common.store.StoreModule
 import com.keepit.common.concurrent.{ ExecutionContextModule, ForkJoinContextMonitorModule }
-import com.keepit.scraper.embedly.EmbedlyModule
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
 
@@ -22,8 +21,7 @@ abstract class ScraperModule(
     val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val storeModule: StoreModule,
-    val fjMonitorModule: ForkJoinContextMonitorModule,
-    val embedlyModule: EmbedlyModule) extends ConfigurationModule with CommonServiceModule {
+    val fjMonitorModule: ForkJoinContextMonitorModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
   val serviceTypeModule = ScraperServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

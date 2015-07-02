@@ -9,14 +9,12 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperDevStoreModule
 import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
-import com.keepit.scraper.embedly.DevEmbedlyModule
 
 case class ScraperDevModule() extends ScraperModule(
   userActionsModule = DevRemoteUserActionsHelperModule(),
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperDevStoreModule(),
-  fjMonitorModule = DevForkJoinContextMonitorModule(),
-  embedlyModule = DevEmbedlyModule()
+  fjMonitorModule = DevForkJoinContextMonitorModule()
 ) with CommonDevModule {
   val fetcherModule = DevHttpFetcherModule()
   val deprecatedFetcherModule = DeprecatedHttpFetcherImplModule()
