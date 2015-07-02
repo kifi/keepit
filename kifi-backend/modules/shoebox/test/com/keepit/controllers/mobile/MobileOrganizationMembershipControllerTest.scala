@@ -204,6 +204,77 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
         }
       }
     }
+    "remove organization memberships" in {
+      def setup()(implicit injector: Injector) = {
+        db.readWrite { implicit session =>
+          val members = UserFactory.users(10).saved
+          val owner = UserFactory.user().withName("A", "Moneybags").saved
+
+          val org = OrganizationFactory.organization()
+            .withName("Moneybags, LLC")
+            .withOwner(owner)
+            .withMembers(members)
+            .saved
+
+          (org, owner, members)
+        }
+      }
+      "reject invalid org public ids" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, _) = setup()
+          val publicOrgId = PublicId[Organization]("NoWayThisOneIsValid")
+
+          val jsonPayload = Json.parse("""{"members": []}""")
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+          status(result) === BAD_REQUEST
+        }
+      }
+      "reject slightly garbage json" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, members) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": 42}]}""")
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+          status(result) === BAD_REQUEST
+        }
+      }
+      "fail if the requester doesn't have permissions" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, members) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val m1 = members(0)
+          val m2 = members(1)
+
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}"}]}""")
+
+          inject[FakeUserActionsHelper].setUser(m1, Set(ExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+
+          status(result) === UNAUTHORIZED
+        }
+      }
+      "remove members if the requester has permission" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, members) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}"}]}""")
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+          status(result) === OK
+        }
+      }
+    }
   }
 
   private def controller(implicit injector: Injector) = inject[MobileOrganizationMembershipController]
