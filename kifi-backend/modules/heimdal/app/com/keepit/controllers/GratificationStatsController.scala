@@ -26,19 +26,19 @@ class GratificationStatsController @Inject() (
     val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }.filter { _.isEligible }
     log.info(s"[GratData] Eligible Grat Datas collected. Sending: ${Json.toJson(gratDatas)}")
-    Ok(Json.toJson(gratDatas))
+    Ok(Json.obj("gratDatas" -> gratDatas))
   }
 
   def getGratData(userId: Id[User]) = Action { request =>
     val gratData = gratStatsCommander.getGratData(userId)
     log.info(s"[GratData] Grat Data collected. Sending: ${Json.toJson(gratData)}")
-    Ok(Json.toJson(gratData))
+    Ok(Json.obj("gratData" -> gratData))
   }
 
   def getGratDatas = Action(parse.json) { request =>
     val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }
     log.info(s"[GratData] Grat Datas collected. Sending: ${Json.toJson(gratDatas)}")
-    Ok(Json.toJson(gratDatas))
+    Ok(Json.obj("gratDatas" -> gratDatas))
   }
 }

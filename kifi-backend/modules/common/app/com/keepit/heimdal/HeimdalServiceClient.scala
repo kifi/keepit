@@ -348,24 +348,24 @@ class HeimdalServiceClientImpl @Inject() (
 
   def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
     val payload = Json.toJson(userIds)
-    call(Heimdal.internal.getEligibleGratData, payload).map { response =>
-      log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.body}")
-      Json.parse(response.body).as[Seq[GratificationData]]
+    call(Heimdal.internal.getEligibleGratDatas, payload).map { response =>
+      log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.json}")
+      (response.json \ "gratDatas").as[Seq[GratificationData]]
     }
   }
 
   def getGratData(userId: Id[User]): Future[GratificationData] = {
     call(Heimdal.internal.getGratData(userId)).map { response =>
-      log.info(s"[GratData] Grat Data received. Body: ${response.body}")
-      Json.parse(response.body).as[GratificationData]
+      log.info(s"[GratData] Grat Data received. Body: ${response.json}")
+      (response.json \ "gratData").as[GratificationData]
     }
   }
 
   def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
     val payload = Json.toJson(userIds)
     call(Heimdal.internal.getGratDatas, payload).map { response =>
-      log.info(s"[GratData] Grat Datas received. Body: ${response.body}")
-      Json.parse(response.body).as[Seq[GratificationData]]
+      log.info(s"[GratData] Grat Datas received. Body: ${response.json}")
+      (response.json \ "gratDatas").as[Seq[GratificationData]]
     }
   }
 }
