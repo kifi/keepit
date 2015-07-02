@@ -18,14 +18,14 @@ trait ArticleFetcherTest[A <: Article, FetcherType <: ArticleFetcher[A]] extends
       injector.getInstance(fetcherClass)
     }
 
-  def fetch(file: String)(implicit ec: ExecutionContext): A = {
+  def fetch(file: String, url: String = "")(implicit ec: ExecutionContext): A = {
 
-    def mkRequest(file: String): ArticleFetchRequest[A] = {
-      val fileLocation = s"test/com/keepit/rover/article/fetcher/fixtures/$file"
+    val request = {
+      val actualUrl = if (url == "") file else url
+      val fileLocation = s"test/com/keepit/rover/article/fetcher/fixtures/$file:::$actualUrl"
       ArticleFetchRequest(articleKind, fileLocation)
     }
 
-    val request = mkRequest(file)
     Await.result(articleFetcher.fetch(request).map(_.get), articleFetchDuration)
   }
 

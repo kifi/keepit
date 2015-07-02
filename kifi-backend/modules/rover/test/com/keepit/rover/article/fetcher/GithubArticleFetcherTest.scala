@@ -11,7 +11,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
   "GithubArticleFetcher" should {
 
     "parse an issue" in {
-      val scraped = fetch("githubcom_issue.txt")
+      val scraped = fetch("githubcom_issue.txt", "https://github.com/kangax/fabric.js/issues/380")
       val content = scraped.content.content.get
 
       content.contains("fabric.js") === true
@@ -20,7 +20,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse the issues list" in {
-      val scraped = fetch("githubcom_issues.txt")
+      val scraped = fetch("githubcom_issues.txt", "https://github.com/kangax/fabric.js/issues")
       val content = scraped.content.content.get
 
       content.contains("Bugfix for controlsAboveOverlay") === true
@@ -29,7 +29,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse a wiki page" in {
-      val scraped = fetch("githubcom_wiki.txt")
+      val scraped = fetch("githubcom_wiki.txt", "https://github.com/kangax/fabric.js/wiki")
       val content = scraped.content.content.get
 
       content.contains("Welcome to the fabric.js wiki") === true
@@ -38,7 +38,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse a pull request" in {
-      val scraped = fetch("githubcom_pullrequest.txt")
+      val scraped = fetch("githubcom_pullrequest.txt", "https://github.com/kangax/fabric.js/pull/381")
       val content = scraped.content.content.get
 
       content.contains("Kienz opened this pull request") === true
@@ -47,7 +47,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse pull request list" in {
-      val scraped = fetch("githubcom_pulls.txt")
+      val scraped = fetch("githubcom_pulls.txt", "https://github.com/kangax/fabric.js/pulls")
       val content = scraped.content.content.get
 
       content.contains("Bugfix for controlsAboveOverlay (issue #380)") === true
@@ -56,7 +56,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse profiles" in {
-      val scraped = fetch("githubcom_profile.txt")
+      val scraped = fetch("githubcom_profile.txt", "https://github.com/andrewconner")
       val content = scraped.content.content.get
 
       (content.length > 100) === true
@@ -65,7 +65,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse source page" in {
-      val scraped = fetch("githubcom_source.txt")
+      val scraped = fetch("githubcom_source.txt", "https://github.com/kangax/fabric.js/blob/master/HEADER.js")
       val content = scraped.content.content.get
 
       content.contains("True when in environment that supports touch events") === true
@@ -74,7 +74,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse source page" in {
-      val scraped = fetch("githubcom_gist.txt")
+      val scraped = fetch("githubcom_gist.txt", "https://gist.github.com/4499206")
       val content = scraped.content.content.get
 
       content.contains("Proof-of-Concept exploit for Rails Remote Code Execution") === true
@@ -83,7 +83,7 @@ class GithubArticleFetcherTest extends Specification with ArticleFetcherTest[Git
     }
 
     "parse repo main page" in {
-      val scraped = fetch("githubcom_repo.txt")
+      val scraped = fetch("githubcom_repo.txt", "https://gist.github.com/4499206")
       val content = scraped.content.content.get
 
       content.contains("Object Model for HTML5 Canvas + SVG-to-Canvas") === true
