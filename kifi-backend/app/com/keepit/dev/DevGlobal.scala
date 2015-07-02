@@ -17,7 +17,6 @@ import com.keepit.shoebox.{ ShoeboxServices, ShoeboxProdModule }
 import net.codingwell.scalaguice.ScalaModule
 import play.api.Application
 import play.api.Mode._
-import com.keepit.scraper.ScraperServices
 import com.keepit.abook.ABookServices
 import com.keepit.cortex.CortexServices
 import com.keepit.graph.GraphServices
@@ -30,7 +29,6 @@ import scala.concurrent.Future
 object DevGlobal extends FortyTwoGlobal(Dev)
     with ShoeboxServices
     with SearchServices
-    with ScraperServices
     with ABookServices
     with CortexServices
     with GraphServices
@@ -49,7 +47,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
   }
 
   // Modules are overridden on top of each other, so the last modules in this list have higher precedence
-  val modules: Seq[Module] = Seq(RoverDevModule(), CuratorDevModule(), GraphDevModule(), CortexDevModule(), ScraperDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
+  val modules: Seq[Module] = Seq(RoverDevModule(), CuratorDevModule(), GraphDevModule(), CortexDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
 
   override val module = composeModules(modules)
 
@@ -60,7 +58,6 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     def startServices() = {
       val t = System.currentTimeMillis
       startShoeboxServices()
-      startScraperServices()
       startSearchServices()
       startABookServices()
       startCortexServices()

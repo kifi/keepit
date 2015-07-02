@@ -1,7 +1,7 @@
 package com.keepit.rover.fetcher
 
 import com.keepit.common.net.URI
-import com.keepit.scraper.ShortenedUrls
+import com.keepit.rover.ShortenedUrls
 import play.api.http.Status._
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {

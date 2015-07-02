@@ -16,7 +16,7 @@ case class JsoupDocument(doc: Document) extends FetchedDocument with Logging {
   }
 
   def getLinks(rel: String): Set[String] = {
-    val urls = doc.select("link[ref=" + rel + "]").iterator() map { e => e.attr("href") }
+    val urls = doc.select("link[rel=" + rel + "]").iterator() map { e => e.attr("href") }
     urls filterNot { str => str == null || str.isEmpty } toSet
   }
 
