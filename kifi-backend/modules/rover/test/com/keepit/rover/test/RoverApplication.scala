@@ -19,6 +19,8 @@ import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.rover.common.cache.RoverCacheModule
 import com.keepit.rover.RoverServiceTypeModule
 
+import scala.concurrent.ExecutionContext
+
 class RoverApplication(overridingModules: Module*)(implicit path: File = new File("./modules/rover/"))
   extends TestApplication(path, overridingModules, Seq(
     FakeExecutionContextModule(),
@@ -58,4 +60,6 @@ trait RoverInjectionHelpers { self: TestInjectorProvider =>
   def articleInfoRepo(implicit injector: Injector) = inject[ArticleInfoRepo]
   def articleInfoHelper(implicit injector: Injector) = inject[ArticleInfoHelper]
   def clock(implicit injector: Injector) = inject[Clock]
+  implicit def executionContext(implicit injector: Injector) = inject[ExecutionContext]
+
 }

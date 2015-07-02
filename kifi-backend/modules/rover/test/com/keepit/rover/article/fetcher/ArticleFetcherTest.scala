@@ -1,28 +1,28 @@
 package com.keepit.rover.article.fetcher
 
+import com.google.inject.Injector
 import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.rover.test.RoverTestInjector
+import org.specs2.matcher.NoConcurrentExecutionContext
+import org.specs2.mutable.Specification
+import org.specs2.time.NoTimeConversions
 
-import scala.concurrent.{ ExecutionContext, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
-trait ArticleFetcherTest[A <: Article, FetcherType <: ArticleFetcher[A]] extends RoverTestInjector {
+abstract class ArticleFetcherTest[A <: Article: ArticleKind, FetcherType <: ArticleFetcher[A]: Manifest]
+    extends Specification with RoverTestInjector with NoTimeConversions with NoConcurrentExecutionContext {
 
-  val fetcherClass: Class[FetcherType]
+  val articleKind = implicitly[ArticleKind[A]]
 
-  val articleKind: ArticleKind[A]
   val articleFetchDuration = 10.seconds
 
-  lazy val articleFetcher: FetcherType =
-    withInjector(FileHttpFetcherModule()) { implicit injector =>
-      injector.getInstance(fetcherClass)
-    }
+  def fetch(url: String, file: String)(implicit injector: Injector): A = {
 
-  def fetch(file: String, url: String = "")(implicit ec: ExecutionContext): A = {
+    val articleFetcher = inject[FetcherType]
 
     val request = {
-      val actualUrl = if (url == "") file else url
-      val fileLocation = FileFetcherFormat("test/com/keepit/rover/article/fetcher/fixtures/" + file, actualUrl)
+      val fileLocation = FileFetcherFormat(url, "test/com/keepit/rover/article/fetcher/fixtures/" + file)
       ArticleFetchRequest(articleKind, fileLocation)
     }
 
