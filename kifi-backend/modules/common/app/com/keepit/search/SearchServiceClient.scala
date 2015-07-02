@@ -63,8 +63,6 @@ trait SearchServiceClient extends ServiceClient {
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
 
-  def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
-
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
@@ -238,15 +236,6 @@ class SearchServiceClientImpl(
     call(Search.internal.getSearchDefaultConfig).map { r =>
       val param = Json.fromJson[Map[String, String]](r.json).get
       new SearchConfig(param)
-    }
-  }
-
-  def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]] = {
-    val payload = Json.obj("userId" -> userId.id, "query" -> query, "maxHits" -> maxHits, "config" -> Json.toJson(config.params))
-    call(Search.internal.searchWithConfig(), payload).map { r =>
-      r.json.as[JsArray].value.map { js =>
-        ((js \ "uriId").as[Long].toString, (js \ "title").as[String], (js \ "url").as[String])
-      }
     }
   }
 

@@ -260,14 +260,6 @@ class ShoeboxController @Inject() (
     )
   }
 
-  def getCollectionIdsByExternalIds(ids: String) = Action { request =>
-    val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
-    val collectionIds = db.readOnlyReplica(2) { implicit s => //no cache used
-      extCollIds.map { collectionRepo.getOpt(_).map(_.id.get.id) }.flatten
-    }
-    Ok(Json.toJson(collectionIds))
-  }
-
   // on kifi
   def getConnectedUsers(id: Id[User]) = Action { request =>
     val ids = db.readOnlyMaster { implicit s => //using cache
@@ -326,17 +318,6 @@ class ShoeboxController @Inject() (
       userRepo.getUsers(userIds).map(_._2)
     }
     Ok(Json.toJson(users))
-  }
-
-  def getCollectionsByUser(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>
-    val uris = db.readOnlyReplica(2) { implicit s =>
-      keepToCollectionRepo.getUriIdsInCollection(collectionId)
-    }
-    Ok(Json.toJson(uris))
   }
 
   def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>

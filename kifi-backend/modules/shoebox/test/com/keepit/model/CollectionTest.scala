@@ -102,7 +102,6 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
         db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
@@ -146,12 +145,9 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala")).get.id.get === coll3.id.get
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Scala")).get.id.get === coll4.id.get
           keepToCollectionRepo.getKeepsForTag(coll3.id.get).length === 1
-          keepToCollectionRepo.getUriIdsInCollection(coll3.id.get).length === 1
           keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 0
-          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 0
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 1
-          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Cooking")) must beNone
         }
       }
@@ -165,10 +161,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
       }
@@ -216,22 +210,11 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           n must be > coll2.seq.value
           n
         }
-        val latestSeqNum = db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(
             keepId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
           val seq = collectionRepo.get(coll1.id.get).seq.value
           seq must be > newSeqNum
-          seq
-        }
-
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
-        }
-        db.readWrite { implicit s =>
-          keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
       }
     }

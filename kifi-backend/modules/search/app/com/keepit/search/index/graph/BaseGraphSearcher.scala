@@ -14,12 +14,6 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
   def getDocId(id: Long) = reader.getIdMapper.getDocId(id)
 
-  def getURIList(field: String, docid: Int): URIList = {
-    if (docid < 0) return URIList.empty
-    val ref = getAllBytes(field, docid)
-    URIList(ref.bytes, ref.offset, ref.length)
-  }
-
   def getLongArray(field: String, docid: Int): Array[Long] = {
     if (docid < 0) return Array.empty[Long]
     val ref = getAllBytes(field, docid)

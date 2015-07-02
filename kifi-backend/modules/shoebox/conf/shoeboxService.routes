@@ -863,7 +863,6 @@ GET     /internal/shoebox/database/userIdsByExternalIds                @com.keep
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
 POST    /internal/shoebox/database/getPrimaryEmailAddressForUsers      @com.keepit.controllers.internal.ShoeboxController.getPrimaryEmailAddressForUsers()
-GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.internal.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
 POST    /internal/shoebox/database/getExperimentsByUserIds             @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
@@ -878,9 +877,6 @@ POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.in
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
 POST    /internal/shoebox/database/processAndSendMail @com.keepit.controllers.internal.ShoeboxController.processAndSendMail
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
-GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.internal.ShoeboxDataPipeController.getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int)
-GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers.internal.ShoeboxController.getUriIdsInCollection(collectionId: Id[Collection])
-GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.internal.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUrisWithContent     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

@@ -3,14 +3,10 @@ package com.keepit.search.index.graph
 import com.google.inject.Injector
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
-import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory }
+import com.keepit.search.index.{ VolatileIndexDirectory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.test.SearchTestInjector
 import play.api.test.Helpers._
@@ -65,35 +61,6 @@ trait GraphTestHelper extends SearchTestInjector {
     fakeShoeboxServiceClient.saveURIs(uris: _*)
   }
 
-  def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new InMemoryArticleStoreImpl()) {
-      case (store, (uri, idx)) =>
-        store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-        store
-    }
-  }
-
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-      id = normalizedUriId,
-      title = title,
-      description = None,
-      author = None,
-      publishedAt = None,
-      canonicalUrl = None,
-      alternateUrls = Set.empty,
-      keywords = None,
-      media = None,
-      content = content,
-      scrapedAt = currentDateTime,
-      httpContentType = Some("text/html"),
-      httpOriginalContentCharset = Option("UTF-8"),
-      state = ACTIVE,
-      message = None,
-      titleLang = Some(Lang("en")),
-      contentLang = Some(Lang("en")))
-  }
-
   def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], mixPrivate: Boolean = false, uniqueTitle: Option[String] = None)(implicit injector: Injector): List[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
@@ -111,22 +78,6 @@ trait GraphTestHelper extends SearchTestInjector {
   def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None)(implicit injector: Injector): Seq[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveBookmarksByUser(edgesByUser, uniqueTitle = uniqueTitle, source = source)
-  }
-
-  def saveCollection(user: User, name: String)(implicit injector: Injector): Collection = {
-    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    val Seq(collection) = fakeShoeboxServiceClient.saveCollections(Collection(userId = user.id.get, name = Hashtag(name)))
-    collection
-  }
-
-  def saveBookmarksToCollection(collection: Collection, bookmarks: Seq[Keep])(implicit injector: Injector): Collection = {
-    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveBookmarksToCollection(collection.id.get, bookmarks: _*)
-    fakeShoeboxServiceClient.getCollection(collection.id.get)
-  }
-
-  def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): CollectionIndexer = {
-    new StandaloneCollectionIndexer(collectionDir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkUserGraphsSearcherFactory()(implicit injector: Injector) = {

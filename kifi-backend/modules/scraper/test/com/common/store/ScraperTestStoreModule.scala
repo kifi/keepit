@@ -11,10 +11,6 @@ case class ScraperTestStoreModule() extends StoreModule() {
 
   @Singleton
   @Provides
-  def articleStore(): ArticleStore = new InMemoryArticleStoreImpl()
-
-  @Singleton
-  @Provides
   def bayesPornDetectorStore(): PornWordLikelihoodStore = new FakePornWordLikelihoodStore()
 
   @Singleton

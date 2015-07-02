@@ -29,40 +29,6 @@ class SearchController @Inject() (
     distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
-  def distSearch() = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    val shardSpec = (json \ "shards").as[String]
-    val searchRequest = (json \ "request")
-
-    // keep the following in sync with SearchServiceClientImpl
-    val userId = (searchRequest \ "userId").as[Long]
-    val lang1 = (searchRequest \ "lang1").as[String]
-    val lang2 = (searchRequest \ "lang2").asOpt[String]
-    val query = (searchRequest \ "query").as[String]
-    val filter = (searchRequest \ "filter").asOpt[String]
-    val maxHits = (searchRequest \ "maxHits").as[Int]
-    val context = (searchRequest \ "context").asOpt[String]
-    val debug = (searchRequest \ "debug").asOpt[String]
-
-    val id = Id[User](userId)
-    val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
-    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    val result = uriSearchCommander.distSearch(
-      shards,
-      id,
-      Lang(lang1),
-      lang2.map(Lang(_)),
-      userExperiments,
-      query,
-      filter,
-      maxHits,
-      context,
-      None,
-      debug)
-
-    Ok(result.json)
-  }
-
   def distSearchUris() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
@@ -157,21 +123,6 @@ class SearchController @Inject() (
   def warmUpUser(userId: Id[User]) = Action { request =>
     uriSearchCommander.warmUp(userId)
     Ok
-  }
-
-  def searchWithConfig() = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val userId = Id[User]((js \ "userId").as[Long])
-    val query = (js \ "query").as[String]
-    val maxHits = (js \ "maxHits").as[Int]
-    val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val res = uriSearchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)))
-    Ok(JsArray(res.hits.map { x =>
-      val id = x.uriId.id
-      val title = x.bookmark.title.getOrElse("")
-      val url = x.bookmark.url
-      Json.obj("uriId" -> id, "title" -> title, "url" -> url)
-    }))
   }
 
   def searchUsers() = Action(parse.tolerantJson) { request =>
