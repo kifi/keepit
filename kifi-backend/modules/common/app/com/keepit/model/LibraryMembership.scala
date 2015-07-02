@@ -27,7 +27,7 @@ case class LibraryMembership(
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
     subscribedToUpdates: Boolean = false,
-    starred: Option[String] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    starred: LibraryPriority = LibraryPriority.UNSTARRED) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -61,7 +61,7 @@ object LibraryMembership {
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
     (__ \ 'subscribedToUpdates).format[Boolean] and
-    (__ \ 'starred).formatNullable[String]
+    (__ \ 'starred).format[LibraryPriority]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
@@ -101,6 +101,24 @@ object LibraryAccess {
 
   def all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
   def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
+}
+
+sealed abstract class LibraryPriority(val value: String)
+object LibraryPriority {
+  case object STARRED extends LibraryPriority("starred")
+  case object UNSTARRED extends LibraryPriority("unstarred")
+
+  implicit val format: Format[LibraryPriority] =
+    Format(__.read[String].map(LibraryPriority(_)), new Writes[LibraryPriority] {
+      def writes(o: LibraryPriority) = JsString(o.value)
+    })
+
+  def apply(str: String): LibraryPriority = {
+    str match {
+      case STARRED.value => STARRED
+      case UNSTARRED.value => UNSTARRED
+    }
+  }
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)

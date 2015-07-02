@@ -235,25 +235,27 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user, starredMemberships, starredLibs) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
-          val unstarred1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
+          val unstarredLibs1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
           val starredLibs = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
-          val unstarred2 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
+          val unstarredLibs2 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
 
-          val star = (lib: Library, starred: String) => LibraryMembershipFactory.membership().withLibraryOwner(lib).withStarred(Some(starred)).saved
-          unstarred1.foreach(star(_, "unstarred"))
-          val starredMemberships = starredLibs.map(star(_, "starred"))
-          unstarred2.foreach(star(_, "unstarred"))
+          val star = (lib: Library, priority: LibraryPriority) => LibraryMembershipFactory.membership().withLibraryOwner(lib).withPriority(priority).saved
+          unstarredLibs1.foreach(star(_, LibraryPriority.STARRED))
+          val starredMemberships = starredLibs.map(star(_, LibraryPriority.STARRED))
+          unstarredLibs2.foreach(star(_, LibraryPriority.UNSTARRED))
           (user, starredMemberships, starredLibs)
         }
         implicit val config = inject[PublicIdConfiguration]
 
-        val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, true)
+        val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, starredFirst = true)
         val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
         infos foreach println
-        val publicIds = starredLibs.map { lib => Library.publicId(lib.id.get) }
-        publicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
-        publicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
         infos.length === 6
+
+        val starredPublicIds = starredLibs.map { lib => Library.publicId(lib.id.get) }
+        println(starredPublicIds)
+        starredPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
+        starredPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
         // TODO: this test is failing, apparently we are returning each result twice.
       }
     }

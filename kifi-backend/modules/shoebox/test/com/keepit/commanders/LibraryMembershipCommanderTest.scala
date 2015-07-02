@@ -12,15 +12,15 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "succeed for member starring themselves" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some("starred")))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
           result.isRight === true
-          result.right.get.starred === "starred"
+          result.right.get.starred === LibraryPriority.STARRED
         }
       }
       "fail for member starring a lib other member" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some("starred")))
+          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
           result.isLeft === true
           result.left.get.message === "permission_denied"
         }
@@ -29,9 +29,9 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "succeed for owner of lib changing access" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some("starred")))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
           result.isRight === true
-          result.right.get.starred === "starred"
+          result.right.get.starred === LibraryPriority.STARRED
         }
       }
       "fail for anyone else changing access" in {
