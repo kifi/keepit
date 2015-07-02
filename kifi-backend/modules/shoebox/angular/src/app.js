@@ -82,6 +82,26 @@ angular.module('kifi', [
   }
 ])
 
+.factory('$exceptionHandler', [
+  '$injector', '$window', '$log',
+  function ($injector, $window, $log) {
+    function log(exception) {
+      if ($window.Airbrake) {
+        $window.Airbrake.push({
+          error: {
+            message: exception.toString(),
+            stack: exception.stack
+          }
+        });
+      } else {
+        $log.error(exception);
+      }
+    }
+
+    return _.debounce(log, 5000, true);
+  }]
+)
+
 .controller('AppCtrl', [
   '$scope', '$rootScope', '$rootElement', '$window', '$timeout', '$log', '$analytics', '$location', '$state',
   'profileService', 'platformService', 'libraryService',
