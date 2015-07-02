@@ -8,7 +8,6 @@ import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
-import scala.reflect.ClassTag
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
