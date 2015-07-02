@@ -106,11 +106,16 @@ angular.module('kifi', [
 .factory('errorResponseReporter', [
   '$q', '$exceptionHandler',
   function($q, $exceptionHandler) {
+    var ignoredStatuses = [ 403 ];
+
     var errorResponseReporter = {
       responseError: function (response) {
         // This SHOULD only be called for all HTTP 400-599 status codes.
         response = response || {}; // make sure response is defined
-        $exceptionHandler(new Error(response.status), response);
+
+        if (!_.contains(ignoredStatuses, response.status)) {
+          $exceptionHandler(new Error('Client received HTTP status ' + response.status), response);
+        }
 
         // Continue treating the response as an error.
         return $q.reject(response);
