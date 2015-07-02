@@ -22,10 +22,6 @@ trait FakeStoreModule extends StoreModule {
   @Provides
   def probablisticLRUStore(): ProbablisticLRUStore = new InMemoryProbablisticLRUStoreImpl()
 
-  @Singleton
-  @Provides
-  def articleStore(): ArticleStore = new InMemoryArticleStoreImpl()
-
   @Provides @Singleton
   def roverImageStore(): RoverImageStore = new InMemoryRoverImageStoreImpl()
 

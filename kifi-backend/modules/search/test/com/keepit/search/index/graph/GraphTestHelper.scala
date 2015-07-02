@@ -3,10 +3,7 @@ package com.keepit.search.index.graph
 import com.google.inject.Injector
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
 import com.keepit.search.index.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.search.index.{ VolatileIndexDirectory }
@@ -62,35 +59,6 @@ trait GraphTestHelper extends SearchTestInjector {
   def saveURIs(uris: NormalizedURI*)(implicit injector: Injector) = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveURIs(uris: _*)
-  }
-
-  def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new InMemoryArticleStoreImpl()) {
-      case (store, (uri, idx)) =>
-        store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-        store
-    }
-  }
-
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-      id = normalizedUriId,
-      title = title,
-      description = None,
-      author = None,
-      publishedAt = None,
-      canonicalUrl = None,
-      alternateUrls = Set.empty,
-      keywords = None,
-      media = None,
-      content = content,
-      scrapedAt = currentDateTime,
-      httpContentType = Some("text/html"),
-      httpOriginalContentCharset = Option("UTF-8"),
-      state = ACTIVE,
-      message = None,
-      titleLang = Some(Lang("en")),
-      contentLang = Some(Lang("en")))
   }
 
   def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], mixPrivate: Boolean = false, uniqueTitle: Option[String] = None)(implicit injector: Injector): List[Keep] = {
