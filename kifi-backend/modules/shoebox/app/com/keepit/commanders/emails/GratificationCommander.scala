@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.{ Model, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ Repo, DbRepo, Database }
@@ -23,12 +23,13 @@ class GratificationCommander @Inject() (
     libraryRepo: LibraryRepo,
     keepRepo: KeepRepo,
     userRepo: UserRepo,
+    userExperimentRepo: UserExperimentRepo,
     localUserExperimentCommander: LocalUserExperimentCommander,
     emailSenderProvider: EmailSenderProvider,
     heimdal: HeimdalServiceClient) extends Logging {
 
   private val NUM_WEEKS_BACK = 1
-  val EXPERIMENT_DEPLOY = true
+  val UNDER_EXPERIMENT = false
 
   private val remoteCallQueue = new ReactiveLock(numConcurrent = 5)
 
@@ -47,43 +48,26 @@ class GratificationCommander @Inject() (
   def getGratData(userId: Id[User]): Future[GratificationData] = heimdal.getGratData(userId).map { augmentData }
 
   def generateUserBatch(batchNum: Int): Seq[Id[User]] = {
-    db.readOnlyReplica { implicit s => userRepo.pageIncluding(UserStates.ACTIVE)(batchNum, BATCH_SIZE) }.map { user => user.id.get }
-  }
-
-  def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
-    if (EXPERIMENT_DEPLOY) {
-      val users = userIds.filter { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.GRATIFICATION_EMAIL) }
-      remoteCallQueue.withLockFuture { heimdal.getGratDatas(users) }
-    } else {
-      remoteCallQueue.withLockFuture { heimdal.getEligibleGratDatas(userIds) }
-    }
+    db.readOnlyReplica { implicit s => userRepo.pageAscendingIds(batchNum, BATCH_SIZE, excludeStates = Set(UserStates.INACTIVE)) }
   }
 
   def batchSendEmails(filter: Id[User] => Boolean, sendTo: Option[EmailAddress] = None): Unit = {
     val userCount = db.readOnlyReplica { implicit s => userRepo.count }
     val numBatches = userCount / BATCH_SIZE
-    (0 to numBatches).foreach { batchNum =>
-      generateUserBatch(batchNum).filter(filter) match {
-        case userIds: Seq[Id[User]] if userIds.isEmpty =>
-        case userIds: Seq[Id[User]] => {
-          log.info(s"[GratData] userIds ${userIds.head}-${userIds.last} generated, getting data from heimdal")
-          val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds).map {
-            _.map {
-              augmentData
-            }.filter {
-              _.isEligible
-            }
-          }
-          fGratData.onComplete {
-            case Success(gratDatas) =>
-              log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails")
-              emailSenderProvider.gratification.sendToUsersWithData(gratDatas, sendTo)
-            case Failure(t) => log.error(s"Grat Data batch retrieval failed for batchNum $batchNum. Exception: ${t.getMessage}", t)
-          }
-        }
-        case _ => log.warn("[GratData] odd behavior from generateUserBatch, didn't receive a seq of userIds")
-      }
+
+    def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
+      val userIds = generateUserBatch(batch)
+      val fGratDatas = remoteCallQueue.withLockFuture(heimdal.getEligibleGratDatas(userIds)).map(_.map(augmentData))
+      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); Future.successful(()) }
     }
+
+    if (!UNDER_EXPERIMENT) {
+      FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
+    } else {
+      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(ExperimentType.GRATIFICATION_EMAIL) }
+      remoteCallQueue.withLockFuture(heimdal.getEligibleGratDatas(userIds)).map(_.map(augmentData))
+    }
+
   }
 
   private def augmentData(gratData: GratificationData): GratificationData = {

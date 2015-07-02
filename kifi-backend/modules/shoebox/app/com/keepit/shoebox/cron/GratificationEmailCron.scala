@@ -33,7 +33,7 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
     val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0 ${utcHourForNoonEasternTime - 1}-${utcHourFor8pmEasternTime} ? * *" // scheduled to send to QA
+    val cronTimeEveryday = s"0 0 ${utcHourFor8pmEasternTime - 2} ? * *" // scheduled to send to QA
     cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
     val cronTimeTues = s"0 0 $utcHourForNoonEasternTime ? * TUE"

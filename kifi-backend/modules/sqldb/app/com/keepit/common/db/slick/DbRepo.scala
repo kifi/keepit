@@ -32,6 +32,7 @@ trait Repo[M <: Model[M]] {
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
+  def pageAscendingIds(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]]
   def invalidateCache(model: M)(implicit session: RSession): Unit
   def deleteCache(model: M)(implicit session: RSession): Unit
 }
@@ -99,11 +100,18 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   def all()(implicit session: RSession): Seq[M] = rows.list
 
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] = {
-    // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take & .drop)
+    // todo(Andrew): When Slick 2.2 is released, convert to Compiled query (upgrade necessary for .take & .drop)
     val q = for {
       t <- rows if !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
+  }
+
+  def pageAscendingIds(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]] = {
+    val q = for {
+      t <- rows if !t.state.inSet(excludeStates)
+    } yield t.id
+    q.sortBy(_ asc).drop(page * size).take(size).list
   }
 
   private def insert(model: M)(implicit session: RWSession): Id[M] = {
