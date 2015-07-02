@@ -24,6 +24,40 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
       &:not(.kf-side-by-side) // increasing top border-radius to ensure box-shadow does not bleed through corners of image/video
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
 
+.kf-keep-header
+  border-bottom: 1px solid defaultBorderColor
+  display: block
+  width: calc(100% + 40px)
+  margin: 0px -20px
+  margin-bottom: 15px
+  height: 40px
+  display: flex
+  justify-content: space-between
+
+  .kf-keep-header-l
+    margin: 8px 20px
+
+    .kf-keep-keeper-pic
+      margin-right: 5px
+
+  .kf-keep-header-r
+    margin: 8px 20px
+
+    button, time
+      background: transparent
+      border: 0px
+      padding: 0px 3px
+      vertical-align: middle
+      display: inline-block
+      color: textLightGrey
+      font-size: 14px
+
+    time
+      margin-right: 5px
+
+.mine .kf-keep-header-r
+  margin-right: 45px
+
 .kf-keep-content
   padding: 0 20px
 

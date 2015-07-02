@@ -1,4 +1,23 @@
 <div class="kf-keep-body" ng-class="::{'kf-boxed': boxed != null, 'kf-side-by-side': image.w, 'kf-text-only': !image && !youtubeId}">
+  <div class="kf-keep-header" ng-if="!galleryView">
+    <div class="kf-keep-header-l">
+      <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
+      <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
+    </div>
+    <div class="kf-keep-header-r">
+      <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+      <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
+        kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)"
+        kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20">
+        <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
+        <span class="kf-hide-compact">{{howKept ? 'Kept' : 'Keep'}}</span>
+      </button>
+      <button class="kf-keep-share-btn" ng-click="shareAction()">
+        <span class="svg-share-arrow-green"></span>
+        <span class="kf-hide-compact">Share</span>
+      </button>
+    </div>
+  </div>
   <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
     <div kf-youtube video-id="youtubeId"></div>
     <div class="kf-youtube-bottom-overlay"></div>
@@ -22,6 +41,7 @@
     </div>
     <div class="kf-keep-note-compact" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
   </div>
+  <div class="clearfix"></div>
 
   <div class="kf-keep-footer">
     <div class="kf-keep-actions" ng-if="$root.userLoggedIn">

@@ -1084,6 +1084,15 @@ subsDur = .4s
     visibility: hidden
 
 .kf-lh-buttons
+  max-width: 538px // matching max-width of .kf-keep
+  margin: 0 auto
+  border: solid transparent
+  border-width: 0 appSidePad1
+  text-align: right
+
+  @media (min-width: 796px)
+    padding-right: 234px  // rightColWidth + colGapWidth
+
   .kf-library-share-search
     vertical-align: top
     text-align: left
@@ -1130,17 +1139,6 @@ subsDur = .4s
     background-size: cover
     width: 20px
     height: 20px
-
-.kf-lh-buttons.kf-my-lib
-  max-width: 538px // matching max-width of .kf-keep
-  margin: 0 auto
-  border: solid transparent
-  border-width: 0 appSidePad1
-  text-align: right
-
-  @media (min-width: 796px)
-    padding-right: 234px  // rightColWidth + colGapWidth
-
 
 .kf-lh-invite-search-button
   height: buttonHeight
