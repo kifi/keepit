@@ -31,8 +31,8 @@ trait Repo[M <: Model[M]] {
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
-  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
-  def pageAscendingIds(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]]
+  def page(page: Int, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
+  def pageAscendingIds(page: Int, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]]
   def invalidateCache(model: M)(implicit session: RSession): Unit
   def deleteCache(model: M)(implicit session: RSession): Unit
 }
@@ -99,7 +99,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   def all()(implicit session: RSession): Seq[M] = rows.list
 
-  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] = {
+  def page(page: Int, size: Int, excludeStates: Set[State[M]])(implicit session: RSession): Seq[M] = {
     // todo(Andrew): When Slick 2.2 is released, convert to Compiled query (upgrade necessary for .take & .drop)
     val q = for {
       t <- rows if !t.state.inSet(excludeStates)
@@ -107,7 +107,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageAscendingIds(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]] = {
+  def pageAscendingIds(page: Int, size: Int, excludeStates: Set[State[M]])(implicit session: RSession): Seq[Id[M]] = {
     val q = for {
       t <- rows if !t.state.inSet(excludeStates)
     } yield t.id

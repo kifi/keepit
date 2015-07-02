@@ -31,8 +31,6 @@ class GratificationCommander @Inject() (
   private val NUM_WEEKS_BACK = 1
   val UNDER_EXPERIMENT = false
 
-  private val remoteCallQueue = new ReactiveLock(numConcurrent = 5)
-
   private val BATCH_SIZE = 1000
 
   def getLibraryFollowCounts(userId: Id[User]): CountData[Library] = {
@@ -57,15 +55,16 @@ class GratificationCommander @Inject() (
 
     def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
       val userIds = generateUserBatch(batch)
-      val fGratDatas = remoteCallQueue.withLockFuture(heimdal.getEligibleGratDatas(userIds)).map(_.map(augmentData))
-      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); Future.successful(()) }
+      val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
+      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
 
     if (!UNDER_EXPERIMENT) {
       FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
     } else {
       val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(ExperimentType.GRATIFICATION_EMAIL) }
-      remoteCallQueue.withLockFuture(heimdal.getEligibleGratDatas(userIds)).map(_.map(augmentData))
+      val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
+      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
 
   }
