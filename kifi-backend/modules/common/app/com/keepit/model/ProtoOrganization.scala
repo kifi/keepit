@@ -12,10 +12,9 @@ case class ProtoOrganization(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ProtoOrganization] = ProtoOrganizationStates.ACTIVE,
-    seq: SequenceNumber[ProtoOrganization] = SequenceNumber.ZERO,
     name: String,
     description: Option[String] = None,
-    ownerId: Id[User]) extends ModelWithState[ProtoOrganization] with ModelWithSeqNumber[ProtoOrganization] {
+    ownerId: Id[User]) extends ModelWithState[ProtoOrganization] {
 
   def withId(id: Id[ProtoOrganization]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -30,7 +29,6 @@ object ProtoOrganization {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[ProtoOrganization]) and
-    (__ \ 'seq).format(SequenceNumber.format[ProtoOrganization]) and
     (__ \ 'name).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'ownerId).format[Id[User]]

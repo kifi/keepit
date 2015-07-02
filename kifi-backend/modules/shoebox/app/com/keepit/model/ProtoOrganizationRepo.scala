@@ -14,24 +14,24 @@ import com.keepit.common.time.Clock
 import play.api.libs.json.Json
 
 @ImplementedBy(classOf[ProtoOrganizationRepoImpl])
-trait ProtoOrganizationRepo extends Repo[ProtoOrganization] with SeqNumberFunction[ProtoOrganization] {
+trait ProtoOrganizationRepo extends Repo[ProtoOrganization] {
   def deactivate(model: ProtoOrganization)(implicit session: RWSession): Unit
 }
 
 @Singleton
 class ProtoOrganizationRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends ProtoOrganizationRepo with DbRepo[ProtoOrganization] with SeqNumberDbFunction[ProtoOrganization] with Logging {
+    val clock: Clock) extends ProtoOrganizationRepo with DbRepo[ProtoOrganization] with Logging {
 
   import db.Driver.simple._
 
   type RepoImpl = ProtoOrganizationTable
-  class ProtoOrganizationTable(tag: Tag) extends RepoTable[ProtoOrganization](db, tag, "organization") with SeqNumberColumn[ProtoOrganization] {
+  class ProtoOrganizationTable(tag: Tag) extends RepoTable[ProtoOrganization](db, tag, "proto_organization") {
     def name = column[String]("name", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId) <> ((ProtoOrganization.apply _).tupled, ProtoOrganization.unapply)
+    def * = (id.?, createdAt, updatedAt, state, name, description, ownerId) <> ((ProtoOrganization.apply _).tupled, ProtoOrganization.unapply)
   }
 
   def table(tag: Tag) = new ProtoOrganizationTable(tag)
@@ -44,14 +44,3 @@ class ProtoOrganizationRepoImpl @Inject() (
     save(model.withState(ProtoOrganizationStates.INACTIVE))
   }
 }
-
-trait ProtoOrganizationSequencingPlugin extends SequencingPlugin
-class ProtoOrganizationSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[ProtoOrganizationSequencingActor],
-  override val scheduling: SchedulingProperties) extends ProtoOrganizationSequencingPlugin
-
-@Singleton
-class ProtoOrganizationSequenceNumberAssigner @Inject() (db: Database, repo: ProtoOrganizationRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[ProtoOrganization](db, repo, airbrake)
-class ProtoOrganizationSequencingActor @Inject() (
-  assigner: ProtoOrganizationSequenceNumberAssigner,
-  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

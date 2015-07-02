@@ -13,7 +13,6 @@ case class ProtoOrganizationMembership(
     updatedAt: DateTime = currentDateTime,
     state: State[ProtoOrganizationMembership] = ProtoOrganizationMembershipStates.ACTIVE,
     protoOrgId: Id[ProtoOrganization],
-    inviterId: Id[User],
     userId: Option[Id[User]] = None,
     emailAddress: Option[EmailAddress] = None) extends ModelWithState[ProtoOrganizationMembership] {
 
@@ -33,7 +32,6 @@ object ProtoOrganizationMembership {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[ProtoOrganizationMembership]) and
     (__ \ 'protoOrgId).format[Id[ProtoOrganization]] and
-    (__ \ 'inviterId).format[Id[User]] and
     (__ \ 'userId).format[Option[Id[User]]] and
     (__ \ 'emailAddress).format[Option[EmailAddress]]
   )(ProtoOrganizationMembership.apply, unlift(ProtoOrganizationMembership.unapply))
