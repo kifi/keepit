@@ -6,25 +6,26 @@ import com.keepit.common.logging.Logging
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 
-import scala.concurrent.Await
+import scala.concurrent.{ ExecutionContext, Future, Await }
 import scala.concurrent.duration._
 
 @ImplementedBy(classOf[ProtoOrganizationCommanderImpl])
 trait ProtoOrganizationCommander {
-  def instantiateProtoOrganization(protoOrg: ProtoOrganization): Either[OrganizationFail, OrganizationCreateResponse]
+  def instantiateProtoOrganization(protoOrg: ProtoOrganization): Future[Either[OrganizationFail, OrganizationCreateResponse]]
 }
 
 @Singleton
 class ProtoOrganizationCommanderImpl @Inject() (
     db: Database,
     protoOrgRepo: ProtoOrganizationRepo,
-    protoOrgInviteRepo: ProtoOrganizationInviteRepo,
+    protoOrgInviteRepo: ProtoOrganizationMembershipRepo,
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
+    implicit val executionContext: ExecutionContext,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends ProtoOrganizationCommander with Logging {
 
-  def instantiateProtoOrganization(protoOrg: ProtoOrganization): Either[OrganizationFail, OrganizationCreateResponse] = {
+  def instantiateProtoOrganization(protoOrg: ProtoOrganization): Future[Either[OrganizationFail, OrganizationCreateResponse]] = {
     val invites = db.readOnlyReplica { implicit session =>
       protoOrgInviteRepo.getAllByProtoOrganization(protoOrg.id.get)
     }
@@ -35,7 +36,7 @@ class ProtoOrganizationCommanderImpl @Inject() (
     )
     val createRequest = OrganizationCreateRequest(requesterId = ownerId, initialValues = initialValues)
     orgCommander.createOrganization(createRequest) match {
-      case Left(fail) => Left(fail)
+      case Left(fail) => Future.successful(Left(fail))
       case Right(createResponse) =>
         val org = createResponse.newOrg
         val inviteRequests = invites.collect {
@@ -44,7 +45,7 @@ class ProtoOrganizationCommanderImpl @Inject() (
         }
         implicit val context = heimdalContextBuilder().build
         val inviteResult = orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = ownerId, invitees = inviteRequests)
-        Await.result(inviteResult, 10 seconds) match {
+        inviteResult map {
           case Left(fail) => Left(fail)
           case Right(_) => Right(createResponse)
         }
