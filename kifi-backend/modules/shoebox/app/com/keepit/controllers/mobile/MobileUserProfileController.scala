@@ -12,6 +12,7 @@ import com.keepit.common.util.Paginator
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ JsNumber, JsObject, Json, JsValue }
+import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -120,33 +121,33 @@ class MobileUserProfileController @Inject() (
   // more readily available via mobile clients, I assume desktop would
   // benefit as well - @jaredpetker
   def getProfileLibrariesV2(id: ExternalId[User], page: Int, pageSize: Int,
-    filter: String, ordering: Option[LibraryOrdering]) = MaybeUserAction.async { implicit request =>
+    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None, sortDirection: Option[SortDirection] = None, starredFirst: Boolean) = MaybeUserAction.async { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
         val imageSize = ProcessedImageSize.Large.idealSize
         filter match {
-          case "own" =>
+          case LibraryFilter.OWN =>
             val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq)
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq)
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
-          case "following" =>
-            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq
+          case LibraryFilter.FOLLOWING =>
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
-          case "invited" =>
+          case LibraryFilter.INVITED =>
             val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
-          case "all" if page == 0 =>
+          case LibraryFilter.ALL if page == 0 =>
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, starredFirst).seq))
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq))
             }
-            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq)
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
@@ -159,9 +160,9 @@ class MobileUserProfileController @Inject() (
                 "invited" -> invitedLibs
               ))
             }
-          case "all" if page != 0 =>
+          case LibraryFilter.ALL if page != 0 =>
             Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
-          case _ =>
+          case LibraryFilter.INVALID_FILTER =>
             Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
       } getOrElse {
