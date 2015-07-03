@@ -120,8 +120,8 @@ angular.module('kifi')
           }
         };
 
-        scope.onAddCoverImageMouseUp = function (event) {
-          if (event.which === 1) {
+        scope.onCameraCoverImageMouseUp = function (event) {
+          if (event.which === 1 && !scope.library.image) {
             angular.element('.kf-lh-cover-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
