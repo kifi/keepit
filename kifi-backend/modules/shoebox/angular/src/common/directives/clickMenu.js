@@ -30,7 +30,9 @@ angular.module('kifi')
           if (e.which === 1) {
             $target = $(e.target);
             // Open the menu if we clicked a child of the directive, and that child is not a dropdown item
-            if ($target.closest(element).length && !$target.hasClass('kf-dropdown-menu-item')) {
+            if ($target.closest(element).length &&
+                !$target.hasClass('kf-dropdown-menu-item') &&
+                element.find('menu').children().length) {
               // Only open the menu if it's closed
               if (!isOpen()) {
                 showMenu();
