@@ -1,3 +1,4 @@
+/* global jQuery: true */
 'use strict';
 
 angular.module('kifi')
@@ -5,6 +6,8 @@ angular.module('kifi')
 .directive('kfClickMenu', [
   '$window',
   function ($window) {
+    var $ = jQuery;
+
     return {
       restrict: 'A',
       link: function (scope, element) {
@@ -21,24 +24,28 @@ angular.module('kifi')
           return element.hasClass('kf-open');
         }
 
-        element.on('click', function (clickedInEvent) {
+        function handleMenuClick(e) {
+          var $target;
 
-          function handleCloseClick(clickedOutEvent) {
-            // When the user clicks anywhere after opening the dropdown,
-            // close it if the click is not on the dropdown.
-            if (clickedOutEvent.target !== clickedInEvent.target) {
-              // Stop listening for close-clicks
-              $window.document.removeEventListener('click', handleCloseClick);
+          if (e.which === 1) {
+            $target = $(e.target);
+            // Open the menu if we clicked a child of the directive, and that child is not a dropdown item
+            if ($target.closest(element).length && !$target.hasClass('kf-dropdown-menu-item')) {
+              // Only open the menu if it's closed
+              if (!isOpen()) {
+                showMenu();
+              }
+            } else {
               hideMenu();
             }
           }
+        }
 
-          if (!isOpen() && clickedInEvent.which === 1) {
-            // Listen for close-clicks
-            $window.document.addEventListener('click', handleCloseClick);
-            showMenu();
-          }
+        element.on('$destroy', function () {
+          $window.document.removeEventListener(handleMenuClick);
         });
+
+        $window.document.addEventListener('click', handleMenuClick);
       }
     };
   }
