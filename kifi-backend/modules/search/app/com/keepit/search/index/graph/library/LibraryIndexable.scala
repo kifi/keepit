@@ -18,6 +18,8 @@ object LibraryFields {
   val kindField = "k"
   val ownerField = "o"
   val ownerIdField = "oid"
+  val orgField = "org"
+  val orgIdField = "orgid"
   val recordField = "rec"
 
   val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
@@ -127,6 +129,10 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     doc.add(buildIdValueField(ownerIdField, library.ownerId))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
+
+    val orgId = library.orgId.getOrElse(Id[Organization](-1))
+    doc.add(buildKeywordField(orgField, orgId.id.toString))
+    doc.add(buildIdValueField(orgIdField, orgId))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
 
