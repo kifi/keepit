@@ -26,13 +26,11 @@ case class LibraryMembership(
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
-    subscribedToUpdates: Boolean = false,
-    priority: Long = 0) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    subscribedToUpdates: Boolean = false) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
-  def withPriority(newPriority: Long): LibraryMembership = this.copy(priority = newPriority)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
@@ -61,8 +59,7 @@ object LibraryMembership {
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
-    (__ \ 'subscribedToUpdates).format[Boolean] and
-    (__ \ 'priority).format[Long]
+    (__ \ 'subscribedToUpdates).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
