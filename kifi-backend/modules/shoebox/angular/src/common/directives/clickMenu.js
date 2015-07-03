@@ -29,7 +29,9 @@ angular.module('kifi')
 
           if (e.which === 1) {
             $target = $(e.target);
-            // Open the menu if we clicked a child of the directive, and that child is not a dropdown item
+            // Open the menu if we clicked a child of the directive,
+            // and that child is not a dropdown item,
+            // and the directive's menu has items to show
             if ($target.closest(element).length &&
                 !$target.hasClass('kf-dropdown-menu-item') &&
                 element.find('menu').children().length) {
