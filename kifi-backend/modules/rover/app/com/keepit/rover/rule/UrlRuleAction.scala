@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.HttpProxy
 
 sealed trait UrlRuleAction {
-  
+
   def &(that: UrlRuleAction): UrlRuleAction = UrlRuleAction.And(List(this, that))
   
 }
@@ -32,5 +32,5 @@ object UrlRuleAction {
   case object PreventScrape extends UrlRuleAction
 
   case class StaySensitive(sensitive: Boolean) extends UrlRuleAction
-  
+
 }
