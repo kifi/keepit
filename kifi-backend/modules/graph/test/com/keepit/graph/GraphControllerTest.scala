@@ -48,8 +48,8 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
 
       "get socially related entities" in {
         withInjector(modules: _*) { implicit injector =>
-          val route = com.keepit.graph.controllers.internal.routes.GraphController.getSociallyRelatedEntities(u42).url
-          route === "/internal/graph/getSociallyRelatedEntities?userId=42"
+          val route = com.keepit.graph.controllers.internal.routes.GraphController.getSociallyRelatedEntitiesForUser(u42).url
+          route === "/internal/graph/getSociallyRelatedEntitiesForUser?userId=42"
           val controller = inject[GraphController] //setup
           val manager = inject[GraphManager]
           manager.update(allUpdates: _*)

@@ -107,7 +107,7 @@ class GraphServiceClientImpl(
 
     cacheProvider.relatedEntitiesCache.
       getOrElseFutureOpt(SociallyRelatedEntitiesForUserCacheKey(userId), needRefresh) {
-        call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => // TODO: change to getSociallyRelatedEntitiesForUser once new graph is deployed
+        call(Graph.internal.getSociallyRelatedEntitiesForUser(userId), callTimeouts = longTimeout).map { r => // TODO: change to getSociallyRelatedEntitiesForUser once new graph is deployed
           r.json.asOpt[SociallyRelatedEntities[User]]
         }
       }

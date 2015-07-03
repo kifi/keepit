@@ -57,7 +57,6 @@ trait ABookServiceClient extends ServiceClient {
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
-  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople]
   def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeople]
 }
 
@@ -247,10 +246,6 @@ class ABookServiceClientImpl @Inject() (
     implicit val irrelevantFriendIdFormat = EitherFormat[EmailAddress, Id[SocialUserInfo]]
     val payload = Json.obj("network" -> network, "irrelevantFriendId" -> irrelevantFriendId)
     call(ABook.internal.hideInviteRecommendation(userId), payload).map(_ => ())
-  }
-
-  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
-    call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
   }
 
   def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeople] = {
