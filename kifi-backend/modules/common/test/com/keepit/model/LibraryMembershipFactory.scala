@@ -31,7 +31,7 @@ object LibraryMembershipFactory {
     def unlisted() = new PartialLibraryMembership(membership.copy(listed = false))
     def fromLibraryInvite(invite: LibraryInvite) = new PartialLibraryMembership(membership.copy(userId = invite.userId.get, libraryId = invite.libraryId, access = invite.access))
     def withState(state: State[LibraryMembership]) = new PartialLibraryMembership(membership.copy(state = state))
-    def withPriority(starred: LibraryPriority) = new PartialLibraryMembership(membership.copy(priority = starred))
+    def withPriority(priority: Long) = new PartialLibraryMembership(membership.copy(priority = priority))
     def get: LibraryMembership = membership
   }
 

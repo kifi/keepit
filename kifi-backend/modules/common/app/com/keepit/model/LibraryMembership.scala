@@ -27,12 +27,12 @@ case class LibraryMembership(
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
     subscribedToUpdates: Boolean = false,
-    priority: LibraryPriority = LibraryPriority.UNSTARRED) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    priority: Long = 0) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
-  def withPriority(newPriority: LibraryPriority): LibraryMembership = this.copy(priority = newPriority)
+  def withPriority(newPriority: Long): LibraryMembership = this.copy(priority = newPriority)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
@@ -62,7 +62,7 @@ object LibraryMembership {
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
     (__ \ 'subscribedToUpdates).format[Boolean] and
-    (__ \ 'starred).format[LibraryPriority]
+    (__ \ 'priority).format[Long]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
@@ -102,26 +102,6 @@ object LibraryAccess {
 
   def all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
   def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
-}
-
-// LibraryPriority defines how important a library is
-// A STARRED library should be listed at the top of results, etc.
-sealed abstract class LibraryPriority(val value: String)
-object LibraryPriority {
-  case object STARRED extends LibraryPriority("starred")
-  case object UNSTARRED extends LibraryPriority("unstarred")
-
-  implicit val format: Format[LibraryPriority] =
-    Format(__.read[String].map(LibraryPriority(_)), new Writes[LibraryPriority] {
-      def writes(o: LibraryPriority) = JsString(o.value)
-    })
-
-  def apply(str: String): LibraryPriority = {
-    str match {
-      case STARRED.value => STARRED
-      case UNSTARRED.value => UNSTARRED
-    }
-  }
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)

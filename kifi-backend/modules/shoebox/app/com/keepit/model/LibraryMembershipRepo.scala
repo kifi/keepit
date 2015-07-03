@@ -81,8 +81,6 @@ class LibraryMembershipRepoImpl @Inject() (
   type RepoImpl = LibraryMemberTable
 
   class LibraryMemberTable(tag: Tag) extends RepoTable[LibraryMembership](db, tag, "library_membership") with SeqNumberColumn[LibraryMembership] {
-    implicit val libraryPriorityMapper = MappedColumnType.base[LibraryPriority, String](_.value, LibraryPriority(_))
-
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
@@ -92,8 +90,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def listed = column[Boolean]("listed", O.NotNull)
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
     def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
-    def starred = column[LibraryPriority]("starred", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates, starred) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def priority = column[Long]("priority", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates, priority) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   implicit val getLibraryResult = libraryRepo.getLibraryResult

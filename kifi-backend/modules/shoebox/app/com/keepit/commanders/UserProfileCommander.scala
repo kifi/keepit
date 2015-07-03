@@ -47,10 +47,9 @@ class UserProfileCommander @Inject() (
     getOwnLibrariesForSelf(user, page, idealSize, None, None, false)
   }
 
-  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], starredFirst: Boolean): ParSeq[LibraryCardInfo] = {
+  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], orderedByPriority: Boolean): ParSeq[LibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
-      val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, starredFirst)
-      println("Astarred first = " + starredFirst)
+      val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, orderedByPriority)
       println("libraries: " + libs.map(_.id.get))
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
@@ -84,13 +83,13 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, starredFirst: Boolean = false): ParSeq[LibraryCardInfo] = {
+  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getOwnerLibrariesForAnonymous(user.id.get, page, ordering, direction, starredFirst)
+          libraryRepo.getOwnerLibrariesForAnonymous(user.id.get, page, ordering, direction, orderedByPriority)
         case Some(other) =>
-          libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, starredFirst)
+          libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, orderedByPriority)
       }
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
@@ -98,20 +97,20 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, starredFirst: Boolean = false): ParSeq[LibraryCardInfo] = {
+  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page, ordering, direction, starredFirst)
+            libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
         case Some(other) if other.id == user.id =>
-          libraryRepo.getFollowingLibrariesForSelf(user.id.get, page, ordering, direction, starredFirst)
+          libraryRepo.getFollowingLibrariesForSelf(user.id.get, page, ordering, direction, orderedByPriority)
         case Some(other) =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, starredFirst)
+            libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)

@@ -9,18 +9,18 @@ import org.specs2.mutable.SpecificationLike
 class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestInjector {
   "LibraryMembershipCommander" should {
     "when updateMembership is called:" in {
-      "succeed for member starring themselves" in {
+      "succeed for a user changing priority for themselves" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, priority = Some(1)))
           result.isRight === true
-          result.right.get.priority === LibraryPriority.STARRED
+          result.right.get.priority === 1
         }
       }
-      "fail for member starring a lib other member" in {
+      "fail for member changing library priority for another member" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
+          val result = commander.updateMembership(owner.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, priority = Some(1)))
           result.isLeft === true
           result.left.get.message === "permission_denied"
         }
@@ -29,9 +29,9 @@ class LibraryMembershipCommanderTest extends SpecificationLike with ShoeboxTestI
       "succeed for owner of lib changing access" in {
         withDb() { implicit injector =>
           val (owner, member, non_member, lib) = setup
-          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, starred = Some(LibraryPriority.STARRED)))
+          val result = commander.updateMembership(member.id.get, ModifyLibraryMembershipRequest(userId = member.id.get, libraryId = lib.id.get, priority = Some(1)))
           result.isRight === true
-          result.right.get.priority === LibraryPriority.STARRED
+          result.right.get.priority === 1
         }
       }
       "fail for anyone else changing access" in {

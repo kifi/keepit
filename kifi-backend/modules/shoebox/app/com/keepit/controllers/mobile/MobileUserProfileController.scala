@@ -121,7 +121,7 @@ class MobileUserProfileController @Inject() (
   // more readily available via mobile clients, I assume desktop would
   // benefit as well - @jaredpetker
   def getProfileLibrariesV2(id: ExternalId[User], page: Int, pageSize: Int,
-    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None, sortDirection: Option[SortDirection] = None, starredFirst: Boolean) = MaybeUserAction.async { implicit request =>
+    filter: LibraryFilter, ordering: Option[LibraryOrdering] = None, sortDirection: Option[SortDirection] = None, orderedByPriority: Boolean) = MaybeUserAction.async { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         val viewer = request.userOpt
@@ -130,24 +130,24 @@ class MobileUserProfileController @Inject() (
         filter match {
           case LibraryFilter.OWN =>
             val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq)
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
           case LibraryFilter.FOLLOWING =>
-            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
           case LibraryFilter.INVITED =>
             val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case LibraryFilter.ALL if page == 0 =>
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, starredFirst).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq))
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq))
             }
-            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, starredFirst).seq)
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering, sortDirection, orderedByPriority).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
