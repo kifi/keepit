@@ -8,8 +8,8 @@
   with_items:
     - repo
     - run
-- name: "copy {{ service }} init.d script"
-  copy:
+- name: "install {{ service }} init.d script"
+  template:
     src: etc/init.d/{{ service }}
     dest: /etc/init.d/{{ service }}
     mode: 0754
