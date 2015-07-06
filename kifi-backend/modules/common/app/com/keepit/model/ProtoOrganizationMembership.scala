@@ -12,9 +12,8 @@ case class ProtoOrganizationMembership(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ProtoOrganizationMembership] = ProtoOrganizationMembershipStates.ACTIVE,
-    protoOrgId: Id[ProtoOrganization],
-    userId: Option[Id[User]] = None,
-    emailAddress: Option[EmailAddress] = None) extends ModelWithState[ProtoOrganizationMembership] {
+    orgId: Id[Organization],
+    userId: Id[User]) extends ModelWithState[ProtoOrganizationMembership] {
 
   def withId(id: Id[ProtoOrganizationMembership]): ProtoOrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): ProtoOrganizationMembership = this.copy(updatedAt = now)
@@ -33,8 +32,7 @@ object ProtoOrganizationMembership {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[ProtoOrganizationMembership]) and
-    (__ \ 'protoOrgId).format[Id[ProtoOrganization]] and
-    (__ \ 'userId).format[Option[Id[User]]] and
-    (__ \ 'emailAddress).format[Option[EmailAddress]]
+    (__ \ 'orgId).format[Id[Organization]] and
+    (__ \ 'userId).format[Id[User]]
   )(ProtoOrganizationMembership.apply, unlift(ProtoOrganizationMembership.unapply))
 }

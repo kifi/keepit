@@ -10,8 +10,8 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[ProtoOrganizationMembershipRepoImpl])
 trait ProtoOrganizationMembershipRepo extends Repo[ProtoOrganizationMembership] {
-  def getByProtoOrganization(protoOrgId: Id[ProtoOrganization], limit: Limit, offset: Offset, states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit session: RSession): Seq[ProtoOrganizationMembership]
-  def getAllByProtoOrganization(protoOrgId: Id[ProtoOrganization], states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit session: RSession): Seq[ProtoOrganizationMembership]
+  def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit session: RSession): Seq[ProtoOrganizationMembership]
+  def getAllByOrgId(orgId: Id[Organization], states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit session: RSession): Seq[ProtoOrganizationMembership]
   def deactivate(model: ProtoOrganizationMembership)(implicit session: RWSession): Unit
 }
 
@@ -25,21 +25,20 @@ class ProtoOrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, 
   type RepoImpl = ProtoOrganizationMembershipTable
   class ProtoOrganizationMembershipTable(tag: Tag) extends RepoTable[ProtoOrganizationMembership](db, tag, "proto_organization_membership") {
 
-    def protoOrgId = column[Id[ProtoOrganization]]("proto_organization_id", O.NotNull)
-    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
-    def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
+    def orgId = column[Id[Organization]]("organization_id", O.NotNull)
+    def userId = column[Id[User]]("user_id", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, protoOrgId, userId, emailAddress) <> ((ProtoOrganizationMembership.apply _).tupled, ProtoOrganizationMembership.unapply)
+    def * = (id.?, createdAt, updatedAt, state, orgId, userId) <> ((ProtoOrganizationMembership.apply _).tupled, ProtoOrganizationMembership.unapply)
   }
 
   def table(tag: Tag) = new ProtoOrganizationMembershipTable(tag)
   initTable()
 
-  def getByProtoOrganization(protoOrgId: Id[ProtoOrganization], limit: Limit, offset: Offset, states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit s: RSession): Seq[ProtoOrganizationMembership] = {
-    (for { row <- rows if row.protoOrgId === protoOrgId && row.state.inSet(states) } yield row).drop(offset.value).take(limit.value).list
+  def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit s: RSession): Seq[ProtoOrganizationMembership] = {
+    (for { row <- rows if row.orgId === orgId && row.state.inSet(states) } yield row).drop(offset.value).take(limit.value).list
   }
-  def getAllByProtoOrganization(protoOrgId: Id[ProtoOrganization], states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit s: RSession): Seq[ProtoOrganizationMembership] = {
-    getByProtoOrganization(protoOrgId, limit = Limit(Int.MaxValue), offset = Offset(0), states = states)
+  def getAllByOrgId(orgId: Id[Organization], states: Set[State[ProtoOrganizationMembership]] = Set(ProtoOrganizationMembershipStates.ACTIVE))(implicit s: RSession): Seq[ProtoOrganizationMembership] = {
+    getByOrgId(orgId, limit = Limit(Int.MaxValue), offset = Offset(0), states = states)
   }
 
   def deactivate(model: ProtoOrganizationMembership)(implicit session: RWSession): Unit = {

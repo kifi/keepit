@@ -1,92 +1,71 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.abook.model.RichContact
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.social.BasicUser
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ProtoOrganizationCommanderImpl])
 trait ProtoOrganizationCommander {
-  def createProtoOrganization(ownerId: Id[User], name: String): ProtoOrganization
-  def addMembers(protoOrgId: Id[ProtoOrganization], userIds: Set[Id[User]]): Future[Unit]
-  def instantiateOrganization(protoOrg: ProtoOrganization): Future[Either[OrganizationFail, OrganizationCreateResponse]]
+  def addProtoMembers(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
+  def removeProtoMembers(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
+  def inviteProtoMembers(orgId: Id[Organization]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
 }
 
 @Singleton
 class ProtoOrganizationCommanderImpl @Inject() (
     db: Database,
-    protoOrgRepo: ProtoOrganizationRepo,
+    orgRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
     protoOrgMembershipRepo: ProtoOrganizationMembershipRepo,
-    orgCommander: OrganizationCommander,
     orgInviteCommander: OrganizationInviteCommander,
     implicit val executionContext: ExecutionContext,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends ProtoOrganizationCommander with Logging {
 
-  def createProtoOrganization(ownerId: Id[User], name: String): ProtoOrganization = {
-    db.readWrite { implicit session => protoOrgRepo.save(ProtoOrganization(ownerId = ownerId, name = name)) }
-  }
-  def addMembers(protoOrgId: Id[ProtoOrganization], userIds: Set[Id[User]]): Future[Unit] = SafeFuture {
+  def addProtoMembers(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit] = SafeFuture {
     db.readWrite { implicit session =>
-      val existingMemberships = protoOrgMembershipRepo.getAllByProtoOrganization(protoOrgId, states = ProtoOrganizationMembershipStates.all).filter {
-        _.userId.nonEmpty
-      }.toSet
+      val existingProtoMemberships = protoOrgMembershipRepo.getAllByOrgId(orgId, states = ProtoOrganizationMembershipStates.all)
 
-      val inactiveMemberships = existingMemberships.filter(_.state == ProtoOrganizationMembershipStates.INACTIVE)
-      inactiveMemberships.foreach { m => protoOrgMembershipRepo.save(m.withState(ProtoOrganizationMembershipStates.ACTIVE)) }
+      val inactiveProtoMemberships = existingProtoMemberships.filter(_.state == ProtoOrganizationMembershipStates.INACTIVE)
+      val protoMembershipsToBeReactivated = inactiveProtoMemberships.filter(m => userIds.contains(m.userId))
+      protoMembershipsToBeReactivated.foreach { m =>
+        protoOrgMembershipRepo.save(m.withState(ProtoOrganizationMembershipStates.ACTIVE))
+      }
 
-      val newUserIds = userIds -- existingMemberships.filter(_.userId.isDefined).map(_.userId.get)
-
-      newUserIds.foreach { uid =>
-        protoOrgMembershipRepo.save(ProtoOrganizationMembership(protoOrgId = protoOrgId, userId = Some(uid)))
+      val userIdsToBeAdded = userIds -- existingProtoMemberships.map(_.userId).toSet
+      userIdsToBeAdded.foreach { uid =>
+        protoOrgMembershipRepo.save(ProtoOrganizationMembership(orgId = orgId, userId = uid))
       }
     }
   }
-  def removeMembers(protoOrgId: Id[ProtoOrganization], userIds: Set[Id[User]]): Future[Unit] = SafeFuture {
+
+  def removeProtoMembers(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit] = SafeFuture {
     db.readWrite { implicit session =>
-      val existingMemberships = protoOrgMembershipRepo.getAllByProtoOrganization(protoOrgId, states = ProtoOrganizationMembershipStates.all).filter {
-        _.userId.nonEmpty
-      }.toSet
-
-      val toBeRemoved = existingMemberships.filter { m =>
-        m.userId.isDefined && userIds.contains(m.userId.get)
-      }
-      toBeRemoved.foreach { m =>
-        protoOrgMembershipRepo.save(m.withState(ProtoOrganizationMembershipStates.INACTIVE))
+      val existingProtoMemberships = protoOrgMembershipRepo.getAllByOrgId(orgId).map(m => m.userId -> m).toMap
+      val toBeDeactivated = userIds intersect existingProtoMemberships.keySet
+      toBeDeactivated.foreach { uid =>
+        protoOrgMembershipRepo.deactivate(existingProtoMemberships(uid))
       }
     }
   }
-  def instantiateOrganization(protoOrg: ProtoOrganization): Future[Either[OrganizationFail, OrganizationCreateResponse]] = {
-    val invites = db.readOnlyReplica { implicit session =>
-      protoOrgMembershipRepo.getAllByProtoOrganization(protoOrg.id.get)
-    }
-    val ownerId = protoOrg.ownerId
-    val initialValues = OrganizationModifications(
-      name = Some(protoOrg.name),
-      description = protoOrg.description
-    )
-    val createRequest = OrganizationCreateRequest(requesterId = ownerId, initialValues = initialValues)
-    orgCommander.createOrganization(createRequest) match {
-      case Left(fail) => Future.successful(Left(fail))
-      case Right(createResponse) =>
-        val org = createResponse.newOrg
-        val inviteRequests = invites.collect {
-          case user if user.userId.nonEmpty => OrganizationMemberInvitation(invited = Left(user.userId.get), role = OrganizationRole.MEMBER)
-          case email if email.emailAddress.nonEmpty => OrganizationMemberInvitation(invited = Right(email.emailAddress.get), role = OrganizationRole.MEMBER)
-        }
 
-        implicit val context = heimdalContextBuilder().build
-        val inviteResult = orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = ownerId, invitees = inviteRequests)
-        inviteResult map {
-          case Left(fail) => Left(fail)
-          case Right(_) => Right(createResponse)
-        }
-
-        Future.successful(Right(createResponse))
+  def inviteProtoMembers(orgId: Id[Organization]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+    val (org, existingProtoMemberships) = db.readOnlyReplica { implicit session =>
+      (orgRepo.get(orgId), protoOrgMembershipRepo.getAllByOrgId(orgId).toSet)
     }
+
+    val inviteRequests = existingProtoMemberships.map { m =>
+      OrganizationMemberInvitation(invited = Left(m.userId), role = OrganizationRole.MEMBER)
+    }
+
+    implicit val context = heimdalContextBuilder().build
+    orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = org.ownerId, invitees = inviteRequests.toSeq)
   }
 }
