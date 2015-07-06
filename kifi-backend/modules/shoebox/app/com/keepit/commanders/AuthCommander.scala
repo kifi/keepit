@@ -53,7 +53,7 @@ case class SocialFinalizeInfo(
   email: EmailAddress,
   firstName: String,
   lastName: String,
-  password: String,
+  password: Option[String],
   picToken: Option[String],
   picHeight: Option[Int],
   picWidth: Option[Int],
@@ -66,7 +66,7 @@ object SocialFinalizeInfo {
     (__ \ 'email).format[EmailAddress] and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
-    (__ \ 'password).format[String] and
+    (__ \ 'password).formatNullable[String] and
     (__ \ 'picToken).formatNullable[String] and
     (__ \ 'picHeight).formatNullable[Int] and
     (__ \ 'picWidth).formatNullable[Int] and
@@ -132,14 +132,17 @@ class AuthCommander @Inject() (
   }
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-    email: EmailAddress, passwordInfo: PasswordInfo,
-    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+    email: EmailAddress, passwordInfoOpt: Option[PasswordInfo],
+    firstName: String, lastName: String, isComplete: Boolean): (UserIdentity, Id[User]) = {
     if (email.address.trim.isEmpty) {
       throw new Exception(s"email address is empty for user $userIdOpt identity $identityOpt name $firstName, $lastName")
     }
-    log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
+    log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfoOpt isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
+
+    val (passwordInfo, usedAutoAssignedPassword) = passwordInfoOpt.map(p => (p, false)).getOrElse((Registry.hashers.currentHasher.hash(UUID.randomUUID.toString), true))
+
     val newIdentity = UserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
@@ -189,6 +192,16 @@ class AuthCommander @Inject() (
       userIdOpt.get
     }
 
+    if (usedAutoAssignedPassword) {
+      db.readWrite(attempts = 3) { implicit s =>
+        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, true)
+      }
+    } else {
+      db.readWrite(attempts = 3) { implicit s =>
+        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, false)
+      }
+    }
+
     (newIdentity, confusedCompilerUserId)
   }
 
@@ -211,14 +224,13 @@ class AuthCommander @Inject() (
         airbrake.notify(s"generated alternative email $alternative for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
         alternative
       } else sfi.email
-      val pInfo = currentHasher.hash(sfi.password)
+
+      val pInfo = sfi.password.map { p =>
+        currentHasher.hash(p)
+      }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
-        email = email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
-
-      db.readWrite(attempts = 3) { implicit s =>
-        userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
-      }
+        email = email, passwordInfoOpt = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)
@@ -271,7 +283,7 @@ class AuthCommander @Inject() (
 
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
-      val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
+      val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfoOpt = Some(passwordInfo), firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)

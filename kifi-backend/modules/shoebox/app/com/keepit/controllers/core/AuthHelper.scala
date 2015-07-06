@@ -117,7 +117,6 @@ class AuthHelper @Inject() (
   }
 
   def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, passwordOpt: Option[String])(implicit request: MaybeUserRequest[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
-    val password = passwordOpt.getOrElse(UUID.randomUUID.toString)
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
@@ -126,8 +125,8 @@ class AuthHelper @Inject() (
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
-        val matches = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.matches(identity.passwordInfo.get, password) }
-        if (matches) {
+        val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
+        if (matchesOpt.exists(p => p)) {
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
@@ -151,8 +150,8 @@ class AuthHelper @Inject() (
           Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
         }
     } getOrElse {
-      val pInfo = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.hash(new String(password)) } // see SecureSocial
-      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, isComplete = false)
+      val pInfo = passwordOpt.map(p => hasher.hash(p))
+      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, firstName = "", lastName = "", isComplete = false)
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator =>
@@ -308,14 +307,14 @@ class AuthHelper @Inject() (
       "cropSize" -> optional(number)
     )({ (email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
         val allowedPassword = if (pwd.exists(p => AuthHelper.validatePwd(p))) {
-          pwd.get
+          Some(pwd.get)
         } else {
           log.warn(s"[social-finalize] Rejected social password, generating one instead. Supplied password was ${pwd.map(_.length).getOrElse(0)} chars.")
-          RandomStringUtils.random(20)
+          None
         }
         SocialFinalizeInfo(email = email.copy(address = email.address.trim), firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
       })((sfi: SocialFinalizeInfo) =>
-        Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
+        Some((sfi.email, sfi.firstName, Option(sfi.lastName), sfi.password, sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
   )
   def doSocialFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
