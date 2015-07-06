@@ -100,10 +100,10 @@ final class KeepVisibilityEvaluator(
           Visibility.FOLLOWER // the keep is in a library I am a member of
         }
       }
-    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
-      Visibility.NETWORK
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.FOLLOWER // the keep is in an authorized library
+    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
+      Visibility.NETWORK
     } else {
       if (visibilityDocValues.get(docId) == published) {
         val keeperId = userIdDocValues.get(docId)

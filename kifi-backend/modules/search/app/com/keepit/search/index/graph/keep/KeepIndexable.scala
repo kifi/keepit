@@ -91,7 +91,6 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))
 
     val orgId = keep.organizationId.getOrElse(Id[Organization](-1))
-    doc.add(buildKeywordField(orgField, orgId.id.toString))
     doc.add(buildIdValueField(orgIdField, orgId))
 
     doc

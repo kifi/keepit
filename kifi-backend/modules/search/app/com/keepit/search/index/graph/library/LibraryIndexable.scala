@@ -131,7 +131,6 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 
     val orgId = library.orgId.getOrElse(Id[Organization](-1))
-    doc.add(buildKeywordField(orgField, orgId.id.toString))
     doc.add(buildIdValueField(orgIdField, orgId))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
