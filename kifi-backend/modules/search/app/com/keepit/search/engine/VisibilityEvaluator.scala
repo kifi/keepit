@@ -102,7 +102,7 @@ final class KeepVisibilityEvaluator(
       }
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.FOLLOWER // the keep is in an authorized library
-    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
+    } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
       Visibility.NETWORK
     } else {
       if (visibilityDocValues.get(docId) == published) {
@@ -142,7 +142,7 @@ final class LibraryVisibilityEvaluator(
       } else {
         Visibility.FOLLOWER // a library I am a member of
       }
-    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
+    } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
       Visibility.NETWORK
     } else {
       if (visibilityDocValues.get(docId) == published) {
