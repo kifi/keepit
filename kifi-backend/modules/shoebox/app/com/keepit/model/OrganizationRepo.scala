@@ -59,6 +59,10 @@ class OrganizationRepoImpl @Inject() (
     orgCache.set(org.id.get, org)
   }
 
+  override def save(model: Organization)(implicit session: RWSession): Organization = {
+    super.save(model.copy(seq = deferredSeqNum()))
+  }
+
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {
     orgCache.bulkGetOrElse(orgIds map orgId2Key) { missingKeys =>
       val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }.toSet) && row.state === OrganizationStates.ACTIVE } yield row }
