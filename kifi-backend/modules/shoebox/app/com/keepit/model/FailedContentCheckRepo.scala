@@ -61,8 +61,8 @@ class FailedContentCheckRepoImpl @Inject() (
 
   def getRecentCountByURL(url: String, since: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val hash = UrlHash.hashUrl(url).hash
-    val q = sql"""select count(*) from failed_content_check where url1_hash = ${hash} or url2_hash = ${hash} and updated_at > ${since}"""
-    q.as[Int].list.head
+    val urlHash = UrlHash.hashUrl(url)
+    val q = for (r <- rows if (r.updatedAt > since) && (r.url1Hash === urlHash || r.url2Hash === urlHash)) yield r
+    q.length.run
   }
 }
