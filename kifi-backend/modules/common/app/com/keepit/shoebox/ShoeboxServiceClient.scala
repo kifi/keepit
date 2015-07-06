@@ -127,6 +127,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Seq[Id[User]]]
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Future[Seq[OrganizationInvite]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -790,5 +792,13 @@ class ShoeboxServiceClientImpl @Inject() (
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
     val payload = Json.obj("domainNames" -> domainNames)
     call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
+  }
+
+  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Seq[Id[User]]] = {
+    call(Shoebox.internal.getMembersByOrganizationId(orgId)).map { _.json.as[Seq[Id[User]]] }
+  }
+
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Future[Seq[OrganizationInvite]] = {
+    call(Shoebox.internal.getInvitesByOrganizationId(orgId)).map { _.json.as[Seq[OrganizationInvite]] }
   }
 }

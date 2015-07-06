@@ -59,6 +59,8 @@ class ShoeboxController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
+  orgInviteRepo: OrganizationInviteRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
@@ -70,6 +72,8 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
+  organizationInviteCommander: OrganizationInviteCommander,
+  organizationMembershipCommander: OrganizationMembershipCommander,
   userPersonaRepo: UserPersonaRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
   rover: RoverServiceClient)(implicit private val clock: Clock,
@@ -503,5 +507,15 @@ class ShoeboxController @Inject() (
   def getUserActivePersonas(userId: Id[User]) = Action { request =>
     val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
     Ok(Json.toJson(model))
+  }
+
+  def getMembersByOrganizationId(orgId: Id[Organization]) = Action { request =>
+    val memberIds = organizationMembershipCommander.getMemberIds(orgId)
+    Ok(Json.toJson(memberIds))
+  }
+
+  def getInvitesByOrganizationId(orgId: Id[Organization]) = Action { request =>
+    val invites = organizationInviteCommander.getInvitesByOrganizationId(orgId)
+    Ok(Json.toJson(invites))
   }
 }

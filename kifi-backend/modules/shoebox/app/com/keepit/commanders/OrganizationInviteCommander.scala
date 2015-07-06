@@ -34,6 +34,7 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite]
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Seq[OrganizationInvite]
 }
 
 @Singleton
@@ -346,6 +347,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         case None => Left(OrganizationFail.NOT_A_MEMBER)
       }
+    }
+  }
+
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Seq[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getAllByOrganization(orgId)
     }
   }
 }

@@ -8,7 +8,7 @@ import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheS
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import scala.concurrent.duration.Duration
-import com.keepit.model.{ SocialUserInfo, User }
+import com.keepit.model.{ Organization, SocialUserInfo, User }
 import com.keepit.abook.model.EmailAccountInfo
 
 case class RelatedEntities[E, R](id: Id[E], related: Seq[(Id[R], Double)])
@@ -25,31 +25,56 @@ object RelatedEntities {
   def empty[E, R](id: Id[E]) = RelatedEntities(id, Seq.empty[(Id[R], Double)])
 }
 
-case class SociallyRelatedEntities[E](
-  users: RelatedEntities[E, User],
-  facebookAccounts: RelatedEntities[E, SocialUserInfo],
-  linkedInAccounts: RelatedEntities[E, SocialUserInfo],
-  emailAccounts: RelatedEntities[E, EmailAccountInfo],
+case class SociallyRelatedEntitiesForUser(
+  users: RelatedEntities[User, User],
+  facebookAccounts: RelatedEntities[User, SocialUserInfo],
+  linkedInAccounts: RelatedEntities[User, SocialUserInfo],
+  emailAccounts: RelatedEntities[User, EmailAccountInfo],
   createdAt: DateTime = currentDateTime)
 
-object SociallyRelatedEntities {
+object SociallyRelatedEntitiesForUser {
 
-  implicit def format[E]: Format[SociallyRelatedEntities[E]] = (
-    (__ \ 'users).format[RelatedEntities[E, User]] and
-    (__ \ 'facebookAccounts).format[RelatedEntities[E, SocialUserInfo]] and
-    (__ \ 'linkedInAccounts).format[RelatedEntities[E, SocialUserInfo]] and
-    (__ \ 'emailAccounts).format[RelatedEntities[E, EmailAccountInfo]] and
+  implicit def format: Format[SociallyRelatedEntitiesForUser] = (
+    (__ \ 'users).format[RelatedEntities[User, User]] and
+    (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
+    (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
+    (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
     (__ \ 'createdAt).format[DateTime]
-  )(SociallyRelatedEntities.apply[E] _, unlift(SociallyRelatedEntities.unapply[E]))
+  )(SociallyRelatedEntitiesForUser.apply _, unlift(SociallyRelatedEntitiesForUser.unapply))
 
-  def empty[E](sourceId: Id[E]): SociallyRelatedEntities[E] = SociallyRelatedEntities[E](RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId), RelatedEntities.empty(sourceId))
+  def empty(userId: Id[User]): SociallyRelatedEntitiesForUser = SociallyRelatedEntitiesForUser(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
-case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities[User]] {
-  override val version = 3
-  val namespace = "socially_related_entities"
+case class SociallyRelatedEntitiesForOrg(
+  users: RelatedEntities[Organization, User],
+  emailAccounts: RelatedEntities[Organization, EmailAccountInfo],
+  createdAt: DateTime = currentDateTime)
+
+object SociallyRelatedEntitiesForOrg {
+
+  implicit def format: Format[SociallyRelatedEntitiesForOrg] = (
+    (__ \ 'users).format[RelatedEntities[Organization, User]] and
+    (__ \ 'emailAccounts).format[RelatedEntities[Organization, EmailAccountInfo]] and
+    (__ \ 'createdAt).format[DateTime]
+  )(SociallyRelatedEntitiesForOrg.apply _, unlift(SociallyRelatedEntitiesForOrg.unapply))
+
+  def empty(orgId: Id[Organization]): SociallyRelatedEntitiesForOrg = SociallyRelatedEntitiesForOrg(RelatedEntities.empty(orgId), RelatedEntities.empty(orgId))
+}
+
+case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntitiesForUser] {
+  override val version = 4
+  val namespace = "socially_related_entities_user" // does refactoring this require any other actions?
   def toKey(): String = id.id.toString
 }
 
 class SociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SociallyRelatedEntitiesForUserCacheKey, SociallyRelatedEntities[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SociallyRelatedEntitiesForUserCacheKey, SociallyRelatedEntitiesForUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class SociallyRelatedEntitiesForOrgCacheKey(id: Id[Organization]) extends Key[SociallyRelatedEntitiesForOrg] {
+  override val version = 1
+  val namespace = "socially_related_entities_org"
+  def toKey(): String = id.id.toString
+}
+
+class SociallyRelatedEntitiesForOrgCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SociallyRelatedEntitiesForOrgCacheKey, SociallyRelatedEntitiesForOrg](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

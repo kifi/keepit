@@ -163,6 +163,8 @@ object Shoebox extends Service {
     def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
+    def getMembersByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getMembersByOrganizationId", Param("orgId", orgId))
+    def getInvitesByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitesByOrganizationId", Param("orgId", orgId))
   }
 }
 
@@ -319,6 +321,7 @@ object ABook extends Service {
     def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
     def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
     def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeopleForUser")
+    def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeopleForOrg")
   }
 }
 
@@ -386,6 +389,7 @@ object Graph extends Service {
     def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getSociallyRelatedEntitiesForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForUser", Param("userId", userId))
+    def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForOrg", Param("orgId", orgId))
     //    def getSociallyRelatedUsersForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedUsers", Param("userId", userId))
     //    def getSociallyRelatedFacebookAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedFacebookAccounts", Param("userId", userId))
     //    def getSociallyRelatedLinkedInAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedLinkedInAccounts", Param("userId", userId))

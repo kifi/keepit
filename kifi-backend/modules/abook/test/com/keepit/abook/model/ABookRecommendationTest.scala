@@ -24,6 +24,24 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
     }
   }
 
+  "MemberRecommendationRepo" should {
+    "track irrelevant recommendations" in {
+      withDb() { implicit injector =>
+        val friendRecoRepo = inject[MemberRecommendationRepo]
+        db.readWrite { implicit session =>
+          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+          friendRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+        }
+        db.readOnlyMaster { implicit session =>
+          friendRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          friendRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+        }
+      }
+    }
+  }
+
   "FacebookInviteRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
@@ -59,10 +77,28 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       }
     }
   }
-  "EmailInviteRecommendationRepo" should {
+  "UserEmailInviteRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
-        val emailInviteRecoRepo = inject[EmailInviteRecommendationRepo]
+        val emailInviteRecoRepo = inject[UserEmailInviteRecommendationRepo]
+        db.readWrite { implicit session =>
+          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+        }
+        db.readOnlyMaster { implicit session =>
+          emailInviteRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          emailInviteRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+        }
+      }
+    }
+  }
+
+  "OrgEmailInviteRecommendationRepo" should {
+    "track irrelevant recommendations" in {
+      withDb() { implicit injector =>
+        val emailInviteRecoRepo = inject[OrganizationEmailInviteRecommendationRepo]
         db.readWrite { implicit session =>
           emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
           emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))

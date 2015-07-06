@@ -8,7 +8,7 @@ import com.keepit.common.zookeeper.{ ServiceCluster }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ Organization, NormalizedURI, User }
 import scala.concurrent.Future
 import com.keepit.common.time._
 import com.keepit.common.routes.Graph
@@ -35,15 +35,18 @@ trait GraphServiceClient extends ServiceClient {
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
-  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]]
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]]
+  def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]]
   def refreshSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Unit]
+  def refreshSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Unit]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
 case class GraphCacheProvider @Inject() (
   userScoreCache: ConnectedUserScoreCache,
   uriScoreCache: ConnectedUriScoreCache,
-  relatedEntitiesCache: SociallyRelatedEntitiesForUserCache)
+  relatedEntitiesForUserCache: SociallyRelatedEntitiesForUserCache,
+  relatedEntitiesForOrgCache: SociallyRelatedEntitiesForOrgCache)
 
 class GraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -99,23 +102,42 @@ class GraphServiceClientImpl(
     }
   }
 
-  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntities[User]]] = {
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]] = {
 
-    def needRefresh(cachedEntities: Option[SociallyRelatedEntities[User]]): Boolean = {
+    def needRefresh(cachedEntities: Option[SociallyRelatedEntitiesForUser]): Boolean = {
       !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
     }
 
-    cacheProvider.relatedEntitiesCache.
+    cacheProvider.relatedEntitiesForUserCache.
       getOrElseFutureOpt(SociallyRelatedEntitiesForUserCacheKey(userId), needRefresh) {
-        call(Graph.internal.getSociallyRelatedEntitiesForUser(userId), callTimeouts = longTimeout).map { r => // TODO: change to getSociallyRelatedEntitiesForUser once new graph is deployed
-          r.json.asOpt[SociallyRelatedEntities[User]]
+        call(Graph.internal.getSociallyRelatedEntitiesForUser(userId), callTimeouts = longTimeout).map { r =>
+          r.json.asOpt[SociallyRelatedEntitiesForUser]
+        }
+      }
+  }
+
+  def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]] = {
+
+    def needRefresh(cachedEntities: Option[SociallyRelatedEntitiesForOrg]): Boolean = {
+      !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
+    }
+
+    cacheProvider.relatedEntitiesForOrgCache.
+      getOrElseFutureOpt(SociallyRelatedEntitiesForOrgCacheKey(orgId), needRefresh) {
+        call(Graph.internal.getSociallyRelatedEntitiesForOrg(orgId), callTimeouts = longTimeout).map { r =>
+          r.json.asOpt[SociallyRelatedEntitiesForOrg]
         }
       }
   }
 
   def refreshSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Unit] = {
-    cacheProvider.relatedEntitiesCache.remove(SociallyRelatedEntitiesForUserCacheKey(userId))
+    cacheProvider.relatedEntitiesForUserCache.remove(SociallyRelatedEntitiesForUserCacheKey(userId))
     getSociallyRelatedEntitiesForUser(userId).imap(_ => ())
+  }
+
+  def refreshSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Unit] = {
+    cacheProvider.relatedEntitiesForOrgCache.remove(SociallyRelatedEntitiesForOrgCacheKey(orgId))
+    getSociallyRelatedEntitiesForOrg(orgId).imap(_ => ())
   }
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {

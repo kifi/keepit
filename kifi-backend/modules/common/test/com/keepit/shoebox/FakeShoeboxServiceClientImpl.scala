@@ -698,4 +698,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = Future.successful(Seq())
 
   def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
+
+  def getInvitesByOrganizationId(orgId: Id[Organization]) = Future.successful(Seq.empty)
+
+  def getMembersByOrganizationId(orgId: Id[Organization]) = Future.successful(Seq.empty)
 }
