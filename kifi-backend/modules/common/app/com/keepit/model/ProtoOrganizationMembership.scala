@@ -23,7 +23,9 @@ case class ProtoOrganizationMembership(
   def sanitizeForDelete: ProtoOrganizationMembership = this.copy(state = ProtoOrganizationMembershipStates.INACTIVE)
 }
 
-object ProtoOrganizationMembershipStates extends States[ProtoOrganizationMembership]
+object ProtoOrganizationMembershipStates extends States[ProtoOrganizationMembership] {
+  def all = Set(ACTIVE, INACTIVE)
+}
 
 object ProtoOrganizationMembership {
   implicit def format = (

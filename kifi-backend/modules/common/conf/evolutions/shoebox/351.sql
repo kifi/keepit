@@ -26,7 +26,8 @@ CREATE TABLE proto_organization_membership (
 
 	PRIMARY KEY(id),
 	CONSTRAINT `proto_organization_membership_f_organization` FOREIGN KEY (`proto_organization_id`) REFERENCES proto_organization(`id`),
-	CONSTRAINT `proto_organization_membership_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`)
+	CONSTRAINT `proto_organization_membership_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`),
+	UNIQUE KEY `proto_organization_u_proto_org_id_user_id` (`proto_organization_id`, `user_id`)
 );
 
 insert into evolutions(name, description) values('351.sql', 'create proto_organization, proto_organization_membership');
