@@ -19,7 +19,7 @@ angular.module('kifi')
     var descCharsPerMaxWidthLine = 48;
     var maxSizedImageW = 0.4 * (cardInnerW - gutterW);
 
-    function calcImageSize(summary, title, galleryView) {
+    function calcImageSize(summary, title, galleryView) { // jshint ignore:line
       var url = summary.imageUrl;
       if (url) {
         var imgNaturalW = summary.imageWidth;
@@ -61,15 +61,12 @@ angular.module('kifi')
             }
             var penalty = imgH > contentH ? (imgH - contentH) * contentW : (contentH - imgH) * imgW;
             if (penalty < (image ? image.penalty : Infinity)) { // jshint ignore:line
-              image = {
-                url: url,
-                w: galleryView ? imgW : null,
-                h: galleryView ? imgH : null,
-                penalty: penalty,
-                clipBottom: true,
-                maxDescLines: galleryView ? descLines : 2
-              };
+              image = {url: url, w: imgW, h: imgH, penalty: penalty, clipBottom: true, maxDescLines: descLines};
             }
+          }
+          if (!galleryView) {
+            image.w = image.h = null;
+            image.maxDescLines = 2;
           }
           return image;
         }
