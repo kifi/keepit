@@ -77,28 +77,27 @@ case class OrganizationModifications(
 
 sealed abstract class OrganizationRequest
 
-@json
 case class OrganizationCreateRequest(
   requesterId: Id[User],
   initialValues: OrganizationModifications) extends OrganizationRequest
-
-@json
 case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
 
-@json
 case class OrganizationModifyRequest(
   requesterId: Id[User],
   orgId: Id[Organization],
   modifications: OrganizationModifications) extends OrganizationRequest
-@json
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
-@json
 case class OrganizationDeleteRequest(
   requesterId: Id[User],
   orgId: Id[Organization]) extends OrganizationRequest
-@json
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
+
+case class OrganizationTransferRequest(
+  requesterId: Id[User],
+  orgId: Id[Organization],
+  newOwner: Id[User]) extends OrganizationRequest
+case class OrganizationTransferResponse(request: OrganizationTransferRequest, modifiedOrg: Organization)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))

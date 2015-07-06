@@ -20,6 +20,7 @@ trait OrganizationCommander {
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
+  def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 }
 
 @Singleton
@@ -82,7 +83,9 @@ class OrganizationCommanderImpl @Inject() (
   def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationCreateRequest(createrId, initialParameters) =>
-        if (!initialParameters.name.isDefined || !areAllValidModifications(initialParameters)) Some(OrganizationFail.BAD_PARAMETERS) else None
+        if (initialParameters.name.isEmpty || !areAllValidModifications(initialParameters)) {
+          Some(OrganizationFail.BAD_PARAMETERS)
+        } else None
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
         if (!permissions.exists(_.contains(EDIT_ORGANIZATION))) {
@@ -93,7 +96,13 @@ class OrganizationCommanderImpl @Inject() (
           None
         }
       case OrganizationDeleteRequest(requesterId, orgId) =>
-        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS) else None
+        if (requesterId != orgRepo.get(orgId).ownerId) {
+          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        } else None
+      case OrganizationTransferRequest(requesterId, orgId, _) =>
+        if (requesterId != orgRepo.get(orgId).ownerId) {
+          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        } else None
     }
   }
 
@@ -182,6 +191,22 @@ class OrganizationCommanderImpl @Inject() (
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
           Right(OrganizationDeleteResponse(request))
         case Some(orgFail) => Left(orgFail)
+      }
+    }
+  }
+
+  def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse] = {
+    db.readWrite { implicit session =>
+      getValidationError(request) match {
+        case Some(orgFail) => Left(orgFail)
+        case None =>
+          val org = orgRepo.get(request.orgId)
+          val newOwnerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
+            case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.OWNER))
+            case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.OWNER))
+          }
+          val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
+          Right(OrganizationTransferResponse(request, modifiedOrg))
       }
     }
   }
