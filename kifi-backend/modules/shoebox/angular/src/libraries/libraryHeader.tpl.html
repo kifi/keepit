@@ -140,11 +140,11 @@
 
   </div>
   <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
-    <button class="kf-lh-view-option" ng-click="setGalleryView()">
+    <button class="kf-lh-view-option" ng-click="setGalleryView()" ng-if="admin">
       <figure ng-class="galleryView ? 'svg-view-gallery-green' : 'svg-view-gallery'"></figure>
     </button>
 
-    <button class="kf-lh-view-option" ng-click="setCompactView()">
+    <button class="kf-lh-view-option" ng-click="setCompactView()" ng-if="admin">
       <figure ng-class="galleryView ? 'svg-view-list' : 'svg-view-list-green'"></figure>
     </button>
 

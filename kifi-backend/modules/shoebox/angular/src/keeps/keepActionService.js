@@ -47,9 +47,9 @@ angular.module('kifi')
         // TODO(yiping): should we have a different action
         // for keeping to library?
         'action': 'keep',
-        'path': $location.path(),
+        'path': $location.path()
       };
-      if (galleryView !== undefined) { props.keepView = galleryView ? 'gallery' : 'list' }
+      if (galleryView !== undefined) { props.keepView = galleryView ? 'gallery' : 'list'; }
       $analytics.eventTrack('user_clicked_page', props);
 
       var data = {
