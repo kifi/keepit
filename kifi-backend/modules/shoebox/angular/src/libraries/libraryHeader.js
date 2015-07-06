@@ -18,6 +18,7 @@ angular.module('kifi')
         librarySlug: '=',
         imageLoaded: '=',
         editMode: '=',
+        galleryView: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
@@ -60,6 +61,7 @@ angular.module('kifi')
         scope.followBtnJustClicked = false;
         scope.collabsCanInvite = false;
         scope.quickKeep = {};
+        scope.admin = profileService.me.experiments.indexOf('admin') > -1;
 
         //
         // Internal methods.
@@ -597,6 +599,18 @@ angular.module('kifi')
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
           scope.editMode = !scope.editMode;
+        };
+
+        scope.setGalleryView = function() {
+          scope.galleryView = true;
+          profileService.savePrefs({use_minimal_keep_card: false});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedGalleryView' });
+        };
+
+        scope.setCompactView = function() {
+          scope.galleryView = false;
+          profileService.savePrefs({use_minimal_keep_card: true});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCompactView' });
         };
 
         scope.showFollowers = function () {
