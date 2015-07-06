@@ -200,7 +200,7 @@ angular.module('kifi')
             };
 
             (scope.keep.id ? // Recommended keeps have no keep.id.
-              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id).then(function (result) {
+              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id, scope.galleryView).then(function (result) {
                 if (result.successes.length > 0) {
                   return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
                 }

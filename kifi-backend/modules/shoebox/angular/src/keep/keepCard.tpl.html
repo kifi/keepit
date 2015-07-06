@@ -12,7 +12,7 @@
         <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
         <span class="kf-hide-compact">{{howKept ? 'Kept' : 'Keep'}}</span>
       </button>
-      <button class="kf-keep-share-btn" ng-click="shareAction()">
+      <button class="kf-keep-share-btn" ng-click="clickCallback({keep: keep, event: $event}); shareAction()" click-action="clickedShareArticle">
         <span class="svg-share-arrow-green"></span>
         <span class="kf-hide-compact">Share</span>
       </button>
@@ -51,7 +51,7 @@
         <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
         <span class="kf-hide-compact">{{howKept ? 'Kept' : 'Keep'}}</span>
       </button>
-      <button class="kf-keep-share-btn" ng-click="shareAction()">
+      <button class="kf-keep-share-btn" ng-click="clickCallback({keep: keep, event: $event}); shareAction()" click-action="clickedShareArticle">
         <span class="svg-share-arrow-green"></span>
         <span class="kf-hide-compact">Share</span>
       </button>

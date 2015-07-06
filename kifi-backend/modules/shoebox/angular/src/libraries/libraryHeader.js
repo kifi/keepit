@@ -603,11 +603,13 @@ angular.module('kifi')
         scope.setGalleryView = function() {
           scope.galleryView = true;
           profileService.savePrefs({use_minimal_keep_card: false});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedGalleryView' });
         };
 
         scope.setCompactView = function() {
           scope.galleryView = false;
           profileService.savePrefs({use_minimal_keep_card: true});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCompactView' });
         };
 
         scope.showFollowers = function () {
