@@ -21,6 +21,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
+import com.keepit.common.core._
 
 import play.api.data.Form
 import play.api.data.Forms._
@@ -341,11 +342,16 @@ class UserController @Inject() (
       if (chk.exists(!_._2)) { // there is an incomplete item
         chk
       } else {
-        Map.empty[String, Boolean]
+        Seq.empty[(String, Boolean)]
       }
     }.recover {
       case ex: Throwable =>
-        Map.empty[String, Boolean]
+        Seq.empty[(String, Boolean)]
+    }.map { checklist =>
+      checklist.map {
+        case (name, isComplete) =>
+          Json.obj("name" -> name, "complete" -> isComplete)
+      } |> JsArray.apply
     }
 
     val prefsF = userCommander.getPrefs(SitePrefNames, request.userId, request.experiments)

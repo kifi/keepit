@@ -1,5 +1,7 @@
 package com.keepit.controllers.core
 
+import java.util.UUID
+
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -48,7 +50,7 @@ import scala.concurrent.duration._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
-  def validatePwd(pwd: Array[Char]) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
+  def validatePwd(pwd: String) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
 }
 
 class AuthHelper @Inject() (
@@ -114,8 +116,8 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, password: Array[Char])(implicit request: MaybeUserRequest[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
-    require(AuthHelper.validatePwd(password), "invalid password")
+  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, passwordOpt: Option[String])(implicit request: MaybeUserRequest[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
+    val password = passwordOpt.getOrElse(UUID.randomUUID.toString)
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
@@ -124,7 +126,7 @@ class AuthHelper @Inject() (
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
-        val matches = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.matches(identity.passwordInfo.get, new String(password)) }
+        val matches = timing(s"[handleEmailPasswordSuccessForm($emailAddress)] hash") { hasher.matches(identity.passwordInfo.get, password) }
         if (matches) {
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -165,8 +167,8 @@ class AuthHelper @Inject() (
   val emailPasswordForm = Form[EmailPassword](
     mapping(
       "email" -> EmailAddress.formMapping,
-      "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))
-    )((validEmail, pwd) => EmailPassword(validEmail, pwd.toCharArray))((ep: EmailPassword) => Some(ep.email, new String(ep.password)))
+      "password" -> optional(text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw)))
+    )((validEmail, pwd) => EmailPassword(validEmail, pwd))((ep: EmailPassword) => Some(ep.email, ep.password))
   )
 
   /**
@@ -305,15 +307,15 @@ class AuthHelper @Inject() (
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
     )({ (email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
-        val allowedPassword = if (pwd.exists(p => AuthHelper.validatePwd(p.toCharArray))) {
+        val allowedPassword = if (pwd.exists(p => AuthHelper.validatePwd(p))) {
           pwd.get
         } else {
           log.warn(s"[social-finalize] Rejected social password, generating one instead. Supplied password was ${pwd.map(_.length).getOrElse(0)} chars.")
           RandomStringUtils.random(20)
         }
-        SocialFinalizeInfo(email = email.copy(address = email.address.trim), firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
+        SocialFinalizeInfo(email = email.copy(address = email.address.trim), firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
       })((sfi: SocialFinalizeInfo) =>
-        Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(new String(sfi.password)), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
+        Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
   )
   def doSocialFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(

@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.UUID
+
 import com.google.inject.Inject
 import com.keepit.common.controller.KifiSession
 
@@ -39,11 +41,11 @@ import securesocial.core.providers.utils.GravatarHelper
 import scala.util.{ Failure, Success, Try }
 import KifiSession._
 
-case class EmailPassword(email: EmailAddress, password: Array[Char])
+case class EmailPassword(email: EmailAddress, password: Option[String])
 object EmailPassword {
   implicit val format = (
     (__ \ 'email).format[EmailAddress] and
-    (__ \ 'password).format[String].inmap((s: String) => s.toCharArray, unlift((c: Array[Char]) => Some(c.toString)))
+    (__ \ 'password).formatNullable[String]
   )(EmailPassword.apply, unlift(EmailPassword.unapply))
 }
 
@@ -51,7 +53,7 @@ case class SocialFinalizeInfo(
   email: EmailAddress,
   firstName: String,
   lastName: String,
-  password: Array[Char],
+  password: String,
   picToken: Option[String],
   picHeight: Option[Int],
   picWidth: Option[Int],
@@ -64,7 +66,7 @@ object SocialFinalizeInfo {
     (__ \ 'email).format[EmailAddress] and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
-    (__ \ 'password).format[String].inmap((s: String) => s.toCharArray, unlift((c: Array[Char]) => Some(c.toString))) and
+    (__ \ 'password).format[String] and
     (__ \ 'picToken).formatNullable[String] and
     (__ \ 'picHeight).formatNullable[Int] and
     (__ \ 'picWidth).formatNullable[Int] and
@@ -203,14 +205,13 @@ class AuthCommander @Inject() (
   def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
     timing(s"[finalizeSocialAccount(${socialIdentity.identityId.providerId + "#" + socialIdentity.identityId.userId})]") {
       log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
-      require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
       val email = if (sfi.email.address.trim.isEmpty) {
         val alternative = EmailAddress(s"NoMailUser+${socialIdentity.identityId.providerId}_${socialIdentity.identityId.userId}@kifi.com")
         airbrake.notify(s"generated alternative email $alternative for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
         alternative
       } else sfi.email
-      val pInfo = currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
+      val pInfo = currentHasher.hash(sfi.password)
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
         email = email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
@@ -237,9 +238,9 @@ class AuthCommander @Inject() (
     }
 
   def processCompanyNameFromSignup(user: User, companyNameOpt: Option[String]): Unit = {
-    companyNameOpt.map { companyName =>
+    companyNameOpt.foreach { companyName =>
       val trimmed = companyName.trim
-      if (trimmed != "") {
+      if (trimmed.nonEmpty) {
         userCommander.updateUserBiography(user.id.get, s"Works at $trimmed");
         db.readWrite { implicit session =>
           userValueRepo.setValue(user.id.get, UserValueName.COMPANY_NAME, trimmed)

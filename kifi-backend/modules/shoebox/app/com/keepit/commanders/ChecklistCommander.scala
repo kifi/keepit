@@ -24,7 +24,7 @@ class ChecklistCommander @Inject() (
   private val mobilePlatforms = Set(KifiInstallationPlatform.IPhone, KifiInstallationPlatform.Android)
   private val checklistSize = 5
 
-  def checklist(userId: Id[User], platform: ChecklistPlatform): Map[String, Boolean] = {
+  def checklist(userId: Id[User], platform: ChecklistPlatform): Seq[(String, Boolean)] = {
     platform match {
       case Website =>
         db.readOnlyReplica { implicit session =>
@@ -68,7 +68,7 @@ class ChecklistCommander @Inject() (
           }
 
           first +: rest
-        }.toMap
+        }
     }
   }
 }

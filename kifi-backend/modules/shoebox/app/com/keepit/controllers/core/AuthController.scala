@@ -93,7 +93,7 @@ object TokenFinalizeInfo {
       info.email,
       info.firstName,
       info.lastName,
-      info.password.toCharArray,
+      info.password,
       info.picToken,
       info.picHeight,
       info.picWidth,
@@ -521,7 +521,7 @@ class AuthController @Inject() (
                   email = EmailAddress(identity.email.getOrElse("")),
                   firstName = User.sanitizeName(identity.firstName),
                   lastName = User.sanitizeName(identity.lastName), //todo(andrew): is having an empty string for email is the right thing to do at this point???
-                  password = password.toCharArray,
+                  password = password,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
                 val targetPubLibId = if (cookieIntent.isDefined && cookieIntent.get.value == "follow") pubLibIdOpt else None
