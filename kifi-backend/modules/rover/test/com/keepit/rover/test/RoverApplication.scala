@@ -6,6 +6,7 @@ import com.google.inject.{ Injector, Module }
 import java.io.File
 import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
+import com.keepit.rover.store.RoverFakeStoreModule
 import com.keepit.test.{ TestInjectorProvider, DbInjectionHelper, TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
@@ -17,6 +18,8 @@ import com.google.inject.util.Modules
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.rover.common.cache.RoverCacheModule
 import com.keepit.rover.RoverServiceTypeModule
+
+import scala.concurrent.ExecutionContext
 
 class RoverApplication(overridingModules: Module*)(implicit path: File = new File("./modules/rover/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -38,6 +41,8 @@ trait RoverApplicationInjector extends TestInjectorProvider with ApplicationInje
 
 trait RoverTestInjector extends TestInjector with DbInjectionHelper with RoverInjectionHelpers {
   val module = Modules.combine(
+    FakeExecutionContextModule(),
+    RoverFakeStoreModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeHttpClientModule(),
     RoverServiceTypeModule(),
@@ -55,4 +60,6 @@ trait RoverInjectionHelpers { self: TestInjectorProvider =>
   def articleInfoRepo(implicit injector: Injector) = inject[ArticleInfoRepo]
   def articleInfoHelper(implicit injector: Injector) = inject[ArticleInfoHelper]
   def clock(implicit injector: Injector) = inject[Clock]
+  implicit def executionContext(implicit injector: Injector) = inject[ExecutionContext]
+
 }

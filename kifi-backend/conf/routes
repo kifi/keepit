@@ -9,8 +9,6 @@
 
 -> /  abookService.Routes
 
--> /  scraperService.Routes
-
 -> /  cortexService.Routes
 
 -> /  curatorService.Routes

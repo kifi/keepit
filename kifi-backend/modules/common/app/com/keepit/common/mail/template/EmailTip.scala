@@ -23,13 +23,12 @@ object EmailTip {
   // of course, each value should be unique
   object FriendRecommendations extends EmailTipImpl("PYMK")
   object ConnectFacebook extends EmailTipImpl("cFB")
-  object ConnectLinkedIn extends EmailTipImpl("cLI")
   object ImportGmailContacts extends EmailTipImpl("gmail")
   object InstallExtension extends EmailTipImpl("ext")
   object KeepFromEmail extends EmailTipImpl("keepFromEmail")
   object BookmarkImport extends EmailTipImpl("bmImport")
 
-  val ALL: Seq[EmailTip] = FriendRecommendations :: ConnectFacebook :: ConnectLinkedIn ::
+  val ALL: Seq[EmailTip] = FriendRecommendations :: ConnectFacebook ::
     KeepFromEmail :: BookmarkImport :: Nil
 
   def apply(name: String): Option[EmailTip] = ALL.find(_.name == name)

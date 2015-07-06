@@ -161,7 +161,7 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Provides @Singleton
   def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 7 day))
+    new SociallyRelatedEntitiesForUserCache(stats, accessLog, (outerRepo, 7 day))
 
   @Provides @Singleton
   def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

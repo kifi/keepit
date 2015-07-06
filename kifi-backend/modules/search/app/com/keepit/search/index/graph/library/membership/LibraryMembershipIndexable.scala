@@ -38,7 +38,7 @@ object LibraryMembershipFields {
       else LibraryAccess.READ_ONLY
     }
 
-    val collaborator = Set[LibraryAccess](LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_ONLY)
+    val collaborator = Set[LibraryAccess](LibraryAccess.OWNER, LibraryAccess.READ_WRITE)
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty

@@ -120,8 +120,8 @@ angular.module('kifi')
           }
         };
 
-        scope.onAddCoverImageMouseUp = function (event) {
-          if (event.which === 1) {
+        scope.onCameraCoverImageMouseUp = function (event) {
+          if (event.which === 1 && !scope.library.image) {
             angular.element('.kf-lh-cover-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
@@ -129,7 +129,7 @@ angular.module('kifi')
 
         scope.onCoverImageFileChosen = function (files) {
           var file = files[0];
-          if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+          if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
             coverImageFile = file;
             $timeout(readCoverImageFile);
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });

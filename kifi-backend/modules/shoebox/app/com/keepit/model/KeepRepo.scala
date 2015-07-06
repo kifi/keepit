@@ -65,6 +65,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
+  def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 }
 
 @Singleton
@@ -110,8 +111,6 @@ class KeepRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
-    var privateFlag: Boolean = false
-
     Keep._applyFromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
@@ -183,7 +182,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
-    if (extIds.size == 0) {
+    if (extIds.isEmpty) {
       Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
     } else if (extIds.size == 1) {
       val extId = extIds.head
@@ -557,6 +556,12 @@ class KeepRepoImpl @Inject() (
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep] = {
     val q = { for (r <- rows if r.libraryId === libId && r.visibility =!= excludeVisibility.orNull) yield r }.take(limit)
     q.list
+  }
+
+  def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select distinct source from bookmark where user_id=$userId and state='active'"""
+    q.as[KeepSource].list
   }
 
 }

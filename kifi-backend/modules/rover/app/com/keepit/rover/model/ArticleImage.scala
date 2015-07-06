@@ -20,7 +20,7 @@ case class ArticleImage(
     version: ArticleVersion,
     fetchedAt: DateTime,
     imageUrl: String,
-    imageHash: ImageHash) extends Model[ArticleImage] with ArticleKindHolder {
+    imageHash: ImageHash) extends ModelWithState[ArticleImage] with ArticleKindHolder {
   def withId(id: Id[ArticleImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }

@@ -97,15 +97,6 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "shows connect linkedin tip if not connected to FB" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user, emailToSend) = setup()
-        val htmlF = inject[ConnectNetworkTip].render(emailToSend, user.id.get)(LINKEDIN)
-        val html = Await.result(htmlF, Duration(5, "seconds")).get
-        html.body must contain("Connect with LinkedIn")
-      }
-    }
-
     "does not show connect linkedin tip if connected to FB" in {
       withDb(modules: _*) { implicit injector =>
         val (user, emailToSend) = setup()

@@ -21,7 +21,6 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
-import com.keepit.scraper._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworkType }
 import org.joda.time.DateTime

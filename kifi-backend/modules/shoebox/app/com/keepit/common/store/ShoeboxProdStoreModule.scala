@@ -4,7 +4,6 @@ import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Provides, Singleton }
 import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.inject.AppScoped
-import com.keepit.scraper.embedly.{ EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl }
 import com.keepit.social.{ InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore }
 import com.keepit.typeahead._
 import org.apache.commons.io.FileUtils
@@ -52,13 +51,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
     new S3KifiUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
-  @Singleton
-  @Provides
-  def embedlyStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EmbedlyStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.embedly.bucket").get)
-    new S3EmbedlyStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
-
 }
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) with ShoeboxStoreModule {
@@ -89,13 +81,4 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
       prodStoreModule.kifiUserTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryKifiUserTypeaheadStoreImpl())
   }
-
-  @Singleton
-  @Provides
-  def embedlyStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): EmbedlyStore = {
-    whenConfigured("amazon.s3.embedly.bucket")(
-      prodStoreModule.embedlyStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryEmbedlyStoreImpl())
-  }
-
 }
