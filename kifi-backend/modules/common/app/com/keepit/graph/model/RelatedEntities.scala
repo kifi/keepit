@@ -63,7 +63,7 @@ object SociallyRelatedEntitiesForOrg {
 
 case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntitiesForUser] {
   override val version = 4
-  val namespace = "socially_related_entities_user" // does refactoring this require any other actions?
+  val namespace = "user_socially_related_entities" // does refactoring this require any other actions?
   def toKey(): String = id.id.toString
 }
 
@@ -72,7 +72,7 @@ class SociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: Acc
 
 case class SociallyRelatedEntitiesForOrgCacheKey(id: Id[Organization]) extends Key[SociallyRelatedEntitiesForOrg] {
   override val version = 1
-  val namespace = "socially_related_entities_org"
+  val namespace = "org_socially_related_entities"
   def toKey(): String = id.id.toString
 }
 

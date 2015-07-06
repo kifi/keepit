@@ -71,7 +71,7 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
         withInjector(modules: _*) { implicit injector =>
           val route = com.keepit.graph.controllers.internal.routes.GraphController.getSociallyRelatedEntitiesForOrg(orgId1).url
           route === "/internal/graph/getSociallyRelatedEntitiesForOrg?orgId=1"
-          val controller = inject[GraphController] //setup
+          val controller = inject[GraphController]
           val manager = inject[GraphManager]
           manager.update(allUpdates: _*)
           val result = controller.getSociallyRelatedEntitiesForOrg(orgId1)(FakeRequest())
@@ -79,10 +79,9 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
           val content = contentAsString(result)
           content !== null
 
-          println(content)
-
           val jsResult = Json.fromJson[SociallyRelatedEntitiesForOrg](Json.parse(content))
           jsResult.get.emailAccounts.id == orgId1
+          jsResult.get.emailAccounts.related.size === 2
           jsResult.get.users.id == orgId1
           jsResult.get.users.related.size === 5
         }
