@@ -13,6 +13,7 @@ trait VisibilityEvaluator { self: DebugOption =>
   protected val friendIdsFuture: Future[Set[Long]]
   protected val restrictedUserIdsFuture: Future[Set[Long]]
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
+  protected val orgIdsFuture: Future[Set[Long]]
   protected val monitoredAwait: MonitoredAwait
 
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
@@ -27,7 +28,9 @@ trait VisibilityEvaluator { self: DebugOption =>
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
   }
 
-  protected def getKeepVisibilityEvaluator(userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): KeepVisibilityEvaluator = {
+  lazy val orgIds = LongArraySet.fromSet(monitoredAwait.result(orgIdsFuture, 5 seconds, s"getting org ids"))
+
+  protected def getKeepVisibilityEvaluator(userIdDocValues: NumericDocValues, orgIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): KeepVisibilityEvaluator = {
     new KeepVisibilityEvaluator(
       userId,
       myFriendIds,
@@ -36,17 +39,21 @@ trait VisibilityEvaluator { self: DebugOption =>
       memberLibraryIds,
       trustedLibraryIds,
       authorizedLibraryIds,
+      orgIds,
       userIdDocValues,
+      orgIdDocValues,
       visibilityDocValues)
   }
 
-  protected def getLibraryVisibilityEvaluator(ownerIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
+  protected def getLibraryVisibilityEvaluator(ownerIdDocValues: NumericDocValues, orgIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
       myFriendIds,
       restrictedUserIds,
+      orgIds,
       ownerIdDocValues,
+      orgIdDocValues,
       visibilityDocValues)
   }
 
@@ -74,7 +81,9 @@ final class KeepVisibilityEvaluator(
     memberLibraryIds: LongArraySet,
     trustedLibraryIds: LongArraySet,
     authorizedLibraryIds: LongArraySet,
+    orgIds: LongArraySet,
     userIdDocValues: NumericDocValues,
+    orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
@@ -91,6 +100,8 @@ final class KeepVisibilityEvaluator(
           Visibility.FOLLOWER // the keep is in a library I am a member of
         }
       }
+    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
+      Visibility.NETWORK
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.FOLLOWER // the keep is in an authorized library
     } else {
@@ -117,7 +128,9 @@ final class LibraryVisibilityEvaluator(
     memberLibraryIds: LongArraySet,
     myFriendIds: LongArraySet,
     restrictedUserIds: LongArraySet,
+    orgIds: LongArraySet,
     ownerIdDocValues: NumericDocValues,
+    orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
@@ -129,6 +142,8 @@ final class LibraryVisibilityEvaluator(
       } else {
         Visibility.FOLLOWER // a library I am a member of
       }
+    } else if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
+      Visibility.NETWORK
     } else {
       if (visibilityDocValues.get(docId) == published) {
         val ownerId = ownerIdDocValues.get(docId)

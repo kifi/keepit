@@ -27,6 +27,7 @@ class UriSearchImpl(
     friendIdsFuture: Future[Set[Long]],
     restrictedUserIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    orgIdsFuture: Future[Set[Long]],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
@@ -60,7 +61,7 @@ class UriSearchImpl(
     }
 
     val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
 
     if (debugFlags != 0) {

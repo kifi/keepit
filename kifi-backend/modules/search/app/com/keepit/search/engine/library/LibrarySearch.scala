@@ -28,6 +28,7 @@ class LibrarySearch(
     friendIdsFuture: Future[Set[Long]],
     restrictedUserIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    orgIdsFuture: Future[Set[Long]],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs,
     explain: Option[(Id[Library], Lang, Option[Lang])]) extends DebugOption with Logging {
@@ -65,9 +66,9 @@ class LibrarySearch(
 
     val collector = new LibraryResultCollector(librarySearcher, libraryMembershipSearcher, keepSearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
-    val userScoreSource = new LibraryFromUserScoreVectorSource(librarySearcher, userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)
-    val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val userScoreSource = new LibraryFromUserScoreVectorSource(librarySearcher, userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
+    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)
+    val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
 
     if (debugFlags != 0) {
       engine.debug(this)
