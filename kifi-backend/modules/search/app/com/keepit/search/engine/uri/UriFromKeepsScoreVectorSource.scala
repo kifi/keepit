@@ -19,6 +19,7 @@ class UriFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     recencyOnly: Boolean,
     protected val config: SearchConfig,
@@ -49,7 +50,8 @@ class UriFromKeepsScoreVectorSource(
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
+    val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, orgIdDocValues, visibilityDocValues)
     val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
 
@@ -94,6 +96,24 @@ class UriFromKeepsScoreVectorSource(
     val lastTotal = output.size
     myFriendIds.foreachLong { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
+      if (td != null) {
+        var docId = td.nextDoc()
+        while (docId < NO_MORE_DOCS) {
+          val uriId = uriIdDocValues.get(docId)
+
+          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            // write to the buffer
+            output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
+            writer.putLong(uriId)
+            explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.NETWORK, Array.empty[Int], 0, 0))
+          }
+          docId = td.nextDoc()
+        }
+      }
+    }
+
+    orgIds.foreachLong { orgId =>
+      val td = reader.termDocsEnum(new Term(KeepFields.orgDiscoverableField, orgId.toString))
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {

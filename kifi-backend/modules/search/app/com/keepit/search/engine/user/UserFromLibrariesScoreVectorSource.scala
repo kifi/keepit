@@ -20,6 +20,7 @@ class UserFromLibrariesScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -46,7 +47,8 @@ class UserFromLibrariesScoreVectorSource(
     if (pq.size <= 0) return // no scorer
 
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, visibilityDocValues)
+    val orgIdDocValues = reader.getNumericDocValues(LibraryFields.orgIdField)
+    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, orgIdDocValues, visibilityDocValues)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 

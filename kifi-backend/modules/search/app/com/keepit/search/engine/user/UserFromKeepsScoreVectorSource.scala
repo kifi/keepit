@@ -18,6 +18,7 @@ class UserFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -36,7 +37,8 @@ class UserFromKeepsScoreVectorSource(
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
+    val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, orgIdDocValues, visibilityDocValues)
 
     val recencyScorer = getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
