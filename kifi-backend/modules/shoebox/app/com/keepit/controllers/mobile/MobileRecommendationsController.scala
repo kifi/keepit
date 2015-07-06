@@ -122,9 +122,13 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def keepUpdates(count: Int, beforeTime: String) = UserAction.async { request =>
-    commander.updatesFromFollowedLibraries(request.userId, count, beforeTime)
-      .map(updatedKeeps => Ok(Json.obj("updatedKeeps" -> updatedKeeps)))
+  def keepUpdates(count: Int, beforeId: Option[String], afterId: Option[String]) = UserAction.async { request =>
+    val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
+    val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
+
+    commander.updatesFromFollowedLibraries(request.userId, count, beforeExtId, afterExtId).map { updatedKeeps =>
+      Ok(Json.obj("updatedKeeps" -> updatedKeeps))
+    }
   }
 
   private def getRecommendationSource(request: UserRequest[_]): RecommendationSource = {

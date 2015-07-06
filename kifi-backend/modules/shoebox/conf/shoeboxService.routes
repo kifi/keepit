@@ -245,7 +245,7 @@ POST    /m/3/recos/top                          @com.keepit.controllers.mobile.M
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
-GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(count: Int, beforeTime: String)
+GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(count: Int, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
 

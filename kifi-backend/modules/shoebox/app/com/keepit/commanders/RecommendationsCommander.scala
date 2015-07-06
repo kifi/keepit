@@ -148,7 +148,7 @@ class RecommendationsCommander @Inject() (
       if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
 
-        val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId, 5 * maxUpdates)
+        val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId, 5 * maxUpdates, None, None)
         val keepsByLibrary = recentlyUpdatedKeeps.groupBy(_.libraryId).values.toList
         val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxUpdatesPerLibrary)
         val result = fairlySampledKeeps.sortBy(_.keptAt).reverse.take(maxUpdates)
@@ -171,12 +171,13 @@ class RecommendationsCommander @Inject() (
     }.getOrElse(Future.successful(None))
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeTime: String): Future[Seq[KeepInfo]] = {
+  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
+
     val keeps: Seq[Keep] = db.readWrite { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeTime)
-    }.foldRight((List[Keep](), Set[Id[NormalizedURI]]())) {
-      case (keep, (keeps, seenUriIds)) =>
-        if (seenUriIds(keep.uriId)) (keeps, seenUriIds) else (keep :: keeps, seenUriIds + keep.uriId)
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeExtId, afterExtId)
+    }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
+      case (keep, (acc, seenUriIds)) =>
+        if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
     }._1
 
     keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
