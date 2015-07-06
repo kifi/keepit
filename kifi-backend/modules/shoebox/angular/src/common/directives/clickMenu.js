@@ -46,7 +46,7 @@ angular.module('kifi')
         }
 
         element.on('$destroy', function () {
-          $window.document.removeEventListener(handleMenuClick);
+          $window.document.removeEventListener('click', handleMenuClick);
         });
 
         $window.document.addEventListener('click', handleMenuClick);
