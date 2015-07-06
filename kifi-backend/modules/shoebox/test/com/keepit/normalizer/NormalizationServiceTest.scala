@@ -55,7 +55,6 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
   def fixLinkedInArticleForUrl(url: String, linkedInId: Option[String])(implicit injector: Injector): Unit = {
     val rover = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
     rover.setArticlesForUrl(url, Set(mkLinkedInArticle(url, linkedInId)))
-    println(s"${rover.articlesByUrl}")
   }
 
   def fixSignatureForUrl(url: String, signature: String)(implicit injector: Injector): Unit = {
