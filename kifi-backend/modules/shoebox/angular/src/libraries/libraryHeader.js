@@ -129,7 +129,7 @@ angular.module('kifi')
 
         scope.onCoverImageFileChosen = function (files) {
           var file = files[0];
-          if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+          if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
             coverImageFile = file;
             $timeout(readCoverImageFile);
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
