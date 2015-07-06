@@ -1,0 +1,10 @@
+<div class="kf-uc">
+  <h2 class="kf-uc-title">Get the most out of Kifi</h2>
+  <ul>
+    <li ng-repeat="item in checklist" class="kf-uc-item {{ item.complete ? 'kf-uc-item-complete' : '' }}" ng-click="item.action($event)">
+      <span class="kf-uc-check {{ item.complete ? 'svg-checkmark-green' : '' }}"></span>
+      <span class="kf-uc-item-title">{{ item.title }}</span>
+      <p class="kf-uc-item-subtitle">{{ item.subtitle }}</p>
+    </li>
+  </ul>
+</div>

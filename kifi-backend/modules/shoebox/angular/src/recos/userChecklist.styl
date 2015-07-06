@@ -1,0 +1,58 @@
+section-padding = 10px 16px
+section-border = defaultBorder
+section-border-radius = 10px
+
+.kf-uc
+  padding: 10px 16px
+  margin-top: 20px
+  line-height: 14px
+  font-size: 12px
+  overflow: hidden
+  border-radius: section-border-radius
+  border: section-border
+  background-color: #fff
+
+.kf-uc-title
+  font-size: 15px
+  font-weight: bold
+  padding: 6px 0 16px
+
+.kf-uc-item
+  margin-top: 16px
+  cursor: pointer
+
+.kf-uc-item:first-child
+  margin-top: 0;
+
+.kf-uc-item-title
+  font-size: 14px
+
+.kf-uc-item:hover .kf-uc-item-title
+  text-decoration: underline
+
+.kf-uc-item-subtitle
+  margin: 0
+  color: #999
+  font-size: 11px
+
+.kf-uc-check
+  float: left
+  width: 23px
+  height: 23px
+  margin: 2px 5px 5px 0
+  border-radius: 50%
+  border: 1px solid #bbb
+
+.kf-uc-item-complete
+  &:hover .kf-uc-item-title
+    text-decoration: none
+
+  .kf-uc-item-title
+  .kf-uc-item-subtitle
+    color: accentGreen
+
+  .kf-uc-check
+    border-color: accentGreen
+    background-position: center center;
+    background-size: 14px 14px;
+    background-repeat: no-repeat;
