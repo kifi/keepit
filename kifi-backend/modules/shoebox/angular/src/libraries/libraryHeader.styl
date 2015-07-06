@@ -1084,15 +1084,6 @@ subsDur = .4s
     visibility: hidden
 
 .kf-lh-buttons
-  max-width: 538px // matching max-width of .kf-keep
-  margin: 0 auto
-  border: solid transparent
-  border-width: 0 appSidePad1
-  text-align: right
-
-  @media (min-width: 796px)
-    padding-right: 234px  // rightColWidth + colGapWidth
-
   .kf-library-share-search
     vertical-align: top
     text-align: left
@@ -1107,14 +1098,13 @@ subsDur = .4s
       width: 15px
       margin-right: 2px
 
-.kf-lh-edit-keeps,
-.kf-lh-view-option
+.kf-lh-edit-keeps
   float: left
   border-color: transparent
   border-left: 0
   border-right: 0
-  padding-left: 25px
-  padding-right: 15px
+  padding-left: 29px
+  padding-right: 0
   background-position: left center
   background-size: auto 15px
   background-repeat: no-repeat
@@ -1128,17 +1118,16 @@ subsDur = .4s
   &:hover
     text-decoration: underline
 
-.kf-lh-edit-keeps
-  background-size: 25px 25px
-  margin-left: 20px
+.kf-lh-buttons.kf-my-lib
+  max-width: 538px // matching max-width of .kf-keep
+  margin: 0 auto
+  border: solid transparent
+  border-width: 0 appSidePad1
+  text-align: right
 
-.kf-lh-view-option
-  padding-left: 0
+  @media (min-width: 796px)
+    padding-right: 234px  // rightColWidth + colGapWidth
 
-  figure
-    background-size: cover
-    width: 20px
-    height: 20px
 
 .kf-lh-invite-search-button
   height: buttonHeight
@@ -1159,3 +1148,4 @@ subsDur = .4s
     height: 16px
     background-size: cover
     margin-right: 5px
+

@@ -93,10 +93,7 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
-    $scope.galleryView = true;
-    $rootScope.$on('prefsChanged', function() {
-      $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-    });
+
 
     //
     // Scope methods.
@@ -146,8 +143,8 @@ angular.module('kifi')
     }
 
     $scope.libraryKeepClicked = function (keep, event) {
-      var eventAction = event.currentTarget.getAttribute('click-action');
-      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction, keepView: $scope.galleryView ? 'gallery' : 'list' });
+      var eventAction = event.target.getAttribute('click-action');
+      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction });
     };
 
     $scope.callAddKeep = function () {
@@ -311,12 +308,5 @@ angular.module('kifi')
     });
 
     libraryService.noteLibraryViewed(library.id);
-
-    $timeout(function() {
-      libraryService.trackEvent('user_viewed_page', $scope.library, {
-        type: 'library',
-        keepView: $scope.galleryView ? 'gallery' : 'list'
-      });
-    });
   }
 ]);
