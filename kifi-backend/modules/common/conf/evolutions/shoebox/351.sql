@@ -7,7 +7,7 @@ CREATE TABLE proto_organization_membership (
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
-	proto_organization_id bigint(20) NOT NULL,
+	organization_id bigint(20) NOT NULL,
 	user_id bigint(20) NOT NULL,
 
 	PRIMARY KEY(id),
