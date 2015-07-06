@@ -10,7 +10,6 @@ import com.keepit.heimdal.{ HeimdalServiceClient, UserEventTypes, UserEvent, Hei
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
 import play.api.libs.json.Json
-import play.twirl.api.Html
 
 import scala.concurrent.{ ExecutionContext, Future }
 
