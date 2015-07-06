@@ -109,12 +109,6 @@ angular.module('kifi')
             return;
           }
 
-          if (!(profileChecklist instanceof Array)) {
-            profileChecklist = Object.keys(profileChecklist).map(function (p) {
-              return { name: p, complete: profileChecklist[p] };
-            });
-          }
-
           var allComplete = true;
           for (var i = 0; i < profileChecklist.length; i++) {
             if (!profileChecklist[i].complete) {
