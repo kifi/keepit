@@ -3,6 +3,8 @@
 # chkconfig: 345 99 05
 # description: Java deamon script
 #
+# {{ ansible_managed }}
+#
 # Set this to your Java installation
 [ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle || JAVA_HOME=/usr/local/java/jdk1.7.0_25
 
@@ -29,7 +31,7 @@ classpathLine=`grep "classpath=" $applDir/bin/$serviceNameLo | sed 's/.*"\(.*\)"
 #echo classpathLine=$classpathLine
 classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 #echo classpath=$classpath
-javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Ddb.shoebox.password='&7w2wtH8fCo=9Kx' -Dhttp.port=9000 -Xms2048M -Xmx5072m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
+javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Ddb.shoebox.password='&7w2wtH8fCo=9Kx' -Dhttp.port=9000 -Xms{{ service_jvm_Xms|default('2048M') }} -Xmx{{ service_jvm_Xmx|default('5072M') }} -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
 javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
 
