@@ -10,6 +10,7 @@ import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.model._
 import com.keepit.common.core._
+import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -32,8 +33,11 @@ class FakeRoverServiceClientImpl(
     setSummaryforUri(uriId, summary.copy(article = summary.article.copy(description = Some(description))))
   }
 
-  private val articlesByUrl = mutable.Map[String, Set[Article]]().withDefaultValue(Set.empty)
+  val articlesByUrl = mutable.Map[String, Set[Article]]().withDefaultValue(Set.empty)
   def setArticlesForUrl(url: String, articles: Set[Article]) = articlesByUrl += (url -> articles)
+
+  private val signatureByUrlAndKind = mutable.Map[(String, ArticleKind[_ <: Article]), (Signature, DateTime)]()
+  def setSignatureForUrl[A <: Article](url: String, signature: Signature)(implicit kind: ArticleKind[A]) = signatureByUrlAndKind += ((url, kind) -> (signature, currentDateTime))
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = Future.successful(None)
   def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean): Future[Unit] = Future.successful(())
@@ -51,7 +55,11 @@ class FakeRoverServiceClientImpl(
         article.asExpected[A]
     }
   }
-  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = Future.successful(None)
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = Future.successful {
+    signatureByUrlAndKind.get((url, kind)).collect {
+      case (signature, createdAt) if createdAt isAfter clock.now().minusSeconds(recency.toSeconds.toInt) => signature
+    }
+  }
 
   def getPornDetectorModel(): Future[Map[String, Float]] = Future.successful(Map.empty)
   def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
