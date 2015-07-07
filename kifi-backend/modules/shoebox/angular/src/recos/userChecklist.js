@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserChecklist', [
-  '$rootScope', '$window', '$location', '$analytics', 'installService', 'extensionLiaison', 'modalService', 'profileService',
-  function ($rootScope, $window, $location, $analytics, installService, extensionLiaison, modalService, profileService) {
+  '$rootScope', '$window', '$location', '$analytics', 'installService', 'extensionLiaison', 'modalService', 'profileService', 'net',
+  function ($rootScope, $window, $location, $analytics, installService, extensionLiaison, modalService, profileService, net) {
     return {
       restrict: 'A',
       replace: true,
@@ -94,7 +94,13 @@ angular.module('kifi')
           {
             name: 'install_mobile',
             title: 'Get the mobile app on iOS or Android',
-            subtitle: 'Text a link to your phone for Kifi on the go'
+            subtitle: 'Text a link to your phone for Kifi on the go',
+            action: function () {
+              modalService.open({
+                template: 'common/modal/sendMobileAppSMS.tpl.html',
+                scope: scope
+              });
+            }
           },
           {
             name: 'twitter_sync',
@@ -114,6 +120,21 @@ angular.module('kifi')
           }
           return true;
         }
+
+        scope.sms = { phoneNumber: '' };
+
+        scope.triggerSendSMS = function () {
+          net.sendMobileAppSMS({ phoneNumber: scope.sms.phoneNumber })
+            .catch(function () {
+              modalService.open({
+                template: 'common/modal/sendMobileAppSMSError.tpl.html'
+              });
+            });
+
+          // Clear the model so the modal doesn't show the phone number
+          // if the user opens it again later
+          scope.sms.phoneNumber = '';
+        };
 
         scope.$watchCollection(function () {
           return profileService.prefs && profileService.prefs.checklist;

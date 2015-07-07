@@ -35,7 +35,9 @@ angular.module('kifi')
         search: get(search, '/search'),
         searched: post(search, '/search/events/searched'),
         resultClicked: post(search, '/search/events/resultClicked')
-      }
+      },
+
+      sendMobileAppSMS: post(shoebox, '/sms')
     };
 
     function get(base, pathSpec, cacheSec) {
