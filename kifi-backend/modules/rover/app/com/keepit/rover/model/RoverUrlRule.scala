@@ -60,7 +60,7 @@ class RoverUrlRuleRepoImpl @Inject() (
   class RoverUrlRepoTable(tag: Tag) extends RepoTable[RoverUrlRule](db, tag, "rover_url_rule") {
 
     def pattern = column[String]("pattern", O.NotNull)
-    def proxy = column[Option[Id[RoverHttpProxy]]]("use_proxy", O.Nullable)
+    def proxy = column[Option[Id[RoverHttpProxy]]]("proxy_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, state, pattern, proxy) <> ((RoverUrlRule.apply _).tupled, RoverUrlRule.unapply _)
 
