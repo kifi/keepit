@@ -171,9 +171,9 @@ class RecommendationsCommander @Inject() (
     }.getOrElse(Future.successful(None))
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeTime: String): Future[Seq[KeepInfo]] = {
+  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeTime: Option[String], afterTime: Option[String]): Future[Seq[KeepInfo]] = {
     val keeps: Seq[Keep] = db.readWrite { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeTime)
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeTime, afterTime)
     }.foldRight((List[Keep](), Set[Id[NormalizedURI]]())) {
       case (keep, (keeps, seenUriIds)) =>
         if (seenUriIds(keep.uriId)) (keeps, seenUriIds) else (keep :: keeps, seenUriIds + keep.uriId)

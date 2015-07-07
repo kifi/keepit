@@ -122,8 +122,8 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def keepUpdates(count: Int, beforeTime: String) = UserAction.async { request =>
-    commander.updatesFromFollowedLibraries(request.userId, count, beforeTime)
+  def keepUpdates(count: Int, beforeTime: Option[String], afterTime: Option[String]) = UserAction.async { request =>
+    commander.updatesFromFollowedLibraries(request.userId, count, beforeTime, afterTime)
       .map(updatedKeeps => Ok(Json.obj("updatedKeeps" -> updatedKeeps)))
   }
 
