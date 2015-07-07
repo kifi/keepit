@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
-  'modalService', 'keepActionService', 'undoService',
+  'modalService', 'keepActionService', 'undoService', '$rootScope',
   function ($analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService) {
+      modalService, keepActionService, undoService, $rootScope) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -19,7 +19,7 @@ angular.module('kifi')
     var descCharsPerMaxWidthLine = 48;
     var maxSizedImageW = 0.4 * (cardInnerW - gutterW);
 
-    function calcImageSize(summary, title) {
+    function calcImageSize(summary, title, galleryView) { // jshint ignore:line
       var url = summary.imageUrl;
       if (url) {
         var imgNaturalW = summary.imageWidth;
@@ -64,6 +64,10 @@ angular.module('kifi')
               image = {url: url, w: imgW, h: imgH, penalty: penalty, clipBottom: true, maxDescLines: descLines};
             }
           }
+          if (!galleryView) {
+            image.w = image.h = null;
+            image.maxDescLines = 2;
+          }
           return image;
         }
       }
@@ -73,6 +77,7 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=kfKeepCard',
+        galleryView: '=',
         boxed: '@',
         currentPageOrigin: '@',
         keepCallback: '&',
@@ -90,7 +95,17 @@ angular.module('kifi')
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
-          scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle);
+          scope.defaultDescLines = 4;
+
+          var setImage = function(galleryView) {
+            scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
+            scope.defaultDescLines = galleryView ? 4 : 2;
+          };
+          setImage(scope.galleryView);
+          scope.$watch(
+            function() { return scope.galleryView; },
+            function(galleryView) { setImage(galleryView); }
+          );
 
           if (keep.user) {
             // don't repeat the user at the top of the keep card in the keeper list
@@ -135,6 +150,9 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
+          scope.onWidgetLibraryClicked(args.clickedLibrary);
+        });
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
           if (scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
@@ -179,7 +197,7 @@ angular.module('kifi')
             };
 
             (scope.keep.id ? // Recommended keeps have no keep.id.
-              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id).then(function (result) {
+              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id, scope.galleryView).then(function (result) {
                 if (result.successes.length > 0) {
                   return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
                 }
@@ -206,6 +224,10 @@ angular.module('kifi')
             //   });
             // });
           }
+        };
+
+        scope.editKeepNote = function (event, keep) {
+          $rootScope.$emit('editKeepNote', event, keep);
         };
 
         scope.trackTweet = function () {

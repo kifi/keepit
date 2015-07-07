@@ -42,13 +42,15 @@ angular.module('kifi')
       });
     }
 
-    function copyToLibrary(keepIds, libraryId) {
-      $analytics.eventTrack('user_clicked_page', {
+    function copyToLibrary(keepIds, libraryId, galleryView) {
+      var props = {
         // TODO(yiping): should we have a different action
         // for keeping to library?
         'action': 'keep',
         'path': $location.path()
-      });
+      };
+      if (galleryView !== undefined) { props.keepView = galleryView ? 'gallery' : 'list'; }
+      $analytics.eventTrack('user_clicked_page', props);
 
       var data = {
         to: libraryId,

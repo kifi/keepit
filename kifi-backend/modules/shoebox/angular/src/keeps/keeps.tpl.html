@@ -37,7 +37,7 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
+    <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled, 'compact': !galleryView, 'mine': (keep.user.id === me.id) }" ng-repeat="keep in keeps">
       <div class="kf-keep-checkbox-wrap">
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
@@ -50,10 +50,12 @@
         </menu>
       </div>
       <div class="kf-keep-top">
-        <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-        <div class="kf-keep-top-r" ng-if="::keep.user">
-          <a class="kf-keep-keeper-name" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
-          <div class="kf-keep-time">
+        <section class="kf-keep-top-l">
+          <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
+          <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
+        </section>
+        <section class="kf-keep-top-r">
+          <div class="kf-keep-time" ng-if="::keep.user">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
             <span ng-if="::!keep.createdAt">kept this</span>
             <span ng-if="::!library && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
@@ -65,13 +67,13 @@
               </a>
             </span>
           </div>
-        </div>
+        </section>
       </div>
       <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
       <div class="kf-keep-add-note" ng-if="::keep.user.id === me.id"><!-- wrapping button in div to reduce watch count on read-only libraries -->
         <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note (type # to add a tag)</button>
       </div>
-      <div kf-keep-card="keep" boxed current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
+      <div kf-keep-card="keep" boxed gallery-view="galleryView" current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
     </div>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
