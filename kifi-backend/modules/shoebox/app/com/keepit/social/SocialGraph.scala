@@ -1,11 +1,14 @@
 package com.keepit.social
 
+import com.google.inject.Binder
+import com.keepit.common.social.{ LinkedInSocialGraph, TwitterSocialGraph, FacebookSocialGraph }
+
 import scala.concurrent.Future
 import scala.util.Try
 
 import com.keepit.model.{ UserValueName, SocialUserInfo }
 
-import net.codingwell.scalaguice.ScalaModule
+import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 
 import play.api.libs.json.JsValue
 
@@ -26,4 +29,11 @@ trait SocialGraph {
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId]
 }
 
-trait SocialGraphModule extends ScalaModule
+trait SocialGraphModule extends ScalaModule {
+  def bindAllSocialGraphs(binder: Binder) = {
+    val socialGraphBinder = ScalaMultibinder.newSetBinder[SocialGraph](binder)
+    socialGraphBinder.addBinding.to[FacebookSocialGraph]
+    socialGraphBinder.addBinding.to[TwitterSocialGraph]
+    socialGraphBinder.addBinding.to[LinkedInSocialGraph]
+  }
+}
