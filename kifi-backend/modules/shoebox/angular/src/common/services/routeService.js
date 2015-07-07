@@ -69,8 +69,8 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
-      socialInvite: route('/invite'),
-      connectTwitter: route('/twitter/request'),
+      socialInvite: '/invite',
+      connectTwitter: '/twitter/request',
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
         return route('/user/friends/recommended', {offset: offset, limit: limit});
