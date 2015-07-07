@@ -93,7 +93,7 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
-    $scope.galleryView = true;
+    $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
     $rootScope.$on('prefsChanged', function() {
       $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
     });
