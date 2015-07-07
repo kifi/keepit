@@ -27,7 +27,7 @@ class SocialWanderingCommander @Inject() (
   private val consolidateOrg = new RequestConsolidator[Id[Organization], Option[SociallyRelatedEntitiesForOrg]](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def getSocialRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]] = consolidateUser(userId) { userId =>
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]] = consolidateUser(userId) { userId =>
     val vertexId = VertexId(UserReader)(userId.id)
     lock.withLockFuture {
       if (graphHasSourceVertex(vertexId)) {
@@ -42,7 +42,7 @@ class SocialWanderingCommander @Inject() (
     }
   }
 
-  def getSocialRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]] = consolidateOrg(orgId) { orgId =>
+  def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]] = consolidateOrg(orgId) { orgId =>
     val vertexId = VertexId(OrganizationReader)(orgId.id)
     lock.withLockFuture {
       if (graphHasSourceVertex(vertexId)) {
