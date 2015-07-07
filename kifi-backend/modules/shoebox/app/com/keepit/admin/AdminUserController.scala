@@ -263,7 +263,7 @@ class AdminUserController @Inject() (
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
-      (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+      (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
     val experiments = db.readOnlyReplica { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
