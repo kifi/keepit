@@ -32,7 +32,7 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
-  def getMemberIds(orgId: Id[Organization]): Seq[Id[User]]
+  def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
@@ -88,7 +88,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getMemberIds(orgId: Id[Organization]): Seq[Id[User]] = {
+  def getMemberIds(orgId: Id[Organization]): Set[Id[User]] = {
     db.readOnlyReplica { implicit session =>
       organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
     }

@@ -150,7 +150,7 @@ class OrganizationCommanderImpl @Inject() (
       }
     }
   }
-  private def applyNewBasePermissionsToMembers(memberships: Seq[OrganizationMembership], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
+  private def applyNewBasePermissionsToMembers(memberships: Set[OrganizationMembership], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
     val membershipsByRole = memberships.groupBy(_.role)
     for ((role, memberships) <- membershipsByRole) {
       val beingAdded = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)

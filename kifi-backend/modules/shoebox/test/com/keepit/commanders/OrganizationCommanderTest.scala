@@ -21,7 +21,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === org
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
-        memberships.length === 1
+        memberships.size === 1
         memberships.head.userId === Id[User](1)
         memberships.head.role === OrganizationRole.OWNER
       }
@@ -102,8 +102,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         try2 must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
 
         val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
-        allMembers.length === 3
-        allMembers.map(_.userId).sorted === Seq(Id[User](1), Id[User](2), Id[User](42))
+        allMembers.size === 3
+        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](42))
       }
     }
 
@@ -148,7 +148,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
         }
         deactivatedOrg.state === OrganizationStates.INACTIVE
-        memberships.length === 0
+        memberships.size === 0
       }
     }
   }

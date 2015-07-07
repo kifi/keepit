@@ -390,10 +390,6 @@ object Graph extends Service {
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getSociallyRelatedEntitiesForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForUser", Param("userId", userId))
     def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForOrg", Param("orgId", orgId))
-    //    def getSociallyRelatedUsersForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedUsers", Param("userId", userId))
-    //    def getSociallyRelatedFacebookAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedFacebookAccounts", Param("userId", userId))
-    //    def getSociallyRelatedLinkedInAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedLinkedInAccounts", Param("userId", userId))
-    //    def getSociallyRelatedEmailAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEmailAccounts", Param("userId", userId))
     def explainFeed() = ServiceRoute(POST, "/internal/graph/explainFeed")
   }
 }

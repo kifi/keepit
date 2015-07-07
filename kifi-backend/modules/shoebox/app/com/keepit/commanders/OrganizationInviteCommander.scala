@@ -32,9 +32,8 @@ trait OrganizationInviteCommander {
   def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
-  // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite]
-  def getInvitesByOrganizationId(orgId: Id[Organization]): Seq[OrganizationInvite]
+  def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
 }
 
 @Singleton
@@ -350,9 +349,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def getInvitesByOrganizationId(orgId: Id[Organization]): Seq[OrganizationInvite] = {
+  def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
-      organizationInviteRepo.getAllByOrganization(orgId)
+      organizationInviteRepo.getAllByOrganization(orgId).toSet
     }
   }
 }

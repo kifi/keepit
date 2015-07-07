@@ -62,8 +62,8 @@ object SociallyRelatedEntitiesForOrg {
 }
 
 case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntitiesForUser] {
-  override val version = 4
-  val namespace = "user_socially_related_entities" // does refactoring this require any other actions?
+  override val version = 1
+  val namespace = "user_socially_related_entities"
   def toKey(): String = id.id.toString
 }
 

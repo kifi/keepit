@@ -44,9 +44,9 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  def hideMemberRecommendation(organizationId: Id[Organization], irrelevantUserId: Id[User]): Unit = {
+  def hideOrgMemberRecommendation(organizationId: Id[Organization], irrelevantMemberId: Id[User]): Unit = {
     db.readWrite { implicit session =>
-      membershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, irrelevantUserId)
+      membershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, irrelevantMemberId)
     }
   }
 
@@ -132,7 +132,7 @@ class ABookRecommendationCommander @Inject() (
       invites <- fOrganizationInvites
     } yield {
       val invitedUserIds = invites.collect { case invite if invite.userId.nonEmpty => invite.userId.get }
-      val invitedEmailAddresses = invites.collect { case invite if invite.emailAddress.nonEmpty => invite.emailAddress.get }
+      val invitedEmailAddresses = invites.collect { case invite if invite.emailAddress.nonEmpty => invite.emailAddress.get }.toSeq
       val invitedEmailAccounts = db.readOnlyMaster { implicit session => emailAccountRepo.getByAddresses(invitedEmailAddresses: _*).values.map(_.id.get) }
       IrrelevantPeopleForOrg(
         organizationId,
