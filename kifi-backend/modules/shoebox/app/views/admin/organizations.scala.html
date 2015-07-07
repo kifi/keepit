@@ -14,13 +14,13 @@ candidatesInfos: Map[Id[Organization], Map[Id[User], OrganizationMembershipInfo]
         <th>Number of Membership Candidates</th>
         <th>Number of Libraries</th>
     </tr>
-    @for((orgId, acard) <- orgAnalyticsCards) {
+    @for(orgId <- orgAnalyticsCards.keys.toSeq.sorted) {
         <tr>
-            <td>@orgDisplay(acard.orgCard.orgId)</td>
-            <td>@acard.orgCard.name</td>
-            <td>@acard.orgCard.numMembers</td>
+            <td>@orgDisplay(orgId)</td>
+            <td>@orgAnalyticsCards(orgId).orgCard.name</td>
+            <td>@orgAnalyticsCards(orgId).orgCard.numMembers</td>
             <td>@candidatesInfos(orgId).size</td>
-            <td>@acard.orgCard.numLibraries</td>
+            <td>@orgAnalyticsCards(orgId).orgCard.numLibraries</td>
         </tr>
     }
 </table>

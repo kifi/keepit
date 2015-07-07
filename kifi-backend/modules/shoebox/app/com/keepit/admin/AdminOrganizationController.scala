@@ -26,8 +26,8 @@ class AdminOrganizationController @Inject() (
     val users = for (i <- 1 to 20) yield {
       userCommander.createUser(i.toString, "TestUser", addrOpt = None, state = UserStates.ACTIVE)
     }
-    val kifiCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Kifi"))))
-    val bcCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Brewster Corp"))))
+    val kifiCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Kifi"), description = Some("Knowledge Sharing"))))
+    val bcCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Brewster Corp"), description = Some("Taking over the world!"))))
     val kifi = kifiCreateResponse.right.get.newOrg
     organizationMembershipCandidateCommander.addCandidates(kifi.id.get, users.map(_.id.get).toSet)
     Ok("done")
@@ -45,4 +45,17 @@ class AdminOrganizationController @Inject() (
     Ok(html.admin.organization(orgView, candidateInfo))
   }
 
+  def setName(orgId: Id[Organization]) = AdminUserPage { request =>
+    val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)
+    log.info(s"[RPB] Unsafely setting organization $orgId to have name '$name'")
+    orgCommander.unsafeModifyOrganization(orgId, OrganizationModifications(name = name))
+    Ok
+  }
+
+  def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
+    val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
+    log.info(s"[RPB] Unsafely setting organization $orgId to have description '$description'")
+    orgCommander.unsafeModifyOrganization(orgId, OrganizationModifications(description = description))
+    Ok
+  }
 }

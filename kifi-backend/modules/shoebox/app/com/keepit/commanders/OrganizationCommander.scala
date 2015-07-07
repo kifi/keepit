@@ -23,6 +23,8 @@ trait OrganizationCommander {
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
+  def unsafeModifyOrganization(orgId: Id[Organization], modifications: OrganizationModifications): Unit
+
   def getAnalyticsView(orgId: Id[Organization]): AnalyticsOrganizationView
   def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], AnalyticsOrganizationCard]
 }
@@ -216,6 +218,18 @@ class OrganizationCommanderImpl @Inject() (
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
           Right(OrganizationTransferResponse(request, modifiedOrg))
+      }
+    }
+  }
+
+  // For use in the Admin Organization controller. Don't use it elsewhere.
+  def unsafeModifyOrganization(orgId: Id[Organization], modifications: OrganizationModifications): Unit = {
+    db.readWrite { implicit session =>
+      val org = orgRepo.get(orgId)
+      val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
+      if (modifications.basePermissions.nonEmpty) {
+        val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
+        applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
       }
     }
   }

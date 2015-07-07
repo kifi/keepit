@@ -3,15 +3,25 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Organization: " + orgAnalyticsView.orgView.name, stylesheets = List("admin_user")) {
-<button class="btn" onclick="configSearch()">Config Search</button>
-<br/>
-<table class="org-summary table table-bordered">
-    <tr><td>Name</td><td>@orgAnalyticsView.orgView.name</td></tr>
-    <tr><td>Description</td><td>@orgAnalyticsView.orgView.description</td></tr>
+<table class="org-summary table table-bordered" style="width:600px">
+    <tr><td>Name</td>
+        <td>
+        <form action="#" method="POST" class="form-inline update-name">
+            <input id="update-name-input" type="text" name="name" value="@orgAnalyticsView.orgView.name">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Description</td>
+        <td>
+        <form action="#" method="POST" class="form-inline update-description">
+            <input id="update-description-input" type="text" name="description" value="@orgAnalyticsView.orgView.description">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
     <tr><td>Owner</td><td>@orgAnalyticsView.orgView.ownerId</td></tr>
 </table>
 
-<table class="org-members table table-bordered">
+<table class="org-members table table-bordered" style="width:300px; float:left">
     <tr><th>Org Members</th></tr>
     @for((uid, info) <- orgAnalyticsView.analyticsExtras.membersInfo) {
         <tr><td>
@@ -20,7 +30,7 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
     }
 </table>
 
-<table class="org-candidates table table-bordered">
+<table class="org-candidates table table-bordered" style="width:300px; float:left">
     <tr><th>Org Candidates</th></tr>
     @for((uid, info) <- candidatesInfo) {
         <tr><td>
@@ -28,4 +38,26 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
         </td></tr>
     }
 </table>
+<script type="text/javascript">
+    $(function() {
+      $('.update-name').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgAnalyticsView.orgView.orgId)", $('.update-name').serialize())
+        .done(function(data) {
+          alert("Updated Organization Name");
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+      $('.update-description').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgAnalyticsView.orgView.orgId)", $('.update-description').serialize())
+        .done(function(data) {
+          alert("Updated Organization Description");
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+    });
+</script>
 }
