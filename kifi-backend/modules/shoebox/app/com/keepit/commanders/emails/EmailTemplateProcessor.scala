@@ -176,62 +176,66 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = {
-    tagRegex.replaceAllIn(text, { rMatch =>
-      val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
-      val tagArgs = tagWrapper.args
+    try {
+      tagRegex.replaceAllIn(text, { rMatch =>
+        val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
+        val tagArgs = tagWrapper.args
 
-      // only call if Id[User] is expected as the first argument
-      @inline def userId = jsValueAsUserId(tagArgs(0))
-      @inline def user = input.users(userId)
-      @inline def basicUser = BasicUser.fromUser(user)
+        // only call if Id[User] is expected as the first argument
+        @inline def userId = jsValueAsUserId(tagArgs(0))
+        @inline def user = input.users(userId)
+        @inline def basicUser = BasicUser.fromUser(user)
 
-      // only call if Id[Library] is expected as the first argument
-      @inline def libraryId = tagArgs(0).as[Id[Library]]
-      @inline def library: Library = input.libraries(libraryId)
+        // only call if Id[Library] is expected as the first argument
+        @inline def libraryId = tagArgs(0).as[Id[Library]]
+        @inline def library: Library = input.libraries(libraryId)
 
-      @inline def keepId = tagArgs(0).as[Id[Keep]]
-      @inline def keep: Keep = input.keeps(keepId)
+        @inline def keepId = tagArgs(0).as[Id[Keep]]
+        @inline def keep: Keep = input.keeps(keepId)
 
-      tagWrapper.label match {
-        case tags.firstName => basicUser.firstName
-        case tags.lastName => basicUser.lastName
-        case tags.fullName => basicUser.firstName + " " + basicUser.lastName
-        case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
-        case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
-        case tags.libraryUrl =>
-          config.applicationBaseUrl + libPathCommander.getPath(library)
-        case tags.libraryName => library.name
-        case tags.libraryOwnerFullName =>
-          val libOwner = input.users(library.ownerId)
-          libOwner.fullName
-        case tags.keepName => keep.title.getOrElse("this keep")
-        case tags.keepUrl => keep.url
-        case tags.unsubscribeUrl =>
-          getUnsubUrl(emailToSend.to match {
-            case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
-            case Right(address) => address
-          })
-        case tags.unsubscribeUserUrl =>
-          val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
-          getUnsubUrl(address)
-        case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
-        case tags.userExternalId => user.externalId.toString()
-        case tags.title => emailToSend.title
-        case tags.baseUrl => config.applicationBaseUrl
-        case tags.kcid => emailToSend.urlKcidParam
-        case tags.campaign => emailToSend.urlCampaignParam
-        case tags.channel => emailToSend.urlChannelParam
-        case tags.source => emailToSend.urlSourceParam
-        case tags.footerHtml => evalTemplate(views.html.email.layouts.footer().body, input, emailToSend, None)
-        case tags.trackingParam =>
-          EmailTrackingParam(
-            subAction = Json.fromJson[String](tagArgs(0)).asOpt,
-            variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
-            tip = emailTipOpt,
-            auxiliaryData = emailToSend.auxiliaryData
-          ).encode
-      }
-    })
+        tagWrapper.label match {
+          case tags.firstName => basicUser.firstName
+          case tags.lastName => basicUser.lastName
+          case tags.fullName => basicUser.firstName + " " + basicUser.lastName
+          case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
+          case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
+          case tags.libraryUrl =>
+            config.applicationBaseUrl + libPathCommander.getPath(library)
+          case tags.libraryName => library.name
+          case tags.libraryOwnerFullName =>
+            val libOwner = input.users(library.ownerId)
+            libOwner.fullName
+          case tags.keepName => keep.title.getOrElse("this keep")
+          case tags.keepUrl => keep.url
+          case tags.unsubscribeUrl =>
+            getUnsubUrl(emailToSend.to match {
+              case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
+              case Right(address) => address
+            })
+          case tags.unsubscribeUserUrl =>
+            val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
+            getUnsubUrl(address)
+          case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
+          case tags.userExternalId => user.externalId.toString()
+          case tags.title => emailToSend.title
+          case tags.baseUrl => config.applicationBaseUrl
+          case tags.kcid => emailToSend.urlKcidParam
+          case tags.campaign => emailToSend.urlCampaignParam
+          case tags.channel => emailToSend.urlChannelParam
+          case tags.source => emailToSend.urlSourceParam
+          case tags.footerHtml => evalTemplate(views.html.email.layouts.footer().body, input, emailToSend, None)
+          case tags.trackingParam =>
+            EmailTrackingParam(
+              subAction = Json.fromJson[String](tagArgs(0)).asOpt,
+              variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
+              tip = emailTipOpt,
+              auxiliaryData = emailToSend.auxiliaryData
+            ).encode
+        }
+      })
+    } catch {
+      case ex: IndexOutOfBoundsException => log.error(s"[EmailTemplateProcessor] Index OOB exception. Text: $text"); throw ex
+    }
   }
 
   // used to gather the types of objects we need to replace the tags with real values
