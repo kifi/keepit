@@ -112,7 +112,7 @@ class UserIpAddressEventLogger @Inject() (
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
-      userRepo.getUsers(userIds).values.toSeq.map { user =>
+      userRepo.getUsers(userIds).values.toList.map { user =>
         userStatisticsCommander.userStatistics(user, Map.empty)
       }
     }
