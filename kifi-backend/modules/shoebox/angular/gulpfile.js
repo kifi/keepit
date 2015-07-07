@@ -35,6 +35,7 @@ var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
+var sourcemaps = require('gulp-sourcemaps');
 
 require('shelljs/global');
 
@@ -154,8 +155,10 @@ var cacheUpdater = function (cacheName) {
  ********************************************************/
 
 var makeMinJs = lazypipe()
-  .pipe(uglify)
-  .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.init)
+    .pipe(uglify)
+    .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.write, './')
   .pipe(gulp.dest, outDir);
 
 var makeMinCss = lazypipe()
