@@ -11,26 +11,47 @@ angular.module('kifi')
       scope: {},
       templateUrl: 'recos/userChecklist.tpl.html',
       link: function (scope, element) {
+        function completeOrIncomplete(complete) {
+          return complete ? 'completed' : 'incomplete';
+        }
+
         var allChecklistItems = [
           {
             name: 'invite_friends',
             title: 'Invite 3 colleagues or friends to Kifi',
-            subtitle: 'Let them tap into your knowledge saved on Kifi',
+            subtitle: 'Let them tap into your knowledge on Kifi',
             action: function () {
               $window.open(routeService.socialInvite, '_blank');
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedInvite3Checklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
             }
           },
           {
             name: 'keep_pages',
-            title: 'Keep five pages',
-            subtitle: 'Keep from the site, browser add-on, or mobile'
+            title: 'Keep 5 pages',
+            subtitle: 'Keep from the site, browser add-on, or mobile',
+            action: function () {
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedKeep5Checklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
+            }
           },
           {
             name: 'follow_libs',
-            title: 'Follow five libraries',
+            title: 'Follow 5 libraries',
             subtitle: 'Browse libraries in your recommendations',
             action: function () {
               $window.open(routeService.followingLibraries, '_blank');
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedFollow5Checklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
             }
           },
           {
@@ -43,20 +64,25 @@ angular.module('kifi')
                   template: 'common/modal/installExtensionErrorModal.tpl.html'
                 });
               });
+
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedGetAddOnChecklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
             }
           },
           {
             name: 'take_tour',
             title: 'Take the Kifi browser addon tour',
             subtitle: 'A quick walk-thru of our most popular features',
-            action: function (linkClicked) {
+            action: function () {
               extensionLiaison.triggerGuide();
-              if (linkClicked) {
-                $analytics.eventTrack('user_clicked_page', {
-                  'action': 'startGuide',
-                  'path': $location.path()
-                });
-              }
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedTakeTourChecklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
             }
           },
           {
@@ -75,30 +101,44 @@ angular.module('kifi')
               }
 
               $rootScope.$emit('showGlobalModal', 'importBookmarks');
-              $analytics.eventTrack('user_viewed_page', {
-                'type': 'browserImport'
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedBrowserImportChecklist',
+                'subaction': completeOrIncomplete(this.complete)
               });
             }
           },
           {
-            name: 'import_thirdparty',
+            name: 'import_third_party',
             title: 'Bring in your links from 3rd parties',
             subtitle: 'Pocket, Delicious, Pinboard, Instapaper & more',
             action: function () {
               $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
-              $analytics.eventTrack('user_viewed_page', {
-                'type': '3rdPartyImport'
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clicked3rdPartyImportChecklist',
+                'subaction': completeOrIncomplete(this.complete)
               });
             }
           },
           {
             name: 'install_mobile',
-            title: 'Get the mobile app on iOS or Android',
+            title: 'Get the iOS or Android mobile app',
             subtitle: 'Text a link to your phone for Kifi on the go',
             action: function () {
               modalService.open({
                 template: 'common/modal/sendMobileAppSMS.tpl.html',
                 scope: scope
+              });
+
+              $analytics.eventTrack('user_viewed_page', {
+                'type': 'getMobileChecklist'
+              });
+
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedGetMobileChecklist',
+                'subaction': completeOrIncomplete(this.complete)
               });
             }
           },
@@ -108,6 +148,11 @@ angular.module('kifi')
             subtitle: 'Twitter meets deep search',
             action: function () {
               $window.open(routeService.connectTwitter,'_blank');
+              $analytics.eventTrack('user_clicked_page', {
+                'type': 'yourKeeps',
+                'action': 'clickedTwitterChecklist',
+                'subaction': completeOrIncomplete(this.complete)
+              });
             }
           }
         ];
