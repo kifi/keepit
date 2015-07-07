@@ -9,7 +9,7 @@ sealed trait UrlRuleFilter extends (String => Boolean) {
 }
 
 object UrlRuleFilter {
-  
+
   def apply = Empty
 
   case object Empty extends UrlRuleFilter {
@@ -43,5 +43,5 @@ object UrlRuleFilter {
     override def apply(url: String) = url.matches(pattern)
 
   }
-  
+
 }

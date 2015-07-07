@@ -69,6 +69,13 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
           articleImageRepo.get(saved.id.get).articleKind === EmbedlyArticle
           articleImageRepo.get(saved.id.get).uriId.id === 14
         }
+
+        // UrlRuleRepo
+        val urlRuleRepo = inject[RoverUrlRuleRepo]
+        db.readWrite { implicit session =>
+          val saved = urlRuleRepo.save(RoverUrlRule(pattern = "^.*$", proxy = None))
+          urlRuleRepo.get(saved.id.get).pattern === "^.*$"
+        }
       }
     }
   }

@@ -1,7 +1,7 @@
 package com.keepit.rover.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache._
 import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo

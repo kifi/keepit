@@ -6,11 +6,11 @@ import com.keepit.model.HttpProxy
 sealed trait UrlRuleAction {
 
   def &(that: UrlRuleAction): UrlRuleAction = UrlRuleAction.And(List(this, that))
-  
+
 }
 
 object UrlRuleAction {
-  
+
   def apply = Empty
 
   case object Empty extends UrlRuleAction {
