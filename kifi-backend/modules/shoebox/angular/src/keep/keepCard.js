@@ -20,7 +20,8 @@ angular.module('kifi')
     var maxSizedImageW = 0.4 * (cardInnerW - gutterW);
 
     function calcImageSize(summary, title, galleryView) { // jshint ignore:line
-      var url = summary.imageUrl;
+      var url = summary.imageUrl,
+          image;
       if (url) {
         var imgNaturalW = summary.imageWidth;
         var imgNaturalH = summary.imageHeight;
@@ -47,7 +48,6 @@ angular.module('kifi')
           // +-----------------------------------------------+
           var descWideLines = (summary.description || '').length / descCharsPerMaxWidthLine;
           var titleWideLines = title.length / titleCharsPerMaxWidthLine;
-          var image;
           for (var imgW = Math.min(imgNaturalW, maxSizedImageW), imgH = imgW / aspectRatio; imgW >= 60 && imgH >= 40; imgW -= 20, imgH = imgW / aspectRatio) {
             imgH = Math.min(360, imgH);
             var contentW = cardInnerW - gutterW - imgW;
