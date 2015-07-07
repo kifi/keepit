@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor, SafeFuture }
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
@@ -31,55 +33,56 @@ object RichIpAddress {
 }
 
 object UserIpAddressRules {
-  val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless").map(_.toLowerCase)
+  val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC").map(_.toLowerCase)
 }
 
-class UserIpAddressCommander @Inject() (
+case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
+
+class UserIpAddressActor @Inject() (userIpAddressEventLogger: UserIpAddressEventLogger, airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) {
+
+  def receive = {
+    case event: UserIpAddressEvent => userIpAddressEventLogger.logUser(event)
+    case m => throw new UnsupportedActorMessage(m)
+  }
+}
+
+class UserIpAddressEventLogger @Inject() (
     db: Database,
-    implicit val defaultContext: ExecutionContext,
-    clock: Clock,
-    httpClient: HttpClient,
-    userIpAddressRepo: UserIpAddressRepo,
     userRepo: UserRepo,
-    userStatisticsCommander: UserStatisticsCommander) extends Logging {
+    userIpAddressRepo: UserIpAddressRepo,
+    httpClient: HttpClient,
+    userStatisticsCommander: UserStatisticsCommander,
+    clock: Clock) extends Logging {
 
   private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
   private val clusterMemoryTime = Period.weeks(10) // How long back do we look and still consider a user to be part of a cluster
 
-  def simplifyUserAgent(userAgent: UserAgent): String = {
-    val agentType = userAgent.typeName.toUpperCase()
-    if (agentType.isEmpty) "NONE" else agentType
-  }
-
-  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true): Future[Unit] = SafeFuture {
-    if (ip.ip.toString.startsWith("10.")) {
-      throw new IllegalArgumentException("IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged")
+  def logUser(event: UserIpAddressEvent): Unit = {
+    if (event.ip.ip.toString.startsWith("10.")) {
+      throw new IllegalArgumentException(s"IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged. User ${event.userId}, ip ${event.ip}, agent ${event.userAgent}")
     }
     val now = clock.now()
-    val agentType = simplifyUserAgent(userAgent)
+    val agentType = simplifyUserAgent(event.userAgent)
     if (agentType == "NONE") {
-      log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + userAgent)
+      log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + event.userAgent)
     }
-    val model = UserIpAddress(userId = userId, ipAddress = ip, agentType = agentType)
+    val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
 
     val cluster = db.readWrite { implicit session =>
-      val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(ip, now.minus(clusterMemoryTime))
+      val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
       userIpAddressRepo.saveIfNew(model)
       currentCluster.toSet
     }
 
-    if (reportNewClusters && !cluster.contains(userId) && cluster.size >= 1) {
-      log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + userId)
-      notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = cluster + userId, newUserId = Some(userId))
+    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.size >= 1) {
+      log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
+      notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
   }
 
-  def logUserByRequest[T](request: UserRequest[T]): Unit = {
-    val userId = request.userId
-    val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val ip = IpAddress(raw_ip_string.split(",").head)
-    logUser(userId, ip, userAgent)
+  def simplifyUserAgent(userAgent: UserAgent): String = {
+    val agentType = userAgent.typeName.toUpperCase()
+    if (agentType.isEmpty) "NONE" else agentType
   }
 
   private def formatCluster(ip: RichIpAddress, users: Seq[UserStatistics], newUserId: Option[Id[User]]): BasicSlackMessage = {
@@ -105,7 +108,7 @@ class UserIpAddressCommander @Inject() (
     !ipInfo.org.exists(company => UserIpAddressRules.blacklistCompanies.contains(company.toLowerCase))
   }
 
-  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Future[Unit] = SafeFuture {
+  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
@@ -126,8 +129,32 @@ class UserIpAddressCommander @Inject() (
     }
   }
 
+  private def heuristicsSayThisClusterIsRelevant(ipInfo: Option[JsObject]): Boolean = {
+    val companyOpt = ipInfo flatMap { obj => (obj \ "org").asOpt[String] }
+    !companyOpt.exists(company => UserIpAddressRules.blacklistCompanies.contains(company.toLowerCase))
+  }
+
   def totalNumberOfLogs(): Int = {
     db.readOnlyReplica { implicit session => userIpAddressRepo.count }
+  }
+
+}
+
+class UserIpAddressCommander @Inject() (
+    db: Database,
+    userIpAddressRepo: UserIpAddressRepo,
+    actor: ActorInstance[UserIpAddressActor]) extends Logging {
+
+  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true): Unit = {
+    actor.ref ! UserIpAddressEvent(userId, ip, userAgent, reportNewClusters)
+  }
+
+  def logUserByRequest[T](request: UserRequest[T]): Unit = {
+    val userId = request.userId
+    val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
+    val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    val ip = IpAddress(raw_ip_string.split(",").head)
+    actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
   }
 
   def countByUser(userId: Id[User]): Int = {

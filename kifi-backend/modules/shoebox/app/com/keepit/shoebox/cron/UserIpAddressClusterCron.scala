@@ -1,7 +1,7 @@
 package com.keepit.shoebox.cron
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.UserIpAddressCommander
+import com.keepit.commanders.{ UserIpAddressEventLogger, UserIpAddressCommander }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -44,6 +44,7 @@ class UserIpAddressClusterCronPluginImpl @Inject() (
 
 class UserIpAddressClusterActor @Inject() (
     userIpAddressCommander: UserIpAddressCommander,
+    userIpAddressEventLogger: UserIpAddressEventLogger,
     implicit val defaultContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
@@ -54,7 +55,7 @@ class UserIpAddressClusterActor @Inject() (
       val clusterIps = userIpAddressCommander.findIpClustersSince(time = timeCutoff, limit = numClusters)
       clusterIps foreach { ip =>
         val usersAtCluster = userIpAddressCommander.getUsersByIpAddressSince(ip, time = timeCutoff)
-        userIpAddressCommander.notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = usersAtCluster.toSet)
+        userIpAddressEventLogger.notifySlackChannelAboutCluster(clusterIp = ip, clusterMembers = usersAtCluster.toSet)
       }
   }
 }
