@@ -713,64 +713,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
-    "unkeepMultiple" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val user = db.readWrite { implicit session =>
-          UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-        }
-        inject[FakeUserActionsHelper].setUser(user)
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-
-        val withCollection =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
-            Nil
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
-
-        val addPath = com.keepit.controllers.mobile.routes.MobileKeepsController.keepMultiple().url
-        addPath === "/m/1/keeps/add"
-
-        val addJson = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
-        )
-        val addRequest = FakeRequest("POST", addPath).withBody(addJson)
-        val addResult = inject[MobileKeepsController].keepMultiple()(addRequest)
-        status(addResult) must equalTo(OK);
-        contentType(addResult) must beSome("application/json");
-
-        db.readOnlyMaster { implicit session =>
-          val keeps = keepRepo.all
-          keeps.map(_.state.value) === Seq("active", "active", "active")
-          keeps.map(_.source) === Seq(KeepSource.mobile, KeepSource.mobile, KeepSource.mobile)
-        }
-
-        val path = com.keepit.controllers.mobile.routes.MobileKeepsController.unkeepMultiple().url
-        path === "/m/1/keeps/remove"
-
-        val json = JsArray(withCollection.take(2) map { k => Json.toJson(k) })
-        val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[MobileKeepsController].unkeepMultiple()(request)
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
-
-        val (ext1, ext2) = db.readOnlyMaster { implicit session =>
-          val keeps = keepRepo.all
-          keeps.map(_.state.value) === Seq("inactive", "inactive", "active")
-          (keeps(0).externalId, keeps(1).externalId)
-        }
-
-        val expected = Json.parse(s"""
-          {"removedKeeps":[
-            {"id":"$ext1","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-            {"id":"$ext2","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
-          ]}
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-      }
-    }
-
     "add Keep with Selected Tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>

@@ -43,7 +43,7 @@ class ChecklistCommander @Inject() (
           val all = Seq(
             "install_ext" -> hasExt,
             "install_mobile" -> hasMobile,
-            "invite_fiends" -> hasInvitedFriends,
+            "invite_friends" -> hasInvitedFriends,
             "follow_libs" -> followsSeveralLibs,
             "keep_pages" -> keptSeveralPages,
             "import_bookmarks" -> importedBrowserBookmarks,
