@@ -55,6 +55,7 @@
           <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
         </section>
         <section class="kf-keep-top-r">
+          <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
           <div class="kf-keep-time" ng-if="::keep.user">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
             <span ng-if="::!keep.createdAt">kept this</span>
