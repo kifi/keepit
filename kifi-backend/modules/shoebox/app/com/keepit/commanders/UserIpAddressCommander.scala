@@ -8,15 +8,21 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
+import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.{ DateTime, Period }
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+object UserIpAddressRules {
+  val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless").map(_.toLowerCase)
+}
+
 class UserIpAddressCommander @Inject() (
     db: Database,
     implicit val defaultContext: ExecutionContext,
+    clock: Clock,
     httpClient: HttpClient,
     userIpAddressRepo: UserIpAddressRepo,
     userRepo: UserRepo) extends Logging {
@@ -33,7 +39,7 @@ class UserIpAddressCommander @Inject() (
     if (ip.ip.toString.startsWith("10.")) {
       throw new IllegalArgumentException("IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged")
     }
-    val now = DateTime.now()
+    val now = clock.now()
     val agentType = simplifyUserAgent(userAgent)
     if (agentType == "NONE") {
       log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + userAgent)
@@ -60,7 +66,7 @@ class UserIpAddressCommander @Inject() (
     logUser(userId, ip, userAgent)
   }
 
-  def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], location: Option[String] = None, company: Option[String] = None): BasicSlackMessage = {
+  private def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], location: Option[String] = None, company: Option[String] = None): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       Some(s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"),
       location.map("I think the company is in " + _),
@@ -79,10 +85,9 @@ class UserIpAddressCommander @Inject() (
 
   def heuristicsSayThisClusterIsRelevant(ipInfo: Option[JsObject]): Boolean = {
     val companyOpt = ipInfo flatMap { obj => (obj \ "org").asOpt[String] }
-    val blacklistCompanies = Set.empty[String]
-
-    !companyOpt.exists(company => blacklistCompanies.contains(company))
+    !companyOpt.exists(company => UserIpAddressRules.blacklistCompanies.contains(company.toLowerCase))
   }
+
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Future[Unit] = SafeFuture {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
