@@ -4,13 +4,13 @@ import java.io.StringReader
 
 import com.keepit.common.db.{ State }
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.model.{LibraryVisibility, Restriction, IndexableUri, NormalizedURI}
+import com.keepit.model.{ LibraryVisibility, Restriction, IndexableUri, NormalizedURI }
 import com.keepit.rover.article.content.{ ArticleContentExtractor }
 import com.keepit.rover.article.Article
 import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
-import com.keepit.search.index.{Searcher, FieldDecoder, Indexable, DefaultAnalyzer}
+import com.keepit.search.index.{ Searcher, FieldDecoder, Indexable, DefaultAnalyzer }
 
 object ArticleFields {
   val titleField = "t"

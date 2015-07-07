@@ -56,7 +56,7 @@ class PeopleRecommendationController @Inject() (
 
   def getInviteRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
     val relevantNetworks = db.readOnlyReplica { implicit session =>
-      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
+      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO - SocialNetworks.LINKEDIN - SocialNetworks.TWITTER + SocialNetworks.EMAIL
     }
     val futureInviteRecommendations = {
       if (request.experiments.contains(ExperimentType.GRAPH_BASED_PEOPLE_TO_INVITE)) {
