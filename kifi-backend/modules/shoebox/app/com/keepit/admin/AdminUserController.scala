@@ -40,19 +40,6 @@ import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahe
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.abook.model.RichContact
 
-case class UserStatistics(
-  user: User,
-  connections: Int,
-  invitations: Int,
-  invitedBy: Seq[User],
-  socialUsers: Seq[SocialUserInfo],
-  privateKeeps: Int,
-  publicKeeps: Int,
-  experiments: Set[ExperimentType],
-  kifiInstallations: Seq[KifiInstallation],
-  librariesCreated: Int,
-  librariesFollowed: Int)
-
 case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
 case class UserStatisticsPage(
@@ -123,7 +110,8 @@ class AdminUserController @Inject() (
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
-    authCommander: AuthCommander) extends AdminUserActions {
+    authCommander: AuthCommander,
+    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
@@ -270,7 +258,7 @@ class AdminUserController @Inject() (
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
+      val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
       (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
@@ -329,33 +317,6 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
-    val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
-    val inviters = invites.map(_.senderUserId).flatten
-    userRepo.getAllUsers(inviters).values.toSeq
-  }
-
-  private def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
-    val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
-    val emails = emailRepo.getAllByUser(user.id.get)
-    val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
-    val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
-    val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
-
-    UserStatistics(user,
-      userConnectionRepo.getConnectionCount(user.id.get),
-      invitationRepo.countByUser(user.id.get),
-      invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
-      socialUserInfos.getOrElse(user.id.get, Seq()),
-      privateKeeps,
-      publicKeeps,
-      userExperimentRepo.getUserExperiments(user.id.get),
-      kifiInstallations,
-      librariesCreated,
-      librariesFollowed)
-  }
-
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType): Future[UserStatisticsPage] = {
     val PAGE_SIZE: Int = 30
 
@@ -378,7 +339,7 @@ class AdminUserController @Inject() (
       case (users, userCount) =>
         db.readOnlyReplica { implicit s =>
           val socialUserInfos = socialUserInfoRepo.getByUsers(users.map(_.id.get)).groupBy(_.userId.get)
-          (users.map(u => userStatistics(u, socialUserInfos)), userCount)
+          (users.map(u => userStatisticsCommander.userStatistics(u, socialUserInfos)), userCount)
         }
     }
 
@@ -449,7 +410,7 @@ class AdminUserController @Inject() (
         val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map { _.id }
         val users = db.readOnlyReplica { implicit s =>
           val socialUserInfos = socialUserInfoRepo.getByUsers(userIds).groupBy(_.userId.get)
-          userIds.map(userRepo.get).map(u => userStatistics(u, socialUserInfos))
+          userIds.map(userRepo.get).map(u => userStatisticsCommander.userStatistics(u, socialUserInfos))
         }
         val userThreadStats = (users.par.map { u =>
           val userId = u.user.id.get
