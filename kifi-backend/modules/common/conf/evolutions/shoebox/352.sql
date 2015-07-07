@@ -26,6 +26,6 @@ CREATE TABLE organization_email_invite_recommendation (
     UNIQUE INDEX organization_email_invite_recommendation_u_user_id_email_account_id (organization_id, email_account_id)
 );
 
-insert into evolutions(name, description) values('351.sql', 'add membership_recommendation, organization_email_invite_recommendation tables');
+insert into evolutions(name, description) values('352.sql', 'add membership_recommendation, organization_email_invite_recommendation tables');
 
 # --- !Downs
