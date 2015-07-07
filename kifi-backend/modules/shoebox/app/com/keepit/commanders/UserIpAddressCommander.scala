@@ -25,7 +25,8 @@ class UserIpAddressCommander @Inject() (
     clock: Clock,
     httpClient: HttpClient,
     userIpAddressRepo: UserIpAddressRepo,
-    userRepo: UserRepo) extends Logging {
+    userRepo: UserRepo,
+    userStatisticsCommander: UserStatisticsCommander) extends Logging {
 
   private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
   private val clusterMemoryTime = Period.weeks(10) // How long back do we look and still consider a user to be part of a cluster
@@ -66,17 +67,19 @@ class UserIpAddressCommander @Inject() (
     logUser(userId, ip, userAgent)
   }
 
-  private def formatCluster(ip: IpAddress, users: Seq[User], newUserId: Option[Id[User]], location: Option[String] = None, company: Option[String] = None): BasicSlackMessage = {
+  private def formatCluster(ip: IpAddress, users: Seq[UserStatistics], newUserId: Option[Id[User]], location: Option[String] = None, company: Option[String] = None): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       Some(s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"),
       location.map("I think the company is in " + _),
       company.map("I think the company is '" + _ + "'")
     ).flatten
 
-    val userDeclarations = users.map { u =>
-      val userDeclaration = s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>"
-      if (newUserId.contains(u.id.get)) {
-        "*" + userDeclaration + " <-- New Member!!!*"
+    val userDeclarations = users.map { stats =>
+      val user = stats.user
+      val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
+      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${user.createdAt}\t${stats.connections} connections\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.privateKeeps}/${stats.publicKeeps} pb/pv keeps\t"
+      if (newUserId.contains(user.id.get)) {
+        "*" + userDeclaration + " <-- New Member in Cluster!!!*"
       } else userDeclaration
     }
 
@@ -91,7 +94,10 @@ class UserIpAddressCommander @Inject() (
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Future[Unit] = SafeFuture {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
-      userRepo.getUsers(clusterMembers.toSeq).values.toSeq
+      val userIds = clusterMembers.toSeq
+      userRepo.getUsers(userIds).values.toSeq.map { user =>
+        userStatisticsCommander.userStatistics(user, Map.empty)
+      }
     }
     val ipInfo = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject]
     log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfo)
