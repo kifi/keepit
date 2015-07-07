@@ -121,7 +121,7 @@ class ABookRecommendationCommander @Inject() (
 
   def getIrrelevantPeopleForOrg(organizationId: Id[Organization]): Future[IrrelevantPeopleForOrg] = {
     val fMembers = shoebox.getMembersByOrganizationId(organizationId)
-    val fOrganizationInvites = shoebox.getInvitesByOrganizationId(organizationId)
+    val fOrganizationInviteEndpoints = shoebox.getInviteEndpointsByOrganizationId(organizationId)
     val (irrelevantUsers, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
       val irrelevantUsers = membershipRecommendationRepo.getIrrelevantRecommendations(organizationId)
       val irrelevantEmailAccounts = organizationEmailInviteRecommendationRepo.getIrrelevantRecommendations(organizationId)
@@ -129,10 +129,10 @@ class ABookRecommendationCommander @Inject() (
     }
     for {
       members <- fMembers
-      invites <- fOrganizationInvites
+      invites <- fOrganizationInviteEndpoints
     } yield {
-      val invitedUserIds = invites.collect { case invite if invite.userId.nonEmpty => invite.userId.get }
-      val invitedEmailAddresses = invites.collect { case invite if invite.emailAddress.nonEmpty => invite.emailAddress.get }.toSeq
+      val invitedUserIds = invites.collect { case Left(userId) => userId }
+      val invitedEmailAddresses = invites.collect { case Right(email) => email }.toSeq
       val invitedEmailAccounts = db.readOnlyMaster { implicit session => emailAccountRepo.getByAddresses(invitedEmailAddresses: _*).values.map(_.id.get) }
       IrrelevantPeopleForOrg(
         organizationId,

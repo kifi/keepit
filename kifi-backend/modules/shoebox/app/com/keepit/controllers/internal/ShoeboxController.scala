@@ -31,7 +31,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-import com.keepit.common.json.TupleFormat
+import com.keepit.common.json.{ EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -514,8 +514,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(memberIds))
   }
 
-  def getInvitesByOrganizationId(orgId: Id[Organization]) = Action { request =>
+  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = Action { request =>
+    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
+
     val invites = organizationInviteCommander.getInvitesByOrganizationId(orgId)
-    Ok(Json.toJson(invites))
+    val inviteEndpoints: Set[Either[Id[User], EmailAddress]] = invites.collect {
+      case invite if invite.userId.nonEmpty => Left(invite.userId.get)
+      case invite if invite.emailAddress.nonEmpty => Right(invite.emailAddress.get)
+    }
+    Ok(Json.toJson(inviteEndpoints))
   }
 }
