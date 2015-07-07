@@ -15,8 +15,6 @@ import play.api.libs.json.Json
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
-  def updateName(organizationId: Id[Organization], name: String): Organization = ???
-  def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
 }
