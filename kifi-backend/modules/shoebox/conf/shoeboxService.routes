@@ -83,8 +83,6 @@ GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitl
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist()
 
 
-POST    /sms                        @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
-
 GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
 
 ##########################################
@@ -512,6 +510,8 @@ POST    /site/user/pic              @com.keepit.controllers.website.UserControll
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
+POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
+
 
 ##########################################
 # Email-Link API
