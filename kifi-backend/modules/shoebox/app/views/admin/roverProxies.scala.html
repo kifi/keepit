@@ -1,0 +1,89 @@
+@import com.keepit.rover.model.HttpProxy
+@import com.keepit.common.controller.UserRequest
+@import com.keepit.rover.model.ProxyScheme
+@(proxies: Seq[HttpProxy])(implicit request: UserRequest[_])
+
+@views.html.admin.admin("Rover Proxies", stylesheets = List("admin_data_integrity")) {
+    <h3>Proxies</h3>
+
+    <div><span class="label">Note:</span> Changes take effect immediately (next page load) when you click <b>Save</b> below.</div>
+
+    <form class="proxies" action="@com.keepit.controllers.admin.routes.AdminRoverController.saveProxies" method="POST">
+        <table class="table table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Active</th>
+                    <th>Alias</th>
+                    <th>Host</th>
+                    <th>Port</th>
+                    <th>Scheme</th>
+                    <th>Username</th>
+                    <th>Password</th>
+            </thead>
+            @for(proxy <- proxies) {
+                <tr>
+                    @*<td><input type="checkbox" class="checkbox" name="active_@proxy.id.get" @if(proxy.isActive) {checked}>-->*@
+                    <td><input type="text" class="alias" name="alias_@proxy.id.get" value="@proxy.alias"></td>
+                    <td><input type="text" class="host" name="host_@proxy.id.get" value="@proxy.host"></td
+                    <td><input type="number" min=0 max=65535 class="port" name="port_@proxy.id.get" value="@proxy.port"></td>
+                    <td>
+                        <select name="scheme_@proxy.id.get">
+                            @for(scheme <- ProxyScheme.schemes) {
+                                <option name="@scheme" value="@scheme" @if(proxy.scheme == scheme) {selected="selected"}>@scheme
+                            }
+                        </select>
+                    </td>
+                    <td><input type="text" name="username_@proxy.id.get" value="@proxy.username.getOrElse("")"></td>
+                    <td><input type="text" name="password_@proxy.id.get" value="@proxy.password.getOrElse("")"></td>
+                </tr>
+            }
+            <tr data-new="true">
+                <td><input type="checkbox" class="checkbox" name="new_active"></td>
+                <td class="control-group"><input type="text" class="alias" name="new_alias"></td>
+                <td class="control-group"><input type="text" class="host" name="new_host"></td>
+                <td class="control-group"><input type="number" min=0 max=65535 class="port" name="new_port"></td>
+                <td>
+                    <select name="new_scheme">
+                        @for(scheme <- ProxyScheme.schemes.map(_.name)) {
+                            <option name="@scheme" value="@scheme">@scheme
+                        }
+                    </select>
+                <td><input type="text" name="new_username"></td>
+                <td><input type="text" name="new_password"></td>
+            </tr>
+        </table>
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+        <button type="reset" class="btn">Clear unsaved changes</button>
+    </form>
+}
+
+<script>
+  $(function main() {
+    $(".proxies")
+      .on("keydown keypress keyup mousedown mouseup blur", ".hostname, .port, .alias", updateRow)
+      .submit(function(e) {
+        if ($(this).find(".error").focus().select().length) {
+          e.preventDefault();
+        } else {
+          $(this).find("button[type=submit]").button("loading");
+        }
+      })
+      .find(".proxies").each(updateRow);
+
+
+    function updateRow() {
+      var $tr = $(this).closest("tr");
+      var $alias = $tr.find(".alias"), alias = $alias.val( ), $aliasGroup = $alias.closest(".control-group");
+      var $host = $tr.find(".hostname"), host = $host.val( ), $hostGroup = $host.closest(".control-group");
+      var $port = $tr.find(".port"), port = $port.val( ), $portGroup = $port.closest(".control-group");
+
+      if (alias || host || port) {
+
+        if (!alias) { $aliasGroup.addClass("error"); } else if ($aliasGroup.hasClass("error")) { $aliasGroup.removeClass("error"); }
+        if (!host) { $hostGroup.addClass("error"); } else if ($hostGroup.hasClass("error")) { $hostGroup.removeClass("error"); }
+        if (!port) { $portGroup.addClass("error"); } else if ($portGroup.hasClass("error")) { $portGroup.removeClass("error"); }
+      }
+      return
+    }
+  });
+</script>

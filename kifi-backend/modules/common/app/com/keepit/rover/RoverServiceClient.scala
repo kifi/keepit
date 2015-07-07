@@ -40,6 +40,8 @@ trait RoverServiceClient extends ServiceClient {
   def getPornDetectorModel(): Future[Map[String, Float]]
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
+
+  def getAllProxies(): Future[Seq[HttpProxy]]
 }
 
 class RoverServiceClientImpl(
@@ -217,6 +219,13 @@ class RoverServiceClientImpl(
       Json.fromJson[String](r.json).get
     }
   }
+
+  def getAllProxies(): Future[Seq[HttpProxy]] = {
+    call(Rover.internal.getAllProxies()).map { r =>
+      Json.fromJson[Seq[HttpProxy]](r.json).get
+    }
+  }
+
 }
 
 case class RoverCacheProvider @Inject() (

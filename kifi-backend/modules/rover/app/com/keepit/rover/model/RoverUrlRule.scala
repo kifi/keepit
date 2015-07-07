@@ -1,13 +1,12 @@
 package com.keepit.rover.model
 
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
-import com.keepit.common.db.{ ModelWithState, State, Id, States }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.rover.rule.{ UrlRuleAction, UrlRuleFilter }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

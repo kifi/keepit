@@ -9,7 +9,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{ Library, NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
-import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.model.{ HttpProxy, BasicImages, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.rule.RoverHttpProxyCommander
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
@@ -21,6 +22,7 @@ import scala.concurrent.{ ExecutionContext }
 class RoverController @Inject() (
     roverCommander: RoverCommander,
     articleCommander: ArticleCommander,
+    httpProxyCommander: RoverHttpProxyCommander,
     implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = Action.async { request =>
@@ -105,4 +107,10 @@ class RoverController @Inject() (
       Ok(json)
     }
   }
+
+  def getAllProxies = Action { request =>
+    val proxies = httpProxyCommander.all
+    Ok(Json.toJson(proxies))
+  }
+
 }

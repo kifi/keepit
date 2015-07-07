@@ -56,4 +56,6 @@ class FakeRoverServiceClientImpl(
   def getPornDetectorModel(): Future[Map[String, Float]] = Future.successful(Map.empty)
   def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
   def whitelist(words: String): Future[String] = Future.successful("")
+
+  def getAllProxies(): Future[Seq[HttpProxy]] = Future.successful(List())
 }

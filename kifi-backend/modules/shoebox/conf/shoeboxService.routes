@@ -833,6 +833,10 @@ GET     /admin/twitter                                     @com.keepit.controlle
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 
+#GET     /admin/rover/searchUrl                             @com.keepit.controllers.admin.AdminRoverController.findUrl()
+GET     /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.getAllProxies()
+POST    /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.saveProxies()
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
