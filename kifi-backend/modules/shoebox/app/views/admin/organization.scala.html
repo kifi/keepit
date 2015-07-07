@@ -1,0 +1,16 @@
+@(org: Organization,
+members: Seq[OrganizationMembership],
+candidateMembers: Seq[OrganizationMembershipCandidate]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Organization: " + org.name, stylesheets = List("admin_user")) {
+<button class="btn" onclick="configSearch()">Config Search</button>
+<br/>
+<table class="org-summary table table-bordered">
+    <tr>
+        <th>Name</th><td><a href="https://www.kifi.com/@org.handle.get.original.value).getOrElse('')">@org.name</a></td>
+        <th>Members</th><td><ul>@for(m <- members) { <li> @m.userId </li> }</ul></td>
+        <th>Candidate Members</th><td><ul>@for(m <- candidateMembers) { <li> @m.userId </li> }</ul></td>
+    </tr>
+</table>
+}

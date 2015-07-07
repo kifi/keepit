@@ -5,13 +5,14 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[OrganizationMembershipCandidateRepoImpl])
 trait OrganizationMembershipCandidateRepo extends Repo[OrganizationMembershipCandidate] {
   def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
   def getAllByOrgId(orgId: Id[Organization], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
+  def getByUserId(userId: Id[User], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
+  def getAllByUserId(userId: Id[User], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
   def deactivate(model: OrganizationMembershipCandidate)(implicit session: RWSession): Unit
 }
 
@@ -39,6 +40,13 @@ class OrganizationMembershipCandidateRepoImpl @Inject() (val db: DataBaseCompone
   }
   def getAllByOrgId(orgId: Id[Organization], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
     getByOrgId(orgId, limit = Limit(Int.MaxValue), offset = Offset(0), states = states)
+  }
+
+  def getByUserId(userId: Id[User], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
+    (for { row <- rows if row.userId === userId && row.state.inSet(states) } yield row).drop(offset.value).take(limit.value).list
+  }
+  def getAllByUserId(userId: Id[User], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
+    getByUserId(userId, limit = Limit(Int.MaxValue), offset = Offset(0), states = states)
   }
 
   def deactivate(model: OrganizationMembershipCandidate)(implicit session: RWSession): Unit = {
