@@ -11,26 +11,26 @@ angular.module('kifi')
       scope: {},
       templateUrl: 'recos/userChecklist.tpl.html',
       link: function (scope, element) {
-        var checklistItems = [
+        var allChecklistItems = [
           {
             name: 'invite_friends',
-            title: 'Invite three friends to Kifi',
-            subtitle: 'Blah subtitle',
+            title: 'Invite 3 colleagues or friends to Kifi',
+            subtitle: 'Let them tap into your knowledge saved on Kifi',
             action: function () {
-              $location.path('/invite');
+              $window.open('https://www.kifi.com/invite', '_blank');
             }
           },
           {
             name: 'keep_pages',
             title: 'Keep five pages',
-            subtitle: 'Blah subtitle'
+            subtitle: 'Keep from the site, browser add-on, or mobile'
           },
           {
             name: 'follow_libs',
             title: 'Follow five libraries',
-            subtitle: 'Blah subtitle',
+            subtitle: 'Browse libraries in your recommendations',
             action: function () {
-              $window.location.href = 'http://support.kifi.com/hc/en-us/articles/202657599-Following-Libraries';
+              $window.open('http://support.kifi.com/hc/en-us/articles/202657599-Following-Libraries', '_blank');
             }
           },
           {
@@ -38,13 +38,17 @@ angular.module('kifi')
             title: 'Get the Kifi browser add-on',
             subtitle: 'The most loved features are in the add-on',
             action: function () {
-              $location.path('/install');
+              installService.triggerInstall(function () {
+                modalService.open({
+                  template: 'common/modal/installExtensionErrorModal.tpl.html'
+                });
+              });
             }
           },
           {
             name: 'take_tour',
-            title: 'Take the tour',
-            subtitle: 'blah',
+            title: 'Take the Kifi browser addon tour',
+            subtitle: 'A quick walk-thru of our most popular features',
             action: function (linkClicked) {
               extensionLiaison.triggerGuide();
               if (linkClicked) {
@@ -57,8 +61,8 @@ angular.module('kifi')
           },
           {
             name: 'import_bookmarks',
-            title: 'Import your bookmarks',
-            subtitle: 'blah blah',
+            title: 'Import bookmarks from your browser',
+            subtitle: 'The easiest way to save your favorites to Kifi',
             action: function () {
               var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
@@ -78,63 +82,62 @@ angular.module('kifi')
           },
           {
             name: 'import_thirdparty',
-            title: 'Import third party libraries',
-            subtitle: 'blah blah',
+            title: 'Bring in your links from 3rd parties',
+            subtitle: 'Pocket, Delicious, Pinboard, Instapaper & more',
             action: function () {
-                $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
-                $analytics.eventTrack('user_viewed_page', {
-                  'type': '3rdPartyImport'
-                });
+              $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+              $analytics.eventTrack('user_viewed_page', {
+                'type': '3rdPartyImport'
+              });
             }
           },
           {
             name: 'install_mobile',
-            title: 'Get the mobile app',
-            subtitle: 'blah blah'
+            title: 'Get the mobile app on iOS or Android',
+            subtitle: 'Text a link to your phone for Kifi on the go'
           },
           {
             name: 'twitter_sync',
-            title: 'Connect your Twitter account',
-            subtitle: 'blah blah'
+            title: 'Sign up for the Twitter Beta',
+            subtitle: 'Twitter meets deep search',
+            action: function () {
+              $window.open('https://www.kifi.com/twitter/request','_blank');
+            }
           }
         ];
 
-        profileService.fetchPrefs().then(function (prefs) {
-          var profileChecklist = prefs.checklist;
-
-          // Don't show the checklist if there isn't
-          // any checklist data in the profile
-          if (!profileChecklist) {
-            element.remove();
-            return;
-          }
-
-          var allComplete = true;
-          for (var i = 0; i < profileChecklist.length; i++) {
-            if (!profileChecklist[i].complete) {
-              allComplete = false;
-              break;
+        function allItemsComplete(items) {
+          for (var i = 0; i < items.length; i++) {
+            if (!items[i].complete) {
+              return false;
             }
           }
+          return true;
+        }
 
-          // Don't show the checklist if all items are compelte
-          if (allComplete) {
+        scope.$watchCollection(function () {
+          return profileService.prefs && profileService.prefs.checklist;
+        }, function (enabledChecklistItems) {
+          if (!enabledChecklistItems) {
+            return;
+          }
+
+          // Don't show the checklist if all items are compelete
+          if (allItemsComplete(enabledChecklistItems)) {
             element.remove();
             return;
           }
 
-          scope.checklist = checklistItems.map(function (checklistItem) {
-            var profileItem = profileChecklist.filter(function (p) {
-              return p.name === checklistItem.name;
+          scope.checklist = enabledChecklistItems.map(function (enabledItem) {
+            var checklistItem = allChecklistItems.filter(function (item) {
+              return enabledItem.name === item.name;
             }).pop();
-            if (!profileItem) {
-              // If the profile checklist doesn't contain an item,
-              // remove it from the list of checklist items to display
+            if (!checklistItem) {
               return null;
             }
 
             // Copy the complete value to the list of checklist items to display
-            checklistItem.complete = profileItem.complete;
+            checklistItem.complete = enabledItem.complete;
 
             return checklistItem;
           }).filter(Boolean);
