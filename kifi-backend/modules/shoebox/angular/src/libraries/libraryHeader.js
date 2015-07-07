@@ -61,7 +61,7 @@ angular.module('kifi')
         scope.followBtnJustClicked = false;
         scope.collabsCanInvite = false;
         scope.quickKeep = {};
-        scope.admin = profileService.me.experiments.indexOf('admin') > -1;
+        scope.admin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
         //
         // Internal methods.
