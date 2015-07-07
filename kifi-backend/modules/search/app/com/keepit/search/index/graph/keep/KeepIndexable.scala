@@ -92,7 +92,7 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.userId))
-    doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
+    doc.add(buildIdValueField(libraryIdField, keep.libraryId.get))
     doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
