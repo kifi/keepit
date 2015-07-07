@@ -32,7 +32,7 @@ class ABookRecommendationCommander @Inject() (
     twitterInviteRecommendationRepo: TwitterInviteRecommendationRepo,
     userEmailInviteRecommendationRepo: UserEmailInviteRecommendationRepo,
     organizationEmailInviteRecommendationRepo: OrganizationEmailInviteRecommendationRepo,
-    membershipRecommendationRepo: MemberRecommendationRepo,
+    membershipRecommendationRepo: OrganizationMemberRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
     oldWTICommander: WTICommander,

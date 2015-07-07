@@ -19,16 +19,16 @@ case class OrganizationMemberRecommendation(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
-@ImplementedBy(classOf[MemberRecommendationRepoImpl])
-trait MemberRecommendationRepo extends Repo[OrganizationMemberRecommendation] {
+@ImplementedBy(classOf[OrganizationMemberRecommendationRepoImpl])
+trait OrganizationMemberRecommendationRepo extends Repo[OrganizationMemberRecommendation] {
   def recordIrrelevantRecommendation(organizationId: Id[Organization], memberId: Id[User])(implicit session: RWSession): Unit
   def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[Id[User]]
 }
 
 @Singleton
-class MemberRecommendationRepoImpl @Inject() (
+class OrganizationMemberRecommendationRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[OrganizationMemberRecommendation] with MemberRecommendationRepo {
+    val clock: Clock) extends DbRepo[OrganizationMemberRecommendation] with OrganizationMemberRecommendationRepo {
 
   import db.Driver.simple._
 

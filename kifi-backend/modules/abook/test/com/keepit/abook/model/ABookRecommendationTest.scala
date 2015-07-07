@@ -24,10 +24,10 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
     }
   }
 
-  "MemberRecommendationRepo" should {
+  "OrganizationMemberRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
-        val friendRecoRepo = inject[MemberRecommendationRepo]
+        val friendRecoRepo = inject[OrganizationMemberRecommendationRepo]
         db.readWrite { implicit session =>
           friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
           friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
