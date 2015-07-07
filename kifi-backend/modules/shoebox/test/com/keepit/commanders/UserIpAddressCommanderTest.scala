@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.concurrent.WatchableExecutionContext
+import play.api.libs.json._
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
@@ -80,6 +80,28 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
         val clusterIps = commander.findIpClustersSince(DateTime.now.minusHours(1), n)
         clusterIps === ips.reverse
       }
+    }
+
+    "parse ip info from http://ip-api.com/" in {
+      val json = Json.parse("""{
+                              "as": "AS7922 Comcast Cable Communications, Inc.",
+                              "city": "Palo Alto",
+                              "country": "United States",
+                              "countryCode": "US",
+                              "isp": "Comcast Cable",
+                              "lat": 37.4135,
+                              "lon": -122.1312,
+                              "org": "Comcast Cable",
+                              "query": "50.174.199.8",
+                              "region": "CA",
+                              "regionName": "California",
+                              "status": "success",
+                              "timezone": "America/Los_Angeles",
+                              "zip": "94306"
+                              }""")
+      val parsed = RichIpAddress(IpAddress("50.174.199.8"), json)
+      parsed === RichIpAddress(IpAddress("50.174.199.8"), Option("Comcast Cable"), Option("United States"), Option("California"), Option("Palo Alto"),
+        Option(37.4135d), Option(-122.1312d), Option("America/Los_Angeles"), Option("94306"))
     }
 
   }
