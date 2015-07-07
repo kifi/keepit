@@ -33,7 +33,7 @@ object RichIpAddress {
 }
 
 object UserIpAddressRules {
-  val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC").map(_.toLowerCase)
+  val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC", "San Francisco International Airport").map(_.toLowerCase)
 }
 
 case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
@@ -87,17 +87,17 @@ class UserIpAddressEventLogger @Inject() (
 
   private def formatCluster(ip: RichIpAddress, users: Seq[UserStatistics], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
-      s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>",
-      s"I think the company is in ${ip.region.getOrElse("")} ${ip.country.getOrElse("")} ",
-      s"I think the company is '${ip.org}'"
+      s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
+      s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
+      ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
     )
 
     val userDeclarations = users.map { stats =>
       val user = stats.user
       val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
-      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${user.createdAt}\t${stats.connections} connections\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.privateKeeps}/${stats.publicKeeps} pb/pv keeps\t"
+      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\t${stats.connections} connections\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.privateKeeps}/${stats.publicKeeps} pb/pv keeps\t"
       if (newUserId.contains(user.id.get)) {
-        "*" + userDeclaration + " <-- New Member in Cluster!!!*"
+        userDeclaration + "\t*<-- New Member in Cluster!!!*"
       } else userDeclaration
     }
 
