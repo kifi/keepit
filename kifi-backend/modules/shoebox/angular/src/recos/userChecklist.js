@@ -125,7 +125,7 @@ angular.module('kifi')
 
         scope.triggerSendSMS = function () {
           net.sendMobileAppSMS({ phoneNumber: scope.sms.phoneNumber })
-            .catch(function () {
+            ['catch'](function () {
               modalService.open({
                 template: 'common/modal/sendMobileAppSMSError.tpl.html'
               });
