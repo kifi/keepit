@@ -4,12 +4,13 @@ import java.io.StringReader
 
 import com.keepit.common.db.{ State }
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.model.{ IndexableUri, NormalizedURI }
+import com.keepit.model.{LibraryVisibility, Restriction, IndexableUri, NormalizedURI}
 import com.keepit.rover.article.content.{ ArticleContentExtractor }
 import com.keepit.rover.article.Article
+import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
-import com.keepit.search.index.{ FieldDecoder, Indexable, DefaultAnalyzer }
+import com.keepit.search.index.{Searcher, FieldDecoder, Indexable, DefaultAnalyzer}
 
 object ArticleFields {
   val titleField = "t"
@@ -26,6 +27,12 @@ object ArticleFields {
   val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+
+  object Safety {
+    val field = "safety"
+    val unsafe = "unsafe"
+  }
+
 }
 
 object ArticleIndexable {
@@ -46,9 +53,11 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
     val doc = super.buildDocument
     val articleContent = ArticleContentExtractor(articles)
 
-    uri.restriction.map { reason =>
+    if (uri.restriction.isDefined) {
       doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
+      doc.add(buildKeywordField(Safety.field, Safety.unsafe))
     }
+
     val titleLang = articleContent.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)

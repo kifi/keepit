@@ -8,7 +8,7 @@ public final class Visibility {
   public static final int NETWORK = 0x02;
   public static final int FOLLOWER = 0x04;
   public static final int OWNER = 0x08;
-  //  unused = 0x10
+  public static final int SAFE = 0x10
   public static final int HAS_SECONDARY_ID = 0x20;
   public static final int LIB_NAME_MATCH = 0x40;
 
