@@ -21,26 +21,28 @@ class AdminOrganizationController @Inject() (
     organizationMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander) extends AdminUserActions {
 
-  def populateGarbage() = AdminUserPage { implicit request =>
+  def populateDatabase() = AdminUserPage { implicit request =>
     val ryan = userCommander.createUser("Ryan", "Brewster", addrOpt = None, state = UserStates.ACTIVE)
-    val user2 = userCommander.createUser("Test", "User", addrOpt = None, state = UserStates.ACTIVE)
-    val createResponse1 = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Kifi"))))
-    val createResponse2 = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Brewster Corp"))))
-    val kifi = createResponse1.right.get.newOrg
-    organizationMembershipCandidateCommander.addCandidates(kifi.id.get, Set(user2.id.get))
-    log.info("made org: " + kifi)
-    log.info("made org: " + createResponse2.right.get.newOrg)
-    Ok(kifi.toString)
+    val users = for (i <- 1 to 20) yield {
+      userCommander.createUser(i.toString, "TestUser", addrOpt = None, state = UserStates.ACTIVE)
+    }
+    val kifiCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Kifi"))))
+    val bcCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Brewster Corp"))))
+    val kifi = kifiCreateResponse.right.get.newOrg
+    organizationMembershipCandidateCommander.addCandidates(kifi.id.get, users.map(_.id.get).toSet)
+    Ok("done")
   }
 
+  def organizationsView = AdminUserPage { implicit request =>
+    val orgIds = orgCommander.getAllOrganizationIds
+    val cards = orgCommander.getAnalyticsCards(orgIds)
+    val candidateInfos = organizationMembershipCandidateCommander.getCandidatesInfos(orgIds)
+    Ok(html.admin.organizations(cards, candidateInfos))
+  }
   def organizationViewById(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val (org, members, candidateMembers) = db.readOnlyMaster { implicit session =>
-      val org = orgRepo.get(orgId)
-      val members = orgMembershipRepo.getAllByOrgId(orgId)
-      val candidateMembers = orgMembershipCandidateRepo.getAllByOrgId(orgId)
-      (org, members, candidateMembers)
-    }
-    Ok(html.admin.organization(org, members, candidateMembers))
+    val orgView = orgCommander.getAnalyticsView(orgId)
+    val candidateInfo = organizationMembershipCandidateCommander.getCandidatesInfo(orgId)
+    Ok(html.admin.organization(orgView, candidateInfo))
   }
 
 }
