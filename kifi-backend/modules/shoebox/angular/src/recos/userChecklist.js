@@ -62,7 +62,7 @@ angular.module('kifi')
           {
             name: 'import_bookmarks',
             title: 'Import bookmarks from your browser',
-            subtitle: 'The easiest way to save your favorites to Kifi',
+            subtitle: 'The easiest way to add your favorites to Kifi',
             action: function () {
               var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
