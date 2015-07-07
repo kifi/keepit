@@ -71,7 +71,7 @@ angular.module('kifi')
           var lib = scope.library;
           lib.descriptionHtml = linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
-          lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
+          lib.isSystem = lib.kind === 'system_main' || lib.kind === 'system_secret';
           scope.collabsCanInvite = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
