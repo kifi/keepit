@@ -105,34 +105,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
   }
 
   "InviteController" should {
-    "send Twitter DM invite" in {
-      running(new ShoeboxApplication(modules: _*)) {
-        val (user1, email1, sui1, invite1, sui2, sui3) = setUp()
-        val inviteController = inject[InviteController]
 
-        // ensure path exists
-        val path = com.keepit.controllers.website.routes.InviteController.inviteV2().url
-        path === s"/site/user/invite"
-
-        inject[FakeUserActionsHelper].setUser(user1)
-        val fullSocialId = FullSocialId(SocialNetworks.TWITTER, Left(SocialId("7890")))
-        val request = FakeRequest().withBody(Json.obj("id" -> Json.toJson(fullSocialId)))
-        val result = inviteController.inviteV2()(request)
-
-        status(result) === OK
-        val json = contentAsJson(result)
-        (json \ "sent").as[Boolean] === true
-
-        val invites = db.readOnlyMaster { implicit ro =>
-          invitationRepo.getBySenderId(user1.id.get)
-        }
-        val invite = invites.filter(_.recipientSocialUserId.isDefined).head
-        invite.senderUserId === user1.id
-        invite.recipientSocialUserId.get === sui3.id.get
-        invite.state === InvitationStates.ACTIVE
-        invite.lastSentAt.isDefined === true
-      }
-    }
     "acceptInvite should be public endpoint" in {
       running(new ShoeboxApplication(modules: _*)) {
         val (user1, email1, sui1, invite1, _, _) = setUp()
