@@ -159,6 +159,8 @@ object Shoebox extends Service {
     def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
+    def getMembersByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getMembersByOrganizationId", Param("orgId", orgId))
+    def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getInviteEndpointsByOrganizationId", Param("orgId", orgId))
   }
 }
 
@@ -313,8 +315,8 @@ object ABook extends Service {
     def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideFriendRecommendation", Param("irrelevantUserId", irrelevantUserId))
     def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
     def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
-    def getIrrelevantPeople(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/getIrrelevantPeople")
     def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeopleForUser")
+    def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeopleForOrg")
   }
 }
 
@@ -381,12 +383,8 @@ object Graph extends Service {
     def uriWandering(userId: Id[User], steps: Int) = ServiceRoute(GET, "/internal/graph/uriWandering", Param("userId", userId), Param("steps", steps))
     def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
-    def getSociallyRelatedEntities(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntities", Param("userId", userId))
     def getSociallyRelatedEntitiesForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForUser", Param("userId", userId))
-    //    def getSociallyRelatedUsersForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedUsers", Param("userId", userId))
-    //    def getSociallyRelatedFacebookAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedFacebookAccounts", Param("userId", userId))
-    //    def getSociallyRelatedLinkedInAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedLinkedInAccounts", Param("userId", userId))
-    //    def getSociallyRelatedEmailAccountsForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEmailAccounts", Param("userId", userId))
+    def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForOrg", Param("orgId", orgId))
     def explainFeed() = ServiceRoute(POST, "/internal/graph/explainFeed")
   }
 }

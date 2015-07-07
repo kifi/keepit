@@ -7,7 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.ImageSize
 import com.keepit.common.util.Paginator
-import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
+import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntitiesForUser }
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -286,7 +286,7 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         (owner, viewer, user1, user2, user3, user4, user5, user6, user7)
       }
 
-      val relationship = SociallyRelatedEntities(
+      val relationship = SociallyRelatedEntitiesForUser(
         RelatedEntities[User, User](owner.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
         RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty),
         RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty),

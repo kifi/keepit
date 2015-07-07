@@ -199,8 +199,8 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val allInvitations = db.readOnlyMaster { implicit s =>
             inject[OrganizationInviteRepo].getAllByOrganization(org.id.get)
           }
-          allInvitations.length === 1
-          val onlyInvitation = allInvitations(0)
+          allInvitations.size === 1
+          val onlyInvitation = allInvitations.head
           val token = onlyInvitation.authToken
 
           val link = (Json.parse(contentAsString(result)) \ "link").as[String]

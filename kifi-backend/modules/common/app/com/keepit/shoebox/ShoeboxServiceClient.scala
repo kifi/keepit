@@ -38,6 +38,7 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.core._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.shoebox.model.IngestableUserIpAddress
+import com.keepit.common.json.EitherFormat
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -123,6 +124,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]]
+  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -761,5 +764,14 @@ class ShoeboxServiceClientImpl @Inject() (
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
     val payload = Json.obj("domainNames" -> domainNames)
     call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
+  }
+
+  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]] = {
+    call(Shoebox.internal.getMembersByOrganizationId(orgId)).map(_.json.as[Set[Id[User]]])
+  }
+
+  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]] = {
+    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
+    call(Shoebox.internal.getInviteEndpointsByOrganizationId(orgId)).map(_.json.as[Set[Either[Id[User], EmailAddress]]])
   }
 }
