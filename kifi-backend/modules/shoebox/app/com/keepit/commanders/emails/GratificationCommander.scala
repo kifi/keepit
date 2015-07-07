@@ -66,7 +66,6 @@ class GratificationCommander @Inject() (
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
       fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
-
   }
 
   private def augmentData(gratData: GratificationData): GratificationData = {
