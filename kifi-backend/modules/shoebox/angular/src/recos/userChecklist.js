@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserChecklist', [
-  '$rootScope', '$window', '$location', '$analytics', 'installService', 'extensionLiaison', 'modalService', 'profileService', 'net',
-  function ($rootScope, $window, $location, $analytics, installService, extensionLiaison, modalService, profileService, net) {
+  '$rootScope', '$window', '$location', '$analytics', 'installService', 'extensionLiaison', 'modalService', 'profileService', 'net', 'routeService',
+  function ($rootScope, $window, $location, $analytics, installService, extensionLiaison, modalService, profileService, net, routeService) {
     return {
       restrict: 'A',
       replace: true,
@@ -17,7 +17,7 @@ angular.module('kifi')
             title: 'Invite 3 colleagues or friends to Kifi',
             subtitle: 'Let them tap into your knowledge saved on Kifi',
             action: function () {
-              $window.open('https://www.kifi.com/invite', '_blank');
+              $window.open(routeService.socialInvite, '_blank');
             }
           },
           {
@@ -30,7 +30,7 @@ angular.module('kifi')
             title: 'Follow five libraries',
             subtitle: 'Browse libraries in your recommendations',
             action: function () {
-              $window.open('http://support.kifi.com/hc/en-us/articles/202657599-Following-Libraries', '_blank');
+              $window.open(routeService.followingLibraries, '_blank');
             }
           },
           {
@@ -107,7 +107,7 @@ angular.module('kifi')
             title: 'Sign up for the Twitter Beta',
             subtitle: 'Twitter meets deep search',
             action: function () {
-              $window.open('https://www.kifi.com/twitter/request','_blank');
+              $window.open(routeService.connectTwitter,'_blank');
             }
           }
         ];
