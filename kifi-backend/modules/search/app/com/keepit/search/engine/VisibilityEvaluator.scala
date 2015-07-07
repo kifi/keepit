@@ -1,6 +1,8 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.NumericDocValues
@@ -30,7 +32,12 @@ trait VisibilityEvaluator { self: DebugOption =>
 
   lazy val orgIds = LongArraySet.fromSet(monitoredAwait.result(orgIdsFuture, 5 seconds, s"getting org ids"))
 
-  protected def getKeepVisibilityEvaluator(userIdDocValues: NumericDocValues, orgIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): KeepVisibilityEvaluator = {
+  protected def getKeepVisibilityEvaluator(reader: WrappedSubReader): KeepVisibilityEvaluator = {
+
+    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
+    val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
+
     new KeepVisibilityEvaluator(
       userId,
       myFriendIds,
@@ -45,7 +52,10 @@ trait VisibilityEvaluator { self: DebugOption =>
       visibilityDocValues)
   }
 
-  protected def getLibraryVisibilityEvaluator(ownerIdDocValues: NumericDocValues, orgIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): LibraryVisibilityEvaluator = {
+  protected def getLibraryVisibilityEvaluator(reader: WrappedSubReader): LibraryVisibilityEvaluator = {
+    val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
+    val ownerIdDocValues = reader.getNumericDocValues(LibraryFields.ownerIdField)
+    val orgIdDocValues = reader.getNumericDocValues(LibraryFields.orgIdField)
     new LibraryVisibilityEvaluator(
       myOwnLibraryIds,
       memberLibraryIds,
@@ -82,7 +92,7 @@ final class KeepVisibilityEvaluator(
     trustedLibraryIds: LongArraySet,
     authorizedLibraryIds: LongArraySet,
     orgIds: LongArraySet,
-    userIdDocValues: NumericDocValues,
+    val userIdDocValues: NumericDocValues,
     orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 

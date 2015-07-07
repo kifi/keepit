@@ -48,10 +48,7 @@ class UriFromKeepsScoreVectorSource(
     if (pq.size <= 0) return // no scorer
 
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, orgIdDocValues, visibilityDocValues)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
     val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
 

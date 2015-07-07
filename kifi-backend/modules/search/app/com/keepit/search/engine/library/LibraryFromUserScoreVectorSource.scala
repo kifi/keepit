@@ -74,10 +74,7 @@ class LibraryFromUserScoreVectorSource(
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
       val idFilter = filter.idFilter
 
-      val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-      val ownerIdDocValues = reader.getNumericDocValues(LibraryFields.ownerIdField)
-      val orgIdDocValues = reader.getNumericDocValues(LibraryFields.orgIdField)
-      val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, orgIdDocValues, visibilityDocValues)
+      val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(reader)
 
       val idMapper = reader.getIdMapper
 
