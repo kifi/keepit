@@ -34,7 +34,7 @@ class AdminRoverController @Inject() (
       val idMap = proxies.map(proxy => (proxy.id.get.id, proxy)).toMap
       Future.sequence(
         for {
-          key <- body.keys.filter(_.startsWith("active_")).map(_.substring(7))
+          key <- body.keys.filter(_.startsWith("alias_")).map(_.substring(6))
           id = key.toLong
           oldProxy = idMap.get(id).get
           newProxy = oldProxy.copy(
@@ -83,7 +83,7 @@ class AdminRoverController @Inject() (
       val idMap = urlRules.map(urlRule => (urlRule.id.get.id, urlRule)).toMap
       Future.sequence(
         for {
-          key <- body.keys.filter(_.startsWith("active_")).map(_.substring(7))
+          key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))
           id = key.toLong
           oldUrlRule = idMap.get(id).get
           newUrlRule = oldUrlRule.copy(

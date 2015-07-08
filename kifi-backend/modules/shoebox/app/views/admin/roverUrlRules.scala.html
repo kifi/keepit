@@ -26,7 +26,7 @@
                         <select name="proxy_@urlRule.id.get">
                             <option @if(urlRule.proxy.isEmpty) {selected="selected"} value="">Do not route to proxy</option>
                             @for(proxy <- proxies) {
-                                <option name="@proxy.id.get.id" value="@proxy.id.get.id" @if(urlRule.proxy == proxy.id) {selected="selected"}>Route to @proxy.toSelect</option>
+                                <option name="@proxy.id.get.id" value="@proxy.id.get.id" @if(urlRule.proxy == proxy.id) {selected="selected"}>Route to '@proxy.alias'</option>
                             }
                         </select>
                     </td>
@@ -55,7 +55,7 @@
                     <select name="new_proxy">
                         <option value="">Do not route to proxy</option>
                         @for(proxy <- proxies) {
-                            <option name="@proxy.id.get.id" value="@proxy.id.get.id">Route to @proxy.toSelect</option>
+                            <option name="@proxy.id.get.id" value="@proxy.id.get.id">Route to '@proxy.alias'</option>
                         }
                     </select>
             </tr>
