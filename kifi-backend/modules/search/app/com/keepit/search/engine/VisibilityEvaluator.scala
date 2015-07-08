@@ -161,7 +161,7 @@ final class LibraryVisibilityEvaluator(
         Visibility.MEMBER // a library I am a member of
       }
     } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
-      Visibility.NETWORK
+      Visibility.MEMBER
     } else {
       if (visibilityDocValues.get(docId) == published) {
         val ownerId = ownerIdDocValues.get(docId)
