@@ -9,7 +9,7 @@ import com.keepit.rover.article.content.{ ArticleContentExtractor }
 import com.keepit.rover.article.Article
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
-import com.keepit.search.index.{Searcher, FieldDecoder, Indexable, DefaultAnalyzer}
+import com.keepit.search.index.{ Searcher, FieldDecoder, Indexable, DefaultAnalyzer }
 
 object ArticleFields {
   val titleField = "t"
