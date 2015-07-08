@@ -19,3 +19,5 @@ POST    /internal/rover/pornDetector/whitelist        @com.keepit.rover.controll
 
 GET     /internal/rover/getAllProxies           @com.keepit.rover.controllers.internal.RoverController.getAllProxies
 POST    /internal/rover/saveProxy               @com.keepit.rover.controllers.internal.RoverController.saveProxy
+GET     /internal/rover/getAllUrlRules           @com.keepit.rover.controllers.internal.RoverController.getAllUrlRules
+POST    /internal/rover/saveUrlRule               @com.keepit.rover.controllers.internal.RoverController.saveUrlRule

@@ -17,6 +17,20 @@ case class HttpProxy(
 
   def isActive = state == HttpProxyStates.ACTIVE
 
+  def authenticationStr = username.map(
+    _ + password.map(":" + _).getOrElse("") + "@"
+  ).getOrElse("")
+
+  def toSelect =
+    s"""
+       |$alias
+       | (
+       |${ProxyScheme.toName(scheme)}://
+       |$authenticationStr
+       |$host:$port
+       |)
+     """.stripMargin.replaceAll("\n", "")
+
 }
 
 object HttpProxyStates extends States[HttpProxy]

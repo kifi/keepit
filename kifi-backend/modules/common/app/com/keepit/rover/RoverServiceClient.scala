@@ -43,6 +43,9 @@ trait RoverServiceClient extends ServiceClient {
 
   def getAllProxies(): Future[Seq[HttpProxy]]
   def saveProxy(proxy: HttpProxy): Future[HttpProxy]
+
+  def getAllUrlRules(): Future[Seq[UrlRule]]
+  def saveUrlRule(proxy: UrlRule): Future[UrlRule]
 }
 
 class RoverServiceClientImpl(
@@ -231,6 +234,19 @@ class RoverServiceClientImpl(
     val payload = Json.toJson(proxy)
     call(Rover.internal.saveProxy(), payload).map { r =>
       Json.fromJson[HttpProxy](r.json).get
+    }
+  }
+
+  def getAllUrlRules(): Future[Seq[UrlRule]] = {
+    call(Rover.internal.getAllUrlRules()).map { r =>
+      Json.fromJson[Seq[UrlRule]](r.json).get
+    }
+  }
+
+  def saveUrlRule(urlRule: UrlRule): Future[UrlRule] = {
+    val payload = Json.toJson(urlRule)
+    call(Rover.internal.saveUrlRule(), payload).map { r =>
+      Json.fromJson[UrlRule](r.json).get
     }
   }
 

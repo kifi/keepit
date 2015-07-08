@@ -422,6 +422,8 @@ object Rover extends Service {
 
     def getAllProxies() = ServiceRoute(GET, s"/internal/rover/getAllProxies")
     def saveProxy() = ServiceRoute(POST, s"/internal/rover/saveProxy")
+    def getAllUrlRules() = ServiceRoute(GET, s"/internal/rover/getAllUrlRules")
+    def saveUrlRule() = ServiceRoute(POST, s"/internal/rover/saveUrlRule")
   }
 }
 
