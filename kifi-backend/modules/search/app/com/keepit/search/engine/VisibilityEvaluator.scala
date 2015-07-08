@@ -2,7 +2,7 @@ package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine.query.QueryUtil
-import com.keepit.search.index.{ article, WrappedSubReader }
+import com.keepit.search.index.{ WrappedSubReader }
 import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
@@ -127,7 +127,7 @@ final class KeepVisibilityEvaluator(
         } else if (restrictedUserIds.findIndex(keeperId) >= 0) {
           Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
         } else {
-          Visibility.RESTRICTED // currently not searching published keeps by others
+          Visibility.OTHERS // another published keep
         }
       } else {
         Visibility.RESTRICTED
