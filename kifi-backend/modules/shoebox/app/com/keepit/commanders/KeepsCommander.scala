@@ -332,7 +332,8 @@ class KeepsCommander @Inject() (
           finalizeUnkeeping(keeps, userId)
 
           // Inactivate tags, update tag
-          (keepToCollectionRepo.getCollectionsForKeeps(keeps) zip keeps).flatMap {
+          val phantomActiveKeeps = keeps.map(_.copy(state = KeepStates.ACTIVE))
+          (keepToCollectionRepo.getCollectionsForKeeps(phantomActiveKeeps) zip keeps).flatMap {
             case (colls, keep) =>
               log.info(s"[unkeepManyFromLibrary] Removing tags from ${keep.id.get}: ${colls.mkString(",")}")
               colls.foreach { collId => keepToCollectionRepo.remove(keep.id.get, collId) }
