@@ -511,6 +511,19 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
+GET     /site/teams/:id                          @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
+GET     /site/user/:id/teams                     @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
+POST    /site/teams/create                       @com.keepit.controllers.website.OrganizationController.createOrganization()
+POST    /site/teams/:id/modify                   @com.keepit.controllers.website.OrganizationController.modifyOrganization(id: PublicId[Organization])
+DELETE  /site/teams/:id/delete                   @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
+GET     /site/teams/:id/members                  @com.keepit.controllers.website.OrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
+POST    /site/teams/:id/members/invite           @com.keepit.controllers.website.OrganizationInviteController.inviteUsers(id: PublicId[Organization])
+POST    /site/teams/:id/members/invites/accept   @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
+POST    /site/teams/:id/members/invites/decline  @com.keepit.controllers.website.OrganizationInviteController.declineInvitation(id: PublicId[Organization])
+POST    /site/teams/:id/members/invites/link     @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
+POST    /site/teams/:id/members/modify           @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
+POST    /site/teams/:id/members/remove           @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
+
 
 ##########################################
 # Email-Link API
