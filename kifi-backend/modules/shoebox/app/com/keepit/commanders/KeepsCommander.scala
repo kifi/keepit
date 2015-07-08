@@ -316,7 +316,7 @@ class KeepsCommander @Inject() (
           val (keepsE, invalidKeepIdsE) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
               case Some(k) =>
-                Left(k.copy(state = KeepStates.INACTIVE))
+                Left(k)
               case None =>
                 Right(kId)
             }
@@ -326,19 +326,23 @@ class KeepsCommander @Inject() (
           val invalidKeepIds = invalidKeepIdsE.map(_.right.get)
 
           // Save keeps as INACTIVE
-          keeps.map(keepRepo.save)
+          val inactivatedKeeps = keeps.map { k =>
+            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None))
+          }
           finalizeUnkeeping(keeps, userId)
 
           // Inactivate tags, update tag
-          (keepToCollectionRepo.getCollectionsForKeeps(keeps) zip keeps).flatMap {
+          val phantomActiveKeeps = keeps.map(_.copy(state = KeepStates.ACTIVE))
+          (keepToCollectionRepo.getCollectionsForKeeps(phantomActiveKeeps) zip keeps).flatMap {
             case (colls, keep) =>
+              log.info(s"[unkeepManyFromLibrary] Removing tags from ${keep.id.get}: ${colls.mkString(",")}")
               colls.foreach { collId => keepToCollectionRepo.remove(keep.id.get, collId) }
               colls
-          }.map { coll =>
+          }.foreach { coll =>
             collectionRepo.collectionChanged(coll, inactivateIfEmpty = true)
           }
 
-          (keeps, invalidKeepIds)
+          (inactivatedKeeps, invalidKeepIds)
         }
 
         Right((keeps map KeepInfo.fromKeep, invalidKeepIds))
