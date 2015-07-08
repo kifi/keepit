@@ -160,7 +160,7 @@ object LibrarySearch extends Logging {
       val visibility = hit.visibility
       val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
         myHits
-      } else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+      } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
         networkHits
       } else {
         othersHits

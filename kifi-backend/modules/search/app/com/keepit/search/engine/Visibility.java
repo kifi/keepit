@@ -6,7 +6,7 @@ public final class Visibility {
 
   public static final int OTHERS = 0x01;
   public static final int NETWORK = 0x02;
-  public static final int FOLLOWER = 0x04;
+  public static final int MEMBER = 0x04;
   public static final int OWNER = 0x08;
   public static final int SAFE = 0x10;
   public static final int HAS_SECONDARY_ID = 0x20;
@@ -14,14 +14,14 @@ public final class Visibility {
 
   public static String name(int visibility) {
     if ((visibility & Visibility.OWNER) != 0) return "owner";
-    if ((visibility & Visibility.FOLLOWER) != 0) return "follower";
+    if ((visibility & Visibility.MEMBER) != 0) return "member";
     if ((visibility & Visibility.NETWORK) != 0) return "network";
     if ((visibility & Visibility.OTHERS) != 0) return "others";
     return "restricted";
   }
 
   public static String toString(int visibility) {
-    visibility &= (OWNER | FOLLOWER | NETWORK | OTHERS);
+    visibility &= (OWNER | MEMBER | NETWORK | OTHERS);
 
     if (visibility == 0) {
       return name(0);

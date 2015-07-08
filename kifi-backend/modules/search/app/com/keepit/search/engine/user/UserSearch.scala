@@ -133,7 +133,7 @@ object UserSearch extends Logging {
 
     userShardHits.foreach { hit =>
       val visibility = hit.visibility
-      val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.FOLLOWER | Visibility.NETWORK)) != 0) {
+      val relevantQueue = if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) {
         myHits
       } else {
         othersHits
