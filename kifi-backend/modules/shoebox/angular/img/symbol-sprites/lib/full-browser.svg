@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512px" height="512px" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="full-browser">
+            <g id="Guide" transform="translate(-3.000000, -3.000000)"></g>
+            <g id="Oval" transform="translate(9.000000, 8.000000)" stroke-width="10" stroke="#71C885">
+                <circle id="Oval-37" cx="246.5" cy="246.5" r="246.5"></circle>
+            </g>
+            <g id="Screen" transform="translate(115.000000, 123.000000)" stroke="#71C885" stroke-width="10">
+                <g id="Path-25-+-Path-25-Copy" transform="translate(82.000000, 221.000000)">
+                    <path d="M33.6752621,0.527622768 L26.782857,43.3847656 C26.782857,43.3847656 24.3096377,52.9533343 17.9915997,54.29262 C11.6735617,55.6319057 4.3982459,55.4405792 2.27652789,57.925582 C0.154809879,60.4105847 -1.17430323,73.9970105 1.5107051,73.9970105 L61.069132,73.9970105" id="Path-25"></path>
+                    <path d="M93.4094393,0.527622768 L86.5170342,43.3847656 C86.5170342,43.3847656 84.0438149,52.9533343 77.7257769,54.29262 C71.4077389,55.6319057 64.1324231,55.4405792 62.0107051,57.925582 C59.8889871,60.4105847 58.559874,73.9970105 61.2448823,73.9970105 L120.803309,73.9970105" id="Path-25-Copy" transform="translate(90.273375, 37.262317) scale(-1, 1) translate(-90.273375, -37.262317) "></path>
+                </g>
+                <path d="M0.714257064,0.838877829 L284.500029,0.838877829 L284.500029,190.978482 L0.714257064,190.978482 L0.714257064,0.838877829 L0.714257064,0.838877829 Z" id="Fill-209-Copy-path" stroke-linecap="round" stroke-linejoin="round"></path>
+            </g>
+            <g id="Rectangle-9-+-Line" transform="translate(247.000000, 185.000000)" stroke="#71C885" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14,0 L49,0 L49,35" id="Rectangle-9"></path>
+                <path d="M48.5,0.5 L0.997368515,48.0026321" id="Line"></path>
+            </g>
+            <rect id="Rectangle-9" stroke="#71C885" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" x="209" y="147" width="124" height="124"></rect>
+            <path d="M312,271.953125 L312,292 L188,292 L188,168 L208.640625,168" id="Rectangle-9-Copy" stroke="#71C885" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+    </g>
+</svg>
