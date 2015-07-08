@@ -48,24 +48,21 @@ class AdminRoverController @Inject() (
           )
           if newProxy != oldProxy
         } yield roverServiceClient.saveProxy(newProxy)
-      )
-    }.flatMap { _ =>
-      Future.successful(body("new_alias"))
-        .filter(_.nonEmpty)
-        .flatMap { _ =>
-          roverServiceClient.saveProxy(HttpProxy(
-            state = if (body.contains("new_active")) HttpProxyStates.ACTIVE else HttpProxyStates.INACTIVE,
-            alias = body("new_alias"),
-            host = body("new_host"),
-            port = body("new_port").toInt,
-            scheme = ProxyScheme.fromName(body("new_scheme")),
-            username = Some(body("new_username")).filter(!_.isEmpty),
-            password = Some(body("new_password")).filter(!_.isEmpty)
-          ))
-        }
-        .fallbackTo(Future.successful(()))
-        .map(_ => Redirect(routes.AdminRoverController.getAllProxies()))
+      ).map(_ => Redirect(routes.AdminRoverController.getAllProxies()))
     }
+  }
+
+  def createProxy = AdminUserPage.async { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    roverServiceClient.saveProxy(HttpProxy(
+      state = if (body.contains("new_active")) HttpProxyStates.ACTIVE else HttpProxyStates.INACTIVE,
+      alias = body("new_alias"),
+      host = body("new_host"),
+      port = body("new_port").toInt,
+      scheme = ProxyScheme.fromName(body("new_scheme")),
+      username = Some(body("new_username")).filter(!_.isEmpty),
+      password = Some(body("new_password")).filter(!_.isEmpty)
+    )).map(_ => Redirect(routes.AdminRoverController.getAllProxies()))
   }
 
 }

@@ -836,6 +836,7 @@ GET     /admin/twitter/email                               @com.keepit.controlle
 #GET     /admin/rover/searchUrl                             @com.keepit.controllers.admin.AdminRoverController.findUrl()
 GET     /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.getAllProxies()
 POST    /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.saveProxies()
+POST    /admin/rover/proxies/create                        @com.keepit.controllers.admin.AdminRoverController.createProxy
 
 ##########################################
 # Common Healthcheck / service routes

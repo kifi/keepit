@@ -4,9 +4,10 @@
 @(proxies: Seq[HttpProxy])(implicit request: UserRequest[_])
 
 @views.html.admin.admin("Rover Proxies", stylesheets = List("admin_data_integrity")) {
-    <h3>Proxies</h3>
 
     <div><span class="label">Note:</span> Changes take effect immediately (next page load) when you click <b>Save</b> below.</div>
+
+    <h3>Proxies</h3>
 
     <form class="proxies" action="@com.keepit.controllers.admin.routes.AdminRoverController.saveProxies" method="POST">
         <table class="table table-condensed table-striped">
@@ -40,8 +41,28 @@
                     <td><input type="text" name="password_@proxy.id.get" value="@proxy.password.getOrElse("")"></td>
                 </tr>
             }
+        </table>
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+        <button type="reset" class="btn">Clear unsaved changes</button>
+    </form>
+
+    <h3>Create New</h3>
+
+    <form class="proxies" action="@com.keepit.controllers.admin.routes.AdminRoverController.createProxy" method="POST">
+        <table class="table table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Active</th>
+                    <th>Alias</th>
+                    <th>Host</th>
+                    <th>Port</th>
+                    <th>Scheme</th>
+                    <th>Username (not required)</th>
+                    <th>Password (not required)</th>
+                </tr>
+            </thead>
             <tr data-new="true">
-                <td><input type="checkbox" class="checkbox" name="new_active"></td>
+                <td><input type="checkbox" class="checkbox" name="new_active" checked="checked"></td>
                 <td class="control-group"><input type="text" class="alias" name="new_alias"></td>
                 <td class="control-group"><input type="text" class="host" name="new_host"></td>
                 <td class="control-group"><input type="number" min=0 max=65535 class="port" name="new_port"></td>
@@ -55,7 +76,7 @@
                 <td><input type="text" name="new_password"></td>
             </tr>
         </table>
-        <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+        <button type="submit" class="btn btn-primary" data-loading-text="Creating...">Create</button>
         <button type="reset" class="btn">Clear unsaved changes</button>
     </form>
 }

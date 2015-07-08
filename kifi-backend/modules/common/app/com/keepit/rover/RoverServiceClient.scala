@@ -228,9 +228,7 @@ class RoverServiceClientImpl(
   }
 
   def saveProxy(proxy: HttpProxy): Future[HttpProxy] = {
-    println(HttpProxy)
     val payload = Json.toJson(proxy)
-    println(payload)
     call(Rover.internal.saveProxy(), payload).map { r =>
       Json.fromJson[HttpProxy](r.json).get
     }

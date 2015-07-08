@@ -31,10 +31,14 @@ object ProxyScheme {
   val schemes = List(Http, Https)
   val schemesMap = schemes.map(s => s.name -> s).toMap
 
-  val fromName: String => ProxyScheme = (schemesMap.get _).andThen(_.get)
+  def fromName(name: String): ProxyScheme = schemesMap.get(name.toLowerCase).get
   val toName: ProxyScheme => String = (_: ProxyScheme).name
 
-  implicit val schemeFormat: Format[ProxyScheme] = __.format[String].inmap(fromName, toName)
+  implicit val schemeReads = __.read[String].map(fromName)
+  implicit val schemeWrites: Writes[ProxyScheme] = new Writes[ProxyScheme] {
+    override def writes(o: ProxyScheme): JsValue = JsString(toName(o))
+  }
+
 }
 
 object HttpProxy {
