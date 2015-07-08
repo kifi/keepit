@@ -34,8 +34,9 @@ class UserFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
+
+    val libraryIdDocValues = keepVisibilityEvaluator.libraryIdDocValues
     val userIdDocValues = keepVisibilityEvaluator.userIdDocValues
 
     val recencyScorer = getRecencyScorer(readerContext)
@@ -50,10 +51,10 @@ class UserFromKeepsScoreVectorSource(
       val keeperId = userIdDocValues.get(docId)
 
       if (idFilter.findIndex(keeperId) < 0) { // use findIndex to avoid boxing
-        val libId = libraryIdDocValues.get(docId)
-        val visibility = keepVisibilityEvaluator(docId, libId)
+        val visibility = keepVisibilityEvaluator(docId)
 
         if (visibility != Visibility.RESTRICTED) {
+          val libId = libraryIdDocValues.get(docId)
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
           val inverseLibraryFrequencyBoost = {
             val keepCount = libraryQualityEvaluator.estimateKeepCount(searcher, libId)
