@@ -22,7 +22,8 @@ class EmailTestController @Inject() (
     db: Database,
     emailRepo: ElectronicMailRepo,
     emailSenderProvider: EmailSenderProvider,
-    emailTemplateSender: EmailTemplateSender) extends ShoeboxServiceController {
+    emailTemplateSender: EmailTemplateSender,
+    gratificationCommander: GratificationCommander) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -91,6 +92,14 @@ class EmailTestController @Inject() (
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).
       getOrElse(Future.successful(BadRequest(s"test sender for $name not found")))
+  }
+
+  def testBatchSending(name: String, sendTo: String) = Action.async { request =>
+    name match {
+      case "gratification" => gratificationCommander.batchSendEmails({ id: Id[User] => true }, Some(EmailAddress(sendTo)))
+      case "activity" => emailSenderProvider.activityFeed.apply(Some(EmailAddress(sendTo)))
+    }
+    Future.successful(Ok("sent"))
   }
 
   private def testEmailTip(to: Either[Id[User], EmailAddress], tip: EmailTip) = {

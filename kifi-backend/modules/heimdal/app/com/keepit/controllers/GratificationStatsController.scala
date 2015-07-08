@@ -24,6 +24,7 @@ class GratificationStatsController @Inject() (
 
   def getEligibleGratDatas = Action(parse.json) { request =>
     val userIds = request.body.as[Seq[Id[User]]]
+    log.info(s"[GratData] Request received, getting eligible grat data for users ${userIds.head}-${userIds.last}")
     val gratDatas = userIds.map { gratStatsCommander.getGratData }.filter { _.isEligible }
     log.info(s"[GratData] Eligible Grat Datas collected. Sending: ${Json.toJson(gratDatas)}")
     Ok(Json.obj("gratDatas" -> gratDatas))
