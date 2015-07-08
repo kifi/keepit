@@ -110,11 +110,11 @@ final class KeepVisibilityEvaluator(
         if (keeperId == userId) {
           Visibility.OWNER // the keep in a library I am a member of, and I kept it
         } else {
-          Visibility.FOLLOWER // the keep is in a library I am a member of
+          Visibility.MEMBER // the keep is in a library I am a member of
         }
       }
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-      Visibility.FOLLOWER // the keep is in an authorized library
+      Visibility.MEMBER // the keep is in an authorized library
     } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
       Visibility.NETWORK
     } else {
@@ -153,7 +153,7 @@ final class LibraryVisibilityEvaluator(
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
         Visibility.OWNER // my library
       } else {
-        Visibility.FOLLOWER // a library I am a member of
+        Visibility.MEMBER // a library I am a member of
       }
     } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
       Visibility.NETWORK

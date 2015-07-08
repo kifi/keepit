@@ -113,7 +113,7 @@ class UriSearchImpl(
 
       networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score * (if ((hit.visibility & Visibility.FOLLOWER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }

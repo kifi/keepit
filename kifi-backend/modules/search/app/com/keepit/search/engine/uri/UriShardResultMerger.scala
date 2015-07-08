@@ -53,7 +53,7 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
           val visibility = hit.visibility
           val queue = {
             if ((visibility & Visibility.OWNER) != 0) myHits
-            else if ((visibility & (Visibility.FOLLOWER | Visibility.NETWORK)) != 0) networkHits
+            else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) networkHits
             else othersHits
           }
           queue.insert(hit.score, null, hit)
