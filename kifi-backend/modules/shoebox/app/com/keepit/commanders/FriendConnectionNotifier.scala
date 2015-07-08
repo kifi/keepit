@@ -45,9 +45,9 @@ class FriendConnectionNotifier @Inject() (
     val notificationF = elizaServiceClient.sendGlobalNotification( //push needed
       userIds = Set(friendUserId),
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
-      body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more connections »",
+      body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly.",
       linkText = "Invite more friends to kifi",
-      linkUrl = "https://www.kifi.com/friends/invite",
+      linkUrl = s"https://www.kifi.com/${respondingUser.username}",
       imageUrl = respondingUserImage,
       sticky = false,
       category = category,
@@ -57,7 +57,7 @@ class FriendConnectionNotifier @Inject() (
         if (canSendPush) {
           elizaServiceClient.sendUserPushNotification(
             userId = friendUserId,
-            message = s"${respondingUser.fullName} connected to you on Kifi",
+            message = s"${respondingUser.fullName} connected with you on Kifi",
             recipient = respondingUser,
             pushNotificationExperiment = PushNotificationExperiment.Experiment1,
             category = UserPushNotificationCategory.UserConnectionAccepted)
