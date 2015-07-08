@@ -1,11 +1,14 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.engine.query.QueryUtil
+import com.keepit.search.index.{ article, WrappedSubReader }
+import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.NumericDocValues
+import org.apache.lucene.index.{ Term, NumericDocValues }
+import org.apache.lucene.search.DocIdSetIterator
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
@@ -187,4 +190,31 @@ final class UserVisibilityEvaluator(
       Visibility.OTHERS // someone else
     }
   }
+}
+
+object ArticleVisibilityEvaluator {
+  def apply(reader: WrappedSubReader): ArticleVisibilityEvaluator = {
+    val unsafeDocIterator: DocIdSetIterator = {
+      val it = reader.termDocsEnum(new Term(ArticleFields.Safety.field, ArticleFields.Safety.unsafe))
+      if (it == null) QueryUtil.emptyDocsEnum else it
+    }
+    new ArticleVisibilityEvaluator(unsafeDocIterator)
+  }
+}
+
+final class ArticleVisibilityEvaluator(val unsafeDocIterator: DocIdSetIterator) extends AnyVal {
+
+  @inline
+  private def isSafe(doc: Int): Boolean = {
+    if (unsafeDocIterator.docID < doc) unsafeDocIterator.advance(doc)
+    unsafeDocIterator.docID > doc
+  }
+
+  @inline
+  def apply(doc: Int): Int = {
+    // todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons.
+    if (isSafe(doc)) (Visibility.OTHERS | Visibility.SAFE)
+    else Visibility.OTHERS
+  }
+
 }
