@@ -50,3 +50,4 @@ GET     /internal/cortex/lda/evaluatePersona                                    
 POST    /internal/cortex/lda/trainPersonaFeature                                    @com.keepit.controllers.cortex.LDAController.trainPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA])
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged                              @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
+POST    /internal/cortex/data/dumpPlainTxts                                         @com.keepit.controllers.cortex.CortexDataPipeController.dumpPlainTxts
