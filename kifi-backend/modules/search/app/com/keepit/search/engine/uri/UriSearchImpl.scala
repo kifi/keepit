@@ -153,9 +153,15 @@ class UriSearchImpl(
     timeLogs.done()
     timing()
 
-    debugLog(s"myTotal=$myTotal networkTotal=$networkTotal othersTotal=$othersTotal show=$show")
+    val uriShardResult = UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, networkTotal, othersTotal, show)
 
-    UriShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, networkTotal, othersTotal, show)
+    debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
+    debugLog(s"networkHits: ${networkHits.size()}/${networkHits.totalHits}")
+    debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
+    debugLog(s"myTotal=$myTotal networkTotal=$networkTotal othersTotal=$othersTotal show=$show")
+    debugLog(s"uriShardResult: ${uriShardResult.hits.map(_.id).mkString(",")}")
+
+    uriShardResult
   }
 
   def explain(uriId: Id[NormalizedURI]): UriSearchExplanation = {

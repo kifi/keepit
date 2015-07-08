@@ -40,6 +40,7 @@ trait VisibilityEvaluator { self: DebugOption =>
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
     val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
+    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
 
     new KeepVisibilityEvaluator(
       userId,
@@ -51,6 +52,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       authorizedLibraryIds,
       orgIds,
       userIdDocValues,
+      libraryIdDocValues,
       orgIdDocValues,
       visibilityDocValues)
   }
@@ -96,12 +98,15 @@ final class KeepVisibilityEvaluator(
     authorizedLibraryIds: LongArraySet,
     orgIds: LongArraySet,
     val userIdDocValues: NumericDocValues,
-    orgIdDocValues: NumericDocValues,
+    val libraryIdDocValues: NumericDocValues,
+    val orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
 
-  def apply(docId: Int, libId: Long): Int = {
+  def apply(docId: Int): Int = {
+    val libId = libraryIdDocValues.get(docId)
+
     if (memberLibraryIds.findIndex(libId) >= 0) {
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
         Visibility.OWNER // the keep is in my library (I may or may not have kept it)
