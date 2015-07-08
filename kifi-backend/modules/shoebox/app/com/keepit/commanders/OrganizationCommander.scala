@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 
 import scala.util.{ Failure, Success, Try }
 
@@ -61,16 +62,22 @@ class OrganizationCommanderImpl @Inject() (
     val orgName = org.name
     val description = org.description
 
-    val members = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
+    val memberIds = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
+    val members = userRepo.getAllUsers(memberIds).values.toSeq
+    val membersAsBasicUsers = members.map { m => BasicUser(externalId = m.externalId, firstName = m.firstName, lastName = m.lastName, pictureName = m.pictureName.getOrElse(""), username = m.username) }
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
-    val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
-
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
-
-    // TODO(ryan): actually find the number of libraries
-    val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
-    OrganizationView(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, ownerId = org.ownerId, members = members,
-      numMembers = memberCount, numLibraries = numPublicLibs)
+    val librariesByVisibility = libraryRepo.countLibrariesForOrgByVisibility(orgId)
+    val numPublicLibraries = librariesByVisibility(LibraryVisibility.PUBLISHED) // TODO: find libraries that are visible to the requester
+    OrganizationView(
+      orgId = Organization.publicId(orgId),
+      handle = orgHandle,
+      name = orgName,
+      description = description,
+      avatarPath = avatarPath,
+      members = membersAsBasicUsers,
+      numMembers = memberCount,
+      numLibraries = numPublicLibraries)
   }
 
   private def getOrganizationCardHelper(orgId: Id[Organization])(implicit session: RSession): OrganizationCard = {
@@ -80,13 +87,19 @@ class OrganizationCommanderImpl @Inject() (
     val description = org.description
 
     val numMembers = orgMembershipRepo.countByOrgId(orgId)
-    val libraries = libraryRepo.countLibrariesForOrgByVisibility(orgId)
-
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    // TODO(ryan): actually find the number of libraries
-    val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
-    OrganizationCard(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, numMembers = numMembers, numLibraries = numPublicLibs)
+    val librariesByVisibility = libraryRepo.countLibrariesForOrgByVisibility(orgId)
+    val numPublicLibs = librariesByVisibility(LibraryVisibility.PUBLISHED) // TODO: actually find the number of libraries
+
+    OrganizationCard(
+      orgId = Organization.publicId(orgId),
+      handle = orgHandle,
+      name = orgName,
+      description = description,
+      avatarPath = avatarPath,
+      numMembers = numMembers,
+      numLibraries = numPublicLibs)
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
@@ -95,8 +108,8 @@ class OrganizationCommanderImpl @Inject() (
 
   def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
-      case OrganizationCreateRequest(createrId, initialParameters) =>
-        if (initialParameters.name.isEmpty || !areAllValidModifications(initialParameters)) {
+      case OrganizationCreateRequest(createrId, initialValues) =>
+        if (!areAllValidModifications(initialValues.asOrganizationModifications)) {
           Some(OrganizationFail.BAD_PARAMETERS)
         } else None
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
@@ -139,8 +152,8 @@ class OrganizationCommanderImpl @Inject() (
       db.readWrite { implicit session =>
         if (!isValidRequest(request)) None
         else {
-          val protoOrg = Organization(ownerId = request.requesterId, name = request.initialValues.name.get, handle = None)
-          val orgTemplate = organizationWithModifications(protoOrg, request.initialValues)
+          val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
+          val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
           val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
             throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
           }
