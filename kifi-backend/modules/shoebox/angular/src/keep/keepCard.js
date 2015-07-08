@@ -64,7 +64,7 @@ angular.module('kifi')
               image = {url: url, w: imgW, h: imgH, penalty: penalty, clipBottom: true, maxDescLines: descLines};
             }
           }
-          if (!galleryView) {
+          if (!galleryView && image) {
             image.w = image.h = null;
             image.maxDescLines = 2;
           }
