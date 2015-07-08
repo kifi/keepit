@@ -1,7 +1,7 @@
 package com.keepit.rover.rule
 
 import com.keepit.common.db.Id
-import com.keepit.model.HttpProxy
+import com.keepit.rover.model.HttpProxy
 
 sealed trait UrlRuleAction {
 

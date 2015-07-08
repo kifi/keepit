@@ -22,8 +22,6 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 trait ShoeboxScraperClient extends ThrottledServiceClient {
   private val ? = null
   def getAllURLPatterns(): Future[UrlPatternRules]
-  def getProxy(url: String): Future[Option[HttpProxy]]
-  def getProxyP(url: String): Future[Option[HttpProxy]]
 }
 
 @Singleton
@@ -44,18 +42,6 @@ class ShoeboxScraperClientImpl @Inject() (
       call(Shoebox.internal.allURLPatternRules(), routingStrategy = offlinePriority).map { r =>
         Json.fromJson[UrlPatternRules](r.json).get
       }
-    }
-  }
-
-  def getProxy(url: String): Future[Option[HttpProxy]] = limiter.withLockFuture {
-    call(Shoebox.internal.getProxy(url), routingStrategy = offlinePriority).map { r =>
-      if (r.json == null) None else r.json.asOpt[HttpProxy]
-    }
-  }
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = limiter.withLockFuture {
-    call(Shoebox.internal.getProxyP, Json.toJson(url), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
-      if (r.json == null) None else r.json.asOpt[HttpProxy]
     }
   }
 }

@@ -36,9 +36,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
 
-  def getProxy(url: String): Future[Option[HttpProxy]] = ???
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
 
 }
 // code below should be sync with code in ShoeboxController

@@ -221,7 +221,7 @@ class UrlController @Inject() (
           isUnscrapable = body.contains("unscrapable_" + key),
           useProxy = body("proxy_" + key) match {
             case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
+            //case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
           },
           normalization = body("normalization_" + key) match {
             case "None" => None
@@ -248,7 +248,7 @@ class UrlController @Inject() (
           isUnscrapable = body.contains("new_unscrapable"),
           useProxy = body("new_proxy") match {
             case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
+            //case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
           },
           normalization = body("new_normalization") match {
             case "None" => None

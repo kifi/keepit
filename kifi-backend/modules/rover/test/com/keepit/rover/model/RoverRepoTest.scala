@@ -25,7 +25,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // HttpProxyRepo
         val httpProxyRepo = inject[RoverHttpProxyRepo]
         db.readWrite { implicit session =>
-          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = "http", username = None, password = None))
+          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = ProxyScheme.Http, username = None, password = None))
           httpProxyRepo.get(saved.id.get).alias === "marvin"
         }
 
