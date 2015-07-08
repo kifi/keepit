@@ -116,7 +116,7 @@ final class KeepVisibilityEvaluator(
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.MEMBER // the keep is in an authorized library
     } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
-      Visibility.NETWORK
+      Visibility.MEMBER
     } else {
       if (visibilityDocValues.get(docId) == published) {
         val keeperId = userIdDocValues.get(docId)

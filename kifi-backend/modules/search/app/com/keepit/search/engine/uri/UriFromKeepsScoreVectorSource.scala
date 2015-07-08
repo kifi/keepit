@@ -118,9 +118,9 @@ class UriFromKeepsScoreVectorSource(
 
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
             // write to the buffer
-            output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
+            output.alloc(writer, Visibility.MEMBER, 8) // id (8 bytes)
             writer.putLong(uriId)
-            explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.NETWORK, Array.empty[Int], 0, 0))
+            explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.MEMBER, Array.empty[Int], 0, 0))
           }
           docId = td.nextDoc()
         }
