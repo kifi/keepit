@@ -92,7 +92,9 @@ angular.module('kifi', [
             message: exception.toString(),
             stack: exception.stack
           },
-          params: cause
+          params: {
+            cause: cause
+          }
         });
       } else {
         $log.error(exception);
