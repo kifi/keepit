@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.controller.UserRequest
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -23,7 +24,7 @@ trait OrganizationCommander {
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
-  def unsafeModifyOrganization(orgId: Id[Organization], modifications: OrganizationModifications): Unit
+  def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
 
   def getAnalyticsView(orgId: Id[Organization]): AnalyticsOrganizationView
   def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], AnalyticsOrganizationCard]
@@ -35,14 +36,15 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
-    libraryRepo: LibraryRepo,
-    userRepo: UserRepo,
     orgInviteRepo: OrganizationInviteRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
+    userRepo: UserRepo,
+    keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
-  // TODO: do the smart thing and add a limit/offset
+  // TODO(ryan): do the smart thing and add a limit/offset
   def getAllOrganizationIds: Seq[Id[Organization]] = db.readOnlyReplica { implicit session => orgRepo.all().map(_.id.get) }
 
   def getOrganizationView(orgId: Id[Organization]): OrganizationView = {
@@ -65,7 +67,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    // TODO: actually find the number of libraries
+    // TODO(ryan): actually find the number of libraries
     val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
     OrganizationView(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, ownerId = org.ownerId, members = members,
       numMembers = memberCount, numLibraries = numPublicLibs)
@@ -82,7 +84,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    // TODO: actually find the number of libraries
+    // TODO(ryan): actually find the number of libraries
     val numPublicLibs = libraries(LibraryVisibility.PUBLISHED)
     OrganizationCard(orgId = orgId, handle = orgHandle, name = orgName, description = description, avatarPath = avatarPath, numMembers = numMembers, numLibraries = numPublicLibs)
   }
@@ -223,7 +225,10 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   // For use in the Admin Organization controller. Don't use it elsewhere.
-  def unsafeModifyOrganization(orgId: Id[Organization], modifications: OrganizationModifications): Unit = {
+  def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit = {
+    if (!request.experiments.contains(ExperimentType.ADMIN)) {
+      throw new IllegalAccessException("unsafeModifyOrganization called from outside the admin page!")
+    }
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
@@ -237,8 +242,9 @@ class OrganizationCommanderImpl @Inject() (
   def getAnalyticsView(orgId: Id[Organization]): AnalyticsOrganizationView = {
     db.readOnlyReplica { implicit session =>
       val orgView = getOrganizationViewHelper(orgId)
-      // TODO: get actual numbers
-      val numTotalKeeps = 42
+      val memberIds = orgMembershipRepo.getAllByOrgId(orgId).map(_.userId)
+      val numTotalKeeps = keepRepo.getCountByUsers(memberIds).values.sum
+      // TODO(ryan): get actual numbers for chats
       val numTotalChats = 420
       val memberInfos = orgMembershipCommander.getMembersInfo(orgId)
       AnalyticsOrganizationView(orgView, AnalyticsOrganizationViewExtras(numTotalKeeps, numTotalChats, memberInfos))

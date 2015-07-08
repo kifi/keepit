@@ -24,4 +24,21 @@ candidatesInfos: Map[Id[Organization], Map[Id[User], OrganizationMembershipInfo]
         </tr>
     }
 </table>
+<form action="#" method="POST" class="form-inline create-org">
+    <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
+    <input type="Submit" value="Create">
+</form>
+<script type="text/javascript">
+    $(function() {
+      $('.create-org').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()", $('.create-org').serialize())
+        .done(function(data) {
+          alert("Added an organization: " + data);
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+    });
+</script>
 }

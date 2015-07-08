@@ -244,7 +244,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val members = organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
     members.map { uid =>
       val numTotalKeeps = keepRepo.getCountByUser(uid)
-      val numTotalChats = 42 // TODO: find a way to get the number of user chats
+      val numTotalChats = 42 // TODO(ryan): find a way to get the number of user chats
       uid -> OrganizationMembershipInfo(numTotalKeeps, numTotalChats)
     }.toMap
   }

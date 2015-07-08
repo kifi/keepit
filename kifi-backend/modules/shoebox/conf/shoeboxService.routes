@@ -675,11 +675,12 @@ POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
 
 
-GET     /admin/populatedb                    @com.keepit.controllers.admin.AdminOrganizationController.populateDatabase()
-GET     /admin/organization/:id              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
-POST    /admin/organization/:id/name         @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
-POST    /admin/organization/:id/description  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
-GET     /admin/organizations                 @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
+GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
+POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
+POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
+POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
+GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
+POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 
 # TEMPORARY ROUTE - remove when activity email is live
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()

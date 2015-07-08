@@ -21,17 +21,7 @@ class AdminOrganizationController @Inject() (
     organizationMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander) extends AdminUserActions {
 
-  def populateDatabase() = AdminUserPage { implicit request =>
-    val ryan = userCommander.createUser("Ryan", "Brewster", addrOpt = None, state = UserStates.ACTIVE)
-    val users = for (i <- 1 to 20) yield {
-      userCommander.createUser(i.toString, "TestUser", addrOpt = None, state = UserStates.ACTIVE)
-    }
-    val kifiCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Kifi"), description = Some("Knowledge Sharing"))))
-    val bcCreateResponse = orgCommander.createOrganization(OrganizationCreateRequest(ryan.id.get, OrganizationModifications(name = Some("Brewster Corp"), description = Some("Taking over the world!"))))
-    val kifi = kifiCreateResponse.right.get.newOrg
-    organizationMembershipCandidateCommander.addCandidates(kifi.id.get, users.map(_.id.get).toSet)
-    Ok("done")
-  }
+  private val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
 
   def organizationsView = AdminUserPage { implicit request =>
     val orgIds = orgCommander.getAllOrganizationIds
@@ -45,17 +35,27 @@ class AdminOrganizationController @Inject() (
     Ok(html.admin.organization(orgView, candidateInfo))
   }
 
+  def createOrganization() = AdminUserPage { request =>
+    val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)
+    log.info(s"[RPB] Creating an organization with name '$name'")
+    val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationModifications(name = name)))
+    Ok(response.toString)
+  }
+  def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
+    organizationMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+    Ok
+  }
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
     val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)
     log.info(s"[RPB] Unsafely setting organization $orgId to have name '$name'")
-    orgCommander.unsafeModifyOrganization(orgId, OrganizationModifications(name = name))
+    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = name))
     Ok
   }
-
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
     val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
     log.info(s"[RPB] Unsafely setting organization $orgId to have description '$description'")
-    orgCommander.unsafeModifyOrganization(orgId, OrganizationModifications(description = description))
+    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(description = description))
     Ok
   }
 }

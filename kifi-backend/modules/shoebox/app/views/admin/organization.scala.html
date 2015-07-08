@@ -37,6 +37,13 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
         <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
         </td></tr>
     }
+    <tr><td>
+    <form action="#" method="POST" class="form-inline add-candidate">
+        <input id="add-candidate-input" type="text" name="candidate-id" placeholder="Candidate Id goes here">
+        <input type="Submit" value="Add">
+    </form>
+    </td></tr>
+
 </table>
 <script type="text/javascript">
     $(function() {
@@ -53,6 +60,15 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
         $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgAnalyticsView.orgView.orgId)", $('.update-description').serialize())
         .done(function(data) {
           alert("Updated Organization Description");
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+      $('.add-candidate').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgAnalyticsView.orgView.orgId)", $('.add-candidate').serialize())
+        .done(function(data) {
+          alert("Added a candidate member: " + data);
         }).fail(function(data) {
           alert("Bad Request: " + data.responseText);
         });
