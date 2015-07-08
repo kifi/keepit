@@ -58,4 +58,5 @@ class FakeRoverServiceClientImpl(
   def whitelist(words: String): Future[String] = Future.successful("")
 
   def getAllProxies(): Future[Seq[HttpProxy]] = Future.successful(List())
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy] = Future.successful(HttpProxy(alias = "", host = "", port = 0, scheme = ProxyScheme.Http, username = None, password = None))
 }

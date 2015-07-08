@@ -6,23 +6,27 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class HttpProxy(
-  id: Option[Id[HttpProxy]] = None,
-  state: State[HttpProxy] = HttpProxyStates.ACTIVE,
-  alias: String,
-  host: String,
-  port: Int,
-  scheme: ProxyScheme,
-  username: Option[String],
-  password: Option[String])
+    id: Option[Id[HttpProxy]] = None,
+    state: State[HttpProxy] = HttpProxyStates.ACTIVE,
+    alias: String,
+    host: String,
+    port: Int,
+    scheme: ProxyScheme,
+    username: Option[String],
+    password: Option[String]) {
+
+  def isActive = state == HttpProxyStates.ACTIVE
+
+}
 
 object HttpProxyStates extends States[HttpProxy]
 
 sealed class ProxyScheme(val name: String)
 
-case object Https extends ProxyScheme("https")
-case object Http extends ProxyScheme("http")
-
 object ProxyScheme {
+
+  case object Https extends ProxyScheme("https")
+  case object Http extends ProxyScheme("http")
 
   val schemes = List(Http, Https)
   val schemesMap = schemes.map(s => s.name -> s).toMap

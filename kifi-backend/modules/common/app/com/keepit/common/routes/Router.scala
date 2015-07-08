@@ -423,6 +423,7 @@ object Rover extends Service {
     def whitelist() = ServiceRoute(POST, s"/internal/rover/pornDetector/whitelist")
 
     def getAllProxies() = ServiceRoute(GET, s"/internal/rover/getAllProxies")
+    def saveProxy() = ServiceRoute(POST, s"/internal/rover/saveProxy")
   }
 }
 

@@ -108,9 +108,13 @@ class RoverController @Inject() (
     }
   }
 
-  def getAllProxies = Action { request =>
-    val proxies = httpProxyCommander.all
-    Ok(Json.toJson(proxies))
+  def getAllProxies = Action.async { request =>
+    httpProxyCommander.all.map(proxies => Ok(Json.toJson(proxies)))
+  }
+
+  def saveProxy = Action.async(parse.json) { request =>
+    val proxy = request.body.as[HttpProxy]
+    httpProxyCommander.save(proxy).map { newProxy => Ok(Json.toJson(newProxy)) }
   }
 
 }

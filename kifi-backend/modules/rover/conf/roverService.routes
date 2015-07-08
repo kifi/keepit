@@ -18,3 +18,4 @@ POST    /internal/rover/pornDetector/detect       @com.keepit.rover.controllers.
 POST    /internal/rover/pornDetector/whitelist        @com.keepit.rover.controllers.internal.PornDetectorController.whitelist
 
 GET     /internal/rover/getAllProxies           @com.keepit.rover.controllers.internal.RoverController.getAllProxies
+POST    /internal/rover/saveProxy               @com.keepit.rover.controllers.internal.RoverController.saveProxy

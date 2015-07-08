@@ -42,6 +42,7 @@ trait RoverServiceClient extends ServiceClient {
   def whitelist(words: String): Future[String]
 
   def getAllProxies(): Future[Seq[HttpProxy]]
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy]
 }
 
 class RoverServiceClientImpl(
@@ -223,6 +224,15 @@ class RoverServiceClientImpl(
   def getAllProxies(): Future[Seq[HttpProxy]] = {
     call(Rover.internal.getAllProxies()).map { r =>
       Json.fromJson[Seq[HttpProxy]](r.json).get
+    }
+  }
+
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy] = {
+    println(HttpProxy)
+    val payload = Json.toJson(proxy)
+    println(payload)
+    call(Rover.internal.saveProxy(), payload).map { r =>
+      Json.fromJson[HttpProxy](r.json).get
     }
   }
 

@@ -19,17 +19,20 @@
                     <th>Scheme</th>
                     <th>Username</th>
                     <th>Password</th>
+                </tr>
             </thead>
             @for(proxy <- proxies) {
                 <tr>
-                    @*<td><input type="checkbox" class="checkbox" name="active_@proxy.id.get" @if(proxy.isActive) {checked}>-->*@
+                    <td><input type="checkbox" class="checkbox" name="active_@proxy.id.get" @if(proxy.isActive) {checked="checked"}>
                     <td><input type="text" class="alias" name="alias_@proxy.id.get" value="@proxy.alias"></td>
-                    <td><input type="text" class="host" name="host_@proxy.id.get" value="@proxy.host"></td
+                    <td><input type="text" class="host" name="host_@proxy.id.get" value="@proxy.host"></td>
                     <td><input type="number" min=0 max=65535 class="port" name="port_@proxy.id.get" value="@proxy.port"></td>
                     <td>
                         <select name="scheme_@proxy.id.get">
                             @for(scheme <- ProxyScheme.schemes) {
-                                <option name="@scheme" value="@scheme" @if(proxy.scheme == scheme) {selected="selected"}>@scheme
+                                @defining(scheme.name) { name =>
+                                    <option name="@name" value="@name" @if(proxy.scheme == scheme) {selected="selected"}>@name</option>
+                                }
                             }
                         </select>
                     </td>
@@ -44,8 +47,8 @@
                 <td class="control-group"><input type="number" min=0 max=65535 class="port" name="new_port"></td>
                 <td>
                     <select name="new_scheme">
-                        @for(scheme <- ProxyScheme.schemes.map(_.name)) {
-                            <option name="@scheme" value="@scheme">@scheme
+                        @for(schemeName <- ProxyScheme.schemes.map(_.name)) {
+                            <option name="@schemeName" value="@schemeName">@schemeName</option>
                         }
                     </select>
                 <td><input type="text" name="new_username"></td>
