@@ -51,8 +51,8 @@
       <tr>
         <th>Organizations</th>
           <td><ul>
-          @for(org <- organizations) { <li>@org</li> }
-          @for(org <- candidateOrganizations) { <li>@org</li> }
+          @for(org <- organizations) { <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org)">@org</a></li> }
+          @for(org <- candidateOrganizations) { <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org)">@org</a></li> }
           </ul></td>
       </tr>
       <tr>

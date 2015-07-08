@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
@@ -10,6 +11,7 @@ import play.api.libs.json._
 // OrganizationView should ONLY contain public information. No internal ids.
 case class OrganizationView(
   orgId: PublicId[Organization],
+  ownerId: ExternalId[User],
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
@@ -20,6 +22,7 @@ case class OrganizationView(
 object OrganizationView {
   private val defaultWrites: Writes[OrganizationView] = (
     (__ \ 'id).write[PublicId[Organization]] and
+    (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
     (__ \ 'name).write[String] and
     (__ \ 'description).writeNullable[String] and
@@ -36,6 +39,7 @@ object OrganizationView {
 // OrganizationCard should ONLY contain public information. No internal ids.
 case class OrganizationCard(
   orgId: PublicId[Organization],
+  ownerId: ExternalId[User],
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
@@ -45,6 +49,7 @@ case class OrganizationCard(
 object OrganizationCard {
   private val defaultWrites: Writes[OrganizationCard] = (
     (__ \ 'id).write[PublicId[Organization]] and
+    (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
     (__ \ 'name).write[String] and
     (__ \ 'description).writeNullable[String] and
@@ -109,3 +114,13 @@ object OrganizationModifications {
   val website = defaultReads
   val mobileV1 = defaultReads
 }
+
+case class OrganizationMembershipInfo(numTotalKeeps: Int, numTotalChats: Int)
+case class AnalyticsOrganizationViewExtras(
+  numTotalKeeps: Int,
+  numTotalChats: Int,
+  membersInfo: Map[Id[User], OrganizationMembershipInfo])
+case class AnalyticsOrganizationView(orgView: OrganizationView, analyticsExtras: AnalyticsOrganizationViewExtras)
+
+case class AnalyticsOrganizationCardExtras(numTotalKeeps: Int, numTotalChats: Int)
+case class AnalyticsOrganizationCard(orgCard: OrganizationCard, analyticsExtras: AnalyticsOrganizationCardExtras)

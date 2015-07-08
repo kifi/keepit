@@ -62,6 +62,8 @@ class OrganizationCommanderImpl @Inject() (
     val orgName = org.name
     val description = org.description
 
+    val ownerId = userRepo.get(org.ownerId).externalId
+
     val memberIds = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map { m => BasicUser(externalId = m.externalId, firstName = m.firstName, lastName = m.lastName, pictureName = m.pictureName.getOrElse(""), username = m.username) }
@@ -71,6 +73,7 @@ class OrganizationCommanderImpl @Inject() (
     val numPublicLibraries = librariesByVisibility(LibraryVisibility.PUBLISHED) // TODO: find libraries that are visible to the requester
     OrganizationView(
       orgId = Organization.publicId(orgId),
+      ownerId = ownerId,
       handle = orgHandle,
       name = orgName,
       description = description,
@@ -86,6 +89,8 @@ class OrganizationCommanderImpl @Inject() (
     val orgName = org.name
     val description = org.description
 
+    val ownerId = userRepo.get(org.ownerId).externalId
+
     val numMembers = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
@@ -94,6 +99,7 @@ class OrganizationCommanderImpl @Inject() (
 
     OrganizationCard(
       orgId = Organization.publicId(orgId),
+      ownerId = ownerId,
       handle = orgHandle,
       name = orgName,
       description = description,

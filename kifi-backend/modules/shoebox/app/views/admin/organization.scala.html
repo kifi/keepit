@@ -1,9 +1,14 @@
-@(orgAnalyticsView: AnalyticsOrganizationView,
+@import com.keepit.model.OrganizationMembershipInfo
+@(
+orgAnalyticsView: AnalyticsOrganizationView,
+orgId: Id[Organization],
+ownerId: Id[User],
 candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Organization: " + orgAnalyticsView.orgView.name, stylesheets = List("admin_user")) {
 <table class="org-summary table table-bordered" style="width:600px">
+    <tr><td>Id</td><td>@orgId</td></tr>
     <tr><td>Name</td>
         <td>
         <form action="#" method="POST" class="form-inline update-name">
@@ -18,12 +23,13 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td>@orgAnalyticsView.orgView.ownerId</td></tr>
+    <tr><td>Owner</td><td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(ownerId)">@ownerId</a></td></tr>
+
 </table>
 
 <table class="org-members table table-bordered" style="width:300px; float:left">
     <tr><th>Org Members</th></tr>
-    @for((uid, info) <- orgAnalyticsView.analyticsExtras.membersInfo) {
+    @for(uid <- orgAnalyticsView.analyticsExtras.membersInfo.keySet.toSeq.sorted) {
         <tr><td>
         <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
         </td></tr>
@@ -32,7 +38,7 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
 
 <table class="org-candidates table table-bordered" style="width:300px; float:left">
     <tr><th>Org Candidates</th></tr>
-    @for((uid, info) <- candidatesInfo) {
+    @for(uid <- candidatesInfo.keySet.toSeq.sorted) {
         <tr><td>
         <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
         </td></tr>
@@ -48,7 +54,7 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
 <script type="text/javascript">
     $(function() {
       $('.update-name').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgAnalyticsView.orgView.orgId)", $('.update-name').serialize())
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgId)", $('.update-name').serialize())
         .done(function(data) {
           alert("Updated Organization Name");
         }).fail(function(data) {
@@ -57,7 +63,7 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
         return false;
       });
       $('.update-description').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgAnalyticsView.orgView.orgId)", $('.update-description').serialize())
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgId)", $('.update-description').serialize())
         .done(function(data) {
           alert("Updated Organization Description");
         }).fail(function(data) {
@@ -66,7 +72,7 @@ candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
         return false;
       });
       $('.add-candidate').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgAnalyticsView.orgView.orgId)", $('.add-candidate').serialize())
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgId)", $('.add-candidate').serialize())
         .done(function(data) {
           alert("Added a candidate member: " + data);
         }).fail(function(data) {
