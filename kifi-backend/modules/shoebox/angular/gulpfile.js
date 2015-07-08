@@ -274,7 +274,7 @@ gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-
 
 gulp.task('symbol-sprites', function() {
   exec('./build-svgs.rb');
-  return gulp.src(['./img/symbol-sprites/dist/*'])
+  return gulp.src(['./img/symbol-sprites/dist/*.svg'])
     .pipe(gulp.dest('./dist'));
 });
 

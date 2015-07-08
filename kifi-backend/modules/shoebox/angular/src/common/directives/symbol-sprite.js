@@ -11,7 +11,7 @@ angular.module('kifi')
     compile: function () {
       return function (scope, element, attrs) {
         var file = 'symbol-sprite.svg';
-        var path = '/img/symbol-sprites/dist/' + file;
+        var path = '/dist/' + file;
         element[0].innerHTML = '<use xlink:href="' + path + '#' + attrs.icon + '" />';
         element[0].classList.add('symbol-sprite');
       };
