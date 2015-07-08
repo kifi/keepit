@@ -1,15 +1,13 @@
 package com.keepit.rover.model
 
 import com.keepit.common.db.{ State, States, Id }
-import com.kifi.macros.json
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-@json
 case class HttpProxy(
   id: Option[Id[HttpProxy]] = None,
-  state: State[HttpProxy] = None,
+  state: State[HttpProxy] = HttpProxyStates.ACTIVE,
   alias: String,
   host: String,
   port: Int,
@@ -35,16 +33,17 @@ object ProxyScheme {
   implicit val schemeFormat: Format[ProxyScheme] = __.format[String].inmap(fromName, toName)
 }
 
-//object HttpProxy {
-//
-//  implicit val format = (
-//    (__ \ 'id).formatNullable(Id.format[HttpProxy]) and
-//    (__ \ 'alias).format[String] and
-//    (__ \ 'host).format[String] and
-//    (__ \ 'port).format[Int] and
-//    (__ \ 'scheme).format[String] and
-//    (__ \ 'username).formatNullable[String] and
-//    (__ \ 'password).formatNullable[String]
-//  )(HttpProxy.apply, unlift(HttpProxy.unapply))
-//
-//}
+object HttpProxy {
+
+  implicit val format = (
+    (__ \ 'id).formatNullable(Id.format[HttpProxy]) and
+    (__ \ 'state).format[State[HttpProxy]] and
+    (__ \ 'alias).format[String] and
+    (__ \ 'host).format[String] and
+    (__ \ 'port).format[Int] and
+    (__ \ 'scheme).format[ProxyScheme] and
+    (__ \ 'username).formatNullable[String] and
+    (__ \ 'password).formatNullable[String]
+  )(HttpProxy.apply, unlift(HttpProxy.unapply))
+
+}
