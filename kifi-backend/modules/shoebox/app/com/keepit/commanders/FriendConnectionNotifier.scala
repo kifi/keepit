@@ -47,7 +47,7 @@ class FriendConnectionNotifier @Inject() (
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
       body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly.",
       linkText = "Invite more friends to kifi",
-      linkUrl = s"https://www.kifi.com/${respondingUser.username}",
+      linkUrl = s"https://www.kifi.com/${respondingUser.username.value}",
       imageUrl = respondingUserImage,
       sticky = false,
       category = category,
