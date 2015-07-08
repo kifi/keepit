@@ -91,7 +91,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "organizations") must haveClass[JsArray]
-          val cards = jsonResponse.as[Seq[JsObject]]
+          val cards = (jsonResponse \ "organizations").as[Seq[JsObject]]
           cards.foreach { card => (card \ "name").as[String] === "Justice League" }
           cards.map { card => (card \ "numLibraries").as[Int] }.toSet === (1 to 10).toSet
         }
@@ -148,8 +148,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          (createResponseJson \ "name").as[String] === orgName
-          (createResponseJson \ "description").as[Option[String]] === Some(orgDescription)
+          (createResponseJson \ "organization" \ "name").as[String] === orgName
+          (createResponseJson \ "organization" \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }
