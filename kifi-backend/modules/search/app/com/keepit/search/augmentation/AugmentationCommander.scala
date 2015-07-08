@@ -169,7 +169,7 @@ class AugmentationCommanderImpl @Inject() (
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
+            keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
