@@ -316,7 +316,7 @@ class KeepsCommander @Inject() (
           val (keepsE, invalidKeepIdsE) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
               case Some(k) =>
-                Left(k.copy(state = KeepStates.INACTIVE))
+                Left(k.copy(state = KeepStates.INACTIVE, note = None))
               case None =>
                 Right(kId)
             }
@@ -334,7 +334,7 @@ class KeepsCommander @Inject() (
             case (colls, keep) =>
               colls.foreach { collId => keepToCollectionRepo.remove(keep.id.get, collId) }
               colls
-          }.map { coll =>
+          }.foreach { coll =>
             collectionRepo.collectionChanged(coll, inactivateIfEmpty = true)
           }
 
