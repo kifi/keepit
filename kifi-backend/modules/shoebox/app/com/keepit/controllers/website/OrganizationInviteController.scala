@@ -1,4 +1,4 @@
-package com.keepit.controllers.mobile
+package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
@@ -16,7 +16,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 @Singleton
-class MobileOrganizationInviteController @Inject() (
+class OrganizationInviteController @Inject() (
     userCommander: UserCommander,
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
@@ -52,7 +52,7 @@ class MobileOrganizationInviteController @Inject() (
           OrganizationMemberInvitation(Right(email), role, msg)
         }
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val inviteResult = orgInviteCommander.inviteToOrganization(orgId, request.userId, userInfo ++ emailInfo)
         inviteResult.map {
           case Right(inviteesWithAccess) =>
@@ -74,10 +74,10 @@ class MobileOrganizationInviteController @Inject() (
       case Success(orgId) =>
         val role = (request.body \ "role").as[OrganizationRole]
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         orgInviteCommander.createGenericInvite(orgId, request.userId, role) match {
           case Right(invite) =>
-            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
           case Left(fail) => fail.asErrorResponse
         }
     }
