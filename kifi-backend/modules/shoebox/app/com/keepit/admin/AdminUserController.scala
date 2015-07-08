@@ -9,7 +9,7 @@ import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.{ Failure, Success, Try }
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
@@ -74,6 +74,8 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -249,8 +251,10 @@ class AdminUserController @Inject() (
     val econtactCountF = abookClient.getEContactCount(userId)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
-    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
+    val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
+      val organizations = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+      val candidateOrganizations = orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId)
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -259,7 +263,7 @@ class AdminUserController @Inject() (
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
-      (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+      (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
     val experiments = db.readOnlyReplica { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
@@ -269,7 +273,7 @@ class AdminUserController @Inject() (
       econtactCount <- econtactCountF
       contacts <- contactsF
     } yield {
-      Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers,
+      Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers))
     }

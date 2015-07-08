@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
@@ -22,8 +22,16 @@ case class OrganizationNotificationInfo(
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
 
-case class OrganizationView(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[Id[User]],
-  numMembers: Int, numLibraries: Int)
+case class OrganizationView(
+  orgId: Id[Organization],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  avatarPath: Option[ImagePath],
+  ownerId: Id[User],
+  members: Seq[Id[User]],
+  numMembers: Int,
+  numLibraries: Int)
 
 case class OrganizationCard(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath],
   numMembers: Int, numLibraries: Int)
@@ -123,3 +131,15 @@ object OrganizationFail {
     }
   }
 }
+
+case class OrganizationMembershipInfo(numTotalKeeps: Int, numTotalChats: Int)
+
+case class AnalyticsOrganizationViewExtras(
+  numTotalKeeps: Int,
+  numTotalChats: Int,
+  membersInfo: Map[Id[User], OrganizationMembershipInfo])
+
+case class AnalyticsOrganizationView(orgView: OrganizationView, analyticsExtras: AnalyticsOrganizationViewExtras)
+
+case class AnalyticsOrganizationCardExtras(numTotalKeeps: Int, numTotalChats: Int)
+case class AnalyticsOrganizationCard(orgCard: OrganizationCard, analyticsExtras: AnalyticsOrganizationCardExtras)
