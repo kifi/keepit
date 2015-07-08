@@ -14,15 +14,11 @@ object UrlRuleAction {
   def apply = Empty
 
   case object Empty extends UrlRuleAction {
-
     override def &(that: UrlRuleAction) = that
-
   }
 
   case class And(actions: List[UrlRuleAction]) extends UrlRuleAction {
-
     override def &(that: UrlRuleAction) = And(actions :+ that)
-
   }
 
   case class UseProxy(proxy: Id[HttpProxy]) extends UrlRuleAction
