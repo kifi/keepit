@@ -95,7 +95,7 @@ class UserIpAddressEventLogger @Inject() (
     val userDeclarations = users.map { stats =>
       val user = stats.user
       val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
-      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\t${stats.connections} connections\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.privateKeeps}/${stats.publicKeeps} pb/pv keeps\t"
+      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\t${stats.connections} conns\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.publicKeeps}/${stats.privateKeeps} pb/pv keeps\t"
       if (newUserId.contains(user.id.get)) {
         userDeclaration + "\t*<-- New Member in Cluster!!!*"
       } else userDeclaration
