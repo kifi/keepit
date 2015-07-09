@@ -5,8 +5,8 @@ orgsStats: Map[Id[Organization], OrganizationStatistics],
 fakeOwnerId: Id[User]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@orgDisplay(orgId: Id[Organization]) = {
-    <a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId)">@orgId</a>
+@orgDisplay(org: OrganizationStatistics) = {
+    <a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.orgId)">@org.name</a>
 }
 
 @admin(orgsStats.values.count(_.ownerId != fakeOwnerId) + " real organizations", stylesheets = List("admin_user")) {
@@ -22,8 +22,8 @@ fakeOwnerId: Id[User]
     </tr>
     @for(orgId <- orgsStats.keys.toSeq.sorted) {
         <tr>
-            <td>@orgDisplay(orgId)</td>
-            <td>@orgsStats(orgId).name</td>
+            <td>orgId</td>
+            <td>@orgDisplay(@orgsStats(orgId))</td>
             <td>@orgsStats(orgId).members.size</td>
             <td>@orgsStats(orgId).candidates.size</td>
             <td>@orgsStats(orgId).userStatistics.values.map(_.librariesCreated).sum</td>
