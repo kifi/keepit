@@ -29,7 +29,7 @@ class ABookRecommendationController @Inject() (
 
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
-    abookRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
+    abookRecommendationCommander.getUserInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

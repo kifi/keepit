@@ -509,19 +509,13 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(model))
   }
 
-  def getMembersByOrganizationId(orgId: Id[Organization]) = Action { request =>
+  def getOrganizationMembers(orgId: Id[Organization]) = Action { request =>
     val memberIds = organizationMembershipCommander.getMemberIds(orgId)
     Ok(Json.toJson(memberIds))
   }
 
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = Action { request =>
-    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
-
-    val invites = organizationInviteCommander.getInvitesByOrganizationId(orgId)
-    val inviteEndpoints: Set[Either[Id[User], EmailAddress]] = invites.collect {
-      case invite if invite.userId.nonEmpty => Left(invite.userId.get)
-      case invite if invite.emailAddress.nonEmpty => Right(invite.emailAddress.get)
-    }
-    Ok(Json.toJson(inviteEndpoints))
+  def getOrganizationInviteViews(orgId: Id[Organization]) = Action { request =>
+    val inviteViews: Set[OrganizationInviteView] = organizationInviteCommander.getInvitesByOrganizationId(orgId).map(OrganizationInvite.toOrganizationInviteView)
+    Ok(Json.toJson(inviteViews))
   }
 }

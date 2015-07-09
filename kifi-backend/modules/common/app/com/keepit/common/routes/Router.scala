@@ -163,8 +163,8 @@ object Shoebox extends Service {
     def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
-    def getMembersByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getMembersByOrganizationId", Param("orgId", orgId))
-    def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getInviteEndpointsByOrganizationId", Param("orgId", orgId))
+    def getOrganizationMembers(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationMembers", Param("orgId", orgId))
+    def getOrganizationInviteViews(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationInviteViews", Param("orgId", orgId))
   }
 }
 

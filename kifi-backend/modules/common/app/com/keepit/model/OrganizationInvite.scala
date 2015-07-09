@@ -6,6 +6,7 @@ import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -30,7 +31,6 @@ case class OrganizationInvite(
   def withState(newState: State[OrganizationInvite]): OrganizationInvite = this.copy(state = newState)
 
   override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,email=$emailAddress,role=$role,state=$state]"
-
 }
 
 // doesn't need to be specific to just OrganizationInvite, could be re-used later.
@@ -72,6 +72,14 @@ object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite]
   implicit def ord: Ordering[OrganizationInvite] = new Ordering[OrganizationInvite] {
     def compare(x: OrganizationInvite, y: OrganizationInvite): Int = x.role.priority compare y.role.priority
   }
+
+  implicit def toOrganizationInviteView(from: OrganizationInvite): OrganizationInviteView = OrganizationInviteView(from.userId, from.emailAddress, from.createdAt)
 }
 
 object OrganizationInviteStates extends States[OrganizationInvite]
+
+@json
+case class OrganizationInviteView(
+  userId: Option[Id[User]] = None,
+  emailAddress: Option[EmailAddress] = None,
+  createdAt: DateTime)

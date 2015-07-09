@@ -206,7 +206,6 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.removeEdgeIfExists(update.abookId, update.emailAccountId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.emailAccountId, update.abookId, EmptyEdgeReader)
     } else {
-
       writer.saveVertex(AddressBookData(update.abookId))
       writer.saveVertex(UserData(update.userId))
       writer.saveVertex(EmailAccountData(update.emailAccountId))

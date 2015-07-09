@@ -57,7 +57,7 @@ object RichSocialConnection {
   )(RichSocialConnection.apply, unlift(RichSocialConnection.unapply))
 }
 
-case class InviteRecommendation(
+case class UserInviteRecommendation(
   network: SocialNetworkType,
   identifier: Either[EmailAddress, SocialId],
   name: Option[String],
@@ -65,7 +65,7 @@ case class InviteRecommendation(
   lastInvitedAt: Option[DateTime],
   score: Double)
 
-object InviteRecommendation {
+object UserInviteRecommendation {
   val identifierFormat = EitherFormat[EmailAddress, SocialId]
   implicit val format = (
     (__ \ 'network).format[SocialNetworkType] and
@@ -74,7 +74,22 @@ object InviteRecommendation {
     (__ \ 'pictureUrl).formatNullable[String] and
     (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat) and
     (__ \ 'score).format[Double]
-  )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
+  )(UserInviteRecommendation.apply, unlift(UserInviteRecommendation.unapply))
+}
+
+case class OrganizationInviteRecommendation(
+  emailAddress: EmailAddress,
+  name: Option[String],
+  firstInvitedAt: Option[DateTime],
+  score: Double)
+
+object OrganizationInviteRecommendation {
+  implicit val format = (
+    (__ \ 'emailAddress).format[EmailAddress] and
+    (__ \ 'name).formatNullable[String] and
+    (__ \ 'firstInvitedAt).formatNullable(DateTimeJsonFormat) and
+    (__ \ 'score).format[Double]
+  )(OrganizationInviteRecommendation.apply, unlift(OrganizationInviteRecommendation.unapply))
 }
 
 case class IrrelevantPeopleForUser(

@@ -40,7 +40,7 @@ import com.keepit.social.SecureSocialClientIds
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.{ EmailSenderProvider, EmailOptOutCommander }
-import com.keepit.abook.model.{ InviteRecommendation, RichContact }
+import com.keepit.abook.model.{ UserInviteRecommendation, RichContact }
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress], name: Option[String] = None) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).right.map(_.address).merge}"
@@ -490,7 +490,7 @@ class InviteCommander @Inject() (
     }
   }
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[InviteRecommendation]] = {
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[UserInviteRecommendation]] = {
     abook.getRipestFruits(userId, page, pageSize).map { ripestFruits =>
       val (lastInvitedAtByEmailAddress, lastInvitedAtBySocialUserId, socialUserInfosBySocialUserId) = {
         val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
@@ -508,13 +508,13 @@ class InviteCommander @Inject() (
         richConnection.connectionType match {
           case SocialNetworks.EMAIL =>
             val emailAddress = richConnection.friendEmailAddress.get
-            InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), richConnection.friendName, None, lastInvitedAtByEmailAddress.get(emailAddress), -1)
+            UserInviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), richConnection.friendName, None, lastInvitedAtByEmailAddress.get(emailAddress), -1)
           case socialNetwork =>
             val socialUserId = richConnection.friendSocialId.get
             val socialUserInfo = socialUserInfosBySocialUserId(socialUserId)
             val name = richConnection.friendName getOrElse socialUserInfo.fullName
             val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
-            InviteRecommendation(socialNetwork, Right(socialUserInfo.socialId), Some(name), pictureUrl, lastInvitedAtBySocialUserId.get(socialUserId), -1)
+            UserInviteRecommendation(socialNetwork, Right(socialUserInfo.socialId), Some(name), pictureUrl, lastInvitedAtBySocialUserId.get(socialUserId), -1)
         }
       }
     }
