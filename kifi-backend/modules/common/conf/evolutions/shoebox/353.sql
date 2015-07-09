@@ -13,6 +13,6 @@ CREATE TABLE if not exists rover_url_rule (
     CONSTRAINT rover_url_rule_proxy FOREIGN KEY (proxy_id) REFERENCES rover_http_proxy(id)
 );
 
-insert into evolutions (name, description) values('350.sql', 'create rover_url_rule table');
+insert into evolutions (name, description) values('353.sql', 'create rover_url_rule table');
 
 # --- !Downs
