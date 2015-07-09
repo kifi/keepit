@@ -18,8 +18,8 @@ trait OrganizationMembershipCandidateCommander {
   def addCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
   def removeCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
   def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def getCandidatesInfo(orgId: Id[Organization]): Map[Id[User], OrganizationMembershipInfo]
-  def getCandidatesInfos(orgIds: Seq[Id[Organization]]): Map[Id[Organization], Map[Id[User], OrganizationMembershipInfo]]
+  def getCandidatesInfo(orgId: Id[Organization]): Map[Id[User], OrganizationMembershipAnalyticsInfo]
+  def getCandidatesInfos(orgIds: Seq[Id[Organization]]): Map[Id[Organization], Map[Id[User], OrganizationMembershipAnalyticsInfo]]
 }
 
 @Singleton
@@ -29,7 +29,9 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteCommander: OrganizationInviteCommander,
+    userRepo: UserRepo,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     implicit val executionContext: ExecutionContext,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends OrganizationMembershipCandidateCommander with Logging {
 
@@ -73,22 +75,28 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
     orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = org.ownerId, invitees = inviteRequests.toSeq)
   }
 
-  def getCandidatesInfoHelper(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipInfo] = {
+  def getCandidatesInfoHelper(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipAnalyticsInfo] = {
     val membershipCandidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).map(_.userId)
     membershipCandidates.map { uid =>
+      val basicUser = BasicUser.fromUser(userRepo.get(uid))
       val numTotalKeeps = keepRepo.getCountByUser(uid)
+      val numTotalLibraries = libraryRepo.countOwnerLibrariesForAnonymous(uid)
       val numTotalChats = 42 // TODO: find a way to get the number of user chats
-      uid -> OrganizationMembershipInfo(numTotalKeeps, numTotalChats)
+      uid -> OrganizationMembershipAnalyticsInfo(
+        basicUser,
+        numTotalKeeps = numTotalKeeps,
+        numTotalLibraries = numTotalLibraries,
+        numTotalChats = numTotalChats)
     }.toMap
   }
 
-  def getCandidatesInfo(orgId: Id[Organization]): Map[Id[User], OrganizationMembershipInfo] = {
+  def getCandidatesInfo(orgId: Id[Organization]): Map[Id[User], OrganizationMembershipAnalyticsInfo] = {
     db.readOnlyReplica { implicit session =>
       getCandidatesInfoHelper(orgId)
     }
   }
 
-  def getCandidatesInfos(orgIds: Seq[Id[Organization]]): Map[Id[Organization], Map[Id[User], OrganizationMembershipInfo]] = {
+  def getCandidatesInfos(orgIds: Seq[Id[Organization]]): Map[Id[Organization], Map[Id[User], OrganizationMembershipAnalyticsInfo]] = {
     db.readOnlyReplica { implicit session =>
       orgIds.map { orgId => orgId -> getCandidatesInfoHelper(orgId) }.toMap
     }

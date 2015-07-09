@@ -49,7 +49,7 @@ class AdminOrganizationController @Inject() (
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
-    Ok
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
     val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)

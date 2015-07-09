@@ -46,7 +46,7 @@ trait OrganizationMembershipCommander {
   def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]]
   def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]]
 
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipInfo]
+  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipAnalyticsInfo]
 }
 
 @Singleton
@@ -55,7 +55,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userRepo: UserRepo,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
@@ -240,12 +242,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipInfo] = {
+  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipAnalyticsInfo] = {
     val members = organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
     members.map { uid =>
+      val basicUser = BasicUser.fromUser(userRepo.get(uid))
       val numTotalKeeps = keepRepo.getCountByUser(uid)
+      val numTotalLibraries = libraryRepo.countOwnerLibrariesForAnonymous(uid)
       val numTotalChats = 42 // TODO(ryan): find a way to get the number of user chats
-      uid -> OrganizationMembershipInfo(numTotalKeeps, numTotalChats)
+      uid -> OrganizationMembershipAnalyticsInfo(
+        basicUser,
+        numTotalKeeps = numTotalKeeps,
+        numTotalLibraries = numTotalLibraries,
+        numTotalChats = numTotalChats)
     }.toMap
   }
 }
