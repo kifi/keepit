@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import java.util.regex.PatternSyntaxException
+import java.util.regex.{ Pattern, PatternSyntaxException }
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
@@ -131,12 +131,10 @@ class AdminRoverController @Inject() (
   def performRegexTest = AdminUserPage(parse.json) { implicit request =>
     val body = request.body
     try {
-      val regex = new Regex((body \ "regex").as[String])
+      val regex = (body \ "regex").as[String]
+      val pattern = Pattern.compile(regex)
       val tests = (body \ "tests").as[List[String]]
-      val results = tests.map {
-        case regex(_*) => true
-        case _ => false
-      }
+      val results = tests.map { pattern.matcher(_).matches }
       Ok(Json.toJson(results))
     } catch {
       case e: PatternSyntaxException =>
