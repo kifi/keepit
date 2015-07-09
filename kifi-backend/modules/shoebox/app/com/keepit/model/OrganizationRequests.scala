@@ -55,10 +55,10 @@ sealed abstract class OrganizationFail(val status: Int, val message: String) {
 
 //TODO: when modifying these, make sure we do not break existing Mobile Controllers that are calling .asErrorResponse. Preferably don't modify, just add as needed.
 object OrganizationFail {
-  case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(UNAUTHORIZED, "insufficient_permissions")
-  case object HANDLE_UNAVAILABLE extends OrganizationFail(FORBIDDEN, "handle_unavailable")
+  case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(FORBIDDEN, "insufficient_permissions")
+  case object HANDLE_UNAVAILABLE extends OrganizationFail(CONFLICT, "handle_unavailable")
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
-  case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
+  case object NO_VALID_INVITATIONS extends OrganizationFail(BAD_REQUEST, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
 

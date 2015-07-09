@@ -28,9 +28,10 @@ class MobileOrganizationInviteController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def inviteUsers(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
-    Organization.decodePublicId(pubId) match {
-      case Success(orgId) =>
+  def inviteUsers(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.INVITE_MEMBERS).async(parse.tolerantJson) { request =>
+    request.request.userIdOpt match {
+      case None => Future.successful(OrganizationFail.NOT_A_MEMBER.asErrorResponse)
+      case Some(userId) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
@@ -53,7 +54,7 @@ class MobileOrganizationInviteController @Inject() (
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val inviteResult = orgInviteCommander.inviteToOrganization(orgId, request.userId, userInfo ++ emailInfo)
+        val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, userId, userInfo ++ emailInfo)
         inviteResult.map {
           case Right(inviteesWithAccess) =>
             val result = inviteesWithAccess.map {
@@ -63,19 +64,17 @@ class MobileOrganizationInviteController @Inject() (
             Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
           case Left(organizationFail) => organizationFail.asErrorResponse
         }
-      case Failure(ex) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
     }
   }
 
-  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
-    Organization.decodePublicId(pubId) match {
-      case Failure(ex) =>
-        OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
-      case Success(orgId) =>
+  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
+    request.request.userIdOpt match {
+      case None => OrganizationFail.NOT_A_MEMBER.asErrorResponse
+      case Some(userId) =>
         val role = (request.body \ "role").as[OrganizationRole]
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        orgInviteCommander.createGenericInvite(orgId, request.userId, role) match {
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        orgInviteCommander.createGenericInvite(request.orgId, userId, role) match {
           case Right(invite) =>
             Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
           case Left(fail) => fail.asErrorResponse
