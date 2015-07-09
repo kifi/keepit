@@ -59,7 +59,7 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
         </tr>
         @for((ipAddress, userData) <- sharedIpAddresses) {
             <tr>
-                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.size}</td>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.users.size}</td>
             </tr>
             @formatListOfUsers(userData)
         }
