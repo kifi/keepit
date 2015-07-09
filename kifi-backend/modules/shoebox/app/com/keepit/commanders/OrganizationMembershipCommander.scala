@@ -45,8 +45,6 @@ trait OrganizationMembershipCommander {
   def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]]
   def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]]
   def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]]
-
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipAnalyticsInfo]
 }
 
 @Singleton
@@ -240,20 +238,5 @@ class OrganizationMembershipCommanderImpl @Inject() (
     } catch {
       case OrganizationFailException(failure) => Left(failure)
     }
-  }
-
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipAnalyticsInfo] = {
-    val members = organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
-    members.map { uid =>
-      val basicUser = BasicUser.fromUser(userRepo.get(uid))
-      val numTotalKeeps = keepRepo.getCountByUser(uid)
-      val numTotalLibraries = libraryRepo.countOwnerLibrariesForAnonymous(uid)
-      val numTotalChats = 42 // TODO(ryan): find a way to get the number of user chats
-      uid -> OrganizationMembershipAnalyticsInfo(
-        basicUser,
-        numTotalKeeps = numTotalKeeps,
-        numTotalLibraries = numTotalLibraries,
-        numTotalChats = numTotalChats)
-    }.toMap
   }
 }

@@ -26,9 +26,6 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
-
-  def getAnalyticsView(orgId: Id[Organization]): OrganizationAnalyticsView
-  def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationAnalyticsCard]
 }
 
 @Singleton
@@ -257,28 +254,4 @@ class OrganizationCommanderImpl @Inject() (
       }
     }
   }
-
-  def getAnalyticsView(orgId: Id[Organization]): OrganizationAnalyticsView = {
-    db.readOnlyReplica { implicit session =>
-      val orgView = getOrganizationViewHelper(orgId)
-      val memberIds = orgMembershipRepo.getAllByOrgId(orgId).map(_.userId)
-      val numTotalKeeps = keepRepo.getCountByUsers(memberIds).values.sum
-      // TODO(ryan): get actual numbers for chats
-      val numTotalChats = 420
-      val memberInfos = orgMembershipCommander.getMembersInfo(orgId)
-      OrganizationAnalyticsView(orgView, numTotalKeeps, numTotalChats, memberInfos)
-    }
-  }
-
-  def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationAnalyticsCard] = {
-    db.readOnlyReplica { implicit session =>
-      orgIds.map { orgId =>
-        val orgCard = getOrganizationCardHelper(orgId)
-        val numTotalKeeps = 0
-        val numTotalChats = 0
-        orgId -> OrganizationAnalyticsCard(orgCard, numTotalKeeps, numTotalChats)
-      }.toMap
-    }
-  }
-
 }
