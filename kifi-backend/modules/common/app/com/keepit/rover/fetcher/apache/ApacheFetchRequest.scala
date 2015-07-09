@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URISanitizer, URI }
 import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect, FetchRequest }
-import com.keepit.rover.model.ProxyScheme
+import com.keepit.rover.model.{ HttpProxy, ProxyScheme }
 import org.apache.http.HttpHeaders._
 import org.apache.http.{ StatusLine, HttpHost }
 import org.apache.http.auth.{ UsernamePasswordCredentials, AuthScope }
@@ -40,7 +40,7 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
 
   def url: String = httpGet.getURI.toString
   def isAborted: Boolean = httpGet.isAborted
-  def info: FetchRequestInfo = RedirectInterceptor.getFetchRequestContext(httpContext).get
+  def info(proxy: Option[HttpProxy]): FetchRequestInfo = RedirectInterceptor.getFetchRequestContext(httpContext, proxy).get
 
   def execute(): Try[ApacheFetchResponse] = {
     Try {

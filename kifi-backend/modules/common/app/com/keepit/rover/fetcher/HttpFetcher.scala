@@ -43,14 +43,14 @@ case class FetchResult[T](context: FetchContext, content: Option[T]) {
 
 }
 
-case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
+case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect], proxy: Option[HttpProxy])
 case class FetchResponseInfo(statusCode: Int, status: String, contentType: Option[String], contentCharset: Option[Charset])
 case class FetchContext(request: FetchRequestInfo, response: FetchResponseInfo)
 
 object FetchContext {
-  def ok(destinationUrl: String): FetchContext = {
+  def ok(destinationUrl: String, proxy: Option[HttpProxy] = None): FetchContext = {
     FetchContext(
-      FetchRequestInfo(destinationUrl, Seq()),
+      FetchRequestInfo(destinationUrl, Seq(), proxy),
       FetchResponseInfo(200, "OK", None, None)
     )
   }
