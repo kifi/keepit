@@ -585,7 +585,7 @@ GET           /admin/bookmarks/checkLibraryKeepVisibility                       
 
 GET           /admin/uri/:uriId                                                      @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
-<<<<<<< HEAD
+
 GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
 GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
@@ -685,7 +685,6 @@ GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminU
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
-=======
 GET           /admin/uri/:uriId/article/:kind                                        @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
 GET           /admin/uri/:uriId/fetchAsap                                            @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
@@ -795,7 +794,6 @@ POST          /admin/organization/:id/setDescription                            
 POST          /admin/organization/:id/addCandidate                                   @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 GET           /admin/organizations                                                   @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
 POST          /admin/organizations/create                                            @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
->>>>>>> master
 
 # TEMPORARY ROUTE - remove when activity email is live
 POST          /admin/sendActivityEmailToAll                                          @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
