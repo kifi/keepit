@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -66,7 +66,10 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("organization" -> Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.website)))
+    Ok(Json.obj("organization" -> getOrganizationHelper(request.orgId)))
+  }
+  def getOrganizationHelper(orgId: Id[Organization]): JsValue = {
+    Json.toJson(orgCommander.getOrganizationView(orgId))(OrganizationView.website)
   }
 
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
