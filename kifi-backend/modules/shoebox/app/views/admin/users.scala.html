@@ -95,6 +95,7 @@
           <th>#</th>
           <th>Id</th>
           <th>User</th>
+          <th>org mem/cand</th>
           <th>kifi Conns</th>
           <th>Invited By</th>
           <th>Invite Sent</th>
@@ -113,6 +114,7 @@
           <td>@{i+1}</td>
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
+          <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
           <td>@userStatistics.connections</td>
           <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
           <td>@userStatistics.invitations</td>
