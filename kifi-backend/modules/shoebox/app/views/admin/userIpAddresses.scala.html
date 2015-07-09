@@ -36,8 +36,6 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
         <td>@userStatistics.privateKeeps</td>
         <td>@userStatistics.publicKeeps</td>
         <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
-        <td>@userStatistics.experiments.mkString(", ")</td>
-        <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>
     }
 }
@@ -58,12 +56,10 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
             <th>Prvt Keep</th>
             <th>Pub Keep</th>
             <th>Date Joined</th>
-            <th>Experiment</th>
-            <th>Version</th>
         </tr>
         @for((ipAddress, userData) <- sharedIpAddresses) {
             <tr>
-                <td rowspan="0"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a></td>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.size}</td>
             </tr>
             @formatListOfUsers(userData)
         }
@@ -81,7 +77,7 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
         <tr>
             <td>@{i+1}</td>
             <td>@log.createdAt</td>
-            <td><a href="http://ip-api.com/#@{log.ipAddress}">@log.ipAddress</a></td>
+            <td><a href="http://ip-api.com/#@{log.ipAddress}">@{log.ipAddress}</a></td>
             <td>@log.agentType</td>
         </tr>
         }
