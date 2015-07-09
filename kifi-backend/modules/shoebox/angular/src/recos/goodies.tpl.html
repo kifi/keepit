@@ -2,26 +2,26 @@
   <div class="kf-gd-top clearfix">
     <h2 class="kf-gd-title">Helpful Links</h2>
     <button class="kf-gd-btn kf-gd-trigger-guide" ng-click="triggerGuide(true)" kf-min-version="3.3.0">
-      <svg kf-symbol-sprite icon="kifi-tutorial"></svg>
+      <span class="sprite sprite-guide-icon"></span>
       <span class="kf-gd-line-1">Learn the ropes</span>
       <span class="kf-gd-line-2">Start our step-by-step guide</span>
     </button>
     <button class="kf-gd-btn kf-gd-trigger-install" ng-click="triggerInstall()" ng-switch="installState()">
-      <svg kf-symbol-sprite icon="full-browser"></svg>
+      <span class="sprite sprite-install-extension-icon"></span>
       <span class="kf-gd-line-1">Get the browser add-on</span>
       <span class="kf-gd-line-2" ng-switch-default>Save your links to Kifi from anywhere</span>
       <span class="kf-gd-line-2" ng-switch-when="installing">Installing…</span>
       <span class="kf-gd-line-2" ng-switch-when="done">Installed!</span>
     </button>
     <button class="kf-gd-btn" ng-click="importBookmarks()">
-      <svg kf-symbol-sprite icon="import-from-browser"></svg>
+      <span class="sprite sprite-import-bookmarks-icon"></span>
       <span class="kf-gd-line-1">Import from your browser</span>
       <span class="kf-gd-line-2">Easily get your bookmarks into Kifi</span>
     </button>
     <button class="kf-gd-btn" ng-click="importBookmarkFile()">
-      <svg kf-symbol-sprite icon="import-third-party"></svg>
+      <span class="sprite sprite-import-from-other-services-icon"></span>
       <span class="kf-gd-line-1">Import from 3rd parties</span>
-      <span class="kf-gd-line-2">Pocket, Delicious, Pinboard, Instapaper & more</span>
+      <span class="kf-gd-line-2">Pocket, Delicious, Pinboard & more</span>
     </button>
   </div>
   <div class="kf-gd-bottom">
