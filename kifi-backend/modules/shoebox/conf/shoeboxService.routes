@@ -692,6 +692,7 @@ POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserC
 
 GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
 POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
+POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView

@@ -13,6 +13,13 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
+    <tr><td>Handle</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+                <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
     <tr><td>Description</td>
         <td>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
