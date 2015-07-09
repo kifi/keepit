@@ -28,7 +28,7 @@ var modRewrite = require('connect-modrewrite');
 var gutil = require('gulp-util');
 var karma = require('karma').server;
 var protractor = require('gulp-protractor').protractor;
-var revall = require('gulp-rev-all');
+var RevAll = require('gulp-rev-all');
 var awspublish = require('gulp-awspublish');
 var parallelize = require('concurrent-transform');
 var through = require('through');
@@ -443,10 +443,11 @@ gulp.task('test', function (done) {
 });
 
 function compileAssetRevs(opts, dest) {
-  opts = merge({ ignore: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
+  opts = merge({ dontRenameFile: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
   dest = dest || 'tmp';
+  var revAll = new RevAll(opts);
   return gulp.src(assetSrc, { base: '.' })
-    .pipe(revall(opts))
+    .pipe(revAll.revision())
     .pipe(gulp.dest(dest));
 }
 
