@@ -28,57 +28,49 @@ class OrganizationInviteController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def inviteUsers(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.INVITE_MEMBERS).async(parse.tolerantJson) { request =>
-    request.request.userIdOpt match {
-      case None => Future.successful(OrganizationFail.NOT_A_MEMBER.asErrorResponse)
-      case Some(userId) =>
-        val invites = (request.body \ "invites").as[JsArray].value
-        val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
+  def inviteUsers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS).async(parse.tolerantJson) { request =>
+    val invites = (request.body \ "invites").as[JsArray].value
+    val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
-        val userInvites = invites.filter(inv => (inv \ "type").as[String] == "user")
-        val emailInvites = invites.filter(inv => (inv \ "type").as[String] == "email")
+    val userInvites = invites.filter(inv => (inv \ "type").as[String] == "user")
+    val emailInvites = invites.filter(inv => (inv \ "type").as[String] == "email")
 
-        val userExternalIds = userInvites.map(inv => (inv \ "id").as[ExternalId[User]])
-        val userMap = userCommander.getByExternalIds(userExternalIds)
-        val userInfo = userInvites.map { userInvite =>
-          val externalId = (userInvite \ "id").as[ExternalId[User]]
-          val userId = userMap(externalId).id.get
-          val role = (userInvite \ "role").as[OrganizationRole]
-          OrganizationMemberInvitation(Left(userId), role, msg)
+    val userExternalIds = userInvites.map(inv => (inv \ "id").as[ExternalId[User]])
+    val userMap = userCommander.getByExternalIds(userExternalIds)
+    val userInfo = userInvites.map { userInvite =>
+      val externalId = (userInvite \ "id").as[ExternalId[User]]
+      val userId = userMap(externalId).id.get
+      val role = (userInvite \ "role").as[OrganizationRole]
+      OrganizationMemberInvitation(Left(userId), role, msg)
+    }
+
+    val emailInfo = emailInvites.map { emailInvite =>
+      val email = (emailInvite \ "email").as[EmailAddress]
+      val role = (emailInvite \ "role").as[OrganizationRole]
+      OrganizationMemberInvitation(Right(email), role, msg)
+    }
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, request.request.userId, userInfo ++ emailInfo)
+    inviteResult.map {
+      case Left(organizationFail) => organizationFail.asErrorResponse
+      case Right(inviteesWithAccess) =>
+        val result = inviteesWithAccess.map {
+          case (Left(user), role) => Json.obj("user" -> user.externalId, "role" -> role)
+          case (Right(contact), role) => Json.obj("email" -> contact.email, "role" -> role)
         }
-
-        val emailInfo = emailInvites.map { emailInvite =>
-          val email = (emailInvite \ "email").as[EmailAddress]
-          val role = (emailInvite \ "role").as[OrganizationRole]
-          OrganizationMemberInvitation(Right(email), role, msg)
-        }
-
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, userId, userInfo ++ emailInfo)
-        inviteResult.map {
-          case Left(organizationFail) => organizationFail.asErrorResponse
-          case Right(inviteesWithAccess) =>
-            val result = inviteesWithAccess.map {
-              case (Left(user), role) => Json.obj("user" -> user.externalId, "role" -> role)
-              case (Right(contact), role) => Json.obj("email" -> contact.email, "role" -> role)
-            }
-            Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
-        }
+        Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
     }
   }
 
-  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
-    request.request.userIdOpt match {
-      case None => OrganizationFail.NOT_A_MEMBER.asErrorResponse
-      case Some(userId) =>
-        val role = (request.body \ "role").as[OrganizationRole]
+  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
+    val role = (request.body \ "role").as[OrganizationRole]
 
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        orgInviteCommander.createGenericInvite(request.orgId, userId, role) match {
-          case Right(invite) =>
-            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
-          case Left(fail) => fail.asErrorResponse
-        }
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, role) match {
+      case Right(invite) =>
+        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+      case Left(fail) => fail.asErrorResponse
     }
   }
 
