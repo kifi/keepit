@@ -35,7 +35,6 @@ class UrlController @Inject() (
     normalizationService: NormalizationService,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    httpProxyRepo: HttpProxyRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
