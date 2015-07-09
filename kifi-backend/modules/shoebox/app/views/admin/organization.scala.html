@@ -53,7 +53,7 @@ orgStats: OrganizationStatistics
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
             <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(candidate.userId)">@candidate.userId</a></td>
-            <td>@orgStats.userStatistics(candidate.userId).user.fullName</td>
+            <td>@adminHelper.userDisplay(orgStats.userStatistics(candidate.userId).user)</td>
             <td>@orgStats.userStatistics(candidate.userId).librariesCreated</td>
             <td>@orgStats.userStatistics(candidate.userId).publicKeeps</td>
         </tr>

@@ -19,7 +19,9 @@ case class UserStatistics(
   experiments: Set[ExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
-  librariesFollowed: Int)
+  librariesFollowed: Int,
+  orgs: Seq[Organization],
+  orgCandidates: Seq[Organization])
 
 case class OrganizationStatistics(
   orgId: Id[Organization],
@@ -62,6 +64,8 @@ class UserStatisticsCommander @Inject() (
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+    val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+    val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
 
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
@@ -73,7 +77,8 @@ class UserStatisticsCommander @Inject() (
       userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations,
       librariesCreated,
-      librariesFollowed)
+      librariesFollowed,
+      orgs, orgCandidates)
   }
 
   def organizationStatistics(orgId: Id[Organization])(implicit session: RSession): OrganizationStatistics = {
