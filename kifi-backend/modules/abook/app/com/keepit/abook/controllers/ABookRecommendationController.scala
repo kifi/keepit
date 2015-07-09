@@ -35,8 +35,8 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def hideUserRecommendationForOrg(orgId: Id[Organization], irrelevantUserId: Id[User]) = Action { request =>
-    abookOrganizationRecommendationCommander.hideUserRecommendation(orgId, irrelevantUserId)
+  def hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
+    abookOrganizationRecommendationCommander.hideUserRecommendation(orgId, memberId, irrelevantUserId)
     Ok
   }
 
@@ -48,8 +48,8 @@ class ABookRecommendationController @Inject() (
     }
   }
 
-  def getNonUserRecommendationsForOrg(viewerId: Id[User], orgId: Id[Organization], offset: Int, limit: Int) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getNonUserRecommendations(viewerId, orgId, offset, limit).map { recommendedUsers =>
+  def getNonUserRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int) = Action.async { request =>
+    abookOrganizationRecommendationCommander.getNonUserRecommendations(orgId, memberId: Id[User], offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -62,9 +62,9 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def hideNonUserRecommendationForOrg(orgId: Id[Organization]) = Action(parse.json) { request =>
+  def hideNonUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
     val emailAddress = (request.body \ "irrelevantEmail").as[EmailAddress]
-    abookOrganizationRecommendationCommander.hideNonUserRecommendation(orgId, emailAddress)
+    abookOrganizationRecommendationCommander.hideNonUserRecommendation(orgId, memberId, emailAddress)
     Ok
   }
 

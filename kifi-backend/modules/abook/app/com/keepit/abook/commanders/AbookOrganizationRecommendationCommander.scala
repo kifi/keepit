@@ -37,16 +37,16 @@ class AbookOrganizationRecommendationCommander @Inject() (
     oldWTICommander: WTICommander,
     clock: Clock) extends Logging {
 
-  def hideUserRecommendation(organizationId: Id[Organization], irrelevantMemberId: Id[User]): Unit = {
+  def hideUserRecommendation(organizationId: Id[Organization], memberId: Id[User], irrelevantMemberId: Id[User]): Unit = {
     db.readWrite { implicit session =>
-      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, irrelevantMemberId)
+      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, irrelevantMemberId)
     }
   }
 
-  def hideNonUserRecommendation(organizationId: Id[Organization], emailAddress: EmailAddress): Unit = {
+  def hideNonUserRecommendation(organizationId: Id[Organization], memberId: Id[User], emailAddress: EmailAddress): Unit = {
     db.readWrite { implicit session =>
       val emailAccount = emailAccountRepo.internByAddress(emailAddress)
-      organizationEmailInviteRecommendationRepo.recordIrrelevantRecommendation(organizationId, emailAccount.id.get)
+      organizationEmailInviteRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, emailAccount.id.get)
     }
   }
 
@@ -62,9 +62,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
     fRecommendations
   }
 
-  def getNonUserRecommendations(viewerId: Id[User], orgId: Id[Organization], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
+  def getNonUserRecommendations(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
     val start = clock.now()
-    val fRecommendations = generateFutureNonUserRecommendations(viewerId, orgId).map {
+    val fRecommendations = generateFutureNonUserRecommendations(orgId, memberId).map {
       orgInviteRecoStream => orgInviteRecoStream.slice(offset, offset + limit).toSeq
     }
     fRecommendations.onSuccess {
@@ -118,7 +118,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureNonUserRecommendations(viewerId: Id[User], orgId: Id[Organization]): Future[Stream[OrganizationInviteRecommendation]] = {
+  private def generateFutureNonUserRecommendations(orgId: Id[Organization], memberId: Id[User]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fExistingInvites = shoebox.getOrganizationInviteViews(orgId)
     val fNormalizedUsernames = getNormalizedUsernames(orgId)
     getSociallyRelatedEntities(orgId).flatMap { relatedEntities =>
@@ -126,7 +126,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => organizationEmailInviteRecommendationRepo.getIrrelevantRecommendations(orgId) }
-        val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(viewerId) }
+        val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(memberId) }
         for {
           existingInvites <- fExistingInvites
           normalizedUserNames <- fNormalizedUsernames
