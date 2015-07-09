@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.rover.rule.{ UrlRuleFilter, UrlRuleAction }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -45,6 +46,7 @@ object RoverUrlRuleStates extends States[RoverUrlRule]
 @ImplementedBy(classOf[RoverUrlRuleRepoImpl])
 trait RoverUrlRuleRepo extends Repo[RoverUrlRule] {
   def allActive(implicit session: RSession): Seq[RoverUrlRule]
+  def actionsFor(url: String)(implicit session: RSession): Seq[UrlRuleAction]
 }
 
 @Singleton
@@ -78,6 +80,15 @@ class RoverUrlRuleRepoImpl @Inject() (
     }
     result.sortBy(_.id.get.id)
   }
+
+  def actionsFor(url: String)(implicit session: RSession): Seq[UrlRuleAction] =
+    for {
+      rule <- allActive
+      filter = UrlRuleFilter.fromRule(rule)
+      actions = UrlRuleAction.fromRule(rule)
+      if filter(url)
+      action <- actions
+    } yield action
 
 }
 

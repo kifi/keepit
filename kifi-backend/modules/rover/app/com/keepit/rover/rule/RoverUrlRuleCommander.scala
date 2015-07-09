@@ -3,14 +3,16 @@ package com.keepit.rover.rule
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.Database
-import com.keepit.rover.model.{ RoverUrlRule, UrlRule, RoverUrlRuleRepo }
+import com.keepit.rover.model._
 
 import scala.concurrent.Future
 
 @Singleton
 class RoverUrlRuleCommander @Inject() (
     val db: Database,
-    val urlRuleRepo: RoverUrlRuleRepo) {
+    val urlRuleRepo: RoverUrlRuleRepo,
+    val httpProxyRepo: RoverHttpProxyRepo,
+    val httpProxyCommander: RoverHttpProxyCommander) {
 
   def all: Future[Seq[UrlRule]] = db.readOnlyMaster { implicit session =>
     Future.successful(urlRuleRepo.all.map(roverUrlRuleToUrlRule))
@@ -34,6 +36,25 @@ class RoverUrlRuleCommander @Inject() (
       Future.successful(roverUrlRuleToUrlRule(urlRuleRepo.save(newProxy)))
     }
   }
+
+  def actionsFor(url: String): Seq[UrlRuleAction] = {
+    db.readOnlyMaster { implicit session =>
+      urlRuleRepo.actionsFor(url)
+    }
+  }
+
+  def proxyFor(url: String): Option[RoverHttpProxy] = {
+    db.readOnlyMaster { implicit session =>
+      actionsFor(url).collect {
+        case UrlRuleAction.UseProxy(proxyId) => proxyId
+      }.headOption.map { proxyId =>
+        httpProxyRepo.get(proxyId)
+      }
+    }
+  }
+
+  def lightweightProxyFor(url: String): Option[HttpProxy] =
+    proxyFor(url).map(httpProxyCommander.roverHttpProxyToHttpProxy)
 
   def roverUrlRuleToUrlRule(urlRule: RoverUrlRule): UrlRule = {
     UrlRule(
