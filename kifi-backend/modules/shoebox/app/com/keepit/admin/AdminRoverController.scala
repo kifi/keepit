@@ -22,8 +22,18 @@ class AdminRoverController @Inject() (
     val roverServiceClient: RoverServiceClient,
     implicit val executionContext: ExecutionContext) extends AdminUserActions {
 
-  def findUrl = AdminUserPage { implicit request =>
-    ???
+  def searchUrl = AdminUserPage { implicit request =>
+    Ok(views.html.admin.roverSearchUrl())
+  }
+
+  def findUrl = AdminUserPage(parse.urlFormEncoded) { implicit request =>
+    val url = request.body.get("url").get.head
+    db.readOnlyReplica { implicit session =>
+      urlRepo.get(url) match {
+        case Some(urlModel) => Redirect(routes.UrlController.getURIInfo(urlModel.normalizedUriId))
+        case None => Ok(views.html.admin.roverSearchUrl(notFound = true, url = Some(url)))
+      }
+    }
   }
 
   def getAllProxies = AdminUserPage.async { implicit request =>
