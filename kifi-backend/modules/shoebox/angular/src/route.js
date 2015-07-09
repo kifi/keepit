@@ -19,7 +19,7 @@ angular.module('kifi')
           return match[1] + match[2]; // remove trailing slash
         }
       })
-      .when('/:username/libraries', '/:username')
+      .when('/:handle/libraries', '/:handle')
       .otherwise('/');  // last resort
 
     // Set up the states.
@@ -52,13 +52,13 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userProfile', {
-        url: '/:username',
+        url: '/:handle',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
           userProfileActionService: 'userProfileActionService',
           profile: ['userProfileActionService', '$stateParams', function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.username);
+            return userProfileActionService.getProfile($stateParams.handle);
           }]
         },
         'abstract': true
@@ -94,13 +94,13 @@ angular.module('kifi')
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug?authToken',
+        url: '/:handle/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
-            return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
+            return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
           }],
           libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
             if (library.image) {
