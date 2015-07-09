@@ -585,106 +585,6 @@ GET           /admin/bookmarks/checkLibraryKeepVisibility                       
 
 GET           /admin/uri/:uriId                                                      @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
-
-GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
-GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
-
-GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/myKeepInfos           @com.keepit.controllers.admin.AdminAttributionController.myKeepInfos()
-GET     /admin/myReKeeps             @com.keepit.controllers.admin.AdminAttributionController.myReKeeps()
-GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
-GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
-GET     /admin/topReKeeps            @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
-GET     /admin/keepAttribution       @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
-
-POST    /admin/reKeepStats/update       @com.keepit.controllers.admin.AdminAttributionController.updateReKeepStats
-POST    /admin/reKeepStats/user/update  @com.keepit.controllers.admin.AdminAttributionController.updateUserReKeepStats
-POST    /admin/reKeepStats/users/update @com.keepit.controllers.admin.AdminAttributionController.updateUsersReKeepStats
-POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttributionController.updateAllReKeepStats
-
-GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
-GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
-
-GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
-GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
-GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
-GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
-POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
-POST    /admin/data/pornDomainFlag                  @com.keepit.controllers.admin.UrlController.pornDomainFlag()
-GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
-GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
-GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
-GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
-GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
-GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
-POST    /admin/data/normalization/submit       @com.keepit.controllers.admin.UrlController.submitNormalization
-GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
-POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
-GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
-POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
-POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
-GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
-
-GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
-
-GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
-GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
-GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
-GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI], deprecated: Boolean ?= false)
-
-GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfoController.all
-GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
-
-GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
-
-GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
-GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
-POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
-GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
-GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
-POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
-GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
-GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.registeredUsersView(page: Int)
-GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
-POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
-GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
-GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
-GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
-GET     /admin/user/:id/ips         @com.keepit.controllers.admin.AdminUserController.userIpAddressesView(id: Id[User])
-POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
-GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
-GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
-GET     /admin/user/:id/prefixSocialSearch  @com.keepit.controllers.admin.AdminUserController.prefixSocialSearch(id:Id[User], query:String ?= "")
-GET     /admin/user/:id/prefixContactSearch @com.keepit.controllers.admin.AdminUserController.prefixContactSearch(id:Id[User], query:String ?= "")
-POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
-POST    /admin/user/:id/createLibrary  @com.keepit.controllers.admin.AdminUserController.createLibrary(id: Id[User])
-POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperimentAction(id: Id[User], exp: String)
-POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Keep])
-DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperimentAction(id: Id[User], exp: String)
-POST    /admin/user/:id/name        @com.keepit.controllers.admin.AdminUserController.changeUsersName(id: Id[User])
-POST    /admin/user/:id/pic         @com.keepit.controllers.admin.AdminUserController.setUserPicture(id: Id[User], pictureId: Id[UserPicture])
-POST    /admin/user/:id/picUpdate   @com.keepit.controllers.admin.AdminUserController.updateUserPicture(id: Id[User])
-POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
-POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
-POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
-GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
-POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
-POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
-GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
-POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
-POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
-POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
-GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
-POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
-GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
-GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
-GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
-GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
-POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
-POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
 GET           /admin/uri/:uriId/article/:kind                                        @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
 GET           /admin/uri/:uriId/fetchAsap                                            @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
@@ -721,8 +621,6 @@ GET           /admin/data/batchURLMigration                                     
 POST          /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
 GET           /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.getPatterns
 POST          /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.savePatterns
-GET           /admin/data/proxies                                                    @com.keepit.controllers.admin.ScraperAdminController.getProxies
-POST          /admin/data/proxies                                                    @com.keepit.controllers.admin.ScraperAdminController.saveProxies
 GET           /admin/data/remigrate                                                  @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST          /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST          /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
@@ -953,17 +851,17 @@ GET           /admin/twitter                                                    
 GET           /admin/twitter/accept                                                  @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET           /admin/twitter/email                                                   @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 
-GET     /admin/rover/searchUrl                             @com.keepit.controllers.admin.AdminRoverController.searchUrl()
-POST    /admin/rover/searchUrl                             @com.keepit.controllers.admin.AdminRoverController.findUrl()
-GET     /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.getAllProxies()
-POST    /admin/rover/proxies                               @com.keepit.controllers.admin.AdminRoverController.saveProxies()
-POST    /admin/rover/proxies/create                        @com.keepit.controllers.admin.AdminRoverController.createProxy
-GET     /admin/rover/urlRules                              @com.keepit.controllers.admin.AdminRoverController.getAllUrlRules()
-POST    /admin/rover/urlRules                              @com.keepit.controllers.admin.AdminRoverController.saveUrlRules()
-POST    /admin/rover/urlRules/create                       @com.keepit.controllers.admin.AdminRoverController.createUrlRule
-GET     /admin/rover/testRegex                             @com.keepit.controllers.admin.AdminRoverController.testRegex
-GET     /admin/rover/testRegex/:regex                      @com.keepit.controllers.admin.AdminRoverController.testRegexFilled(regex: String)
-POST    /admin/rover/performRegexTest                      @com.keepit.controllers.admin.AdminRoverController.performRegexTest
+GET           /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.searchUrl()
+POST          /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.findUrl()
+GET           /admin/rover/proxies                                                   @com.keepit.controllers.admin.AdminRoverController.getAllProxies()
+POST          /admin/rover/proxies                                                   @com.keepit.controllers.admin.AdminRoverController.saveProxies()
+POST          /admin/rover/proxies/create                                            @com.keepit.controllers.admin.AdminRoverController.createProxy
+GET           /admin/rover/urlRules                                                  @com.keepit.controllers.admin.AdminRoverController.getAllUrlRules()
+POST          /admin/rover/urlRules                                                  @com.keepit.controllers.admin.AdminRoverController.saveUrlRules()
+POST          /admin/rover/urlRules/create                                           @com.keepit.controllers.admin.AdminRoverController.createUrlRule
+GET           /admin/rover/testRegex                                                 @com.keepit.controllers.admin.AdminRoverController.testRegex
+GET           /admin/rover/testRegex/:regex                                          @com.keepit.controllers.admin.AdminRoverController.testRegexFilled(regex: String)
+POST          /admin/rover/performRegexTest                                          @com.keepit.controllers.admin.AdminRoverController.performRegexTest
 
 ##########################################
 # Common Healthcheck / service routes
