@@ -18,6 +18,7 @@ import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexable }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexable, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.index.graph.organization.{ OrganizationMembershipIndexable, OrganizationMembershipIndexer }
 import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.util.LongArraySet
@@ -39,6 +40,7 @@ class SearchFactory @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     libraryMembershipIndexer: LibraryMembershipIndexer,
+    orgMemembershipIndexer: OrganizationMembershipIndexer,
     userIndexer: UserIndexer,
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
     shoeboxClient: ShoeboxServiceClient,
@@ -56,6 +58,7 @@ class SearchFactory @Inject() (
   private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
   private[this] val configReqConsolidator = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
   private[this] val fakeUserIdsReqConsolidator = new RequestConsolidator[this.type, Set[Long]](3 seconds)
+  private[this] val orgIdsReqConsolidater = new RequestConsolidator[Id[User], Set[Long]](3 seconds)
 
   def getUriSearches(
     shards: Set[Shard[NormalizedURI]],
@@ -77,6 +80,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
+    val orgIdsFuture = getOrganizations(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
@@ -127,6 +131,7 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             restrictedUserIdsFuture,
             libraryIdsFuture,
+            orgIdsFuture,
             clickBoostsFuture,
             clickHistoryFuture,
             monitoredAwait,
@@ -164,6 +169,15 @@ class SearchFactory @Inject() (
         }
       }
       Future.sequence(futureMutualFriendsByUserId).map(_.toMap)
+    }
+  }
+
+  def getOrganizations(userId: Id[User]): Future[Set[Long]] = {
+    orgIdsReqConsolidater(userId) { userId =>
+      SafeFuture {
+        val searcher = orgMemembershipIndexer.getSearcher
+        OrganizationMembershipIndexable.getOrgsByMember(searcher, userId)
+      }
     }
   }
 
@@ -216,6 +230,7 @@ class SearchFactory @Inject() (
         throw new IllegalArgumentException("library must be specified")
     }
     val friendIdsFuture = Future.successful(LongArraySet.empty)
+    val orgIdsFuture = Future.successful(LongArraySet.empty)
 
     val restrictedUserIdsFuture = getRestrictedUsers(None)
 
@@ -260,6 +275,7 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             restrictedUserIdsFuture,
             libraryIdsFuture,
+            orgIdsFuture,
             monitoredAwait,
             timeLogs,
             (lang1, lang2)
@@ -290,6 +306,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
+    val orgIdsFuture = getOrganizations(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
@@ -335,6 +352,7 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             restrictedUserIdsFuture,
             libraryIdsFuture,
+            orgIdsFuture,
             monitoredAwait,
             timeLogs,
             explain.map((_, lang1, lang2))
@@ -364,6 +382,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
+    val orgIdsFuture = getOrganizations(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
@@ -400,6 +419,7 @@ class SearchFactory @Inject() (
             friendIdsFuture,
             restrictedUserIdsFuture,
             libraryIdsFuture,
+            orgIdsFuture,
             monitoredAwait,
             timeLogs,
             explain.map((_, lang1, lang2))

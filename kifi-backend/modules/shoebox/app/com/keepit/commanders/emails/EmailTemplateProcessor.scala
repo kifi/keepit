@@ -175,7 +175,7 @@ class EmailTemplateProcessorImpl @Inject() (
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = {
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = try {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -232,6 +232,8 @@ class EmailTemplateProcessorImpl @Inject() (
           ).encode
       }
     })
+  } catch {
+    case ex: IndexOutOfBoundsException => log.error(s"[EmailTemplate] IOOB Exception. Text: $text"); throw ex
   }
 
   // used to gather the types of objects we need to replace the tags with real values
@@ -243,6 +245,8 @@ class EmailTemplateProcessorImpl @Inject() (
       // only call if Id[User] is expected as the first argument
       @inline def userId = jsValueAsUserId(tagArgs(0))
 
+      @inline def keepId = tagArgs(0).as[Id[Keep]]
+
       tagWrapper.label match {
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
@@ -251,7 +255,6 @@ class EmailTemplateProcessorImpl @Inject() (
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case tags.keepName | tags.keepUrl =>
-          val keepId = tagArgs(0).as[Id[Keep]]
           KeepNeeded(keepId)
         case _ => NothingNeeded
       }

@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 
 trait TestInjectorProvider { this: InjectorProvider =>
   def inject[A](implicit m: Manifest[A], injector: Injector): A = injector.instance[A]
-  def withInjector[T](overridingModules: Module*)(f: Injector => T) = {
+  def withInjector[T](overridingModules: Module*)(f: Injector => T): T = {
     val customModules = Modules.`override`(module).`with`(overridingModules: _*)
     val injector = createInjector(customModules)
     try {

@@ -48,10 +48,6 @@
   sudo: yes
   roles:
     - { role: kifi.rover }
-- hosts: tag_Service_scraper
-  sudo: yes
-  roles:
-    - { role: kifi.scraper }
 - hosts: tag_Service_search
   sudo: yes
   roles:

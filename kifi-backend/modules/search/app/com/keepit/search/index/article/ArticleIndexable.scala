@@ -9,7 +9,7 @@ import com.keepit.rover.article.content.{ ArticleContentExtractor }
 import com.keepit.rover.article.Article
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
-import com.keepit.search.index.{ FieldDecoder, Indexable, DefaultAnalyzer }
+import com.keepit.search.index.{ Searcher, FieldDecoder, Indexable, DefaultAnalyzer }
 
 object ArticleFields {
   val titleField = "t"
@@ -22,15 +22,25 @@ object ArticleFields {
   val homePageField = "home_page"
   val mediaField = "media"
   val recordField = "rec"
+  val safeField = "safe"
 
   val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+
+  object Safety {
+    val field = "safety"
+    val unsafe = "unsafe"
+  }
+
 }
 
 object ArticleIndexable {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](INACTIVE, REDIRECTED)
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state) || !uri.shouldHaveContent
+  def isSafe(searcher: Searcher, uriId: Long): Boolean = {
+    searcher.getLongDocValue(ArticleFields.safeField, uriId).exists(_ > 0)
+  }
 }
 
 case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Shard[NormalizedURI]) extends Indexable[NormalizedURI, NormalizedURI] {
@@ -46,9 +56,13 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
     val doc = super.buildDocument
     val articleContent = ArticleContentExtractor(articles)
 
-    uri.restriction.map { reason =>
-      doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
+    if (uri.restriction.isDefined) {
+      doc.add(buildKeywordField(Safety.field, Safety.unsafe))
     }
+
+    val safe = if (uri.restriction.isDefined) 0L else 1L
+    doc.add(buildLongValueField(safeField, safe))
+
     val titleLang = articleContent.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)

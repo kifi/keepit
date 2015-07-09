@@ -213,6 +213,9 @@ class HomeController @Inject() (
           case SmsSuccess =>
             Ok
           case SmsRemoteFailure =>
+            db.readWriteAsync { implicit session =>
+              userValueRepo.setValue(request.userId, UserValues.lastSmsSent.name, clock.now().minusMinutes(2))
+            }
             InternalServerError
         }
     }

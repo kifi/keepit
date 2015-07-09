@@ -15,8 +15,6 @@ import play.api.libs.json.Json
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
-  def updateName(organizationId: Id[Organization], name: String): Organization = ???
-  def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
 }
@@ -57,6 +55,10 @@ class OrganizationRepoImpl @Inject() (
   }
   override def invalidateCache(org: Organization)(implicit session: RSession) {
     orgCache.set(org.id.get, org)
+  }
+
+  override def save(model: Organization)(implicit session: RWSession): Organization = {
+    super.save(model.copy(seq = deferredSeqNum()))
   }
 
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {

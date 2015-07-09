@@ -38,8 +38,7 @@ angular.module('kifi')
           }, 50);
           var ready = scope.library ? libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
             scope.library = data.library;
-            scope.isFollowing = data.library.membership && data.library.membership.access === 'read_only';
-            scope.isMine = libraryService.isMyLibrary(data.library);
+            scope.library.path = data.library.url;
           }) : timeout;
         }).on('touchstart touchend', function () {
           touchedAt = Date.now();
@@ -61,37 +60,5 @@ angular.module('kifi')
         });
       }
     };
-  }
-])
-
-.controller('UserLibTooltipController', [
-  '$scope', 'libraryService', 'signupService', 'modalService',
-  function ($scope, libraryService, signupService, modalService) {
-
-    function followLibrary() {
-      libraryService.joinLibrary($scope.library.id).then(function () {
-        $scope.isFollowing = true;
-        $scope.library.numFollowers++;
-      })['catch'](modalService.openGenericErrorModal);
-    }
-
-    function unfollowLibrary() {
-      libraryService.leaveLibrary($scope.library.id).then(function () {
-        $scope.isFollowing = false;
-        $scope.library.numFollowers = Math.max(0, $scope.library.numFollowers - 1);
-      })['catch'](modalService.openGenericErrorModal);
-    }
-
-    $scope.toggleFollow = function () {
-      if ($scope.isFollowing) {
-        unfollowLibrary();
-      } else if ($scope.$root.userLoggedIn) {
-        followLibrary();
-      } else {
-        $scope.tipping = false;
-        signupService.register({libraryId: $scope.library.id, intent: 'follow'});
-      }
-    };
-
   }
 ]);

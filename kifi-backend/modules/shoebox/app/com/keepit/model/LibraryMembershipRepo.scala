@@ -13,6 +13,7 @@ import com.keepit.common.performance.timing
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import play.api.libs.json.Json
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
 import scala.collection.immutable.Seq
@@ -89,13 +90,13 @@ class LibraryMembershipRepoImpl @Inject() (
     def listed = column[Boolean]("listed", O.NotNull)
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
     def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def priority = column[Long]("priority", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates, priority) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   implicit val getLibraryResult = libraryRepo.getLibraryResult
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
-
   initTable()
 
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {

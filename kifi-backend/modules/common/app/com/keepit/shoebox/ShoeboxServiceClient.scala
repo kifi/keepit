@@ -60,10 +60,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
-  def getUriIdsInCollection(id: Id[Collection]): Future[Seq[KeepUriAndTime]]
-  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]]
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
-  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
@@ -392,18 +388,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]] = {
-    call(Shoebox.internal.getCollectionsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority) map { r =>
-      r.json.as[Seq[Collection]]
-    }
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
-    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority) map { r =>
-      r.json.as[Seq[KeepUriAndTime]]
-    }
-  }
-
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     cacheProvider.activeSearchConfigExperimentsCache.getOrElseFuture(ActiveExperimentsKey) {
       call(Shoebox.internal.getActiveExperiments).map { r =>
@@ -454,19 +438,6 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
     call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
-  }
-
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
-    call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
-      r.json.as[Seq[Collection]]
-    }
-  }
-
-  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
-    redundantDBConnectionCheck(collIds)
-    call(Shoebox.internal.getCollectionIdsByExternalIds(collIds.mkString(","))).map { r =>
-      r.json.as[Seq[Id[Collection]]]
-    }
   }
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]] = {

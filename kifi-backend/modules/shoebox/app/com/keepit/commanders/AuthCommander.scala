@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.UUID
+
 import com.google.inject.Inject
 import com.keepit.common.controller.KifiSession
 
@@ -39,11 +41,11 @@ import securesocial.core.providers.utils.GravatarHelper
 import scala.util.{ Failure, Success, Try }
 import KifiSession._
 
-case class EmailPassword(email: EmailAddress, password: Array[Char])
+case class EmailPassword(email: EmailAddress, password: Option[String])
 object EmailPassword {
   implicit val format = (
     (__ \ 'email).format[EmailAddress] and
-    (__ \ 'password).format[String].inmap((s: String) => s.toCharArray, unlift((c: Array[Char]) => Some(c.toString)))
+    (__ \ 'password).formatNullable[String]
   )(EmailPassword.apply, unlift(EmailPassword.unapply))
 }
 
@@ -51,7 +53,7 @@ case class SocialFinalizeInfo(
   email: EmailAddress,
   firstName: String,
   lastName: String,
-  password: Array[Char],
+  password: Option[String],
   picToken: Option[String],
   picHeight: Option[Int],
   picWidth: Option[Int],
@@ -64,7 +66,7 @@ object SocialFinalizeInfo {
     (__ \ 'email).format[EmailAddress] and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
-    (__ \ 'password).format[String].inmap((s: String) => s.toCharArray, unlift((c: Array[Char]) => Some(c.toString))) and
+    (__ \ 'password).formatNullable[String] and
     (__ \ 'picToken).formatNullable[String] and
     (__ \ 'picHeight).formatNullable[Int] and
     (__ \ 'picWidth).formatNullable[Int] and
@@ -130,14 +132,17 @@ class AuthCommander @Inject() (
   }
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-    email: EmailAddress, passwordInfo: PasswordInfo,
-    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+    email: EmailAddress, passwordInfoOpt: Option[PasswordInfo],
+    firstName: String, lastName: String, isComplete: Boolean): (UserIdentity, Id[User]) = {
     if (email.address.trim.isEmpty) {
       throw new Exception(s"email address is empty for user $userIdOpt identity $identityOpt name $firstName, $lastName")
     }
-    log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
+    log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfoOpt isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
+
+    val (passwordInfo, usedAutoAssignedPassword) = passwordInfoOpt.map(p => (p, false)).getOrElse((Registry.hashers.currentHasher.hash(UUID.randomUUID.toString), true))
+
     val newIdentity = UserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
@@ -187,6 +192,16 @@ class AuthCommander @Inject() (
       userIdOpt.get
     }
 
+    if (usedAutoAssignedPassword) {
+      db.readWrite(attempts = 3) { implicit s =>
+        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, true)
+      }
+    } else {
+      db.readWrite(attempts = 3) { implicit s =>
+        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, false)
+      }
+    }
+
     (newIdentity, confusedCompilerUserId)
   }
 
@@ -203,21 +218,19 @@ class AuthCommander @Inject() (
   def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
     timing(s"[finalizeSocialAccount(${socialIdentity.identityId.providerId + "#" + socialIdentity.identityId.userId})]") {
       log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
-      require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
       val email = if (sfi.email.address.trim.isEmpty) {
         val alternative = EmailAddress(s"NoMailUser+${socialIdentity.identityId.providerId}_${socialIdentity.identityId.userId}@kifi.com")
         airbrake.notify(s"generated alternative email $alternative for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
         alternative
       } else sfi.email
-      val pInfo = currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
+
+      val pInfo = sfi.password.map { p =>
+        currentHasher.hash(p)
+      }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
-        email = email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
-
-      db.readWrite(attempts = 3) { implicit s =>
-        userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
-      }
+        email = email, passwordInfoOpt = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)
@@ -237,9 +250,9 @@ class AuthCommander @Inject() (
     }
 
   def processCompanyNameFromSignup(user: User, companyNameOpt: Option[String]): Unit = {
-    companyNameOpt.map { companyName =>
+    companyNameOpt.foreach { companyName =>
       val trimmed = companyName.trim
-      if (trimmed != "") {
+      if (trimmed.nonEmpty) {
         userCommander.updateUserBiography(user.id.get, s"Works at $trimmed");
         db.readWrite { implicit session =>
           userValueRepo.setValue(user.id.get, UserValueName.COMPANY_NAME, trimmed)
@@ -270,7 +283,7 @@ class AuthCommander @Inject() (
 
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
-      val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
+      val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfoOpt = Some(passwordInfo), firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)

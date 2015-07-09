@@ -19,6 +19,7 @@ class UriFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     recencyOnly: Boolean,
     protected val config: SearchConfig,
@@ -46,10 +47,7 @@ class UriFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
     val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
 
@@ -57,8 +55,7 @@ class UriFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val libId = libraryIdDocValues.get(docId)
-      val visibility = keepVisibilityEvaluator(docId, libId)
+      val visibility = keepVisibilityEvaluator(docId)
 
       if (visibility != Visibility.RESTRICTED) {
         val uriId = uriIdDocValues.get(docId)
@@ -67,7 +64,7 @@ class UriFromKeepsScoreVectorSource(
 
           val boost = {
             if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) + 0.2f // recency boost [1.0, recencyBoost]
-            else if ((visibility & Visibility.FOLLOWER) != 0) 1.1f
+            else if ((visibility & Visibility.MEMBER) != 0) 1.1f
             else 1.0f
           }
 
@@ -104,6 +101,24 @@ class UriFromKeepsScoreVectorSource(
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
             explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.NETWORK, Array.empty[Int], 0, 0))
+          }
+          docId = td.nextDoc()
+        }
+      }
+    }
+
+    orgIds.foreachLong { orgId =>
+      val td = reader.termDocsEnum(new Term(KeepFields.orgDiscoverableField, orgId.toString))
+      if (td != null) {
+        var docId = td.nextDoc()
+        while (docId < NO_MORE_DOCS) {
+          val uriId = uriIdDocValues.get(docId)
+
+          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            // write to the buffer
+            output.alloc(writer, Visibility.MEMBER, 8) // id (8 bytes)
+            writer.putLong(uriId)
+            explanation.foreach(_.collectBufferScoreContribution(uriId, -1, Visibility.MEMBER, Array.empty[Int], 0, 0))
           }
           docId = td.nextDoc()
         }

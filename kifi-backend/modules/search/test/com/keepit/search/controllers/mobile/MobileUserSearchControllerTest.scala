@@ -6,7 +6,7 @@ import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 
 import com.keepit.model._
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.actor.FakeActorSystemModule
 
@@ -67,45 +67,6 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
   }
 
   "MobileUserSearchController" should {
-    "search user" in {
-      withInjector(modules: _*) { implicit injector =>
-        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val users = setup(client)
-        val indexer = inject[UserIndexer]
-        Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
-
-        val path = com.keepit.search.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
-        path === "/m/1/search/users/search?query=woody&maxHits=3"
-
-        inject[FakeUserActionsHelper].setUser(users.head)
-        val request = FakeRequest("GET", path)
-
-        val controller = inject[MobileUserSearchController]
-        val result = controller.searchV1("woody", None, None, 3)(request)
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        val expected = Json.parse(s"""
-          {
-            "hits":
-              [
-                {
-                  "basicUser":
-                    {
-                      "id":"4e5f7b8c-951b-4497-8661-123456789004",
-                      "firstName":"Woody",
-                      "lastName":"Allen",
-                      "pictureName":"face.jpg","username":"test"
-                    },
-                  "isFriend":false
-                }
-              ],
-            "context":"AgAJAAcBBQ"
-            }
-          """)
-        Json.parse(contentAsString(result)) === expected
-      }
-    }
 
     "page user by name" in {
       withInjector(modules: _*) { implicit injector =>

@@ -7,10 +7,10 @@ import com.keepit.search.index.Indexable
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexerPlugin }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
+import com.keepit.search.index.graph.organization.{ OrganizationMembershipIndexerPlugin, OrganizationIndexerPlugin }
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import com.keepit.search.index.article.{ ArticleIndexerPlugin, DeprecatedArticleIndexerPlugin }
-import com.keepit.search.index.graph.collection.CollectionGraphPlugin
+import com.keepit.search.index.article.{ ArticleIndexerPlugin }
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.user.UserIndexerPlugin
 import com.keepit.search.index.message.MessageIndexerPlugin
@@ -19,7 +19,6 @@ import views.html
 
 class IndexController @Inject() (
     articleIndexerPlugin: ArticleIndexerPlugin,
-    collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
     userGraphPlugin: UserGraphPlugin,
     searchFriendPlugin: SearchFriendGraphPlugin,
@@ -29,11 +28,12 @@ class IndexController @Inject() (
     libraryIndexer: LibraryIndexer,
     libraryMembershipIndexerPlugin: LibraryMembershipIndexerPlugin,
     libraryMembershipIndexer: LibraryMembershipIndexer,
+    orgIndexerPlugin: OrganizationIndexerPlugin,
+    orgMemIndexerPlugin: OrganizationMembershipIndexerPlugin,
     phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
   def updateKeepIndex() = Action { implicit request =>
     keepIndexerPlugin.update()
-    collectionGraphPlugin.update() // still needed for compatibility support
     Ok
   }
 
@@ -46,7 +46,6 @@ class IndexController @Inject() (
   def listIndexInfo() = Action { implicit request =>
     val infos = (
       articleIndexerPlugin.indexInfos ++
-      collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++
       userGraphPlugin.indexInfos ++
       searchFriendPlugin.indexInfos ++
@@ -54,7 +53,9 @@ class IndexController @Inject() (
       keepIndexerPlugin.indexInfos ++
       libraryIndexerPlugin.indexInfos ++
       libraryMembershipIndexerPlugin.indexInfos ++
-      phraseIndexerPlugin.indexInfos
+      phraseIndexerPlugin.indexInfos ++
+      orgIndexerPlugin.indexInfos ++
+      orgMemIndexerPlugin.indexInfos
     )
     Ok(Json.toJson(infos))
   }

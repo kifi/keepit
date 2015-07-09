@@ -20,6 +20,7 @@ class UserFromLibrariesScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -45,8 +46,7 @@ class UserFromLibrariesScoreVectorSource(
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, visibilityDocValues)
+    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(reader)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
@@ -85,9 +85,9 @@ class UserFromLibrariesScoreVectorSource(
         val ownerId = ownerIdDocValues.get(docId)
         if (idFilter.findIndex(ownerId) < 0) { // use findIndex to avoid boxing
           // write to the buffer
-          output.alloc(writer, Visibility.FOLLOWER, 8) // ownerId (8 bytes)
+          output.alloc(writer, Visibility.MEMBER, 8) // ownerId (8 bytes)
           writer.putLong(ownerId)
-          explanation.foreach(_.collectBufferScoreContribution(ownerId, -1, Visibility.FOLLOWER, Array.empty[Int], 0, 0))
+          explanation.foreach(_.collectBufferScoreContribution(ownerId, -1, Visibility.MEMBER, Array.empty[Int], 0, 0))
         }
       }
     }

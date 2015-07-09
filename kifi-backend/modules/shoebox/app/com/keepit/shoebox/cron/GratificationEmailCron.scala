@@ -33,7 +33,7 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
     val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0 ${utcHourFor8pmEasternTime} ? * *" // scheduled to send to QA
+    val cronTimeEveryday = s"0 30 ${utcHourFor8pmEasternTime} ? * *" // scheduled to send to QA
     cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
     val cronTimeTues = s"0 0 $utcHourForNoonEasternTime ? * TUE"
@@ -55,7 +55,7 @@ class GratificationEmailActor @Inject() (
     emailCommander: GratificationCommander,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  val testDestinationEmail = EmailAddress("qa.test@kifi.com") // while in QA, send all emails to Jo
+  val testDestinationEmail = EmailAddress("cam@kifi.com") // while in QA, send all emails to Cam
 
   def receive = {
     case SendEmails =>

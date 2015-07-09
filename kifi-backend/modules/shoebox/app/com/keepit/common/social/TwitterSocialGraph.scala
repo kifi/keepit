@@ -1,6 +1,6 @@
 package com.keepit.common.social
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.{ LibraryPathCommander, KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
@@ -69,6 +69,7 @@ object PagedTwitterUserInfos {
 
 case class TwitterError(message: String, code: Long)
 
+@ImplementedBy(classOf[TwitterSocialGraphImpl])
 trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 

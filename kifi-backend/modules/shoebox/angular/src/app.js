@@ -85,12 +85,15 @@ angular.module('kifi', [
 .factory('$exceptionHandler', [
   '$injector', '$window', '$log',
   function ($injector, $window, $log) {
-    function log(exception) {
+    function log(exception, cause) {
       if ($window.Airbrake) {
         $window.Airbrake.push({
           error: {
             message: exception.toString(),
             stack: exception.stack
+          },
+          params: {
+            cause: cause
           }
         });
       } else {
@@ -99,8 +102,37 @@ angular.module('kifi', [
     }
 
     return _.debounce(log, 5000, true);
-  }]
-)
+  }
+])
+
+.factory('errorResponseReporter', [
+  '$q', '$exceptionHandler',
+  function($q, $exceptionHandler) {
+    var ignoredStatuses = [ 403 ];
+
+    var errorResponseReporter = {
+      responseError: function (response) {
+        // This SHOULD only be called for all HTTP 400-599 status codes.
+        response = response || {}; // make sure response is defined
+
+        if (!_.contains(ignoredStatuses, response.status)) {
+          $exceptionHandler(new Error('Client received HTTP status ' + response.status), response);
+        }
+
+        // Continue treating the response as an error.
+        return $q.reject(response);
+      }
+    };
+    return errorResponseReporter;
+  }
+])
+
+.config([
+  '$httpProvider',
+  function ($httpProvider) {
+    $httpProvider.interceptors.push('errorResponseReporter');
+  }
+])
 
 .controller('AppCtrl', [
   '$scope', '$rootScope', '$rootElement', '$window', '$timeout', '$log', '$analytics', '$location', '$state',

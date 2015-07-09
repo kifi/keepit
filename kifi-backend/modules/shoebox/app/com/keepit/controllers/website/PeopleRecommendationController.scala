@@ -55,15 +55,13 @@ class PeopleRecommendationController @Inject() (
   }
 
   def getInviteRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
-    val relevantNetworks = db.readOnlyReplica { implicit session =>
-      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
-    }
+    val relevantNetworks = Set[SocialNetworkType](SocialNetworks.EMAIL) // Twitter, LinkedIn, Facebook have restricted our ability to invite
+    /*    db.readOnlyReplica { implicit session =>
+      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO - SocialNetworks.LINKEDIN - SocialNetworks.TWITTER + SocialNetworks.EMAIL
+    }*/
     val futureInviteRecommendations = {
-      if (request.experiments.contains(ExperimentType.GRAPH_BASED_PEOPLE_TO_INVITE)) {
-        abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks)
-      } else {
-        inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)
-      }
+      abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks) // Graph based recommendations
+      //  inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)  RichConnection based recommendations
     }
     futureInviteRecommendations.imap(recommendations => Ok(Json.toJson(recommendations)))
   }

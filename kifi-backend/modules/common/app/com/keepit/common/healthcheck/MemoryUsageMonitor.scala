@@ -24,15 +24,6 @@ object MemoryUsageMonitor {
 
   def apply(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit): MemoryUsageMonitor = new MemoryUsageMonitorImpl(warn)
 
-  def apply(airbrakeNotifierProvider: Provider[AirbrakeNotifier]): MemoryUsageMonitor = {
-    val monitor = apply { (pool, threshold, maxHeapSize, count) =>
-      if (count > 1) { // at least two incidents in a row
-        airbrakeNotifierProvider.get.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
-      }
-    }
-    if (monitor.monitoredPools.isEmpty) airbrakeNotifierProvider.get.notify(s"found no memory pool to monitor")
-    monitor
-  }
 }
 
 trait MemoryUsageMonitor {

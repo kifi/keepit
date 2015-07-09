@@ -19,6 +19,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.duration.Duration
 
@@ -150,7 +151,64 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
   def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
     seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
-    updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
+    updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug, orgId = lib.organizationId)
+}
+
+sealed abstract class SortDirection(val value: String)
+object SortDirection {
+  case object ASCENDING extends SortDirection("asc")
+  case object DESCENDING extends SortDirection("desc")
+  def apply(value: String) = value match {
+    case ASCENDING.value => ASCENDING
+    case DESCENDING.value => DESCENDING
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[SortDirection] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SortDirection]] = {
+      stringBinder.bind(key, params) map {
+        case Right(str) =>
+          Right(SortDirection(str))
+        case _ => Left("Unable to bind a SortDirection")
+      }
+    }
+
+    override def unbind(key: String, ordering: SortDirection): String = {
+      stringBinder.unbind(key, ordering.value)
+    }
+  }
+}
+
+abstract class LibraryFilter(val value: String)
+object LibraryFilter {
+  case object OWN extends LibraryFilter("own")
+  case object FOLLOWING extends LibraryFilter("following")
+  case object INVITED extends LibraryFilter("invited")
+  case object ALL extends LibraryFilter("all")
+  case object INVALID_FILTER extends LibraryFilter("")
+
+  def apply(value: String) = {
+    value match {
+      case OWN.value => OWN
+      case FOLLOWING.value => FOLLOWING
+      case INVITED.value => INVITED
+      case ALL.value => ALL
+      case _ => INVALID_FILTER
+    }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryFilter] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LibraryFilter]] = {
+      stringBinder.bind(key, params) map {
+        case Right(str) =>
+          Right(LibraryFilter(str))
+        case _ => Left("Unable to bind a LibraryFilter")
+      }
+    }
+
+    override def unbind(key: String, ordering: LibraryFilter): String = {
+      stringBinder.unbind(key, ordering.value)
+    }
+  }
 }
 
 object LibraryPathHelper {
@@ -267,7 +325,8 @@ object LibraryView {
 
 case class DetailedLibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library],
   kind: LibraryKind, memberCount: Int, keepCount: Int, lastKept: Option[DateTime] = None, lastFollowed: Option[DateTime] = None,
-  visibility: LibraryVisibility, updatedAt: DateTime, name: String, description: Option[String], color: Option[LibraryColor], slug: LibrarySlug)
+  visibility: LibraryVisibility, updatedAt: DateTime, name: String, description: Option[String], color: Option[LibraryColor], slug: LibrarySlug,
+  orgId: Option[Id[Organization]])
 
 object DetailedLibraryView {
   implicit val format = Json.format[DetailedLibraryView]

@@ -1,0 +1,85 @@
+@import com.keepit.model.OrganizationMembershipInfo
+@(
+orgAnalyticsView: AnalyticsOrganizationView,
+orgId: Id[Organization],
+ownerId: Id[User],
+candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Organization: " + orgAnalyticsView.orgView.name, stylesheets = List("admin_user")) {
+<table class="org-summary table table-bordered" style="width:600px">
+    <tr><td>Id</td><td>@orgId</td></tr>
+    <tr><td>Name</td>
+        <td>
+        <form action="#" method="POST" class="form-inline update-name">
+            <input id="update-name-input" type="text" name="name" value="@orgAnalyticsView.orgView.name">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Description</td>
+        <td>
+        <form action="#" method="POST" class="form-inline update-description">
+            <input id="update-description-input" type="text" name="description" value="@orgAnalyticsView.orgView.description">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Owner</td><td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(ownerId)">@ownerId</a></td></tr>
+
+</table>
+
+<table class="org-members table table-bordered" style="width:300px; float:left">
+    <tr><th>Org Members</th></tr>
+    @for(uid <- orgAnalyticsView.analyticsExtras.membersInfo.keySet.toSeq.sorted) {
+        <tr><td>
+        <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
+        </td></tr>
+    }
+</table>
+
+<table class="org-candidates table table-bordered" style="width:300px; float:left">
+    <tr><th>Org Candidates</th></tr>
+    @for(uid <- candidatesInfo.keySet.toSeq.sorted) {
+        <tr><td>
+        <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
+        </td></tr>
+    }
+    <tr><td>
+    <form action="#" method="POST" class="form-inline add-candidate">
+        <input id="add-candidate-input" type="text" name="candidate-id" placeholder="Candidate Id goes here">
+        <input type="Submit" value="Add">
+    </form>
+    </td></tr>
+
+</table>
+<script type="text/javascript">
+    $(function() {
+      $('.update-name').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgId)", $('.update-name').serialize())
+        .done(function(data) {
+          alert("Updated Organization Name");
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+      $('.update-description').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgId)", $('.update-description').serialize())
+        .done(function(data) {
+          alert("Updated Organization Description");
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+      $('.add-candidate').on("submit", function() {
+        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgId)", $('.add-candidate').serialize())
+        .done(function(data) {
+          alert("Added a candidate member: " + data);
+        }).fail(function(data) {
+          alert("Bad Request: " + data.responseText);
+        });
+        return false;
+      });
+    });
+</script>
+}

@@ -34,6 +34,7 @@ case class Organization(
   def withState(newState: State[Organization]): Organization = this.copy(state = newState)
   def withName(newName: String): Organization = this.copy(name = newName)
   def withDescription(newDescription: Option[String]): Organization = this.copy(description = newDescription)
+  def withOwner(newOwner: Id[User]): Organization = this.copy(ownerId = newOwner)
   def withBasePermissions(newBasePermissions: BasePermissions): Organization = {
     this.copy(basePermissions = new BasePermissions(basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
   }
@@ -55,7 +56,7 @@ case class Organization(
     }
   }
 
-  def toIngestableOrganization = IngestableOrganization(id, state, seq)
+  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.getHandle)
 
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
@@ -131,7 +132,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
-case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: OrganizationHandle)
 
 object IngestableOrganization {
   implicit val format = Json.format[IngestableOrganization]

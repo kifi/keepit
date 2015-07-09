@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model.UrlHash
 import com.keepit.rover.article.content.ArticleContent
 import com.keepit.rover.article.{ Article, ArticleKind }
-import com.keepit.rover.document.utils.Signature
+import com.keepit.rover.document.utils.{ SignatureBuilder, Signature }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import com.keepit.common.core._
@@ -45,7 +45,7 @@ class ContentSignatureCommander @Inject() (
 
   def computeArticleSignature(latestArticle: Article): Future[Signature] = consolidate(latestArticle) { article =>
     SafeFuture {
-      ArticleContent.defaultSignature(article.content) tap { articleSignature =>
+      SignatureBuilder.defaultSignature(article.content) tap { articleSignature =>
         cache.direct.set(UrlContentSignatureKey.fromArticle(article), UrlContentSignature(Some(articleSignature)))
       }
     }

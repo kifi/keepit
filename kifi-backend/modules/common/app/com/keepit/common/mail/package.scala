@@ -132,7 +132,6 @@ package object template {
     }
 
     def connectFacebookUrl(content: String) = connectNetworkUrl("facebook", content)
-    def connectLinkedInUrl(content: String) = connectNetworkUrl("linkedin", content)
 
     def inviteContactUrl(id: Id[User], content: String) =
       htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", content, openInAppIfMobile = true)

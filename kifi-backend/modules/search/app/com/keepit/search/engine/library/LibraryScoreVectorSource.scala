@@ -18,6 +18,7 @@ class LibraryScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -35,9 +36,7 @@ class LibraryScoreVectorSource(
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-    val ownerIdDocValues = reader.getNumericDocValues(LibraryFields.ownerIdField)
-    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, visibilityDocValues)
+    val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(reader)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter

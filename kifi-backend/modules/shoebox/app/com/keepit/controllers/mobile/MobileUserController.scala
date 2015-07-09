@@ -31,7 +31,7 @@ class MobileUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userCommander: UserCommander,
   userConnectionsCommander: UserConnectionsCommander,
-  val userIpAddressCommander: UserIpAddressCommander,
+  userIpAddressCommander: UserIpAddressCommander,
   typeaheadCommander: TypeaheadCommander,
   keepCountCache: KeepCountCache,
   keepRepo: KeepRepo,

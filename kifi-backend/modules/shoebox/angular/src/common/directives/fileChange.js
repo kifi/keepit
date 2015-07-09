@@ -16,7 +16,6 @@ angular.module('kifi')
         var input = this;
         scope.$apply(function () {
           scope.kfFileChange()(input.files);
-          input.files = null;
         });
       });
     }

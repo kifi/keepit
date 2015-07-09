@@ -75,6 +75,10 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
   def table(tag: Tag) = new OrganizationMembershipTable(tag)
   initTable()
 
+  override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
+    super.save(model.copy(seq = deferredSeqNum()))
+  }
+
   private val getByOrgIdAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]]) =>
     (for (row <- rows if row.organizationId === orgId && row.userId === userId) yield row)
   }

@@ -1,0 +1,3 @@
+---
+service_jvm_Xms: 1G
+service_jvm_Xmx: 1G
