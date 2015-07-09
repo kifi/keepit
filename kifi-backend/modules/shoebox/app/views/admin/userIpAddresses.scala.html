@@ -22,6 +22,7 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
 @formatListOfUsers(userData: com.keepit.controllers.admin.UserStatisticsPage) = {
     @for((userStatistics, i) <- userData.users.zipWithIndex) {
     <tr>
+        <td></td>
         <td>@{i+1}</td>
         <td><span class="badge">@userStatistics.user.id.get.id</span></td>
         <td>@adminHelper.userDisplay(userStatistics.user)</td>
@@ -44,28 +45,27 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <table class="table table-bordered">
         <tr>
-            <th>Ip Address</th>
             <th>#</th>
             <th>Id</th>
             <th>User</th>
             <th>kifi Conns</th>
             <th>Invited By</th>
             <th>Invite Sent</th>
-            <th>Messages all/active/started</th>
-            <th>Lib create/follow</th>
+            <th>Messages al/ac/st</th>
+            <th>Lib cr/fw</th>
             <th>Network</th>
-            <th>Email Address</th>
-            <th>Private Keeps</th>
-            <th>Public Keeps</th>
+            <th>mail</th>
+            <th>Prvt Keep</th>
+            <th>Pub Keep</th>
             <th>Date Joined</th>
             <th>Experiment</th>
             <th>Version</th>
         </tr>
         @for((ipAddress, userData) <- sharedIpAddresses) {
-        <tr>
-            <td><a href="http://ip-api.com/#@ipAddress">@ipAddress</a></td>
+            <tr>
+                <td rowspan="0"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a></td>
+            </tr>
             @formatListOfUsers(userData)
-        </tr>
         }
     </table>
 
