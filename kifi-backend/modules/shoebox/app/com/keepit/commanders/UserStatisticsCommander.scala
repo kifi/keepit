@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.store.{ ImageSize, ImagePath }
 import com.keepit.model._
 import com.keepit.common.time._
 
@@ -20,16 +21,33 @@ case class UserStatistics(
   librariesCreated: Int,
   librariesFollowed: Int)
 
+case class OrganizationStatistics(
+  orgId: Id[Organization],
+  ownerId: Id[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  numLibraries: Int,
+  numTotalKeeps: Int,
+  numTotalChats: Int,
+  members: Set[OrganizationMembership],
+  candidates: Set[OrganizationMembershipCandidate],
+  userStatistics: Map[Id[User], UserStatistics])
+
 class UserStatisticsCommander @Inject() (
     db: Database,
     kifiInstallationRepo: KifiInstallationRepo,
     keepRepo: KeepRepo,
     emailRepo: UserEmailAddressRepo,
+    libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
     userRepo: UserRepo,
-    userExperimentRepo: UserExperimentRepo) {
+    userExperimentRepo: UserExperimentRepo,
+    orgRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -56,6 +74,32 @@ class UserStatisticsCommander @Inject() (
       kifiInstallations,
       librariesCreated,
       librariesFollowed)
+  }
+
+  def organizationStatistics(orgId: Id[Organization])(implicit session: RSession): OrganizationStatistics = {
+    val org = orgRepo.get(orgId)
+    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val numTotalKeeps = libraries.map { lib => keepRepo.getCountByLibrary(lib.id.get) }.sum
+    val numTotalChats = 42 // TODO(ryan): find the actual number of chats from Eliza
+
+    val members = orgMembershipRepo.getAllByOrgId(orgId).toSet
+    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+    val userStats = userIds.map { uid => uid -> userStatistics(userRepo.get(uid), Map.empty) }.toMap
+
+    OrganizationStatistics(
+      orgId = orgId,
+      ownerId = org.ownerId,
+      handle = org.getHandle,
+      name = org.name,
+      description = org.description,
+      numLibraries = libraries.size,
+      numTotalKeeps = numTotalKeeps,
+      numTotalChats = numTotalChats,
+      members = members,
+      candidates = candidates,
+      userStatistics = userStats
+    )
   }
 
 }
