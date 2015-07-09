@@ -619,8 +619,6 @@ GET           /admin/data/renormalization/:page                                 
 GET           /admin/data/batchURIMigration                                          @com.keepit.controllers.admin.UrlController.batchURIMigration
 GET           /admin/data/batchURLMigration                                          @com.keepit.controllers.admin.UrlController.batchURLMigration
 POST          /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
-GET           /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.getPatterns
-POST          /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.savePatterns
 GET           /admin/data/remigrate                                                  @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST          /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST          /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
@@ -948,8 +946,6 @@ POST          /internal/shoebox/logEvent                                        
 
 POST          /internal/geckoboard/refresh                                           @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-GET           /internal/shoebox/database/getProxy                                    @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
-POST          /internal/shoebox/database/getProxyP                                   @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
 GET           /internal/shoebox/database/getFriendRequestRecipientIdBySender         @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
 GET           /internal/shoebox/database/userValue                                   @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
 POST          /internal/shoebox/database/userValue                                   @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
@@ -961,7 +957,6 @@ GET           /internal/shoebox/database/getLapsedUsersForDelighted             
 
 GET           /internal/shoebox/emailSenderTest                                      @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
-GET           /internal/shoebox/database/urlPatternRules                             @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()
 GET           /internal/shoebox/database/getAllFakeUsers                             @com.keepit.controllers.internal.ShoeboxController.getAllFakeUsers()
 GET           /internal/shoebox/database/getInvitations                              @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
 GET           /internal/shoebox/database/getSocialConnections                        @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])

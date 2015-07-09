@@ -24,12 +24,12 @@ trait ContentCheck {
   }
 }
 
-case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit rover: RoverServiceClient, articlePolicy: ArticleFetchPolicy) extends ContentCheck with Logging {
+case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None)(implicit rover: RoverServiceClient, articlePolicy: ArticleFetchPolicy) extends ContentCheck with Logging {
 
   private val recency = 7 days
 
   def isDefinedAt(candidate: NormalizationCandidate) = {
-    val isTrustedSource = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
+    val isTrustedSource = candidate.isTrusted
     lazy val isJavaUri = Try(java.net.URI.create(candidate.url)).isSuccess
     isTrustedSource && isJavaUri
   }

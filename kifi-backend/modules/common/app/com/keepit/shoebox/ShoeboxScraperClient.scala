@@ -21,27 +21,17 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxScraperClient extends ThrottledServiceClient {
   private val ? = null
-  def getAllURLPatterns(): Future[UrlPatternRules]
 }
 
 @Singleton
 class ShoeboxScraperClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
-  val airbrakeNotifier: AirbrakeNotifier,
-  urlPatternRuleAllCache: UrlPatternRulesAllCache)
+  val airbrakeNotifier: AirbrakeNotifier)
     extends ShoeboxScraperClient with Logging {
 
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
   override val limiter = new ReactiveLock(8, Some(32))
   val assignScrapeTasksLimiter = new ReactiveLock(1, Some(5)) //in fact we should have at most one in the queue
-
-  def getAllURLPatterns(): Future[UrlPatternRules] = {
-    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRulesAllKey()) {
-      call(Shoebox.internal.allURLPatternRules(), routingStrategy = offlinePriority).map { r =>
-        Json.fromJson[UrlPatternRules](r.json).get
-      }
-    }
-  }
 }
