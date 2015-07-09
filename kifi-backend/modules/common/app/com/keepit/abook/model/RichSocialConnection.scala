@@ -77,14 +77,24 @@ object InviteRecommendation {
   )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
 }
 
-case class IrrelevantPeople(
+case class IrrelevantPeopleForUser(
   userId: Id[User],
   irrelevantUsers: Set[Id[User]],
   irrelevantFacebookAccounts: Set[Id[SocialUserInfo]],
   irrelevantLinkedInAccounts: Set[Id[SocialUserInfo]],
   irrelevantEmailAccounts: Set[Id[EmailAccountInfo]])
 
-object IrrelevantPeople {
-  implicit val format = Json.format[IrrelevantPeople]
-  def empty(userId: Id[User]) = IrrelevantPeople(userId, Set.empty, Set.empty, Set.empty, Set.empty)
+object IrrelevantPeopleForUser {
+  implicit val format = Json.format[IrrelevantPeopleForUser]
+  def empty(userId: Id[User]) = IrrelevantPeopleForUser(userId, Set.empty, Set.empty, Set.empty, Set.empty)
+}
+
+case class IrrelevantPeopleForOrg(
+  orgId: Id[Organization],
+  irrelevantUsers: Set[Id[User]],
+  irrelevantEmailAccounts: Set[Id[EmailAccountInfo]])
+
+object IrrelevantPeopleForOrg {
+  implicit val format = Json.format[IrrelevantPeopleForOrg]
+  def empty(orgId: Id[Organization]) = IrrelevantPeopleForOrg(orgId, Set.empty, Set.empty)
 }

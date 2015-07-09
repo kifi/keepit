@@ -93,7 +93,7 @@ object TokenFinalizeInfo {
       info.email,
       info.firstName,
       info.lastName,
-      info.password.toCharArray,
+      Option(info.password),
       info.picToken,
       info.picHeight,
       info.picWidth,
@@ -270,7 +270,7 @@ class AuthController @Inject() (
         authHelper.checkForExistingUser(info.email) collect {
           case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
-            val matches = hasher.matches(identity.passwordInfo.get, new String(info.password))
+            val matches = hasher.matches(identity.passwordInfo.get, info.password)
             if (!matches) {
               Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
             } else {
@@ -290,8 +290,8 @@ class AuthController @Inject() (
               }
             }
         } getOrElse {
-          val pInfo = hasher.hash(new String(info.password))
-          val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
+          val pInfo = hasher.hash(info.password)
+          val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, Some(pInfo), firstName = "", lastName = "", isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
           authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
@@ -513,15 +513,12 @@ class AuthController @Inject() (
                 ))
               } else {
                 log.info(s"[doSignupPage] ${identity} finalizing social id")
-                val password = identity.passwordInfo match {
-                  case Some(info) => info.password
-                  case _ => Random.alphanumeric.take(10).mkString
-                }
+
                 val sfi = SocialFinalizeInfo(
                   email = EmailAddress(identity.email.getOrElse("")),
                   firstName = User.sanitizeName(identity.firstName),
                   lastName = User.sanitizeName(identity.lastName), //todo(andrew): is having an empty string for email is the right thing to do at this point???
-                  password = password.toCharArray,
+                  password = None,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
                 val targetPubLibId = if (cookieIntent.isDefined && cookieIntent.get.value == "follow") pubLibIdOpt else None

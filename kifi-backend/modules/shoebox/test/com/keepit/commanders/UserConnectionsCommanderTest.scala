@@ -4,7 +4,7 @@ import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientIm
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
+import com.keepit.graph.model.{ SociallyRelatedEntitiesForUser, RelatedEntities }
 import com.keepit.graph.{ GraphServiceClient, FakeGraphServiceModule, FakeGraphServiceClientImpl }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -38,9 +38,9 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
 
           val relatedEntities = {
             val relatedUsers = RelatedEntities[User, User](userId, Seq(users(2).id.get -> 10d, users(1).id.get -> 5d))
-            SociallyRelatedEntities(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+            SociallyRelatedEntitiesForUser(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
           }
-          inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl].setSociallyRelatedEntities(userId, relatedEntities)
+          inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(userId, relatedEntities)
 
           val friendRecoDataF = inject[UserCommander].getFriendRecommendations(userId, 2, 25)
           val friendRecoData = Await.result(friendRecoDataF, Duration(5, "seconds")).get

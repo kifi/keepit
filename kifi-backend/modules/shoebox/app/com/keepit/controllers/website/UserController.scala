@@ -21,6 +21,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
+import com.keepit.common.core._
 
 import play.api.data.Form
 import play.api.data.Forms._
@@ -60,6 +61,7 @@ class UserController @Inject() (
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
     userProfileCommander: UserProfileCommander,
+    checklistCommander: ChecklistCommander,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -333,18 +335,44 @@ class UserController @Inject() (
   def getPrefs() = UserAction.async { request =>
     // The prefs endpoint is used as an indicator that the user is active
     userCommander.setLastUserActive(request.userId)
-    userCommander.getPrefs(SitePrefNames, request.userId, request.experiments).map(Ok(_))
+
+    val checklistF = Future {
+      checklistCommander.checklist(request.userId, ChecklistPlatform.Website)
+    }.map { chk =>
+      if (chk.exists(!_._2)) { // there is an incomplete item
+        chk
+      } else {
+        Seq.empty[(String, Boolean)]
+      }
+    }.recover {
+      case ex: Throwable =>
+        Seq.empty[(String, Boolean)]
+    }.map { checklist =>
+      checklist.map {
+        case (name, isComplete) =>
+          Json.obj("name" -> name, "complete" -> isComplete)
+      } |> JsArray.apply
+    }
+
+    val prefsF = userCommander.getPrefs(SitePrefNames, request.userId, request.experiments)
+
+    for {
+      prefs <- prefsF
+      checklist <- checklistF
+    } yield {
+      Ok(prefs ++ Json.obj("checklist" -> checklist))
+    }
   }
 
   def savePrefs() = UserAction(parse.tolerantJson) { request =>
     val o = request.request.body.as[JsObject]
     val map = o.value.map(t => UserValueName(t._1) -> t._2).toMap
-    val keyNames = map.keys.toSet
-    if (keyNames.subsetOf(SitePrefNames)) {
+    val allowedMap = map.filter(m => SitePrefNames.contains(m._1))
+    if (allowedMap.nonEmpty) {
       userCommander.savePrefs(request.userId, map)
-      Ok(o)
+      Ok(JsObject(allowedMap.toSeq.map(m => m._1.name -> m._2)))
     } else {
-      BadRequest(Json.obj("error" -> ((SitePrefNames -- keyNames).mkString(", ") + " not recognized")))
+      BadRequest(Json.obj("error" -> "no_valid_preferences"))
     }
   }
 

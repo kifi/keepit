@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.common.db.{ LargeString, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailTrackingParam, EmailTip, EmailToSend }
@@ -10,9 +10,30 @@ import com.keepit.heimdal.{ HeimdalServiceClient, UserEventTypes, UserEvent, Hei
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
 import play.api.libs.json.Json
-import play.twirl.api.Html
 
 import scala.concurrent.{ ExecutionContext, Future }
+
+/*
+This class is involved in a circular dependency:
+
+com.keepit.commanders.emails.EmailTemplateSender (ImplementedBy) ->
+com.keepit.commanders.emails.EmailTemplateSenderImpl (Inject) ->
+com.keepit.commanders.emails.EmailTemplateProcessor (ImplementedBy) ->
+com.keepit.commanders.emails.EmailTemplateProcessorImpl (Inject) ->
+com.keepit.commanders.emails.tips.EmailTipProvider (Inject) ->
+com.keepit.commanders.emails.FriendRecommendationsEmailTip (Inject) ->
+com.keepit.commanders.UserConnectionsCommander (Inject) ->
+com.keepit.social.SocialGraphPlugin (bound by ProdSocialGraphModule) -> $$$ See note below. $$$
+com.keepit.social.SocialGraphPluginImpl (Inject) ->
+com.keepit.common.social.SocialGraphActor (Inject) ->
+com.keepit.common.social.UserConnectionCreator (Inject) ->
+com.keepit.commanders.FriendConnectionNotifier (Inject) ->
+com.keepit.commanders.emails.FriendConnectionMadeEmailSender (Inject) ->
+com.keepit.commanders.emails.EmailTemplateSender
+
+$$$ ProdSocialGraphModule is the default implementation of SocialGraphModule defined in ShoeboxModule.   $$$
+$$$ In tests, this circular dependency can be broken at this step by using FakeSocialGraphModule instead. $$$
+*/
 
 @ImplementedBy(classOf[EmailTemplateSenderImpl])
 trait EmailTemplateSender {

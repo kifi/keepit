@@ -35,6 +35,7 @@ var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
+var sourcemaps = require('gulp-sourcemaps');
 
 require('shelljs/global');
 
@@ -95,6 +96,7 @@ var libJsFiles = [
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],
   ['lib/angular-animate/angular-animate.js', 'lib/angular-animate/angular-animate.min.js'],
   ['lib/angular-ui-router/release/angular-ui-router.js', 'lib/angular-ui-router/release/angular-ui-router.min.js'],
+  ['lib/svg4everybody/svg4everybody.js', 'lib/svg4everybody/svg4everybody.min.js'],
   'lib/jquery-mousewheel/jquery.mousewheel.js',
   'lib/antiscroll/antiscroll.js',
   ['lib/moment/moment.js', 'lib/moment/min/moment.min.js'],
@@ -154,8 +156,10 @@ var cacheUpdater = function (cacheName) {
  ********************************************************/
 
 var makeMinJs = lazypipe()
-  .pipe(uglify)
-  .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.init)
+    .pipe(uglify)
+    .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.write, './')
   .pipe(gulp.dest, outDir);
 
 var makeMinCss = lazypipe()
@@ -271,7 +275,7 @@ gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-
 
 gulp.task('symbol-sprites', function() {
   exec('./build-svgs.rb');
-  return gulp.src(['./img/symbol-sprites/dist/*'])
+  return gulp.src(['./img/symbol-sprites/dist/*.svg'])
     .pipe(gulp.dest('./dist'));
 });
 

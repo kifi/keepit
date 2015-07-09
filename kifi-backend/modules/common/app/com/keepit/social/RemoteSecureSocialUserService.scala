@@ -70,13 +70,6 @@ class RemoteSecureSocialUserPlugin @Inject() (
         throw ex
     }
 
-  private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
-
-  @Inject(optional = true)
-  def setSocialGraphPlugin(sgp: SocialGraphPlugin) {
-    maybeSocialGraphPlugin = Some(sgp)
-  }
-
   def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
     monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {

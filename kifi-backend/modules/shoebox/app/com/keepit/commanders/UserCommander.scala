@@ -655,7 +655,7 @@ class UserCommander @Inject() (
 
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
     val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
-    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntities(userId)
+    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntitiesForUser(userId)
     futureRecommendedUsers.flatMap {
       case None => Future.successful(None)
       case Some(recommendedUsers) =>

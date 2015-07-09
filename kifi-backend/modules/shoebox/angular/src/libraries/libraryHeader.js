@@ -18,6 +18,7 @@ angular.module('kifi')
         librarySlug: '=',
         imageLoaded: '=',
         editMode: '=',
+        galleryView: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
@@ -60,6 +61,7 @@ angular.module('kifi')
         scope.followBtnJustClicked = false;
         scope.collabsCanInvite = false;
         scope.quickKeep = {};
+        scope.admin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
         //
         // Internal methods.
@@ -69,7 +71,7 @@ angular.module('kifi')
           var lib = scope.library;
           lib.descriptionHtml = linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
-          lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
+          lib.isSystem = lib.kind === 'system_main' || lib.kind === 'system_secret';
           scope.collabsCanInvite = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
@@ -120,8 +122,8 @@ angular.module('kifi')
           }
         };
 
-        scope.onAddCoverImageMouseUp = function (event) {
-          if (event.which === 1) {
+        scope.onCameraCoverImageMouseUp = function (event) {
+          if (event.which === 1 && !scope.library.image) {
             angular.element('.kf-lh-cover-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
@@ -129,7 +131,7 @@ angular.module('kifi')
 
         scope.onCoverImageFileChosen = function (files) {
           var file = files[0];
-          if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+          if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
             coverImageFile = file;
             $timeout(readCoverImageFile);
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
@@ -597,6 +599,18 @@ angular.module('kifi')
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
           scope.editMode = !scope.editMode;
+        };
+
+        scope.setGalleryView = function() {
+          scope.galleryView = true;
+          profileService.savePrefs({use_minimal_keep_card: false});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedGalleryView' });
+        };
+
+        scope.setCompactView = function() {
+          scope.galleryView = false;
+          profileService.savePrefs({use_minimal_keep_card: true});
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCompactView' });
         };
 
         scope.showFollowers = function () {

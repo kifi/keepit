@@ -17,7 +17,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getByUserId(userId: Id[User], limit: Limit, offset: Offset, excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getAllByUserId(userId: Id[User], excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
-  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Seq[OrganizationMembership]
+  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Set[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -75,6 +75,10 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
   def table(tag: Tag) = new OrganizationMembershipTable(tag)
   initTable()
 
+  override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
+    super.save(model.copy(seq = deferredSeqNum()))
+  }
+
   private val getByOrgIdAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]]) =>
     (for (row <- rows if row.organizationId === orgId && row.userId === userId) yield row)
   }
@@ -108,8 +112,8 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
   private val getAllByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]]) =>
     for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row
   }
-  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Seq[OrganizationMembership] = {
-    getAllByOrgIdCompiled(orgId, excludeState).list
+  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Set[OrganizationMembership] = {
+    getAllByOrgIdCompiled(orgId, excludeState).list.toSet
   }
 
   def countByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]]) =>

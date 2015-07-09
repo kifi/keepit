@@ -16,7 +16,7 @@ import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, NormalizedURI, SocialUserInfo, User }
+import com.keepit.model.{ Organization, Library, NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
 import com.keepit.graph.utils.GraphPrimitives
 import scala.concurrent.Future
@@ -71,8 +71,12 @@ class GraphController @Inject() (
     }
   }
 
-  def getSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.getSocialRelatedEntities(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
+  def getSociallyRelatedEntitiesForUser(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.getSociallyRelatedEntitiesForUser(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
+  }
+
+  def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]) = Action.async { request =>
+    socialWanderingCommander.getSociallyRelatedEntitiesForOrg(orgId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational

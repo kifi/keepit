@@ -41,6 +41,7 @@
     "gulp-rename": "1.2.0",
     "gulp-rev-all": "0.5.13",
     "gulp-rimraf": "0.1.0",
+    "gulp-sourcemaps": "^1.5.2",
     "gulp-stylus": "1.1.0",
     "gulp-svgmin": "0.4.6",
     "gulp-uglify": "0.3.1",

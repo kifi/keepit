@@ -21,9 +21,10 @@ class LibraryFromUserScoreVectorSource(
     librarySearcher: Searcher,
     userSearcher: Searcher,
     val userId: Long,
-    val friendIdsFuture: Future[Set[Long]],
-    val restrictedUserIdsFuture: Future[Set[Long]],
-    val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val restrictedUserIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     config: SearchConfig,
     val monitoredAwait: MonitoredAwait,
@@ -73,9 +74,7 @@ class LibraryFromUserScoreVectorSource(
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
       val idFilter = filter.idFilter
 
-      val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
-      val ownerIdDocValues = reader.getNumericDocValues(LibraryFields.ownerIdField)
-      val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(ownerIdDocValues, visibilityDocValues)
+      val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(reader)
 
       val idMapper = reader.getIdMapper
 

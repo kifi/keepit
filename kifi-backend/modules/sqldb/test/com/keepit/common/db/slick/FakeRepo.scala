@@ -15,6 +15,7 @@ class FakeRepo[M <: Model[M]] extends Repo[M] {
   }
   def count(implicit session: RSession): Int = db.size
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] = db.values.drop(page * size).take(size).toSeq
+  def pageAscendingIds(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]] = db.keys.drop(page * size).take(size).toSeq
   def invalidateCache(model: M)(implicit session: RSession): Unit = {}
   override def deleteCache(model: M)(implicit session: RSession): Unit = {}
 }

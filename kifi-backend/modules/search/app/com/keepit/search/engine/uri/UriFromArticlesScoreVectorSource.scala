@@ -1,9 +1,9 @@
 package com.keepit.search.engine.uri
 
-import com.keepit.search.engine.{ DirectScoreContext, Visibility, DebugOption, ScoreVectorSourceLike }
+import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.SearchFilter
-import com.keepit.search.index.article.{ ArticleFields, ArticleVisibility }
+import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext
@@ -29,7 +29,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
       BloomFilter(output) // a bloom filter which test if a uri id is in the buffer
     }
 
-    val articleVisibility = ArticleVisibility(reader)
+    val articleVisibility = ArticleVisibilityEvaluator(reader)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -42,7 +42,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
 
       if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
         // An article hit may or may not be visible according to the restriction
-        val visibility = if (articleVisibility.isVisible(docId)) Visibility.OTHERS else Visibility.RESTRICTED
+        val visibility = articleVisibility(docId)
 
         if (bloomFilter(uriId)) {
           // get all scores and write to the buffer
@@ -57,6 +57,8 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // this uriId is not in the buffer
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
+
+            // todo(Léo): visibility will actually never be RESTRICTED at this point - if we decide to check for isDiscoverable in ArticleVisibilityEvaluator, it could be.
             directScoreContext.put(uriId, visibility)
             explanation.foreach(_.collectDirectScoreContribution(uriId, -1, visibility, directScoreContext.scoreMax))
 

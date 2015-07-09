@@ -43,7 +43,7 @@ class GratificationEmailSender @Inject() (
 
   def emailToSend(gratData: GratificationData, toAddress: Option[EmailAddress]): EmailToSend = {
     EmailToSend(
-      from = SystemEmailAddress.CONGRATS,
+      from = SystemEmailAddress.NOTIFICATIONS,
       fromName = Some(Right("The Kifi Team")),
       to = toAddress.map(Right.apply).getOrElse(Left(gratData.userId)),
       subject = "People have been viewing your content on Kifi!",

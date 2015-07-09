@@ -1,7 +1,8 @@
 package com.keepit.search.index.graph.keep
 
+import com.keepit.common.db.Id
 import com.keepit.common.strings._
-import com.keepit.model.{ Hashtag, LibraryVisibility, NormalizedURI, Keep }
+import com.keepit.model._
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
@@ -18,6 +19,9 @@ object KeepFields {
   val userField = "user"
   val userIdField = "userId"
   val userDiscoverableField = "userDisc"
+  val orgField = "org"
+  val orgIdField = "orgId"
+  val orgDiscoverableField = "orgDisc"
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
@@ -46,9 +50,19 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     val doc = super.buildDocument
 
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
-    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+
+    if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
+      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
+      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+    }
+
+    keep.organizationId.foreach { orgId =>
+      doc.add(buildKeywordField(orgField, orgId.toString))
+      if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
+        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
+      }
+    }
 
     val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
     val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
@@ -78,7 +92,8 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.userId))
-    keep.libraryId.foreach(libId => doc.add(buildIdValueField(libraryIdField, libId)))
+    doc.add(buildIdValueField(libraryIdField, keep.libraryId.get))
+    doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 

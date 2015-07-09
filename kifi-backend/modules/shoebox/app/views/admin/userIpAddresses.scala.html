@@ -40,7 +40,7 @@ sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
         <tr>
             <td>@{i+1}</td>
             <td>@log.createdAt</td>
-            <td>@log.ipAddress</td>
+            <td><a href="http://ip-api.com/#@{log.ipAddress}">@log.ipAddress</a></td>
             <td>@log.agentType</td>
         </tr>
         }

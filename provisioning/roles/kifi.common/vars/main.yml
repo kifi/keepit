@@ -15,3 +15,4 @@ ulimit_config:
     type: hard
     item: nofile
     value: 8192
+instance_type_key: "{{ ec2_instance_type | regex_replace('\\W', '_') }}"

@@ -1,5 +1,6 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.commanders.UserIpAddressEventLogger
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
 import com.keepit.model.UserFactoryHelper._
@@ -184,6 +185,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         ctrl.method === "GET"
 
         val controller = inject[MobileUserController]
+        val commander = inject[UserIpAddressEventLogger]
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
         val call = controller.currentUser
@@ -191,7 +193,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        controller.userIpAddressCommander.totalNumberOfLogs() === 1
+        commander.totalNumberOfLogs() === 1
       }
     }
 

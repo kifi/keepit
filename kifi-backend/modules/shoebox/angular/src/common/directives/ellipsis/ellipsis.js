@@ -101,9 +101,12 @@ angular.module('kifi')
         //
         // Execute ellipsis truncate on fullText update
         scope.$watch('fullText', buildEllipsis);
+        scope.$watch('maxNumLines', buildEllipsis);
 
         // Execute ellipsis truncate on fullText update
-        scope.$watch('ellipsisAppend', buildEllipsis);
+        scope.$watch('maxNumLines', function () {
+          $timeout(buildEllipsis);
+        });
 
         // When window width or height changes - re-init truncation
         angular.element($window).bind('resize', _.debounce(function() {

@@ -14,14 +14,14 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
         db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === org
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
-        memberships.length === 1
+        memberships.size === 1
         memberships.head.userId === Id[User](1)
         memberships.head.role === OrganizationRole.OWNER
       }
@@ -33,7 +33,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
@@ -72,7 +72,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
@@ -102,8 +102,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         try2 must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
 
         val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
-        allMembers.length === 3
-        allMembers.map(_.userId).sorted === Seq(Id[User](1), Id[User](2), Id[User](42))
+        allMembers.size === 3
+        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](42))
       }
     }
 
@@ -113,7 +113,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationModifications(name = Some("Kifi")))
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
@@ -148,7 +148,52 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
         }
         deactivatedOrg.state === OrganizationStates.INACTIVE
-        memberships.length === 0
+        memberships.size === 0
+      }
+    }
+    "transfer ownership of an organization" in {
+      withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
+        val orgCommander = inject[OrganizationCommander]
+        val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
+        val createResponse = orgCommander.createOrganization(createRequest)
+        createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+        val org = createResponse.right.get.newOrg
+
+        db.readWrite { implicit session =>
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
+        }
+
+        // Random non-members shouldn't be able to delete the org
+        val nonmemberTransferRequest = OrganizationTransferRequest(orgId = org.id.get, requesterId = Id[User](42), newOwner = Id[User](43))
+        val nonmemberTransferResponse = orgCommander.transferOrganization(nonmemberTransferRequest)
+        nonmemberTransferResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Neither should a generic member
+        val memberTransferRequest = OrganizationTransferRequest(orgId = org.id.get, requesterId = Id[User](3), newOwner = Id[User](43))
+        val memberTransferResponse = orgCommander.transferOrganization(memberTransferRequest)
+        memberTransferResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Even an owner can't, if they aren't the "original" owner
+        val ownerTransferRequest = OrganizationTransferRequest(orgId = org.id.get, requesterId = Id[User](2), newOwner = Id[User](43))
+        val ownerTransferResponse = orgCommander.transferOrganization(ownerTransferRequest)
+        ownerTransferResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // The OG owner can do whatever they want
+        val trueOwnerTransferRequest = OrganizationTransferRequest(orgId = org.id.get, requesterId = Id[User](1), newOwner = Id[User](3))
+        val trueOwnerTransferResponse = orgCommander.transferOrganization(trueOwnerTransferRequest)
+        trueOwnerTransferResponse must haveClass[Right[OrganizationTransferRequest, Organization]]
+        trueOwnerTransferResponse.right.get.request === trueOwnerTransferRequest
+
+        val (modifiedOrg, newOwnerMembership) = db.readOnlyMaster { implicit session =>
+          (orgRepo.get(org.id.get), orgMembershipRepo.getByOrgIdAndUserId(org.id.get, Id[User](3)).get)
+        }
+        modifiedOrg.state === OrganizationStates.ACTIVE
+        modifiedOrg.ownerId === Id[User](3)
+        newOwnerMembership.role === OrganizationRole.OWNER
       }
     }
   }

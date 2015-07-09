@@ -60,7 +60,7 @@ class MobileOrganizationInviteController @Inject() (
               case (Left(user), role) => Json.obj("user" -> user.externalId, "role" -> role)
               case (Right(contact), role) => Json.obj("email" -> contact.email, "role" -> role)
             }
-            Ok(Json.toJson(result))
+            Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
           case Left(organizationFail) => organizationFail.asErrorResponse
         }
       case Failure(ex) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)

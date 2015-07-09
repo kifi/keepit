@@ -18,6 +18,7 @@ class LibraryFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -33,10 +34,8 @@ class LibraryFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
+    val libraryIdDocValues = keepVisibilityEvaluator.libraryIdDocValues
 
     val recencyScorer = getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
@@ -51,7 +50,7 @@ class LibraryFromKeepsScoreVectorSource(
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
-        val visibility = keepVisibilityEvaluator(docId, libId)
+        val visibility = keepVisibilityEvaluator(docId)
 
         if (visibility != Visibility.RESTRICTED) {
           val recencyBoost = getRecencyBoost(recencyScorer, docId)

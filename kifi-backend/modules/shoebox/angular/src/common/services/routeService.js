@@ -62,11 +62,15 @@ angular.module('kifi')
         return route('/collections/' + tagId + '/undelete');
       },
 
+      followingLibraries: 'http://support.kifi.com/hc/en-us/articles/202657599-Following-Libraries',
+
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
+      socialInvite: '/invite',
+      connectTwitter: '/twitter/request',
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
         return route('/user/friends/recommended', {offset: offset, limit: limit});
