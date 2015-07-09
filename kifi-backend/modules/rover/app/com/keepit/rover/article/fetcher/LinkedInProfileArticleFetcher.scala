@@ -9,6 +9,7 @@ import com.keepit.rover.document.{ JsoupDocument, RoverDocumentFetcher }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -41,14 +42,21 @@ class LinkedInProfileArticleFetcher @Inject() (
     }
   }
 
-  private val idPattern = """newTrkInfo = '([0-9]{1,20}),' \+ document.referrer.substr\(0\,128\)""".r
+  private val idPatterns = List(
+    """endorsementData:\{recipientId:'([0-9]{1,20})'""".r,
+    """newTrkInfo='([0-9]{1,20}),'\+document.referrer.substr\(0\,128\)""".r,
+    """<div id="member-([0-9]{1,20})" class="masthead"""".r
+  )
+
   private def getLinkedInProfile(doc: JsoupDocument): LinkedInProfile = {
-    val title = doc.doc.getElementById("member-1").text
-    val overview = doc.doc.select("[id=overview] dd").text
-    val sections = doc.doc.select("[id^=profile-] .content").text
-    val id = idPattern.findFirstMatchIn(doc.doc.getElementsByTag("script").toString).map { case idPattern(id) => id }
+    val docString = doc.doc.toString
+    val title = s"${doc.doc.select(".full-name").text} - ${doc.doc.select(".title").text}"
+    val overview = doc.doc.select(".profile-overview").text
+    val sections = doc.doc.select("[class^=profile-]").text
+    val id = idPatterns.flatMap(_.findFirstMatchIn(docString)).map(_.group(1)).countAll.maxByOpt(_._2).map(_._1)
     if (id.isEmpty) { log.error(s"Could not find LinkedIn id at ${doc.doc.location}") }
     LinkedInProfile(id, title, overview, sections)
   }
+
 }
 
