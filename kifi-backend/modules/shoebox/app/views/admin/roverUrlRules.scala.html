@@ -15,13 +15,15 @@
                 <tr>
                     <th>Active</th>
                     <th>Pattern</th>
+                    <th>Test</th>
                     <th>Route to Proxy</th>
                 </tr>
             </thead>
             @for(urlRule <- urlRules) {
-                <tr>
-                    <td><input type="checkbox" class="checkbox" name="active_@urlRule.id.get" @if(urlRule.isActive) {checked="checked"}>
-                    <td><input type="text" class="pattern" name="pattern_@urlRule.id.get" value="@urlRule.pattern">
+                <tr class="url-rule-row">
+                    <td><input type="checkbox" class="checkbox" name="active_@urlRule.id.get" @if(urlRule.isActive) {checked="checked"}></td>
+                    <td><input type="text" class="pattern" name="pattern_@urlRule.id.get" value="@urlRule.pattern"></td>
+                    <td><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegexFilled(urlRule.pattern)" class="btn btn-small">test</a></td>
                     <td>
                         <select name="proxy_@urlRule.id.get">
                             <option @if(urlRule.proxy.isEmpty) {selected="selected"} value="">Do not route to proxy</option>
@@ -48,7 +50,7 @@
                     <th>Route to Proxy</th>
                 </tr>
             </thead>
-            <tr data-new="true">
+            <tr data-new="true" class="url-rule-row">
                 <td><input type="checkbox" class="checkbox" name="new_active" checked="checked"></td>
                 <td class="control-group"><input type="text" class="pattern" name="new_pattern"></td>
                 <td>

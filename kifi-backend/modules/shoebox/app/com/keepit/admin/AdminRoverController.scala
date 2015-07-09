@@ -7,8 +7,10 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.{ URLRepo, NormalizedURIRepo }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model._
+import play.api.libs.json.Json
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.matching.Regex
 
 class AdminRoverController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -104,6 +106,25 @@ class AdminRoverController @Inject() (
       pattern = body("new_pattern"),
       proxy = proxyIdFromString(body("new_proxy"))
     )).map(_ => Redirect(routes.AdminRoverController.getAllUrlRules()))
+  }
+
+  def testRegex = AdminUserPage { implicit request =>
+    Ok(views.html.admin.roverTestRegex())
+  }
+
+  def testRegexFilled(regex: String) = AdminUserPage { implicit request =>
+    Ok(views.html.admin.roverTestRegex(Some(regex)))
+  }
+
+  def performRegexTest = AdminUserPage(parse.json) { implicit request =>
+    val body = request.body
+    val regex = new Regex((body \ "regex").as[String])
+    val tests = (body \ "tests").as[List[String]]
+    val results = tests.map {
+      case regex(_*) => true
+      case _ => false
+    }
+    Ok(Json.toJson(results))
   }
 
 }
