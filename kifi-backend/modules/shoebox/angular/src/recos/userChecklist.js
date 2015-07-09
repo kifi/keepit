@@ -34,6 +34,11 @@ angular.module('kifi')
             title: 'Keep 5 pages',
             subtitle: 'Keep from the site, browser add-on, or mobile',
             action: function () {
+              modalService.open({
+                template: 'recos/userChecklistKeepModal.tpl.html',
+                scope: scope
+              });
+
               $analytics.eventTrack('user_clicked_page', {
                 'type': 'yourKeeps',
                 'action': 'clickedKeep5Checklist',
@@ -46,7 +51,10 @@ angular.module('kifi')
             title: 'Follow 5 libraries',
             subtitle: 'Browse libraries in your recommendations',
             action: function () {
-              $window.open(routeService.followingLibraries, '_blank');
+              modalService.open({
+                template: 'recos/userChecklistFollowModal.tpl.html',
+                scope: scope
+              });
               $analytics.eventTrack('user_clicked_page', {
                 'type': 'yourKeeps',
                 'action': 'clickedFollow5Checklist',
@@ -157,15 +165,6 @@ angular.module('kifi')
           }
         ];
 
-        function allItemsComplete(items) {
-          for (var i = 0; i < items.length; i++) {
-            if (!items[i].complete) {
-              return false;
-            }
-          }
-          return true;
-        }
-
         scope.sms = { phoneNumber: '' };
 
         scope.triggerSendSMS = function () {
@@ -181,9 +180,70 @@ angular.module('kifi')
           scope.sms.phoneNumber = '';
         };
 
-        scope.$watchCollection(function () {
+        var highlightTimeout = 15000;
+
+        function removeHighlight($element) {
+          $element.removeClass('kf-uc-highlight-levitate');
+        }
+
+        var clonedKeepButton = null;
+        scope.getKeepButton = function () {
+          clonedKeepButton = clonedKeepButton || angular.element('.kf-keep-keep-btn').first().clone();
+          angular.element('.kf-uc-example-keep-btn').append(clonedKeepButton);
+        };
+
+        scope.triggerHighlightKeepButton = function () {
+          var keepableElements = angular.element('.kf-reco')
+            .filter(function () { return this.querySelector('.kf-keep-keep-btn'); });
+          var keepableElement  = keepableElements.length > 1 ? keepableElements.eq(1) : keepableElements.first();
+          var keepButton = keepableElement.find('.kf-keep-keep-btn');
+          var keepButtonUnhighlight = removeHighlight.bind(null, keepButton);
+          keepButton.addClass('kf-uc-highlight-levitate');
+
+          // Move it to the top
+          keepableElement.parent().prepend(keepableElement);
+          $window.scrollTo(0, keepableElement.scrollTop());
+
+          keepableElement.one('click', keepButtonUnhighlight);
+          setTimeout(keepButtonUnhighlight, highlightTimeout);
+        };
+
+        var clonedFollowButton = null;
+        scope.getFollowButton = function () {
+          clonedFollowButton = clonedFollowButton || angular.element('.kf-rcl-follow-btn').first().clone();
+          angular.element('.kf-uc-example-follow-btn').append(clonedFollowButton);
+        };
+
+        scope.triggerHighlightFollowButton = function () {
+          var followableElements = angular.element('.kf-reco')
+            .filter(function () { return this.querySelector('.kf-rcl-follow-btn'); });
+          var followableElement = followableElements.length > 1 ? followableElements.eq(1) : followableElements.first();
+          var followButton = followableElement.find('.kf-rcl-follow-btn');
+          var followButtonUnhighlight = removeHighlight.bind(null, followButton);
+          followButton.addClass('kf-uc-highlight-levitate');
+          $window.scrollTo(0, followableElement.scrollTop());
+
+          // Move it to the top
+          followableElement.parent().prepend(followableElement);
+
+          followableElement.one('click', followButtonUnhighlight);
+          setTimeout(followButtonUnhighlight, highlightTimeout);
+        };
+
+        function allItemsComplete(items) {
+          for (var i = 0; i < items.length; i++) {
+            if (!items[i].complete) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        function getEnabledChecklistItems() {
           return profileService.prefs && profileService.prefs.checklist;
-        }, function (enabledChecklistItems) {
+        }
+
+        function createChecklistData(enabledChecklistItems) {
           if (!enabledChecklistItems) {
             return;
           }
@@ -207,7 +267,10 @@ angular.module('kifi')
 
             return checklistItem;
           }).filter(Boolean);
-        });
+        }
+
+        // Wait for the profileService to fetch the checklist
+        scope.$watchCollection(getEnabledChecklistItems, createChecklistData);
       }
     };
   }
