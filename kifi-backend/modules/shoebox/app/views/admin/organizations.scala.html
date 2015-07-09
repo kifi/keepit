@@ -23,7 +23,7 @@ fakeOwnerId: Id[User]
     @for(orgId <- orgsStats.keys.toSeq.sorted) {
         <tr>
             <td>orgId</td>
-            <td>@orgDisplay(@orgsStats(orgId))</td>
+            <td>@orgDisplay(orgsStats(orgId))</td>
             <td>@orgsStats(orgId).members.size</td>
             <td>@orgsStats(orgId).candidates.size</td>
             <td>@orgsStats(orgId).userStatistics.values.map(_.librariesCreated).sum</td>
