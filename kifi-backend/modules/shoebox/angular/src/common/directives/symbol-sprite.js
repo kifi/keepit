@@ -10,9 +10,8 @@ angular.module('kifi')
     restrict :'A',
     compile: function () {
       return function (scope, element, attrs) {
-        var file = 'symbol-sprite.svg';
-        var path = '/dist/' + file;
-        element[0].innerHTML = '<use xlink:href="' + path + '#' + attrs.icon + '" />';
+        var file = '/dist/symbol-sprite.svg';
+        element[0].innerHTML = '<use xlink:href="' + file + '#' + attrs.icon + '" />';
         element[0].classList.add('symbol-sprite');
       };
     }
