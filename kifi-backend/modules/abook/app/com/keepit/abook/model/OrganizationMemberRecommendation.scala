@@ -65,10 +65,10 @@ class OrganizationMemberRecommendationRepoImpl @Inject() (
   }
 
   private val compiledIrrelevantRecommendations = Compiled { organizationId: Column[Id[Organization]] =>
-    for (row <- rows if row.organizationId === organizationId && row.irrelevant === true) yield row.memberId
+    for (row <- rows if row.organizationId === organizationId && row.irrelevant === true) yield row
   }
 
   def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[Id[User]] = {
-    compiledIrrelevantRecommendations(organizationId).list.toSet
+    compiledIrrelevantRecommendations(organizationId).list.map(_.recommendedUserId).toSet
   }
 }

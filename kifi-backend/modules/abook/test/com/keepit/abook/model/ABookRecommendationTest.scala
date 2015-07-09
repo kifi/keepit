@@ -27,16 +27,16 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
   "OrganizationMemberRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
-        val friendRecoRepo = inject[OrganizationMemberRecommendationRepo]
+        val memberRecoRepo = inject[OrganizationMemberRecommendationRepo]
         db.readWrite { implicit session =>
-          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
-          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
-          friendRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Id(430))
-          friendRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), Id(430))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Id(430))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), Id(430))
         }
         db.readOnlyMaster { implicit session =>
-          friendRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(420), Id(430))
-          friendRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(430))
+          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(420), Id(430))
+          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(430))
         }
       }
     }
