@@ -180,10 +180,52 @@ angular.module('kifi')
           scope.sms.phoneNumber = '';
         };
 
-        var highlightTimeout = 15000;
+        function hasChildWithSelector(parent, selector) {
+          return !!parent.querySelector(selector);
+        }
 
-        function removeHighlight($element) {
-          $element.removeClass('kf-uc-highlight-levitate');
+        function scrollToUnderHeader($element, $header) {
+          var PADDING = 10;
+          var documentTop = $window.document.documentElement.getBoundingClientRect().top;
+          var elementTop = $element.get(0).getBoundingClientRect().top;
+          var headerHeight = $header.get(0).getBoundingClientRect().height;
+          var absoluteElementTop = elementTop - documentTop;
+          var scrollToY = absoluteElementTop - headerHeight - PADDING;
+          $window.scrollTo(0, scrollToY);
+        }
+
+        // Highlight a button and move its card to the top of the card list
+        function triggerHighlightElement(toHighlightSelector, containerSelector) {
+          var HIGHLIGHT_TIMEOUT = 15000;
+          var containers = angular.element(containerSelector);
+          var cards = containers.filter(function () {
+            return hasChildWithSelector(this, toHighlightSelector);
+          });
+          // Try to choose the second element so the user definitely sees
+          // that something changed. If only one is available, use that one.
+          var card = cards.length > 1 ? cards.eq(1) : cards.eq(0);
+
+          if (card.length === 0) {
+            return;
+          }
+
+          var button = card.find(toHighlightSelector);
+          button.addClass('kf-uc-highlight-levitate');
+
+          // Move it to the top
+          card.parent().prepend(card);
+          // Scroll to show the whole card
+          scrollToUnderHeader(card, angular.element('.kf-lih'));
+
+          function removeHighlight() {
+            button.removeClass('kf-uc-highlight-levitate');
+          }
+
+          button.one('click', removeHighlight);
+          setTimeout(function () {
+            button.off('click', removeHighlight);
+            removeHighlight();
+          }, HIGHLIGHT_TIMEOUT);
         }
 
         var clonedKeepButton = null;
@@ -192,21 +234,7 @@ angular.module('kifi')
           angular.element('.kf-uc-example-keep-btn').append(clonedKeepButton);
         };
 
-        scope.triggerHighlightKeepButton = function () {
-          var keepableElements = angular.element('.kf-reco')
-            .filter(function () { return this.querySelector('.kf-keep-keep-btn'); });
-          var keepableElement  = keepableElements.length > 1 ? keepableElements.eq(1) : keepableElements.first();
-          var keepButton = keepableElement.find('.kf-keep-keep-btn');
-          var keepButtonUnhighlight = removeHighlight.bind(null, keepButton);
-          keepButton.addClass('kf-uc-highlight-levitate');
-
-          // Move it to the top
-          keepableElement.parent().prepend(keepableElement);
-          $window.scrollTo(0, keepableElement.scrollTop());
-
-          keepableElement.one('click', keepButtonUnhighlight);
-          setTimeout(keepButtonUnhighlight, highlightTimeout);
-        };
+        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-reco');
 
         var clonedFollowButton = null;
         scope.getFollowButton = function () {
@@ -214,21 +242,7 @@ angular.module('kifi')
           angular.element('.kf-uc-example-follow-btn').append(clonedFollowButton);
         };
 
-        scope.triggerHighlightFollowButton = function () {
-          var followableElements = angular.element('.kf-reco')
-            .filter(function () { return this.querySelector('.kf-rcl-follow-btn'); });
-          var followableElement = followableElements.length > 1 ? followableElements.eq(1) : followableElements.first();
-          var followButton = followableElement.find('.kf-rcl-follow-btn');
-          var followButtonUnhighlight = removeHighlight.bind(null, followButton);
-          followButton.addClass('kf-uc-highlight-levitate');
-          $window.scrollTo(0, followableElement.scrollTop());
-
-          // Move it to the top
-          followableElement.parent().prepend(followableElement);
-
-          followableElement.one('click', followButtonUnhighlight);
-          setTimeout(followButtonUnhighlight, highlightTimeout);
-        };
+        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-reco');
 
         function allItemsComplete(items) {
           for (var i = 0; i < items.length; i++) {
