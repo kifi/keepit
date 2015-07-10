@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -26,6 +27,7 @@ case class UserStatistics(
 case class OrganizationStatistics(
   org: Organization,
   orgId: Id[Organization],
+  pubId: PublicId[Organization],
   ownerId: Id[User],
   handle: OrganizationHandle,
   name: String,
@@ -40,6 +42,7 @@ case class OrganizationStatistics(
 class UserStatisticsCommander @Inject() (
     db: Database,
     kifiInstallationRepo: KifiInstallationRepo,
+    implicit val publicIdConfig: PublicIdConfiguration,
     keepRepo: KeepRepo,
     emailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
@@ -96,6 +99,7 @@ class UserStatisticsCommander @Inject() (
     OrganizationStatistics(
       org = org,
       orgId = orgId,
+      pubId = Organization.publicId(orgId),
       ownerId = org.ownerId,
       handle = org.getHandle,
       name = org.name,
