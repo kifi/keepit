@@ -35,6 +35,7 @@ class ShoeboxArticleIngestionActor @Inject() (
     systemValueRepo: SystemValueRepo,
     rover: RoverServiceClient,
     airbrake: AirbrakeNotifier,
+    urlPatternRulesRepo: UrlPatternRuleRepo,
     uriIntegrityHelpers: UriIntegrityHelpers,
     private implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
@@ -142,14 +143,15 @@ class ShoeboxArticleIngestionActor @Inject() (
 
   private def updateActiveUris(partiallyProcessedUpdatesByUri: Iterable[(Id[NormalizedURI], Seq[ShoeboxArticleUpdate], Boolean)])(implicit session: RWSession): Unit = {
     if (partiallyProcessedUpdatesByUri.nonEmpty) {
+      val rules = urlPatternRulesRepo.getUrlPatternRules()
       partiallyProcessedUpdatesByUri.foreach {
         case (uriId, updates, hasBeenRenormalized) =>
-          if (!hasBeenRenormalized) { updateUriAndKeeps(uriId, updates) }
+          if (!hasBeenRenormalized) { updateUriAndKeeps(uriId, updates, rules) }
       }
     }
   }
 
-  private def updateUriAndKeeps(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate])(implicit session: RWSession): Unit = {
+  private def updateUriAndKeeps(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate], rules: UrlPatternRules)(implicit session: RWSession): Unit = {
     require(updates.forall(_.uriId == uriId), s"Updates do not match expecting uriId ($uriId): $updates")
     log.info(s"Updating NormalizedURI ($uriId) after processing associated ShoeboxArticleUpdates from Rover: $updates")
     val uri = uriRepo.get(uriId)
@@ -162,7 +164,7 @@ class ShoeboxArticleIngestionActor @Inject() (
     val restriction = {
       val isSensitiveByRule = updates.foldLeft[Option[Boolean]](None) {
         case (Some(true), _) => Some(true)
-        case (isSensitiveByRuleSoFar, update) => isSensitiveByRuleSoFar
+        case (isSensitiveByRuleSoFar, update) => rules.isSensitive(update.destinationUrl) orElse isSensitiveByRuleSoFar
       }
 
       isSensitiveByRule match {

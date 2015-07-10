@@ -71,6 +71,11 @@ case class FakeCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides
+  def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def userExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 

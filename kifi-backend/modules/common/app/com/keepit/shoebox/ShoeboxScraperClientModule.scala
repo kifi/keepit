@@ -5,6 +5,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
+import com.keepit.model.UrlPatternRulesAllCache
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 
@@ -19,11 +20,13 @@ case class ProdShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
   def shoeboxServiceClient(
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
-    airbrakeNotifier: AirbrakeNotifier): ShoeboxScraperClient = {
+    airbrakeNotifier: AirbrakeNotifier,
+    urlPatternRuleAllCache: UrlPatternRulesAllCache): ShoeboxScraperClient = {
     new ShoeboxScraperClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
       client,
-      airbrakeNotifier
+      airbrakeNotifier,
+      urlPatternRuleAllCache
     )
   }
 

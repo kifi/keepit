@@ -1,6 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.URI
+import com.keepit.model.{ UrlPatternRulesCommander }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.document.utils.Signature
@@ -11,13 +12,15 @@ case class PrenormalizationException(uriString: String, cause: Throwable) extend
 
 @Singleton
 class PriorNormalizationKnowledge @Inject() (
+    urlPatternRules: UrlPatternRulesCommander,
     implicit val rover: RoverServiceClient,
     implicit val articlePolicy: ArticleFetchPolicy) {
 
   def prenormalize(uriString: String): Try[String] = {
     URI.parse(uriString).flatMap { parsedUri =>
       Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
-        val result = prenormalizedUri
+        val uriWithPreferredSchemeOption = getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
+        val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
         result.toString()
       }
     }.recoverWith {
@@ -29,10 +32,12 @@ class PriorNormalizationKnowledge @Inject() (
     referenceUrl match {
       case LinkedInNormalizer.linkedInPrivateProfile(_, id) => Seq(LinkedInProfileCheck(id.toLong))
       case _ => Seq(
-        SignatureCheck(referenceUrl, referenceSignature),
+        SignatureCheck(referenceUrl, referenceSignature, urlPatternRules.rules().getTrustedDomain(referenceUrl)),
         AlternateUrlCheck(referenceUrl, prenormalize)
       )
     }
   }
+
+  private def getPreferredSchemeNormalizer(url: String): Option[StaticNormalizer] = urlPatternRules.rules().getPreferredNormalization(url).map(SchemeNormalizer(_))
 
 }
