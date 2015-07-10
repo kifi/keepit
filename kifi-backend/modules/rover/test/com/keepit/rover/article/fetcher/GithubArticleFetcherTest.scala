@@ -4,7 +4,7 @@ import com.keepit.rover.article.GithubArticle
 
 class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubArticleFetcher] {
 
-  withInjector(FileHttpFetcherModule()) { implicit injector =>
+  withDb(FileHttpFetcherModule()) { implicit injector =>
 
     "GithubArticleFetcher" should {
 

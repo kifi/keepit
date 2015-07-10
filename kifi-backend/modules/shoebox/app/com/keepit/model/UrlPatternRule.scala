@@ -1,13 +1,14 @@
 package com.keepit.model
 
+import com.keepit.common.cache._
 import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
+import scala.concurrent.duration._
 
 case class UrlPatternRule(
     id: Option[Id[UrlPatternRule]] = None,

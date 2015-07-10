@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 
 class DefaultArticleFetcherTest extends ArticleFetcherTest[DefaultArticle, DefaultArticleFetcher] {
 
-  withInjector(FileHttpFetcherModule()) { implicit injector =>
+  withDb(FileHttpFetcherModule()) { implicit injector =>
 
     "DefaultArticleFetcher" should {
       "parse doc 1" in {
