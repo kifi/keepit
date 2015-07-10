@@ -19,6 +19,7 @@ trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
   def getOrganizationView(orgId: Id[Organization]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard]
+  def getLibraries(orgId: Id[Organization]): Seq[LibraryCardInfo]
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -104,6 +105,8 @@ class OrganizationCommanderImpl @Inject() (
       numMembers = numMembers,
       numLibraries = numPublicLibs)
   }
+
+  def getLibraries(orgId: Id[Organization]): Seq[LibraryCardInfo] = ???
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
     getValidationError(request).isEmpty

@@ -112,6 +112,44 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         }
       }
     }
+
+    "get user/orgs libraries by handle" in {
+      def testSetup(implicit injector: Injector) = {
+        db.readWrite { implicit session =>
+          val userHandle = Username("myuserhandle")
+          val orgHandle = OrganizationHandle("myorghandle")
+          val user = UserFactory.user().withUsername(userHandle.value).saved
+          val org = OrganizationFactory.organization().withHandle(orgHandle).withOwner(user).saved
+          (user, org)
+        }
+      }
+      "get a user's libraries" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, _) = testSetup
+
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          val request = route.getLibrariesByHandle(user.username)
+          val response = controller.getLibrariesByHandle(user.username, page = 0, pageSize = 10, filter = "own")(request)
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "type").as[String] === "user"
+        }
+      }
+      "get an org" in {
+        skipped("not implemented yet :(")
+        withDb(modules: _*) { implicit injector =>
+          val (user, org) = testSetup
+
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          val request = route.getLibrariesByHandle(org.getHandle)
+          val response = controller.getLibrariesByHandle(org.getHandle, page = 0, pageSize = 10, filter = "own")(request)
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "type").as[String] === "org"
+        }
+      }
+    }
+
   }
 
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]

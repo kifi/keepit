@@ -51,7 +51,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val (user, org) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val handle = OrganizationHandle("Kifi")
+            val handle = OrganizationHandle("kifi")
             val org = OrganizationFactory.organization().withHandle(handle).withOwner(user).withName("Forty Two Kifis").saved
             LibraryFactory.libraries(10).map(_.published().withOrganization(org.id)).saved
             LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(org.id)).saved
@@ -67,7 +67,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "organization" \ "name").as[String] === "Forty Two Kifis"
-          (jsonResponse \ "organization" \ "handle").as[String] === "Kifi"
+          (jsonResponse \ "organization" \ "handle").as[String] === "kifi"
           (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10
         }
       }
