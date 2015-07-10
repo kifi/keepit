@@ -24,6 +24,7 @@ case class UserStatistics(
   orgCandidates: Seq[Organization])
 
 case class OrganizationStatistics(
+  org: Organization,
   orgId: Id[Organization],
   ownerId: Id[User],
   handle: OrganizationHandle,
@@ -84,15 +85,16 @@ class UserStatisticsCommander @Inject() (
   def organizationStatistics(orgId: Id[Organization])(implicit session: RSession): OrganizationStatistics = {
     val org = orgRepo.get(orgId)
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-    val numTotalKeeps = libraries.map { lib => keepRepo.getCountByLibrary(lib.id.get) }.sum
+    val numTotalKeeps = libraries.map(_.keepCount).sum
     val numTotalChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
-    val members = orgMembershipRepo.getAllByOrgId(orgId).toSet
+    val members = orgMembershipRepo.getAllByOrgId(orgId)
     val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
     val userStats = userIds.map { uid => uid -> userStatistics(userRepo.get(uid), Map.empty) }.toMap
 
     OrganizationStatistics(
+      org = org,
       orgId = orgId,
       ownerId = org.ownerId,
       handle = org.getHandle,
