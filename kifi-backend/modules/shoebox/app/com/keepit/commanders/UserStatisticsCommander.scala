@@ -24,6 +24,7 @@ case class UserStatistics(
   orgCandidates: Seq[Organization])
 
 case class OrganizationStatistics(
+  org: Organization,
   orgId: Id[Organization],
   ownerId: Id[User],
   handle: OrganizationHandle,
@@ -93,6 +94,7 @@ class UserStatisticsCommander @Inject() (
     val userStats = userIds.map { uid => uid -> userStatistics(userRepo.get(uid), Map.empty) }.toMap
 
     OrganizationStatistics(
+      org = org,
       orgId = orgId,
       ownerId = org.ownerId,
       handle = org.getHandle,
