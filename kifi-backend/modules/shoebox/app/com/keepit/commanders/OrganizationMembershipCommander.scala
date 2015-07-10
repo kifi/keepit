@@ -45,8 +45,6 @@ trait OrganizationMembershipCommander {
   def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]]
   def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]]
   def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]]
-
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipInfo]
 }
 
 @Singleton
@@ -55,7 +53,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userRepo: UserRepo,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
@@ -238,14 +238,5 @@ class OrganizationMembershipCommanderImpl @Inject() (
     } catch {
       case OrganizationFailException(failure) => Left(failure)
     }
-  }
-
-  def getMembersInfo(orgId: Id[Organization])(implicit session: RSession): Map[Id[User], OrganizationMembershipInfo] = {
-    val members = organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
-    members.map { uid =>
-      val numTotalKeeps = keepRepo.getCountByUser(uid)
-      val numTotalChats = 42 // TODO(ryan): find a way to get the number of user chats
-      uid -> OrganizationMembershipInfo(numTotalKeeps, numTotalChats)
-    }.toMap
   }
 }

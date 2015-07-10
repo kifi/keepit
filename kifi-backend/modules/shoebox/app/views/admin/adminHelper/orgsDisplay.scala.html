@@ -1,0 +1,3 @@
+@(orgs: Seq[Organization])
+
+@for(org <- orgs) { adminHelper.orgDisplay(org) }

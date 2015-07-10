@@ -1,30 +1,67 @@
 @import com.keepit.common.service.IpAddress
 @(user: User,
 logs: Seq[UserIpAddress],
-sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
+sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@formatListOfUsers(userIds: Seq[Id[User]]) = {
-    <ul>
-    @for(uid <- userIds) {
-        <li>
-        <a href=@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)>@uid</a>
-        </li>
+@networkLogoLink(sui: SocialUserInfo) = {
+  <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
+    @sui.networkType.name.take(2)
+}
+
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+  <ul>
+    @for(installation <- kifiInstallations) {
+      <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
     }
-    </ul>
+  </ul>
+}
+
+
+
+@formatListOfUsers(userData: com.keepit.controllers.admin.UserStatisticsPage) = {
+    @for((userStatistics, i) <- userData.users.zipWithIndex) {
+    <tr>
+        <td></td>
+        <td>@{i+1}</td>
+        <td><span class="badge">@userStatistics.user.id.get.id</span></td>
+        <td>@adminHelper.userDisplay(userStatistics.user)</td>
+        <td>@userStatistics.connections</td>
+        <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
+        <td>@userStatistics.invitations</td>
+        <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
+        <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
+        <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+        <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+        <td>@userStatistics.privateKeeps</td>
+        <td>@userStatistics.publicKeeps</td>
+        <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
+    </tr>
+    }
 }
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <table class="table table-bordered">
         <tr>
-            <th>Ip Address</th>
-            <th>Kifi Users Sharing that IP</th>
+            <th>#</th>
+            <th>Id</th>
+            <th>User</th>
+            <th>kifi Conns</th>
+            <th>Invited By</th>
+            <th>Invite Sent</th>
+            <th>Messages al/ac/st</th>
+            <th>Lib cr/fw</th>
+            <th>Network</th>
+            <th>mail</th>
+            <th>Prvt Keep</th>
+            <th>Pub Keep</th>
+            <th>Date Joined</th>
         </tr>
-        @for((ipAddress, otherIds) <- sharedIpAddresses) {
-        <tr>
-            <td><a href="http://ip-api.com/#@ipAddress">@ipAddress</a></td>
-            <td>@formatListOfUsers(otherIds)</td>
-        </tr>
+        @for((ipAddress, userData) <- sharedIpAddresses) {
+            <tr>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.users.size}</td>
+            </tr>
+            @formatListOfUsers(userData)
         }
     </table>
 
@@ -40,7 +77,7 @@ sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
         <tr>
             <td>@{i+1}</td>
             <td>@log.createdAt</td>
-            <td><a href="http://ip-api.com/#@{log.ipAddress}">@log.ipAddress</a></td>
+            <td><a href="http://ip-api.com/#@{log.ipAddress}">@{log.ipAddress}</a></td>
             <td>@log.agentType</td>
         </tr>
         }

@@ -187,7 +187,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
 
-          status(result) === UNAUTHORIZED
+          status(result) === FORBIDDEN
         }
       }
       "modify members if the requester has permission" in {
@@ -258,7 +258,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
 
-          status(result) === UNAUTHORIZED
+          status(result) === FORBIDDEN
         }
       }
       "remove members if the requester has permission" in {

@@ -151,32 +151,35 @@ rclSideBorderWidth = 1px // from defaultBorder
   .kf-library-share-search
     vertical-align: top
 
-  follow-unfollow-width = 112px
+follow-unfollow-width = 112px
 
-  .kf-rcl-follow-btn
-    border-color: transparent
-    width: follow-unfollow-width
-    padding: 0
-    background: followBlue
-    color: white
+.kf-rcl-follow-btn
+  border-color: transparent
+  width: follow-unfollow-width
+  padding: 0
+  background: followBlue
+  color: white
 
-    &::before  // moves the text slightly right
-      content: ''
-      padding-left: 2px
+  &::before  // moves the text slightly right
+    content: ''
+    padding-left: 2px
 
-  .kf-rcl-unfollow-btn
-    border: 1px solid #20a1f1
-    width: follow-unfollow-width
-    padding: 0
-    background: #fff
-    color: #20a1f1
+  &:hover
+    background-color: followBlue
 
-    &:hover
-      border-color: redColor
+.kf-rcl-unfollow-btn
+  border: 1px solid #20a1f1
+  width: follow-unfollow-width
+  padding: 0
+  background: #fff
+  color: #20a1f1
 
-    &::after
-      content: 'Following'
+  &:hover
+    border-color: redColor
 
-    &:hover::after
-      content: 'Unfollow'
-      color: redColor
+  &::after
+    content: 'Following'
+
+  &:hover::after
+    content: 'Unfollow'
+    color: redColor
