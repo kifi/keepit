@@ -591,6 +591,15 @@ GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.
 GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
 GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
+GET     /admin/domains/find            @com.keepit.controllers.admin.UrlController.searchDomain
+POST    /admin/domains/find            @com.keepit.controllers.admin.UrlController.findDomainByHostname
+GET     /admin/domains/:id             @com.keepit.controllers.admin.UrlController.getDomain(id: Id[com.keepit.classify.Domain])
+POST    /admin/domains/:id/toggleEmailProvider @com.keepit.controllers.admin.UrlController.domainToggleEmailProvider(id: Id[com.keepit.classify.Domain])
+GET     /admin/domains/tags            @com.keepit.controllers.admin.UrlController.getDomainTags
+POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlController.saveDomainTags
+GET     /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.getDomainOverrides
+POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.saveDomainOverrides
+
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -746,14 +755,6 @@ POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admi
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
-GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
-POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
-GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-GET     /admin/slider/domains/find    @com.keepit.controllers.admin.SliderAdminController.searchDomain
-POST    /admin/slider/domains/find    @com.keepit.controllers.admin.SliderAdminController.findDomainByHostname
-GET     /admin/slider/domains/:id   @com.keepit.controllers.admin.SliderAdminController.getDomain(id: Id[com.keepit.classify.Domain])
-POST    /admin/slider/domains/:id/toggleEmailProvider @com.keepit.controllers.admin.SliderAdminController.domainToggleEmailProvider(id: Id[com.keepit.classify.Domain])
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)

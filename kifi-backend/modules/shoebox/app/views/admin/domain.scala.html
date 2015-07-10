@@ -25,15 +25,8 @@
         <tr>
             <th>Email provider</th>
             <td>
-                <form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.domainToggleEmailProvider(domain.id.get)" method="POST">
-                    @domain.isEmailProvider
-                    <button type="submit" class="btn btn-default btn-small">
-                        @if(domain.isEmailProvider) {
-                            Un-make email provider
-                        } else {
-                            Make email provider
-                        }
-                    </button>
+                <form id="email-provider" class="email-provider-check">
+                    <input type="checkbox" @if(domain.isEmailProvider) {checked} onclick="@com.keepit.controllers.admin.routes.UrlController.domainToggleEmailProvider(domain.id.get)">
                 </form>
             </td>
         </tr>
@@ -44,4 +37,20 @@
             <th>Updated At</th><td>@adminHelper.dateTimeDisplay(domain.updatedAt)</td>
         </tr>
     </table>
+
+    <script type="text/javascript">
+      $("#email-provider").on("click", "input", function() {
+        var $td = $(this).closest("#email-provider");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        $.post('@com.keepit.controllers.admin.routes.UrlController.domainToggleEmailProvider(domain.id.get)')
+            .done(done).fail(fail);
+        function done() {
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+      });
+    </script>
+
 }

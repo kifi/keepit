@@ -1,7 +1,7 @@
 @(domains: Seq[com.keepit.classify.Domain])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Domain Overrides", stylesheets = List("admin_slider")) {
-<form class="domain-overrides" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveDomainOverrides" method="POST">
+<form class="domain-overrides" action="@com.keepit.controllers.admin.routes.UrlController.saveDomainOverrides" method="POST">
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
