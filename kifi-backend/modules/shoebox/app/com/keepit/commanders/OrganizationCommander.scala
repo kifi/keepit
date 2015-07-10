@@ -26,9 +26,6 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
-
-  def getAnalyticsView(orgId: Id[Organization]): AnalyticsOrganizationView
-  def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], AnalyticsOrganizationCard]
 }
 
 @Singleton
@@ -66,7 +63,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val memberIds = orgMembershipRepo.getByOrgId(orgId, Limit(8), Offset(0)).map(_.userId)
     val members = userRepo.getAllUsers(memberIds).values.toSeq
-    val membersAsBasicUsers = members.map { m => BasicUser(externalId = m.externalId, firstName = m.firstName, lastName = m.lastName, pictureName = m.pictureName.getOrElse(""), username = m.username) }
+    val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
     val librariesByVisibility = libraryRepo.countLibrariesForOrgByVisibility(orgId)
@@ -257,28 +254,4 @@ class OrganizationCommanderImpl @Inject() (
       }
     }
   }
-
-  def getAnalyticsView(orgId: Id[Organization]): AnalyticsOrganizationView = {
-    db.readOnlyReplica { implicit session =>
-      val orgView = getOrganizationViewHelper(orgId)
-      val memberIds = orgMembershipRepo.getAllByOrgId(orgId).map(_.userId)
-      val numTotalKeeps = keepRepo.getCountByUsers(memberIds).values.sum
-      // TODO(ryan): get actual numbers for chats
-      val numTotalChats = 420
-      val memberInfos = orgMembershipCommander.getMembersInfo(orgId)
-      AnalyticsOrganizationView(orgView, AnalyticsOrganizationViewExtras(numTotalKeeps, numTotalChats, memberInfos))
-    }
-  }
-
-  def getAnalyticsCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], AnalyticsOrganizationCard] = {
-    db.readOnlyReplica { implicit session =>
-      orgIds.map { orgId =>
-        val orgCard = getOrganizationCardHelper(orgId)
-        val numTotalKeeps = 0
-        val numTotalChats = 0
-        orgId -> AnalyticsOrganizationCard(orgCard, AnalyticsOrganizationCardExtras(numTotalKeeps, numTotalChats))
-      }.toMap
-    }
-  }
-
 }

@@ -62,8 +62,6 @@ angular.module('kifi')
         return route('/collections/' + tagId + '/undelete');
       },
 
-      followingLibraries: 'http://support.kifi.com/hc/en-us/articles/202657599-Following-Libraries',
-
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friendRequest: function (id) {

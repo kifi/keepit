@@ -321,19 +321,17 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  def userStatisticsPage(page: Int = 0, userViewType: UserViewType): Future[UserStatisticsPage] = {
-    val PAGE_SIZE: Int = 30
-
+  def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
     val usersF = Future {
       db.readOnlyReplica { implicit s =>
         userViewType match {
-          case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE),
+          case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
-          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE),
+          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
             userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
-          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE),
+          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
-          case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, PAGE_SIZE),
+          case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
         }
       }
@@ -365,20 +363,40 @@ class AdminUserController @Inject() (
 
     (userStatsF zip userThreadStatsF).map {
       case ((users, userCount), userThreadStats) =>
-        UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers, recentUsers, inviteInfo)
+        UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, pageSize, newUsers, recentUsers, inviteInfo)
     }
   }
 
+  def usersStatisticsPage(userIds: Seq[Id[User]]): UserStatisticsPage = {
+
+    val userStats = db.readOnlyReplica { implicit s =>
+      val users = userRepo.getAllUsers(userIds)
+      val socialUserInfos = socialUserInfoRepo.getByUsers(userIds).groupBy(_.userId.get)
+      users.map(u => userStatisticsCommander.userStatistics(u._2, socialUserInfos)).toList
+    }
+
+    val userThreadStats = userIds.map(id => id -> eliza.getUserThreadStats(id)).seq.toMap
+
+    val (newUsers, recentUsers, inviteInfo) = db.readOnlyReplica { implicit s =>
+      val invites = invitationRepo.getRecentInvites()
+      val (accepted, sent) = invites.partition(_.state == InvitationStates.ACCEPTED)
+      val recentUsers = userRepo.getRecentActiveUsers()
+      (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(sent, accepted)))
+    }
+
+    UserStatisticsPage(AllUsersViewType, userStats, userThreadStats, 0, userIds.size, userIds.size, newUsers, recentUsers, inviteInfo)
+  }
+
   def usersView(page: Int = 0) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(page, AllUsersViewType).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(AllUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def registeredUsersView(page: Int = 0) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(page, RegisteredUsersViewType).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(RegisteredUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def fakeUsersView(page: Int = 0) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(page, FakeUsersViewType).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(FakeUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
@@ -402,7 +420,7 @@ class AdminUserController @Inject() (
   }
 
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(page, ByExperimentUsersViewType(ExperimentType(exp))).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(ByExperimentUsersViewType(ExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def searchUsers() = AdminUserPage { implicit request =>
@@ -940,7 +958,8 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
+    val pages: Map[IpAddress, UserStatisticsPage] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersStatisticsPage(userIds) }.toMap
+    Ok(html.admin.userIpAddresses(owner, logs, pages))
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>

@@ -22,6 +22,10 @@ angular.module('kifi')
               template: 'common/modal/installExtensionErrorModal.tpl.html'
             });
           });
+          $analytics.eventTrack('user_clicked_page', {
+            'type': 'yourKeeps',
+            'action': 'clickedInstallExtensionSideNav'
+          });
         };
 
         scope.triggerGuide = function (linkClicked) {
@@ -46,15 +50,17 @@ angular.module('kifi')
           }
 
           $rootScope.$emit('showGlobalModal', 'importBookmarks');
-          $analytics.eventTrack('user_viewed_page', {
-            'type': 'browserImport'
+          $analytics.eventTrack('user_clicked_page', {
+            'type': 'yourKeeps',
+            'action': 'clickedImportBrowserSideNav'
           });
         };
 
         scope.importBookmarkFile = function () {
           $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
-          $analytics.eventTrack('user_viewed_page', {
-            'type': '3rdPartyImport'
+          $analytics.eventTrack('user_clicked_page', {
+            'type': 'yourKeeps',
+            'action': 'clicked3rdPartySideNav'
           });
         };
 

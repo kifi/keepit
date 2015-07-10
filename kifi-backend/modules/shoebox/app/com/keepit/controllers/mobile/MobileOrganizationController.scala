@@ -43,33 +43,25 @@ class MobileOrganizationController @Inject() (
     }
   }
 
-  def modifyOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
-    request.request.userIdOpt match {
-      case None => OrganizationFail.NOT_A_MEMBER.asErrorResponse
-      case Some(requesterId) =>
-        request.body.validate[OrganizationModifications](OrganizationModifications.mobileV1) match {
-          case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
-          case JsSuccess(modifications, _) =>
-            orgCommander.modifyOrganization(OrganizationModifyRequest(requesterId, request.orgId, modifications)) match {
-              case Left(failure) => failure.asErrorResponse
-              case Right(response) =>
-                val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get)
-                implicit val writes = OrganizationView.mobileV1
-                Ok(Json.obj("organization" -> Json.toJson(orgView)))
-            }
+  def modifyOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    request.body.validate[OrganizationModifications](OrganizationModifications.mobileV1) match {
+      case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
+      case JsSuccess(modifications, _) =>
+        orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
+          case Left(failure) => failure.asErrorResponse
+          case Right(response) =>
+            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get)
+            implicit val writes = OrganizationView.mobileV1
+            Ok(Json.obj("organization" -> Json.toJson(orgView)))
         }
     }
   }
 
-  def deleteOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
-    request.request.userIdOpt match {
-      case None => OrganizationFail.NOT_A_MEMBER.asErrorResponse
-      case Some(requesterId) =>
-        val deleteRequest = OrganizationDeleteRequest(requesterId = requesterId, orgId = request.orgId)
-        orgCommander.deleteOrganization(deleteRequest) match {
-          case Left(fail) => fail.asErrorResponse
-          case Right(response) => NoContent
-        }
+  def deleteOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    val deleteRequest = OrganizationDeleteRequest(requesterId = request.request.userId, orgId = request.orgId)
+    orgCommander.deleteOrganization(deleteRequest) match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(response) => NoContent
     }
   }
 
@@ -77,6 +69,7 @@ class MobileOrganizationController @Inject() (
     Ok(Json.obj("organization" -> Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.mobileV1)))
   }
 
+  // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
     if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
