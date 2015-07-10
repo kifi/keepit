@@ -7,10 +7,11 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 @Singleton
 class UserOrOrganizationController @Inject() (
@@ -26,19 +27,23 @@ class UserOrOrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def getByHandle(handle: Handle) = {
+  def getByHandle(handle: Handle) = MaybeUserAction.async { request =>
     val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
-    val actionOpt = handleOwnerObjectOpt map {
-      case (Left(org), _) => OrganizationAction(Organization.publicId(org.id.get), OrganizationPermission.VIEW_ORGANIZATION) { request =>
-        val orgPayload = orgController.getOrganizationHelper(org.id.get)
-        Ok(Json.obj("type" -> "org", "result" -> orgPayload))
-      }
-      case (Right(user), _) => MaybeUserAction { request =>
-        val viewer = request.userOpt
-        val userPayload = userProfileController.getProfileHelper(user.username, viewer).get
-        Ok(Json.obj("type" -> "user", "result" -> userPayload))
-      }
+    val actionAndTypeOpt = handleOwnerObjectOpt map {
+      case (Left(org), _) =>
+        (orgController.getOrganization(Organization.publicId(org.id.get)), "org")
+      case (Right(user), _) =>
+        (userProfileController.getProfile(user.username), "user")
     }
-    actionOpt.getOrElse { MaybeUserAction { request => NotFound } }
+    actionAndTypeOpt.map {
+      case (action, actionType) =>
+        action(request).flatMap { result =>
+          result.body.run(Iteratee.getChunks).map { chunks =>
+            val payload = chunks.head
+            Ok(Json.obj("type" -> actionType, "result" -> Json.parse(payload)))
+          }
+        }
+    }.getOrElse(Future.successful(NotFound))
   }
+
 }
