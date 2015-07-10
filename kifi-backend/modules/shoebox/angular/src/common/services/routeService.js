@@ -40,7 +40,7 @@ angular.module('kifi')
       userPasswordUrl: route('/user/password'),
       userBiography: route('/user/me/biography'),
       formatPicUrl: function (userId, pictureName, size) {
-        return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
+        return env.picBase + '/user-or-org/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
       },
 
       ////////////////////////////
@@ -193,10 +193,10 @@ angular.module('kifi')
       // User Profile           //
       ////////////////////////////
       getUserProfile: function (handle) {
-        return route('/user/' + handle + '/profile');
+        return route('/user-or-org/' + handle);
       },
       getUserLibraries: function (handle, filter, opt_page, opt_size) {
-        return route('/user/' + handle + '/libraries', {
+        return route('/user-or-org/' + handle + '/libraries', {
           filter: filter,
           page: _.isUndefined(opt_page) ? [] : opt_page,
           size: _.isUndefined(opt_size) ? [] : opt_size
