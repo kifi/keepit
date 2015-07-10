@@ -35,7 +35,7 @@ orgStats: OrganizationStatistics
     @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
         <tr>
             <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
-            <td>@orgStats.userStatistics(membership.userId).user.fullName</td>
+            <td>@adminHelper.userDisplay(orgStats.userStatistics(membership.userId).user)</td>
             <td>@membership.role</td>
             <td>@orgStats.userStatistics(membership.userId).librariesCreated</td>
             <td>@orgStats.userStatistics(membership.userId).publicKeeps</td>
