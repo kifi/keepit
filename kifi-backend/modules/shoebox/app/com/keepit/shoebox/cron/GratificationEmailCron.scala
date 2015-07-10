@@ -27,19 +27,19 @@ class GratificationEmailCronPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val nowET = currentDateTime(zones.ET)
-    val offsetMillisToUtc = zones.ET.getOffset(nowET)
+    val nowET = currentDateTime(zones.PT)
+    val offsetMillisToUtc = zones.PT.getOffset(nowET)
     val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
-    val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
-    val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
+    val utcHourFor9amPacificTime = 9 + -offsetHoursToUtc
+    val utcHourFor10pmPacificTime = 22 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0 ${utcHourFor8pmEasternTime - 3} ? * *" // scheduled to send to QA
-    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
+    val cronTimeEveryday = s"0 0/30 ${utcHourFor10pmPacificTime}-${utcHourFor10pmPacificTime + 2} ? * *" // scheduled to send to QA
+    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendOddEmails)
 
-    val cronTimeTues = s"0 0 $utcHourForNoonEasternTime ? * TUE"
+    val cronTimeTues = s"0 0 $utcHourFor9amPacificTime ? * TUE"
     cronTaskOnLeader(quartz, actor.ref, cronTimeTues, GratificationEmailMessage.SendOddEmails)
 
-    val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * MON"
+    val cronTimeMonday = s"0 0 $utcHourFor9amPacificTime ? * MON"
     cronTaskOnLeader(quartz, actor.ref, cronTimeMonday, GratificationEmailMessage.SendEvenEmails)
   }
 }

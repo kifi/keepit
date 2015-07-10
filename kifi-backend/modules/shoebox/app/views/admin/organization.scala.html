@@ -13,6 +13,13 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
+    <tr><td>Handle</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+                <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
     <tr><td>Description</td>
         <td>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
@@ -20,7 +27,7 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(orgStats.ownerId)">@orgStats.ownerId</a></td></tr>
+    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
 
 </table>
 
@@ -52,7 +59,7 @@ orgStats: OrganizationStatistics
     </tr>
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
-            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(candidate.userId)">@candidate.userId</a></td>
+            <td>@candidate.userId</td>
             <td>@adminHelper.userDisplay(orgStats.userStatistics(candidate.userId).user)</td>
             <td>@orgStats.userStatistics(candidate.userId).librariesCreated</td>
             <td>@orgStats.userStatistics(candidate.userId).publicKeeps</td>
