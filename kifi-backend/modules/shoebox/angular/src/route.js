@@ -51,9 +51,14 @@ angular.module('kifi')
         },
         reloadOnSearch: false  // controller handles search query changes itself
       })
-      .state('userProfile', {
+      .state('userOrOrgProfile', {
         url: '/:handle',
-        templateUrl: 'userProfile/userProfile.tpl.html',
+        // templateUrl: 'userProfile/userProfile.tpl.html',
+        templateProvider: ['type', '$templateRequest', function(type, templateRequest) {
+          var handleType = 'user'; // TODO (Adam): Ternary
+          return templateRequest(handleType + 'Profile/' + handleType + 'Profile.tpl.html');
+        }],
+
         controller: 'UserProfileCtrl',
         resolve: {
           userProfileActionService: 'userProfileActionService',

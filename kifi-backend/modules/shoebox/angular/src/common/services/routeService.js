@@ -40,7 +40,7 @@ angular.module('kifi')
       userPasswordUrl: route('/user/password'),
       userBiography: route('/user/me/biography'),
       formatPicUrl: function (userId, pictureName, size) {
-        return env.picBase + '/user-or-org/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
+        return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
       },
 
       ////////////////////////////
