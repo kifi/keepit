@@ -22,7 +22,7 @@ fakeOwnerId: Id[User]
     </tr>
     @for(orgId <- orgsStats.keys.toSeq.sorted) {
         <tr>
-            <td>orgId</td>
+            <td>@orgId</td>
             <td>@orgDisplay(orgsStats(orgId))</td>
             <td>@orgsStats(orgId).members.size</td>
             <td>@orgsStats(orgId).candidates.size</td>
