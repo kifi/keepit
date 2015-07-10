@@ -1642,7 +1642,10 @@ class LibraryCommanderImpl @Inject() (
                   val inviter = userRepo.get(requestUserId)
                   val libOwner = basicUserRepo.load(library.ownerId)
                   val updatedTargetMembership = libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE))
-                  libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> updatedTargetMembership))
+
+                  if (inviter.id.get.id != targetUserId.id) {
+                    libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> updatedTargetMembership))
+                  }
 
                   Right(updatedTargetMembership)
               }
