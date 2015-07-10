@@ -82,6 +82,9 @@ class UserIpAddressEventLogger @Inject() (
     httpClient: HttpClient,
     userStatisticsCommander: UserStatisticsCommander,
     richIpAddressCache: RichIpAddressCache,
+    organizationRepo: OrganizationRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
@@ -116,20 +119,20 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  private def formatCluster(ip: RichIpAddress, users: Seq[UserStatistics], newUserId: Option[Id[User]]): BasicSlackMessage = {
+  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
       ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
     )
 
-    val userDeclarations = users.map { stats =>
-      val user = stats.user
-      val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
-      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\t${stats.connections} conns\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.publicKeeps}/${stats.privateKeeps} pb/pv keeps\t"
-      if (newUserId.contains(user.id.get)) {
-        userDeclaration + "\t*<-- New Member in Cluster!!!*"
-      } else userDeclaration
+    val userDeclarations = users.map {
+      case (user, candidateOrgs, orgs) =>
+        val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
+        val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\torgs/cand:${orgs.map(_.name).mkString(",")}/${candidateOrgs.map(_.name).mkString(",")}"
+        if (newUserId.contains(user.id.get)) {
+          userDeclaration + "\t*<-- New Member in Cluster!!!*"
+        } else userDeclaration
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
@@ -150,8 +153,10 @@ class UserIpAddressEventLogger @Inject() (
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
-      userRepo.getUsers(userIds).values.toList.map { user =>
-        userStatisticsCommander.userStatistics(user, Map.empty)
+      userRepo.getUsers(userIds).values.toList map { user =>
+        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
+        val orgs = organizationRepo.getByIds(organizationMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+        (user, candidates, orgs)
       }
     }
     getIpInfoOpt(clusterIp) map { ipInfoOpt =>
