@@ -82,7 +82,8 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         db.readWrite { implicit session =>
           val userHandle = Username("myuserhandle")
           val orgHandle = OrganizationHandle("myorghandle")
-          val user = UserFactory.user().withUsername(userHandle.value).saved
+          val userTemplate = UserFactory.user().withUsername(userHandle.value).saved
+          val user = handleCommander.setUsername(userTemplate, userHandle).get
           val org = OrganizationFactory.organization().withHandle(orgHandle).withOwner(user).saved
           (user, org)
         }
@@ -118,7 +119,8 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         db.readWrite { implicit session =>
           val userHandle = Username("myuserhandle")
           val orgHandle = OrganizationHandle("myorghandle")
-          val user = UserFactory.user().withUsername(userHandle.value).saved
+          val userTemplate = UserFactory.user().withUsername(userHandle.value).saved
+          val user = handleCommander.setUsername(userTemplate, userHandle).get
           val org = OrganizationFactory.organization().withHandle(orgHandle).withOwner(user).saved
           (user, org)
         }

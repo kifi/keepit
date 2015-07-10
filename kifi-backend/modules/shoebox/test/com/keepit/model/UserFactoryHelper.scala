@@ -11,7 +11,8 @@ object UserFactoryHelper {
   implicit class UserPersister(partialUser: PartialUser) {
     def saved(implicit injector: Injector, session: RWSession): User = {
       val userTemplate = injector.getInstance(classOf[UserRepo]).save(partialUser.get.copy(id = None))
-      val user = injector.getInstance(classOf[HandleCommander]).setUsername(userTemplate, userTemplate.username, overrideProtection = true, overrideValidityCheck = true).get
+      //val user = injector.getInstance(classOf[HandleCommander]).setUsername(userTemplate, userTemplate.username, overrideProtection = true, overrideValidityCheck = true).get
+      val user = userTemplate
       if (partialUser.experiments.nonEmpty) {
         val experimentRepo = injector.getInstance(classOf[UserExperimentRepo])
         partialUser.experiments.foreach { experimentType =>
