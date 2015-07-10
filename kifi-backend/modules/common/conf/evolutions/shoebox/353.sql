@@ -7,6 +7,7 @@ CREATE TABLE if not exists rover_url_rule (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     pattern varchar(2048) NOT NULL,
+    example varchar(2048) NOT NULL,
     proxy_id bigint(20) NULL,
 
     PRIMARY KEY (id),

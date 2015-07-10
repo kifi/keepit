@@ -24,6 +24,7 @@ class RoverUrlRuleCommander @Inject() (
       val updatedData = RoverUrlRule(
         state = State[RoverUrlRule](that.state.value),
         pattern = that.pattern,
+        example = that.example,
         proxy = that.proxy.map(id => Id(id.id))
       )
       val newProxy =
@@ -61,6 +62,7 @@ class RoverUrlRuleCommander @Inject() (
       id = urlRule.id.map(id => Id(id.id)),
       state = State(urlRule.state.value),
       pattern = urlRule.pattern,
+      example = urlRule.example,
       proxy = urlRule.proxy.map(id => Id(id.id))
     )
   }

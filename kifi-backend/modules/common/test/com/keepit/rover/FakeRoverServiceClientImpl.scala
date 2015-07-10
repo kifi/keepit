@@ -69,5 +69,5 @@ class FakeRoverServiceClientImpl(
   def saveProxy(proxy: HttpProxy): Future[HttpProxy] = Future.successful(HttpProxy(alias = "", host = "", port = 0, scheme = ProxyScheme.Http, username = None, password = None))
 
   def getAllUrlRules(): Future[Seq[UrlRule]] = Future.successful(List())
-  def saveUrlRule(urlRule: UrlRule): Future[UrlRule] = Future.successful(UrlRule(pattern = "", proxy = None))
+  def saveUrlRule(urlRule: UrlRule): Future[UrlRule] = Future.successful(UrlRule(pattern = "", example = "", proxy = None))
 }

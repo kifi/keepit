@@ -16,6 +16,7 @@
                     <th>Active</th>
                     <th>Pattern</th>
                     <th></th>
+                    <th>Example</th>
                     <th>Route to Proxy</th>
                 </tr>
             </thead>
@@ -23,7 +24,9 @@
                 <tr class="url-rule-row">
                     <td><input type="checkbox" class="checkbox" name="active_@urlRule.id.get" @if(urlRule.isActive) {checked="checked"}></td>
                     <td><input type="text" class="pattern" name="pattern_@urlRule.id.get" value="@urlRule.pattern"></td>
-                    <td><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegexFilled(urlRule.pattern)" class="btn btn-small">test</a></td>
+                    <td class="control-group"><input type="text" class="example" name="example_@urlRule.id.get"
+                        style="border-color: @if(urlRule.example.matches(urlRule.pattern)) { green } else { red }" value="@urlRule.example"></td>
+                    <td><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegexFilled(urlRule.pattern, Some(urlRule.example))" class="btn btn-small">test</a></td>
                     <td>
                         <select name="proxy_@urlRule.id.get">
                             <option @if(urlRule.proxy.isEmpty) {selected="selected"} value="">Do not route to proxy</option>
@@ -47,12 +50,14 @@
                 <tr>
                     <th>Active</th>
                     <th>Pattern</th>
+                    <th>Example</th>
                     <th>Route to Proxy</th>
                 </tr>
             </thead>
             <tr data-new="true" class="url-rule-row">
                 <td><input type="checkbox" class="checkbox" name="new_active" checked="checked"></td>
                 <td class="control-group"><input type="text" class="pattern" name="new_pattern"></td>
+                <td class="control-group"><input type="text" class="example" name="new_example"></td>
                 <td>
                     <select name="new_proxy">
                         <option value="">Do not route to proxy</option>

@@ -9,6 +9,7 @@ case class UrlRule(
     id: Option[Id[UrlRule]] = None,
     state: State[UrlRule] = UrlRuleStates.ACTIVE,
     pattern: String,
+    example: String,
     proxy: Option[Id[HttpProxy]]) {
 
   def isActive = state == UrlRuleStates.ACTIVE
@@ -23,6 +24,7 @@ object UrlRule {
     (__ \ 'id).formatNullable[Id[UrlRule]] and
     (__ \ 'state).format[State[UrlRule]] and
     (__ \ 'pattern).format[String] and
+    (__ \ 'example).format[String] and
     (__ \ 'proxy).formatNullable[Id[HttpProxy]]
   )(UrlRule.apply, unlift(UrlRule.unapply))
 

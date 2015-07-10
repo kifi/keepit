@@ -103,6 +103,7 @@ class AdminRoverController @Inject() (
           newUrlRule = oldUrlRule.copy(
             state = if (body.contains("active_" + key)) UrlRuleStates.ACTIVE else UrlRuleStates.INACTIVE,
             pattern = body("pattern_" + key),
+            example = body("example_" + key),
             proxy = proxyIdFromString(body("proxy_" + key))
           )
           if newUrlRule != oldUrlRule
@@ -116,6 +117,7 @@ class AdminRoverController @Inject() (
     roverServiceClient.saveUrlRule(UrlRule(
       state = if (body.contains("new_active")) UrlRuleStates.ACTIVE else UrlRuleStates.INACTIVE,
       pattern = body("new_pattern"),
+      example = body("new_example"),
       proxy = proxyIdFromString(body("new_proxy"))
     )).map(_ => Redirect(routes.AdminRoverController.getAllUrlRules()))
   }
@@ -124,8 +126,8 @@ class AdminRoverController @Inject() (
     Ok(views.html.admin.roverTestRegex())
   }
 
-  def testRegexFilled(regex: String) = AdminUserPage { implicit request =>
-    Ok(views.html.admin.roverTestRegex(Some(regex)))
+  def testRegexFilled(regex: String, test: Option[String] = None) = AdminUserPage { implicit request =>
+    Ok(views.html.admin.roverTestRegex(Some(regex), test.map(t => List(t))))
   }
 
   def performRegexTest = AdminUserPage(parse.json) { implicit request =>

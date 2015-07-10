@@ -20,6 +20,7 @@ case class RoverUrlRule(
     updatedAt: DateTime = currentDateTime,
     state: State[RoverUrlRule] = RoverUrlRuleStates.ACTIVE,
     pattern: String,
+    example: String,
     proxy: Option[Id[RoverHttpProxy]]) extends ModelWithState[RoverUrlRule] {
 
   override def withId(id: Id[RoverUrlRule]): RoverUrlRule = this.copy(id = Some(id))
@@ -36,6 +37,7 @@ object RoverUrlRule {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[RoverUrlRule]) and
     (__ \ 'pattern).format[String] and
+    (__ \ 'example).format[String] and
     (__ \ 'proxy).formatNullable(Id.format[RoverHttpProxy])
   )(RoverUrlRule.apply, unlift(RoverUrlRule.unapply))
 
@@ -61,9 +63,10 @@ class RoverUrlRuleRepoImpl @Inject() (
   class RoverUrlRepoTable(tag: Tag) extends RepoTable[RoverUrlRule](db, tag, "rover_url_rule") {
 
     def pattern = column[String]("pattern", O.NotNull)
+    def example = column[String]("example", O.NotNull)
     def proxy = column[Option[Id[RoverHttpProxy]]]("proxy_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, pattern, proxy) <> ((RoverUrlRule.apply _).tupled, RoverUrlRule.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, pattern, example, proxy) <> ((RoverUrlRule.apply _).tupled, RoverUrlRule.unapply _)
 
   }
 
