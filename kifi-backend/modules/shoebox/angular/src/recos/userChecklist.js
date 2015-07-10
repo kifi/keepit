@@ -34,6 +34,11 @@ angular.module('kifi')
             title: 'Keep 5 pages',
             subtitle: 'Keep from the site, browser add-on, or mobile',
             action: function () {
+              modalService.open({
+                template: 'recos/userChecklistKeepModal.tpl.html',
+                scope: scope
+              });
+
               $analytics.eventTrack('user_clicked_page', {
                 'type': 'yourKeeps',
                 'action': 'clickedKeep5Checklist',
@@ -46,7 +51,10 @@ angular.module('kifi')
             title: 'Follow 5 libraries',
             subtitle: 'Browse libraries in your recommendations',
             action: function () {
-              $window.open(routeService.followingLibraries, '_blank');
+              modalService.open({
+                template: 'recos/userChecklistFollowModal.tpl.html',
+                scope: scope
+              });
               $analytics.eventTrack('user_clicked_page', {
                 'type': 'yourKeeps',
                 'action': 'clickedFollow5Checklist',
@@ -157,15 +165,6 @@ angular.module('kifi')
           }
         ];
 
-        function allItemsComplete(items) {
-          for (var i = 0; i < items.length; i++) {
-            if (!items[i].complete) {
-              return false;
-            }
-          }
-          return true;
-        }
-
         scope.sms = { phoneNumber: '' };
 
         scope.triggerSendSMS = function () {
@@ -181,9 +180,84 @@ angular.module('kifi')
           scope.sms.phoneNumber = '';
         };
 
-        scope.$watchCollection(function () {
+        function hasChildWithSelector(parent, selector) {
+          return !!parent.querySelector(selector);
+        }
+
+        function scrollToUnderHeader($element, $header) {
+          var PADDING = 10;
+          var documentTop = $window.document.documentElement.getBoundingClientRect().top;
+          var elementTop = $element.get(0).getBoundingClientRect().top;
+          var headerHeight = $header.get(0).getBoundingClientRect().height;
+          var absoluteElementTop = elementTop - documentTop;
+          var scrollToY = absoluteElementTop - headerHeight - PADDING;
+          $window.scrollTo(0, scrollToY);
+        }
+
+        // Highlight a button and move its card to the top of the card list
+        function triggerHighlightElement(toHighlightSelector, containerSelector) {
+          var HIGHLIGHT_TIMEOUT = 15000;
+          var containers = angular.element(containerSelector);
+          var cards = containers.filter(function () {
+            return hasChildWithSelector(this, toHighlightSelector);
+          });
+          // Try to choose the second element so the user definitely sees
+          // that something changed. If only one is available, use that one.
+          var card = cards.length > 1 ? cards.eq(1) : cards.eq(0);
+
+          if (card.length === 0) {
+            return;
+          }
+
+          var button = card.find(toHighlightSelector);
+          button.addClass('kf-uc-highlight-levitate');
+
+          // Move it to the top
+          card.parent().prepend(card);
+          // Scroll to show the whole card
+          scrollToUnderHeader(card, angular.element('.kf-lih'));
+
+          function removeHighlight() {
+            button.removeClass('kf-uc-highlight-levitate');
+          }
+
+          button.one('click', removeHighlight);
+          setTimeout(function () {
+            button.off('click', removeHighlight);
+            removeHighlight();
+          }, HIGHLIGHT_TIMEOUT);
+        }
+
+        var clonedKeepButton = null;
+        scope.getKeepButton = function () {
+          clonedKeepButton = clonedKeepButton || angular.element('.kf-keep-keep-btn').first().clone();
+          angular.element('.kf-uc-example-keep-btn').append(clonedKeepButton);
+        };
+
+        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-reco');
+
+        var clonedFollowButton = null;
+        scope.getFollowButton = function () {
+          clonedFollowButton = clonedFollowButton || angular.element('.kf-rcl-follow-btn').first().clone();
+          angular.element('.kf-uc-example-follow-btn').append(clonedFollowButton);
+        };
+
+        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-reco');
+
+        function allItemsComplete(items) {
+          for (var i = 0; i < items.length; i++) {
+            if (!items[i].complete) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        function getEnabledChecklistItems() {
           return profileService.prefs && profileService.prefs.checklist;
-        }, function (enabledChecklistItems) {
+        }
+
+        function createChecklistData(enabledChecklistItems) {
           if (!enabledChecklistItems) {
             return;
           }
@@ -207,7 +281,10 @@ angular.module('kifi')
 
             return checklistItem;
           }).filter(Boolean);
-        });
+        }
+
+        // Wait for the profileService to fetch the checklist
+        scope.$watchCollection(getEnabledChecklistItems, createChecklistData);
       }
     };
   }

@@ -114,13 +114,3 @@ object OrganizationModifications {
   val website = defaultReads
   val mobileV1 = defaultReads
 }
-
-case class OrganizationMembershipInfo(numTotalKeeps: Int, numTotalChats: Int)
-case class AnalyticsOrganizationViewExtras(
-  numTotalKeeps: Int,
-  numTotalChats: Int,
-  membersInfo: Map[Id[User], OrganizationMembershipInfo])
-case class AnalyticsOrganizationView(orgView: OrganizationView, analyticsExtras: AnalyticsOrganizationViewExtras)
-
-case class AnalyticsOrganizationCardExtras(numTotalKeeps: Int, numTotalChats: Int)
-case class AnalyticsOrganizationCard(orgCard: OrganizationCard, analyticsExtras: AnalyticsOrganizationCardExtras)

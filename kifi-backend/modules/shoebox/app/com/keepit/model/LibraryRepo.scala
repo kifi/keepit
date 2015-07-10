@@ -25,6 +25,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
+  def getBySpace(space: LibrarySpace, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def getBySpaceAndName(space: LibrarySpace, name: String, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
@@ -161,6 +162,19 @@ class LibraryRepoImpl @Inject() (
       } else {
         idCache.set(LibraryIdKey(id), library)
       }
+    }
+  }
+
+  private def getByUserId(userId: Id[User], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
+    (for (b <- rows if b.ownerId === userId && !b.state.inSet(excludeStates)) yield b).list.toSet
+  }
+  private def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
+    (for (b <- rows if b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).list.toSet
+  }
+  def getBySpace(space: LibrarySpace, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
+    space match {
+      case UserSpace(userId) => getByUserId(userId, excludeStates)
+      case OrganizationSpace(orgId) => getByOrgId(orgId, excludeStates)
     }
   }
 
