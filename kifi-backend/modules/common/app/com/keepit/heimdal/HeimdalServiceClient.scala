@@ -348,7 +348,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
     val payload = Json.toJson(userIds)
-    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(maxWaitTime = Some(30)), routingStrategy = offlinePriority).map { response =>
+    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(responseTimeout = Some(30000), maxJsonParseTime = Some(30000), maxWaitTime = Some(30000)), routingStrategy = offlinePriority).map { response =>
       log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.json}")
       (response.json \ "gratDatas").as[Seq[GratificationData]]
     }
