@@ -72,6 +72,10 @@ class OrganizationController @Inject() (
     Json.toJson(orgCommander.getOrganizationView(orgId))(OrganizationView.website)
   }
 
+  def getLibraries(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getLibraries(request.orgId))))
+  }
+
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
     if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
