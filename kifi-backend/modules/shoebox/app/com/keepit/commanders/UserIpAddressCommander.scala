@@ -34,7 +34,7 @@ object RichIpAddress {
 
 object UserIpAddressRules {
   val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC",
-    "San Francisco International Airport", "Nomad Digital").map(_.toLowerCase)
+    "San Francisco International Airport", "Nomad Digital", "Choopa, LLC").map(_.toLowerCase)
 }
 
 case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
