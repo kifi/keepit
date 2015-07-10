@@ -36,6 +36,7 @@ class UrlController @Inject() (
     urlPatternRuleRepo: UrlPatternRuleRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
+    httpProxyRepo: HttpProxyRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
