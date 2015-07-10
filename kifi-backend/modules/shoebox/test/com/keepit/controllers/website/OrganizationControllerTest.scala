@@ -51,7 +51,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         withDb(controllerTestModules: _*) { implicit injector =>
           val (user, org) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val handle = PrimaryOrganizationHandle(original = OrganizationHandle("Kifi"), normalized = OrganizationHandle("kifi"))
+            val handle = OrganizationHandle("Kifi")
             val org = OrganizationFactory.organization().withHandle(handle).withOwner(user).withName("Forty Two Kifis").saved
             LibraryFactory.libraries(10).map(_.published().withOrganization(org.id)).saved
             LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(org.id)).saved
@@ -157,7 +157,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
     "when modifyOrganization is called:" in {
       def setupModify(implicit injector: Injector) = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Captain", "America").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("Earth"), normalized = OrganizationHandle("earth"))).saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(OrganizationHandle("Earth")).saved
         (org, owner)
       }
 
@@ -218,7 +218,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       def setupDelete(implicit injector: Injector) = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Dr", "Papaya").saved
         val member = UserFactory.user().withName("Hansel", "Schmidt").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("papaya_republic"), normalized = OrganizationHandle("earth"))).saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(OrganizationHandle("papaya_republic")).saved
         inject[OrganizationMembershipRepo].save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
         (org, owner, member)
       }
