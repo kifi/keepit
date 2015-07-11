@@ -19,8 +19,8 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
         val urlPatternRuleRepo = inject[UrlPatternRuleRepo]
 
         db.readWrite { implicit session =>
-          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://www\\.facebook\\.com/login.*$", isUnscrapable = true))
-          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", isUnscrapable = true))
+          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://www\\.facebook\\.com/login.*$"))
+          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$"))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -28,11 +28,9 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readWrite { implicit session =>
-          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$", isUnscrapable = true))
+          urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$"))
+          urlPatternRuleRepo.getUrlPatternRules().rules.length === 3
         }
-
-        commander.rules().isUnscrapable("http://www.google.com/") === false
-        commander.rules().isUnscrapable("https://www.facebook.com/login.php?bb") === true
       }
     }
 

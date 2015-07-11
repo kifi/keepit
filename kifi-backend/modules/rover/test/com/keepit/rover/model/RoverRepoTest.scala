@@ -73,7 +73,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // UrlRuleRepo
         val urlRuleRepo = inject[RoverUrlRuleRepo]
         db.readWrite { implicit session =>
-          val saved = urlRuleRepo.save(RoverUrlRule(pattern = "^.*$", proxy = None))
+          val saved = urlRuleRepo.save(RoverUrlRule(pattern = "^.*$", example = "", proxy = None))
           urlRuleRepo.get(saved.id.get).pattern === "^.*$"
         }
       }

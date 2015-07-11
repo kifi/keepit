@@ -4,11 +4,9 @@ import com.keepit.rover.article.GithubArticle
 
 class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubArticleFetcher] {
 
-  withDb(FileHttpFetcherModule()) { implicit injector =>
-
-    "GithubArticleFetcher" should {
-
-      "parse an issue" in {
+  "GithubArticleFetcher" should {
+    "parse an issue" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/issues/380", "githubcom_issue.txt")
         val content = scraped.content.content.get
 
@@ -16,8 +14,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("object x is partially or completely surrounded ") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse the issues list" in {
+    "parse the issues list" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/issues", "githubcom_issues.txt")
         val content = scraped.content.content.get
 
@@ -25,8 +25,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("Support for stroke-dasharray feature") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse a wiki page" in {
+    "parse a wiki page" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/wiki", "githubcom_wiki.txt")
         val content = scraped.content.content.get
 
@@ -34,8 +36,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("How fabric canvas layering works") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse a pull request" in {
+    "parse a pull request" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/pull/381", "githubcom_pullrequest.txt")
         val content = scraped.content.content.get
 
@@ -43,8 +47,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("Only if pointer is over targetCorner") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse pull request list" in {
+    "parse pull request list" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/pulls", "githubcom_pulls.txt")
         val content = scraped.content.content.get
 
@@ -52,8 +58,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("It seemed to me that images") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse profiles" in {
+    "parse profiles" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/andrewconner", "githubcom_profile.txt")
         val content = scraped.content.content.get
 
@@ -61,8 +69,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("Andrew Conner") === true
         content.contains("All rights reserved") === false
       }
+    }
 
-      "parse source page" in {
+    "parse source page" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://github.com/kangax/fabric.js/blob/master/HEADER.js", "githubcom_source.txt")
         val content = scraped.content.content.get
 
@@ -70,8 +80,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("fabric.document = document") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse source page" in {
+    "parse source page" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://gist.github.com/4499206", "githubcom_gist.txt")
         val content = scraped.content.content.get
 
@@ -79,8 +91,10 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("escaped_payload = escape_payload(wrap_payload(payload),target") === true
         content.contains("andrewconner") === false
       }
+    }
 
-      "parse repo main page" in {
+    "parse repo main page" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
         val scraped = fetch("https://gist.github.com/4499206", "githubcom_repo.txt")
         val content = scraped.content.content.get
 
@@ -89,7 +103,6 @@ class GithubArticleFetcherTest extends ArticleFetcherTest[GithubArticle, GithubA
         content.contains("No browser sniffing for critical functionality") === true
         content.contains("andrewconner") === false
       }
-
     }
 
   }

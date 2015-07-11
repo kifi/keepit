@@ -26,9 +26,9 @@ class RoverUrlRuleTest extends Specification with RoverTestInjector {
           }
 
         db.readWrite { implicit session =>
-          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://www\\.facebook\\.com/login.*$", proxy = proxyId))
-          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", proxy = None))
-          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://app.asana.com.*$", proxy = proxyId))
+          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://www\\.facebook\\.com/login.*$", example = "", proxy = proxyId))
+          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", example = "", proxy = None))
+          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://app.asana.com.*$", example = "", proxy = proxyId))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -48,7 +48,7 @@ class RoverUrlRuleTest extends Specification with RoverTestInjector {
 
         val proxy = db.readWrite { implicit session =>
           val proxy = httpProxyRepo.save(proxy1)
-          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://app.asana.com.*$", proxy = proxy.id))
+          urlRuleRepo.save(RoverUrlRule(pattern = "^https*://app.asana.com.*$", example = "", proxy = proxy.id))
           proxy
         }
 
