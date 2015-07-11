@@ -1,0 +1,75 @@
+@import com.keepit.common.controller.UserRequest
+@(regex: Option[String] = None, tests: Option[List[String]] = None)(implicit request: UserRequest[_])
+
+@views.html.admin.admin("Test Regex") {
+    <h3>Regex</h3>
+    <input id="regex" type="text" name="regex" @if(regex.isDefined) { value="@regex.get" }>
+    <div class="exception" style="color: red"></div>
+    <h3>Tests</h3>
+    @if(tests.isDefined) {
+        @for(test <- tests.get) {
+            <div class="test-group">
+                <input class="regex-test" type="text" value="@test"><br>
+            </div>
+        }
+    }
+    <div class="test-group group-last">
+        <input class="regex-test" type="text" value="" placeholder="start typing for test"><br>
+        <span class="test-result"></span>
+    </div>
+    <input id="perform-url" type="hidden" value="@com.keepit.controllers.admin.routes.AdminRoverController.performRegexTest()">
+}
+<script type="text/x-template" id="new-test-template">
+    <div class="test-group group-last">
+        <input class="regex-test" type="text" value="" placeholder="start typing for test"><br>
+    </div>
+</script>
+<script>
+    $(function () {
+        var template = $('#new-test-template').html();
+        var doTest = function () {
+            var regex = $('#regex').val();
+            var tests = $('.regex-test').toArray().map(function (elem) {
+                return $(elem).val();
+            });
+            var url = $("#perform-url").val();
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: JSON.stringify({
+                    regex: regex,
+                    tests: tests
+                }),
+                contentType: 'application/json',
+                dataType: 'json'
+            }).done(function (response) {
+                var tests = $('.test-group').toArray();
+                response.forEach(function (passed, i) {
+                    $(tests[i]).find('.regex-test').css('border-color', passed ? 'green' : 'red');
+                });
+                $('.exception').html('');
+            }).fail(function (response) {
+                if (response.responseText) {
+                    $('.exception').html(JSON.parse(response.responseText));
+                }
+            });
+        };
+
+        doTest();
+
+        var setupHandlers = function () {
+            $('.group-last').on('input', lastAdd);
+            $('#regex, .regex-test').on('input', doTest);
+        };
+
+        var lastAdd = function () {
+            var $elem = $(this);
+            $elem.removeClass('group-last');
+            $elem.after($(template));
+            $elem.off('input', lastAdd);
+            setupHandlers();
+        };
+
+        setupHandlers();
+    });
+</script>

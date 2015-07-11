@@ -119,8 +119,6 @@ object Shoebox extends Service {
     def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
     def kifiHit() = ServiceRoute(POST, "/internal/shoebox/database/kifiHit")
     def getHelpRankInfo() = ServiceRoute(POST, "/internal/shoebox/database/getHelpRankInfo")
-    def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
-    def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def getFriendRequestRecipientIdBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestRecipientIdBySender", Param("senderId", senderId))
     def getUserValue(userId: Id[User], key: UserValueName) = ServiceRoute(GET, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
     def setUserValue(userId: Id[User], key: UserValueName) = ServiceRoute(POST, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
@@ -421,6 +419,11 @@ object Rover extends Service {
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/rover/pornDetector/getModel")
     def detectPorn() = ServiceRoute(POST, s"/internal/rover/pornDetector/detect")
     def whitelist() = ServiceRoute(POST, s"/internal/rover/pornDetector/whitelist")
+
+    def getAllProxies() = ServiceRoute(GET, s"/internal/rover/getAllProxies")
+    def saveProxy() = ServiceRoute(POST, s"/internal/rover/saveProxy")
+    def getAllUrlRules() = ServiceRoute(GET, s"/internal/rover/getAllUrlRules")
+    def saveUrlRule() = ServiceRoute(POST, s"/internal/rover/saveUrlRule")
   }
 }
 

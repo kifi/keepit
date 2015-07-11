@@ -207,6 +207,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
 
     "normalize a LinkedIn public profile to a vanity public url if this url is trusted" in {
       withDb(modules: _*) { implicit injector =>
+        val urlPatternRuleRepo = inject[UrlPatternRuleRepo]
         val publicUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", normalization = Some(Normalization.HTTPWWW))) }
         val vanityUrl = "http://www.linkedin.com/in/leo"
         fixSignatureForUrl(publicUri.url, "fake signature")

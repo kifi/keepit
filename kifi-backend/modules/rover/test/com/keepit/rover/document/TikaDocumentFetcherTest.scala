@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.rover.article.fetcher.{ FileFetcherFormat, FileHttpFetcherModule }
 import com.keepit.rover.document.tika.{ MainContentHandler, TikaDocument }
 import com.keepit.rover.fetcher.FetchResult
+import com.keepit.rover.model.RoverUrlRuleRepo
 import com.keepit.rover.test.RoverTestInjector
 import org.specs2.matcher.NoConcurrentExecutionContext
 import org.specs2.mutable.Specification
@@ -22,11 +23,11 @@ class TikaDocumentFetcherTest extends Specification with RoverTestInjector with 
     Await.result(documentFetcher.fetchTikaDocument(fetchUrl, shouldThrottle = false, maxContentChars = maxContentChars), 10.seconds)
   }
 
-  withInjector(FileHttpFetcherModule()) { implicit injector =>
+  "RoverDocumentFetcher" should {
 
-    "RoverDocumentFetcher" should {
+    "limit content chars for tika documents" in {
 
-      "limit content chars for tika documents" in {
+      withDb(FileHttpFetcherModule()) { implicit injector =>
 
         val result1 = fetchTika("https://cnn.com/url2", "www.cnn.com.health.txt", 500).resolve.get.get
         result1.getContent.get.contains("Ralph Lauren") === false
@@ -37,7 +38,6 @@ class TikaDocumentFetcherTest extends Specification with RoverTestInjector with 
       }
 
     }
-
   }
 
 }

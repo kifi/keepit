@@ -130,11 +130,9 @@
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">URL Normalization</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.urlRenormalizeConsole">URL Renormalization Console</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalizationView(0)">Renormalization</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">URL Pattern Rules</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.searchDomain">Find Domain</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.getDomainTags">Domain Tags</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.getDomainOverrides">Domain Overrides</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getProxies">Proxies</a>
                     </ul>
                 </li>
 
@@ -148,6 +146,15 @@
                     </ul>
                 </li>
 
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" >Rover</a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.searchUrl()">Search for URL</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegex()">Test Regex</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.getAllProxies()">Proxies</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.getAllUrlRules()">URL Rules</a></li>
+                </ul>
+            </li>
         </ul>
       </div>
     </div>

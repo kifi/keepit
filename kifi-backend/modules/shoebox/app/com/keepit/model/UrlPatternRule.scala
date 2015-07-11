@@ -1,13 +1,14 @@
 package com.keepit.model
 
+import com.keepit.common.cache._
 import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration._
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
+import scala.concurrent.duration._
 
 case class UrlPatternRule(
     id: Option[Id[UrlPatternRule]] = None,
@@ -16,8 +17,6 @@ case class UrlPatternRule(
     state: State[UrlPatternRule] = UrlPatternRuleStates.ACTIVE,
     pattern: String,
     example: Option[String] = None,
-    isUnscrapable: Boolean = false,
-    useProxy: Option[Id[HttpProxy]] = None,
     normalization: Option[Normalization] = None,
     trustedDomain: Option[String] = None,
     nonSensitive: Option[Boolean] = None) extends Model[UrlPatternRule] {
@@ -37,8 +36,6 @@ object UrlPatternRule {
     (__ \ 'state).format(State.format[UrlPatternRule]) and
     (__ \ 'pattern).format[String] and
     (__ \ 'example).formatNullable[String] and
-    (__ \ 'isUnscrapable).format[Boolean] and
-    (__ \ 'useProxy).formatNullable(Id.format[HttpProxy]) and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'trustedDomain).formatNullable[String] and
     (__ \ 'nonSensitive).format[Option[Boolean]]
@@ -49,7 +46,6 @@ object UrlPatternRuleStates extends States[UrlPatternRule]
 
 case class UrlPatternRules(rules: Seq[UrlPatternRule]) {
   private[model] def findFirst(url: String): Option[UrlPatternRule] = rules.find(rule => url.matches(rule.pattern))
-  def isUnscrapable(url: String): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
   def isSensitive(url: String): Option[Boolean] = for { rule <- findFirst(url); nonSensitive <- rule.nonSensitive } yield !nonSensitive
