@@ -2,8 +2,8 @@
 
 # --- !Ups
 
-alter table url_pattern_rule
-drop foreign key url_pattern_rule_to_proxy;
+-- alter table url_pattern_rule
+-- drop foreign key url_pattern_rule_to_proxy;
 
 drop table http_proxy;
 
