@@ -20,6 +20,7 @@ import scala.util.{ Failure, Success }
 
 trait GratificationEmailCronPlugin extends SchedulerPlugin
 
+@Singleton
 class GratificationEmailCronPluginImpl @Inject() (
     actor: ActorInstance[GratificationEmailActor],
     quartz: ActorInstance[QuartzActor],
