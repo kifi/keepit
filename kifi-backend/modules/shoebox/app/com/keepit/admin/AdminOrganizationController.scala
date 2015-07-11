@@ -20,6 +20,7 @@ class AdminOrganizationController @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander,
+    handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
@@ -50,8 +51,15 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
-    val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)
-    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = name))
+    val name: String = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0).get
+    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = Some(name)))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+  def setHandle(orgId: Id[Organization]) = AdminUserPage { request =>
+    val handle = OrganizationHandle(request.body.asFormUrlEncoded.flatMap(_.get("handle").flatMap(_.headOption)).filter(_.length > 0).get)
+    db.readWrite { implicit session =>
+      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle)
+    }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>

@@ -5,12 +5,16 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
-import play.api.libs.json.Json
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.{ JsValue, Json }
+import play.api.mvc.Result
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Success, Failure, Try }
 
 @Singleton
 class UserOrOrganizationController @Inject() (
@@ -23,22 +27,59 @@ class UserOrOrganizationController @Inject() (
     userProfileController: UserProfileController,
     orgController: OrganizationController,
     handleCommander: HandleCommander,
+    airbrake: AirbrakeNotifier,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def getByHandle(handle: Handle) = {
-    val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
-    val actionOpt = handleOwnerObjectOpt map {
-      case (Left(org), _) => OrganizationAction(Organization.publicId(org.id.get), OrganizationPermission.VIEW_ORGANIZATION) { request =>
-        val orgPayload = orgController.getOrganizationHelper(org.id.get)
-        Ok(Json.obj("type" -> "org", "result" -> orgPayload))
-      }
-      case (Right(user), _) => MaybeUserAction { request =>
-        val viewer = request.userOpt
-        val userPayload = userProfileController.getProfileHelper(user.username, viewer).get
-        Ok(Json.obj("type" -> "user", "result" -> userPayload))
-      }
+  def extractBody(result: Result): Future[Try[JsValue]] = {
+    result.body.run(Iteratee.getChunks).map { chunks =>
+      Try(Json.parse(chunks.head))
     }
-    actionOpt.getOrElse { MaybeUserAction { request => NotFound } }
   }
+
+  def getByHandle(handle: Handle) = MaybeUserAction.async { request =>
+    val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+    handleOwnerObjectOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
+      case Some(handleOwnerObject) =>
+        val (action, actionType) = handleOwnerObject match {
+          case (Left(org), _) =>
+            (orgController.getOrganization(Organization.publicId(org.id.get)), "org")
+          case (Right(user), _) =>
+            (userProfileController.getProfile(user.username), "user")
+        }
+        for (result <- action(request); bodyTry <- extractBody(result)) yield {
+          bodyTry match {
+            case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
+            case Failure(ex) =>
+              airbrake.notify("Could not parse the body in getByHandle: " + ex)
+              BadRequest
+          }
+        }
+    }
+  }
+
+  def getLibrariesByHandle(handle: Handle, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
+    val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+    handleOwnerObjectOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
+      case Some(handleOwnerObject) =>
+        val (action, actionType) = handleOwnerObject match {
+          case (Left(org), _) =>
+            (orgController.getLibraries(Organization.publicId(org.id.get)), "org")
+          case (Right(user), _) =>
+            (userProfileController.getProfileLibraries(user.username, page, pageSize, filter), "user")
+        }
+        for (result <- action(request); bodyTry <- extractBody(result)) yield {
+          bodyTry match {
+            case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
+            case Failure(ex) =>
+              airbrake.notify("Could not parse the body in getByHandle: " + ex)
+              BadRequest
+          }
+        }
+    }
+
+  }
+
 }

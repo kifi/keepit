@@ -1,7 +1,7 @@
 @(user: User,
   totalBookmarks: Int,
-  organizations: Seq[Id[Organization]],
-  candidateOrganizations: Seq[Id[Organization]],
+  organizations: Seq[Organization],
+  candidateOrganizations: Seq[Organization],
   experiments: Set[ExperimentType],
   socialUsers: Seq[SocialUserBasicInfo],
   fortyTwoConnections: Seq[User],
@@ -48,13 +48,8 @@
       <tr>
         <th>Total Bookmarks</th><td>@totalBookmarks</td>
       </tr>
-      <tr>
-        <th>Organizations</th>
-          <td><ul>
-          @for(org <- organizations) { <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org)">@org</a></li> }
-          @for(org <- candidateOrganizations) { <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org)">@org</a></li> }
-          </ul></td>
-      </tr>
+      <tr><th>Orgs memberships</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
+      <tr><th>Orgs candidacies</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>

@@ -3,24 +3,41 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor, SafeFuture }
+import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.controller.UserRequest
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.{ DateTime, Period }
-import play.api.libs.json.{ JsValue, JsObject, Json }
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import com.kifi.macros.json
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class RichIpAddress(ip: IpAddress, org: Option[String], country: Option[String], region: Option[String], city: Option[String],
   lat: Option[Double], lon: Option[Double], timezone: Option[String], zip: Option[String])
 
 object RichIpAddress {
+  implicit val format = (
+    (__ \ 'ip).format[IpAddress] and
+    (__ \ 'org).formatNullable[String] and
+    (__ \ 'country).formatNullable[String] and
+    (__ \ 'region).formatNullable[String] and
+    (__ \ 'city).formatNullable[String] and
+    (__ \ 'lat).formatNullable[Double] and
+    (__ \ 'lon).formatNullable[Double] and
+    (__ \ 'timezone).formatNullable[String] and
+    (__ \ 'zip).formatNullable[String]
+  )(RichIpAddress.apply, unlift(RichIpAddress.unapply))
+
   def apply(ip: IpAddress, json: JsValue): RichIpAddress = {
     (json \ "query").asOpt[String] foreach { parsed => assert(ip.ip == parsed, s"parsed ip from json $json does not equal [$ip]/[$parsed]") }
     RichIpAddress(
@@ -30,11 +47,13 @@ object RichIpAddress {
       (json \ "lat").asOpt[Double], (json \ "lon").asOpt[Double],
       (json \ "timezone").asOpt[String], (json \ "zip").asOpt[String])
   }
+
+  def empty(ip: IpAddress): RichIpAddress = RichIpAddress(ip, None, None, None, None, None, None, None, None)
 }
 
 object UserIpAddressRules {
   val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC",
-    "San Francisco International Airport", "Nomad Digital").map(_.toLowerCase)
+    "San Francisco International Airport", "Nomad Digital", "Choopa, LLC", "Linode").map(_.toLowerCase)
 }
 
 case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
@@ -47,12 +66,26 @@ class UserIpAddressActor @Inject() (userIpAddressEventLogger: UserIpAddressEvent
   }
 }
 
+case class RichIpAddressKey(ip: IpAddress) extends Key[RichIpAddress] {
+  override val version = 1
+  val namespace = "rich_ip_address"
+  def toKey(): String = ip.ip //funny, yea
+}
+
+class RichIpAddressCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[RichIpAddressKey, RichIpAddress](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 class UserIpAddressEventLogger @Inject() (
     db: Database,
     userRepo: UserRepo,
     userIpAddressRepo: UserIpAddressRepo,
     httpClient: HttpClient,
     userStatisticsCommander: UserStatisticsCommander,
+    richIpAddressCache: RichIpAddressCache,
+    organizationRepo: OrganizationRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
+    implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
   private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
@@ -86,20 +119,20 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  private def formatCluster(ip: RichIpAddress, users: Seq[UserStatistics], newUserId: Option[Id[User]]): BasicSlackMessage = {
+  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
       ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
     )
 
-    val userDeclarations = users.map { stats =>
-      val user = stats.user
-      val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
-      val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\t${stats.connections} conns\t${stats.librariesCreated}/${stats.librariesFollowed} lib cr/fw\t${stats.publicKeeps}/${stats.privateKeeps} pb/pv keeps\t"
-      if (newUserId.contains(user.id.get)) {
-        userDeclaration + "\t*<-- New Member in Cluster!!!*"
-      } else userDeclaration
+    val userDeclarations = users.map {
+      case (user, candidateOrgs, orgs) =>
+        val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
+        val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\torgs/cand:${orgs.map(_.name).mkString(",")}/${candidateOrgs.map(_.name).mkString(",")}"
+        if (newUserId.contains(user.id.get)) {
+          userDeclaration + "\t*<-- New Member in Cluster!!!*"
+        } else userDeclaration
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
@@ -109,23 +142,31 @@ class UserIpAddressEventLogger @Inject() (
     !ipInfo.org.exists(company => UserIpAddressRules.blacklistCompanies.contains(company.toLowerCase))
   }
 
+  def getIpInfoOpt(ip: IpAddress): Future[Option[RichIpAddress]] = richIpAddressCache.getOrElseFutureOpt(RichIpAddressKey(ip)) {
+    val resF = httpClient.getFuture(DirectUrl(s"http://pro.ip-api.com/json/${ip.ip}?key=mnU7wRVZAx6BAyP")).map(_.json.asOpt[JsObject])
+    resF.map { jsonOpt =>
+      jsonOpt.map(RichIpAddress(ip, _))
+    }
+  }
+
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
-      userRepo.getUsers(userIds).values.toList.map { user =>
-        userStatisticsCommander.userStatistics(user, Map.empty)
+      userRepo.getUsers(userIds).values.toList map { user =>
+        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
+        val orgs = organizationRepo.getByIds(organizationMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+        (user, candidates, orgs)
       }
     }
-    val ipInfoOpt = httpClient.get(DirectUrl("http://pro.ip-api.com/json/" + clusterIp + "?key=mnU7wRVZAx6BAyP")).json.asOpt[JsObject] map { json =>
-      RichIpAddress(clusterIp, json)
-    }
-    log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfoOpt)
+    getIpInfoOpt(clusterIp) map { ipInfoOpt =>
+      log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfoOpt)
 
-    ipInfoOpt foreach { ipInfo =>
-      if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-        val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
-        httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+      ipInfoOpt foreach { ipInfo =>
+        if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
+          val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
+          httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+        }
       }
     }
   }
