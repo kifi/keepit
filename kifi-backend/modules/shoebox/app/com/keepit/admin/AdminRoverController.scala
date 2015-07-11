@@ -6,7 +6,8 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ URLRepo, NormalizedURIRepo }
+import com.keepit.model.{ NormalizedURI, URLRepo, NormalizedURIRepo }
+import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model._
 import play.api.libs.json.Json
@@ -17,9 +18,8 @@ import scala.util.matching.Regex
 class AdminRoverController @Inject() (
     val userActionsHelper: UserActionsHelper,
     val db: Database,
-    val uriRepo: NormalizedURIRepo,
-    val urlRepo: URLRepo,
     val roverServiceClient: RoverServiceClient,
+    val normalizedUriInterner: NormalizedURIInterner,
     implicit val executionContext: ExecutionContext) extends AdminUserActions {
 
   def searchUrl = AdminUserPage { implicit request =>
@@ -29,8 +29,8 @@ class AdminRoverController @Inject() (
   def findUrl = AdminUserPage(parse.urlFormEncoded) { implicit request =>
     val url = request.body.get("url").get.head
     db.readOnlyReplica { implicit session =>
-      urlRepo.get(url) match {
-        case Some(urlModel) => Redirect(routes.UrlController.getURIInfo(urlModel.normalizedUriId))
+      normalizedUriInterner.getByUri(url) match {
+        case Some(urlModel) => Redirect(routes.UrlController.getURIInfo(urlModel.id.get))
         case None => Ok(views.html.admin.roverSearchUrl(notFound = true, url = Some(url)))
       }
     }
