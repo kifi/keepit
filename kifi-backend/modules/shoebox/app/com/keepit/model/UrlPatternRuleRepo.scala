@@ -16,8 +16,7 @@ trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
 class UrlPatternRuleRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val urlPatternRulesAllCache: UrlPatternRulesAllCache,
-  httpProxyRepo: HttpProxyRepo)
+  val urlPatternRulesAllCache: UrlPatternRulesAllCache)
     extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
   import db.Driver.simple._
   import DBSession._
@@ -26,12 +25,10 @@ class UrlPatternRuleRepoImpl @Inject() (
   case class UrlPatternRuleTable(tag: Tag) extends RepoTable[UrlPatternRule](db, tag, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
     def example = column[Option[String]]("example", O.Nullable)
-    def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
-    def useProxy = column[Option[Id[HttpProxy]]]("use_proxy", O.Nullable)
     def normalization = column[Option[Normalization]]("normalization", O.Nullable)
     def trustedDomain = column[Option[String]]("trusted_domain", O.Nullable)
     def nonSensitive = column[Option[Boolean]]("non_sensitive", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, pattern, example, isUnscrapable, useProxy, normalization, trustedDomain, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, pattern, example, normalization, trustedDomain, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
 
   def table(tag: Tag) = new UrlPatternRuleTable(tag)
