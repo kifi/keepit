@@ -1,15 +1,13 @@
 package com.keepit.heimdal
 
-import com.google.inject.ImplementedBy
-import play.api.libs.json._
-import org.apache.commons.codec.binary.Base64
-import play.api.libs.ws.WS
-import com.keepit.model.{ Gender, User }
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.model.User
+import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
+import play.api.libs.ws.WS
 
 import scala.concurrent.Future
 
@@ -21,7 +19,7 @@ trait MixpanelClient {
   def alias(userId: Id[User], externalId: ExternalId[User]): Future[Unit]
 }
 
-class MixpanelClientImpl(projectToken: String, shoebox: ShoeboxServiceClient) extends MixpanelClient {
+class MixpanelClientImpl(projectToken: String) extends MixpanelClient {
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
