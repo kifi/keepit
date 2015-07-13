@@ -1,5 +1,5 @@
 @import com.keepit.common.controller.UserRequest
-@(regex: Option[String] = None, tests: Option[List[String]] = None)(implicit request: UserRequest[_])
+@(regex: Option[String] = None, tests: Option[Seq[String]] = None)(implicit request: UserRequest[_])
 
 @views.html.admin.admin("Test Regex") {
     <h3>Regex</h3>
@@ -17,7 +17,7 @@
         <input class="regex-test" type="text" value="" placeholder="start typing for test"><br>
         <span class="test-result"></span>
     </div>
-    <input id="perform-url" type="hidden" value="@com.keepit.controllers.admin.routes.AdminRoverController.performRegexTest()">
+    <input id="perform-url" type="hidden" value="@com.keepit.controllers.admin.routes.AdminGoodiesController.performRegexTest()">
 }
 <script type="text/x-template" id="new-test-template">
     <div class="test-group group-last">
