@@ -1,0 +1,15 @@
+@import com.keepit.common.controller.UserRequest
+@(notFound: Boolean = false, url: Option[String] = None)(implicit request: UserRequest[_])
+
+@views.html.admin.admin("Search for URL") {
+    <form method="POST" action="@com.keepit.controllers.admin.routes.AdminRoverController.findUrl" class="form-inline">
+        <div class="form-group">
+            <label for="url" class="control-label">Url</label>
+            <input type="text" name="url" class="form-control" placeholder="url" @if(url.isDefined) { value="@url.get" }>
+            @if(notFound) {
+               <div style="color: red">URL not found</div>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary">Find Url</button>
+    </form>
+}

@@ -54,7 +54,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
       execute(request).map {
         case (apacheRequest, apacheResponse) =>
-          processResponse(apacheRequest, apacheResponse, f)
+          processResponse(request, apacheRequest, apacheResponse, f)
       }
     } recoverWith {
       case ex: Throwable =>
@@ -82,9 +82,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
+  private def processResponse[A](originalRequest: FetchRequest, apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
     try {
-      doProcessResponse(apacheRequest.info, response, f)
+      doProcessResponse(apacheRequest.info(originalRequest.proxy), response, f)
     } catch {
       case ex: Throwable =>
         apacheRequest.abort()

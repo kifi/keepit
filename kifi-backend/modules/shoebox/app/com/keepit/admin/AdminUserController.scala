@@ -74,6 +74,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
+    orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     socialConnectionRepo: SocialConnectionRepo,
@@ -253,8 +254,8 @@ class AdminUserController @Inject() (
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
-      val organizations = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
-      val candidateOrganizations = orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId)
+      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
+      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId).toSet).values.toList
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -956,7 +957,7 @@ class AdminUserController @Inject() (
 
   def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
-    val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
+    val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
     val pages: Map[IpAddress, UserStatisticsPage] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersStatisticsPage(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))

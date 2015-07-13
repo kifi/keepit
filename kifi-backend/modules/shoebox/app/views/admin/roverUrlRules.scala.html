@@ -1,0 +1,101 @@
+@import com.keepit.rover.model.UrlRule
+@import com.keepit.rover.model.HttpProxy
+@import com.keepit.common.controller.UserRequest
+@(urlRules: Seq[UrlRule], proxies: Seq[HttpProxy])(implicit request: UserRequest[_])
+
+@views.html.admin.admin("Rover Url Rules", stylesheets = List("admin_data_integrity")) {
+
+    <div><span class="label">Note:</span> Changes take effect immediately (next page load) when you click <b>Save</b> below.</div>
+
+    <h3>Url Rules</h3>
+
+    <form class="proxies" action="@com.keepit.controllers.admin.routes.AdminRoverController.saveUrlRules" method="POST">
+        <table class="table table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Active</th>
+                    <th>Pattern</th>
+                    <th></th>
+                    <th>Example</th>
+                    <th>Route to Proxy</th>
+                </tr>
+            </thead>
+            @for(urlRule <- urlRules) {
+                <tr class="url-rule-row">
+                    <td><input type="checkbox" class="checkbox" name="active_@urlRule.id.get" @if(urlRule.isActive) {checked="checked"}></td>
+                    <td><input type="text" class="pattern" name="pattern_@urlRule.id.get" value="@urlRule.pattern"></td>
+                    <td class="control-group"><input type="text" class="example" name="example_@urlRule.id.get"
+                        style="border-color: @if(urlRule.example.matches(urlRule.pattern)) { green } else { red }" value="@urlRule.example"></td>
+                    <td><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegexFilled(urlRule.pattern, Some(urlRule.example))" class="btn btn-small">test</a></td>
+                    <td>
+                        <select name="proxy_@urlRule.id.get">
+                            <option @if(urlRule.proxy.isEmpty) {selected="selected"} value="">Do not route to proxy</option>
+                            @for(proxy <- proxies) {
+                                <option name="@proxy.id.get.id" value="@proxy.id.get.id" @if(urlRule.proxy == proxy.id) {selected="selected"}>Route to '@proxy.alias'</option>
+                            }
+                        </select>
+                    </td>
+                </tr>
+            }
+        </table>
+        <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
+        <button type="reset" class="btn">Clear unsaved changes</button>
+    </form>
+
+    <h3>Create New</h3>
+
+    <form class="proxies" action="@com.keepit.controllers.admin.routes.AdminRoverController.createUrlRule" method="POST">
+        <table class="table table-condensed table-striped">
+            <thead>
+                <tr>
+                    <th>Active</th>
+                    <th>Pattern</th>
+                    <th>Example</th>
+                    <th>Route to Proxy</th>
+                </tr>
+            </thead>
+            <tr data-new="true" class="url-rule-row">
+                <td><input type="checkbox" class="checkbox" name="new_active" checked="checked"></td>
+                <td class="control-group"><input type="text" class="pattern" name="new_pattern"></td>
+                <td class="control-group"><input type="text" class="example" name="new_example"></td>
+                <td>
+                    <select name="new_proxy">
+                        <option value="">Do not route to proxy</option>
+                        @for(proxy <- proxies) {
+                            <option name="@proxy.id.get.id" value="@proxy.id.get.id">Route to '@proxy.alias'</option>
+                        }
+                    </select>
+            </tr>
+        </table>
+        <button type="submit" class="btn btn-primary" data-loading-text="Creating...">Create</button>
+        <button type="reset" class="btn">Clear unsaved changes</button>
+    </form>
+}
+
+<script>
+  $(function main() {
+    $(".proxies")
+      .on("keydown keypress keyup mousedown mouseup blur", ".pattern, .proxy", updateRow)
+      .submit(function(e) {
+        if ($(this).find(".error").focus().select().length) {
+          e.preventDefault();
+        } else {
+          $(this).find("button[type=submit]").button("loading");
+        }
+      })
+      .find(".proxies").each(updateRow);
+
+
+    function updateRow() {
+      var $tr = $(this).closest("tr");
+      var $pattern = $tr.find(".pattern"), pattern = $pattern.val( ), $patternGroup = $pattern.closest(".control-group");
+      var $proxy = $tr.find(".proxy"), proxy = $proxy.val( ), $proxyGroup = $proxy.closest(".control-group");
+
+      if (pattern || proxy) {
+        if (!pattern) { $patternGroup.addClass("error"); } else if ($patternGroup.hasClass("error")) { $patternGroup.removeClass("error"); }
+        if (!proxy) { $proxyGroup.addClass("error"); } else if ($proxyGroup.hasClass("error")) { $proxyGroup.removeClass("error"); }
+      }
+      return
+    }
+  });
+</script>

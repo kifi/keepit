@@ -9,7 +9,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{ Library, NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
-import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.model._
+import com.keepit.rover.rule.{ RoverUrlRuleCommander, RoverHttpProxyCommander }
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
@@ -21,6 +22,8 @@ import scala.concurrent.{ ExecutionContext }
 class RoverController @Inject() (
     roverCommander: RoverCommander,
     articleCommander: ArticleCommander,
+    httpProxyCommander: RoverHttpProxyCommander,
+    urlRuleCommander: RoverUrlRuleCommander,
     implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = Action.async { request =>
@@ -105,4 +108,23 @@ class RoverController @Inject() (
       Ok(json)
     }
   }
+
+  def getAllProxies = Action.async { request =>
+    httpProxyCommander.all.map(proxies => Ok(Json.toJson(proxies)))
+  }
+
+  def saveProxy = Action.async(parse.json) { request =>
+    val proxy = request.body.as[HttpProxy]
+    httpProxyCommander.save(proxy).map { newProxy => Ok(Json.toJson(newProxy)) }
+  }
+
+  def getAllUrlRules = Action.async { request =>
+    urlRuleCommander.all.map(rules => Ok(Json.toJson(rules)))
+  }
+
+  def saveUrlRule = Action.async(parse.json) { request =>
+    val rule = request.body.as[UrlRule]
+    urlRuleCommander.save(rule).map { newRule => Ok(Json.toJson(newRule)) }
+  }
+
 }

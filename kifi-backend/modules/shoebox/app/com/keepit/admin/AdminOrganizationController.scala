@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -9,8 +10,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import views.html
 
+import scala.concurrent.{ ExecutionContext, Future }
+
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
+    implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
@@ -20,6 +24,7 @@ class AdminOrganizationController @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander,
+    handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
@@ -28,14 +33,14 @@ class AdminOrganizationController @Inject() (
   def organizationsView = AdminUserPage { implicit request =>
     val orgsStats = db.readOnlyMaster { implicit session =>
       val orgIds = orgRepo.all.map(_.id.get)
-      orgIds.map { orgId => orgId -> statsCommander.organizationStatistics(orgId) }.toMap
+      orgIds.map { orgId => orgId -> statsCommander.organizationStatisticsOverview(orgId) }.toMap
     }
 
     Ok(html.admin.organizations(orgsStats, fakeOwnerId))
   }
-  def organizationViewById(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+  def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
     val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId) }
-    Ok(html.admin.organization(orgStats))
+    orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
   def createOrganization() = AdminUserPage { request =>
@@ -50,8 +55,15 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
-    val name: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0)
-    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = name))
+    val name: String = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0).get
+    orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = Some(name)))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+  def setHandle(orgId: Id[Organization]) = AdminUserPage { request =>
+    val handle = OrganizationHandle(request.body.asFormUrlEncoded.flatMap(_.get("handle").flatMap(_.headOption)).filter(_.length > 0).get)
+    db.readWrite { implicit session =>
+      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle)
+    }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>

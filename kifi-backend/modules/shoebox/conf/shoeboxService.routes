@@ -525,7 +525,8 @@ POST          /site/organizations/:id/members/modify            @com.keepit.cont
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
 
 
-GET           /site/user-or-org/:handle                                              @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
+GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
+GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 
 ##########################################
 # Email-Link API
@@ -590,6 +591,15 @@ GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.
 GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
 GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
+GET     /admin/domains/find            @com.keepit.controllers.admin.UrlController.searchDomain
+POST    /admin/domains/find            @com.keepit.controllers.admin.UrlController.findDomainByHostname
+GET     /admin/domains/:id             @com.keepit.controllers.admin.UrlController.getDomain(id: Id[com.keepit.classify.Domain])
+POST    /admin/domains/:id/toggleEmailProvider @com.keepit.controllers.admin.UrlController.domainToggleEmailProvider(id: Id[com.keepit.classify.Domain])
+GET     /admin/domains/tags            @com.keepit.controllers.admin.UrlController.getDomainTags
+POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlController.saveDomainTags
+GET     /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.getDomainOverrides
+POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.saveDomainOverrides
+
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -608,27 +618,23 @@ POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttri
 GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
 GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
 
-GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
-GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
-GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
-GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
-POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
-POST    /admin/data/pornDomainFlag                  @com.keepit.controllers.admin.UrlController.pornDomainFlag()
-GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
-GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
-GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
-GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
-GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
-GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
-POST    /admin/data/normalization/submit       @com.keepit.controllers.admin.UrlController.submitNormalization
-GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
-POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
-GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
-POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
-GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
-POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
-POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
-GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
+GET     /admin/data/orphan                                                     @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
+GET     /admin/data/orphanFull                                                 @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
+GET     /admin/data/renormalize                                                @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/renormalizeConsole                                         @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
+POST    /admin/data/renormalizeConsole/submit                                  @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
+POST    /admin/data/pornDomainFlag                                             @com.keepit.controllers.admin.UrlController.pornDomainFlag()
+GET     /admin/data/clearRedirects/:toUriId                                    @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
+GET     /admin/data/setFixDuplicateKeepsSeq/:seq                               @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
+GET     /admin/data/normalization/:page                                        @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
+GET     /admin/data/renormalization/:page                                      @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
+GET     /admin/data/batchURIMigration                                          @com.keepit.controllers.admin.UrlController.batchURIMigration
+GET     /admin/data/batchURLMigration                                          @com.keepit.controllers.admin.UrlController.batchURLMigration
+POST    /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
+GET     /admin/data/remigrate                                                  @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
+POST    /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
+POST    /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
+GET     /admin/data/cleanKeepsByUri                                            @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
 
 GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
 
@@ -692,6 +698,7 @@ POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserC
 
 GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
 POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
+POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
@@ -744,14 +751,6 @@ POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admi
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
-GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
-POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
-GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-GET     /admin/slider/domains/find    @com.keepit.controllers.admin.SliderAdminController.searchDomain
-POST    /admin/slider/domains/find    @com.keepit.controllers.admin.SliderAdminController.findDomainByHostname
-GET     /admin/slider/domains/:id   @com.keepit.controllers.admin.SliderAdminController.getDomain(id: Id[com.keepit.classify.Domain])
-POST    /admin/slider/domains/:id/toggleEmailProvider @com.keepit.controllers.admin.SliderAdminController.domainToggleEmailProvider(id: Id[com.keepit.classify.Domain])
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
@@ -817,14 +816,6 @@ GET     /admin/curator/generalRecos                        @com.keepit.controlle
 GET     /admin/curator/feedback                            @com.keepit.controllers.admin.AdminCuratorController.view
 POST    /admin/curator/feedback/counter                    @com.keepit.controllers.admin.AdminCuratorController.examineUserFeedbackCounter
 
-GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
-POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
-POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity
-POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
-POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
-POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity
-POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity
-
 GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
 GET     /adimin/cortex/lda/version                         @com.keepit.controllers.admin.AdminLDAController.versionPage(version: ModelVersion[DenseLDA])
 POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
@@ -854,6 +845,18 @@ GET     /admin/graph/uriWandering                          @com.keepit.controlle
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
+
+GET           /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.searchUrl()
+POST          /admin/rover/searchUrl                                                 @com.keepit.controllers.admin.AdminRoverController.findUrl()
+GET           /admin/rover/proxies                                                   @com.keepit.controllers.admin.AdminRoverController.getAllProxies()
+POST          /admin/rover/proxies                                                   @com.keepit.controllers.admin.AdminRoverController.saveProxies()
+POST          /admin/rover/proxies/create                                            @com.keepit.controllers.admin.AdminRoverController.createProxy
+GET           /admin/rover/urlRules                                                  @com.keepit.controllers.admin.AdminRoverController.getAllUrlRules()
+POST          /admin/rover/urlRules                                                  @com.keepit.controllers.admin.AdminRoverController.saveUrlRules()
+POST          /admin/rover/urlRules/create                                           @com.keepit.controllers.admin.AdminRoverController.createUrlRule
+GET           /admin/rover/testRegex                                                 @com.keepit.controllers.admin.AdminRoverController.testRegex
+GET           /admin/rover/testRegex/:regex                                          @com.keepit.controllers.admin.AdminRoverController.testRegexFilled(regex: String, test: Option[String])
+POST          /admin/rover/performRegexTest                                          @com.keepit.controllers.admin.AdminRoverController.performRegexTest
 
 ##########################################
 # Common Healthcheck / service routes
@@ -940,23 +943,20 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
-POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
-GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
-GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
-POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
-GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
-GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
-POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()
-POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
-GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
+GET     /internal/shoebox/database/getFriendRequestRecipientIdBySender         @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
+GET     /internal/shoebox/database/userValue                                   @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
+POST    /internal/shoebox/database/userValue                                   @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
+GET     /internal/shoebox/database/userSegment                                 @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
+GET     /internal/shoebox/database/extensionVersion                            @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
+POST    /internal/shoebox/database/triggerRawKeepImport                        @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()
+POST    /internal/shoebox/database/triggerSocialGraphFetch                     @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
+GET     /internal/shoebox/database/getLapsedUsersForDelighted                  @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
-GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()
-GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controllers.internal.ShoeboxController.getAllFakeUsers()
-GET      /internal/shoebox/database/getInvitations          @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
-GET      /internal/shoebox/database/getSocialConnections    @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
+GET      /internal/shoebox/database/getAllFakeUsers                             @com.keepit.controllers.internal.ShoeboxController.getAllFakeUsers()
+GET      /internal/shoebox/database/getInvitations                              @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
+GET      /internal/shoebox/database/getSocialConnections                        @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
