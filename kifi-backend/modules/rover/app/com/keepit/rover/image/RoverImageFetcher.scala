@@ -1,5 +1,7 @@
 package com.keepit.rover.image
 
+import java.io.{ InputStream, FileInputStream }
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.core._
@@ -19,17 +21,17 @@ class RoverImageFetcher @Inject() (
     db: Database,
     imageInfoRepo: RoverImageInfoRepo,
     imageStore: RoverImageStore,
-    photoshop: Photoshop,
+    implicit val photoshop: Photoshop,
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends ProcessedImageHelper with Logging {
 
   def fetchAndStoreRemoteImage(remoteImageUrl: String, imageSource: ImageSource, imagePathPrefix: String, requiredScaleSizes: Set[ScaledImageSize] = Set.empty, requiredCropSizes: Set[CroppedImageSize] = Set.empty): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashRemoteImage(remoteImageUrl).flatMap {
       case Right(sourceImage) => {
-        validateAndLoadImageFile(sourceImage.file.file) match {
-          case Success(bufferedSourceImage) =>
+        validateAndGetImageInfo(sourceImage.file.file) match {
+          case Success(imageInfo) =>
 
-            val sourceImageSize = ImageSize(bufferedSourceImage)
+            val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
             val outFormat = inputFormatToOutputFormat(sourceImage.format)
 
             val existingImageInfos = db.readOnlyMaster { implicit session =>
@@ -38,74 +40,65 @@ class RoverImageFetcher @Inject() (
 
             // Prepare Original Image
 
-            val sourceImageReadyToPersistMaybe = existingImageInfos.find(_.kind == ProcessImageOperation.Original) match {
-              case Some(sourceImageInfo) => Success(None)
-              case None => bufferedImageToInputStream(bufferedSourceImage, sourceImage.format).map {
-                case (is, bytes) =>
-                  val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
-                  Some(ImageProcessState.ReadyToPersist(key, outFormat, is, bufferedSourceImage, bytes, ProcessImageOperation.Original))
-              }
+            val sourceImageReadyToPersist = existingImageInfos.find(_.kind == ProcessImageOperation.Original) match {
+              case Some(sourceImageInfo) => None
+              case None =>
+                val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
+                Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, sourceImage.file.file.length().toInt, ProcessImageOperation.Original))
             }
 
-            sourceImageReadyToPersistMaybe match {
+            // Prepare Processed Images
 
-              case Success(sourceImageReadyToPersist) => {
+            val requiredProcessRequests = {
+              val existingImageProcessRequests = existingImageInfos.collect {
+                case scaledImage if scaledImage.kind == ProcessImageOperation.Scale => ScaleImageRequest(scaledImage.imageSize)
+                case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
+              }
+              val expectedProcessRequests = calcSizesForImage(sourceImageSize, requiredScaleSizes.toSeq, requiredCropSizes.toSeq)
+              diffProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
+            }
 
-                // Prepare Processed Images
+            processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, requiredProcessRequests)(photoshop) match {
 
-                val requiredProcessRequests = {
-                  val existingImageProcessRequests = existingImageInfos.collect {
-                    case scaledImage if scaledImage.kind == ProcessImageOperation.Scale => ScaleImageRequest(scaledImage.imageSize)
-                    case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
+              case Right(processedImagesReadyToPersist) => {
+
+                // Upload all images
+
+                val uploads = (processedImagesReadyToPersist ++ sourceImageReadyToPersist).map { image =>
+                  val is: InputStream = new FileInputStream(image.image)
+                  val put = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
+                    ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
                   }
-                  val expectedProcessRequests = calcSizesForImage(sourceImageSize, requiredScaleSizes.toSeq, requiredCropSizes.toSeq)
-                  diffProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
+                  put.onComplete { _ => is.close() }
+                  put
                 }
 
-                processAndPersistImages(bufferedSourceImage, imagePathPrefix, sourceImage.hash, sourceImage.format, requiredProcessRequests)(photoshop) match {
+                // Update RoverImageInfo
 
-                  case Right(processedImagesReadyToPersist) => {
-
-                    // Upload all images
-
-                    val uploads = (processedImagesReadyToPersist ++ sourceImageReadyToPersist).map { image =>
-                      imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
-                        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
+                Future.sequence(uploads).imap(Right(_)).recover {
+                  case error: Exception => Left(ImageProcessState.CDNUploadFailed(error))
+                }.imap {
+                  case Right(uploadedImages) => {
+                    try {
+                      db.readWrite(attempts = 3) { implicit session =>
+                        uploadedImages.foreach(imageInfoRepo.intern(sourceImage.hash, imageSource, sourceImage.sourceImageUrl, _))
                       }
-                    }
-
-                    // Update RoverImageInfo
-
-                    Future.sequence(uploads).imap(Right(_)).recover {
-                      case error: Exception => Left(ImageProcessState.CDNUploadFailed(error))
-                    }.imap {
-                      case Right(uploadedImages) => {
-                        try {
-                          db.readWrite(attempts = 3) { implicit session =>
-                            uploadedImages.foreach(imageInfoRepo.intern(sourceImage.hash, imageSource, sourceImage.sourceImageUrl, _))
-                          }
-                          Right(sourceImage.hash)
-                        } catch {
-                          case imageInfoError: Exception =>
-                            log.error(s"Failed to update ImageInfoRepo after fetching image from $remoteImageUrl: $imageInfoError")
-                            Left(ImageProcessState.DbPersistFailed(imageInfoError))
-                        }
-                      }
-                      case Left(uploadError) => {
-                        log.error(s"Failed to upload images generated from $remoteImageUrl: $uploadError")
-                        Left(uploadError)
-                      }
+                      Right(sourceImage.hash)
+                    } catch {
+                      case imageInfoError: Exception =>
+                        log.error(s"Failed to update ImageInfoRepo after fetching image from $remoteImageUrl: $imageInfoError")
+                        Left(ImageProcessState.DbPersistFailed(imageInfoError))
                     }
                   }
-                  case Left(processingError) => {
-                    log.error(s"Failed to resize image fetched from $remoteImageUrl")
-                    Future.successful(Left(processingError))
+                  case Left(uploadError) => {
+                    log.error(s"Failed to upload images generated from $remoteImageUrl: $uploadError")
+                    Left(uploadError)
                   }
                 }
               }
-              case Failure(sourceImageProcessingError) => {
-                log.error(s"Could not process source image fetched from $remoteImageUrl", sourceImageProcessingError)
-                Future.successful(Left(ImageProcessState.InvalidImage(sourceImageProcessingError)))
+              case Left(processingError) => {
+                log.error(s"Failed to resize image fetched from $remoteImageUrl")
+                Future.successful(Left(processingError))
               }
             }
           case Failure(validationError) => {

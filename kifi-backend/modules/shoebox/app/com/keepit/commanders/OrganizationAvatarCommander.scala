@@ -1,13 +1,13 @@
 package com.keepit.commanders
 
-import java.awt.image.BufferedImage
+import java.io.{ FileInputStream, InputStream }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.OrganizationAvatarConfiguration._
 import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.images.Photoshop
+import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImagePath, ImageSize, OrganizationAvatarStore }
@@ -29,7 +29,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     db: Database,
     orgAvatarRepo: OrganizationAvatarRepo,
     imageStore: OrganizationAvatarStore,
-    photoshop: Photoshop,
+    implicit val photoshop: Photoshop,
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
@@ -42,29 +42,33 @@ class OrganizationAvatarCommanderImpl @Inject() (
     fetchAndHashLocalImage(imageFile).flatMap {
       case Left(storeError) => Future.successful(Left(storeError))
       case Right(sourceImage) =>
-        validateAndLoadImageFile(sourceImage.file.file) match {
+        validateAndGetImageInfo(sourceImage.file.file) match {
           case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
-          case Success(bufferedSourceImage) =>
-            persistOrganizationAvatarsFromBufferedSourceImage(sourceImage, bufferedSourceImage, orgId)
+          case Success(imageInfo) =>
+            persistOrganizationAvatarsFromBufferedSourceImage(sourceImage, imageInfo, orgId)
         }
     }
   }
 
-  def persistOrganizationAvatarsFromBufferedSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, bufferedSourceImage: BufferedImage, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
-    val sourceImageSize = ImageSize(bufferedSourceImage)
+  def persistOrganizationAvatarsFromBufferedSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
+    val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
     val existingAvatars = db.readOnlyMaster { implicit session =>
       orgAvatarRepo.getByImageHash(sourceImage.hash)
     }
 
     val (necessary, unnecessary) = determineRequiredProcessImageRequests(sourceImageSize, existingAvatars)
 
-    prepareNewImagesToBePersisted(sourceImage, bufferedSourceImage, existingAvatars, necessary) match {
+    prepareNewImagesToBePersisted(sourceImage, imageInfo, existingAvatars, necessary) match {
       case Left(processingError) => Future.successful(Left(processingError))
       case Right(processedImagesReadyToPersist) =>
         val uploads = processedImagesReadyToPersist.map { image =>
-          imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
-            ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
+          val is: InputStream = new FileInputStream(image.image)
+
+          val put = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
+            ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
           }
+          put.onComplete { _ => is.close() }
+          put
         }
 
         val uploadedImagesFut = Future.sequence(uploads).imap(Right(_)).recover { case error: Exception => Left(ImageProcessState.CDNUploadFailed(error)) }
@@ -83,23 +87,20 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def prepareNewImagesToBePersisted(sourceImage: ImageProcessState.ImageLoadedAndHashed, bufferedSourceImage: BufferedImage, existingAvatars: Seq[OrganizationAvatar], necessary: Set[ProcessImageRequest]): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
+  def prepareNewImagesToBePersisted(sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, existingAvatars: Seq[OrganizationAvatar], necessary: Set[ProcessImageRequest]): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
+    val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
+
     val sourceImageReadyToPersistMaybe = existingAvatars.find(_.kind == ProcessImageOperation.Original) match {
       case Some(sourceImageInfo) => Success(None)
-      case None => bufferedImageToInputStream(bufferedSourceImage, sourceImage.format).map {
-        case (is, bytes) =>
-          val key = ImagePath(imagePathPrefix, sourceImage.hash, ImageSize(bufferedSourceImage), ProcessImageOperation.Original, sourceImage.format)
-          Some(ImageProcessState.ReadyToPersist(key, outFormat, is, bufferedSourceImage, bytes, ProcessImageOperation.Original))
-      }
+      case None =>
+        val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
+        Success(Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, sourceImage.file.file.length().toInt, ProcessImageOperation.Original)))
     }
 
     sourceImageReadyToPersistMaybe match {
-      case Failure(sourceImageProcessingError) =>
-        Left(ImageProcessState.InvalidImage(sourceImageProcessingError))
-
       case Success(sourceImageReadyToPersist) =>
-        processAndPersistImages(bufferedSourceImage, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop) match {
+        processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop) match {
           case Left(processingError) =>
             Left(processingError)
           case Right(modifiedImagesReadyToPersist) =>
@@ -115,7 +116,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
       }
 
       for (img <- uploadedImages) {
-        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.image.getWidth, height = img.image.getHeight, format = sourceImage.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
+        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.imageInfo.width, height = img.imageInfo.height, format = sourceImage.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
 

@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import java.io.{ FileInputStream, InputStream }
 import java.sql.SQLException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -59,7 +60,7 @@ class KeepImageCommanderImpl @Inject() (
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
     keepImageRepo: KeepImageRepo,
-    photoshop: Photoshop,
+    implicit val photoshop: Photoshop,
     implicit val defaultContext: ExecutionContext,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
@@ -180,10 +181,10 @@ class KeepImageCommanderImpl @Inject() (
     val imageLoadedAndHashedF = fetchAndHashRemoteImage(imageUri)
     imageLoadedAndHashedF.flatMap {
       case Right(orig) =>
-        validateAndLoadImageFile(orig.file.file) match {
-          case Success(bufferedImage) =>
-            val originalSize = ImageSize(bufferedImage.getWidth, bufferedImage.getHeight)
-            val buildSet = processAndPersistImages(bufferedImage, KeepImage.label, originalImage.sourceFileHash, originalImage.format, missingVersions)(photoshop)
+        validateAndGetImageInfo(orig.file.file) match {
+          case Success(imageInfo) =>
+            val originalSize = ImageSize(imageInfo.width, imageInfo.height)
+            val buildSet = processAndPersistImages(orig.file.file, KeepImage.label, originalImage.sourceFileHash, originalImage.format, missingVersions)(photoshop)
 
             buildSet match {
               case Right(toPersist) =>
@@ -232,6 +233,8 @@ class KeepImageCommanderImpl @Inject() (
           (FETCHING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: InvalidImage =>
           (PROCESSING_FAILED, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
+        case BlacklistedImage =>
+          (PROCESSING_FAILED, Some(BlacklistedImage.reason), None)
         case err: DbPersistFailed =>
           (PERSISTING, Some(err.reason), Some(exceptionToFailureReason(err.ex)))
         case err: CDNUploadFailed =>
@@ -295,7 +298,7 @@ class KeepImageCommanderImpl @Inject() (
             persistSet match {
               case Right(toPersist) =>
                 val loadedImageSize = toPersist.find(_.processOperation == ProcessImageOperation.Original).map { toPersist =>
-                  ImageSize(toPersist.image)
+                  ImageSize(toPersist.imageInfo.width, toPersist.imageInfo.height)
                 }.get
                 persistImageSet(keepId, source, loadedImage, loadedImageSize, toPersist, overwriteExistingImage, amendExistingImages = false)
               case Left(e) => Future.successful(e)
@@ -378,9 +381,12 @@ class KeepImageCommanderImpl @Inject() (
     overwriteExistingImage: Boolean, amendExistingImages: Boolean): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
-      imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
+      val is: InputStream = new FileInputStream(image.image)
+      val putF = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
+        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
       }
+      putF.onComplete { _ => is.close() }
+      putF
     }
 
     Future.sequence(uploads).map { results =>
@@ -392,8 +398,7 @@ class KeepImageCommanderImpl @Inject() (
             case _ => false
           }
 
-          val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
-          uploadedImage.image.flush()
+          val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.imageInfo.width, height = uploadedImage.imageInfo.height, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
           ki
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony

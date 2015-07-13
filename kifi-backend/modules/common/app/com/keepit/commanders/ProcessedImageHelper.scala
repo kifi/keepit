@@ -8,7 +8,7 @@ import java.security.MessageDigest
 import javax.imageio.ImageIO
 
 import com.keepit.common.core.File
-import com.keepit.common.images.Photoshop
+import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.{ ImagePath, ImageSize }
@@ -48,45 +48,6 @@ object ScaleImageRequest {
 object CropImageRequest {
   def apply(imageSize: ImageSize): CropImageRequest = new CropImageRequest(imageSize)
   def apply(width: Int, height: Int): CropImageRequest = new CropImageRequest(ImageSize(width, height))
-}
-
-object ProcessedImageHelper {
-  val blacklistedUrl = Set(
-    "http://s0.wp.com/i/blank.jpg",
-    "https://s0.wp.com/i/blank.jpg",
-    "http://wordpress.com/i/blank.jpg",
-    "http://assets.tumblr.com/images/og/link_200.png",
-    "https://ssl.gstatic.com/accounts/ui/avatar_2x.png",
-    "http://cdn.sstatic.net/askubuntu/img/apple-touch-icon@2.png",
-    "http://assets.tumblr.com/images/og/text_200.png"
-  )
-  val blacklistedHash = Set(
-    "bf322fb70d88a207194c5d25f189d692", // wordpress blank image
-    "25b2026ce9381eb01b786361d06c6330", // weird useless icon that has tons of URLs
-    "1d38edd471862bc4b31a6e882a8cd478", // noise.png, a blank image, tons of URLs
-    "1300018473cc0038187aaa0e2604fa27", // wordpress ghost user image
-    "9a35b7c212298d54eed6841ada897fd1", // google spritesheet
-    "8c65758da1765bb830f80ce4403bad13", // common wordpress theme background
-    "55d25e9dc950d5db4d53a3b195c046c6", // tracking pixel
-    "acd642661699ba6a4dc1679e1bab76c1", // common wordpress theme background
-    "8bdcfa66ef2b8ac0a9fb33401eef40e4", // infoq logo
-    "d57486ab23b722832d87a0e238acfd62", // common wordpress theme background
-    "a0d449084ea7eb23a14f0c5c2f8a7dea", // common blogger theme background
-    "b40e39a8e3747e74f4dfcf6d88ecc535", // common wordpress theme background
-    "3f7702975298d2f0b583c83b1ce189f5", // common web forum logo
-    "c4d171422792ac800e504a7a8b2eb624", // google spritesheet
-    "c8f1281dd971abb027322c76e3f55835", // common wordpress theme background
-    "92860867f25ce200ea94779d2d55d737", // common wordpress theme background
-    "a922e59e0e523071923eb2c51517b832", // black image,
-    "000775e04f04f071b6d1000035238e6c", // tumblr link image
-    "04d3fc7ff4e9f9fccc166beabd397558", // stackoverflow logo
-    "7dce329f880b899a462be1c476c79291", // blogger ghost image
-    "c8fcb8f216e75f1c02b93fbc689a81c1", // askubuntu logo
-    "989d155fe0261a9d9938549a3c2f8168", // ebay spritesheet
-    "30d57a48f6f155affd542a528dd02506", // Aa icon
-    "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
-    "cb6b256050c23a71b2b4996e88f77225" // missing link logo
-  )
 }
 
 trait ProcessedImageHelper {
@@ -146,47 +107,44 @@ trait ProcessedImageHelper {
   def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed, baseLabel: String, scaleCandidates: Seq[ScaledImageSize],
     cropCandidates: Seq[CroppedImageSize])(implicit photoshop: Photoshop): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
 
-    validateAndLoadImageFile(sourceImage.file.file) match {
-      case Success(image) =>
+    validateAndGetImageInfo(sourceImage.file.file) match {
+      case Success(imageInfo) =>
+        val image = sourceImage.file.file
         val outFormat = inputFormatToOutputFormat(sourceImage.format)
-        val imageSize = ImageSize(image.getWidth, image.getHeight)
+        val imageSize = ImageSize(imageInfo.width, imageInfo.height)
         val sizes = calcSizesForImage(imageSize, scaleCandidates, cropCandidates)
         val resizedImages = processAndPersistImages(image, baseLabel, sourceImage.hash, sourceImage.format, sizes)(photoshop)
 
         resizedImages match {
           case Right(resizedSet) =>
-            val original = bufferedImageToInputStream(image, outFormat).map {
-              case (is, bytes) =>
-                val key = ImagePath(baseLabel, sourceImage.hash, imageSize, ProcessImageOperation.Original, sourceImage.format)
-                ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes, ProcessImageOperation.Original)
+            val original = {
+              val key = ImagePath(baseLabel, sourceImage.hash, imageSize, ProcessImageOperation.Original, sourceImage.format)
+              ImageProcessState.ReadyToPersist(key, outFormat, image, imageInfo, image.length().toInt, ProcessImageOperation.Original)
             }
-            original match {
-              case Success(o) => Right(resizedSet + o)
-              case Failure(ex) => Left(ImageProcessState.InvalidImage(ex))
-            }
+            Right(resizedSet ++ Set(original))
           case Left(err) => Left(err)
         }
       case Failure(ex) =>
-        log.error(s"s[pih] validateAndLoadImageFile failure", ex)
+        log.error(s"s[pih] validateAndGetImageInfo failure", ex)
         Left(ImageProcessState.InvalidImage(ex))
     }
   }
 
-  protected def processAndPersistImages(image: BufferedImage, baseLabel: String, hash: ImageHash,
+  protected def processAndPersistImages(image: File, baseLabel: String, hash: ImageHash,
     outFormat: ImageFormat, sizes: Set[ProcessImageRequest])(implicit photoshop: Photoshop) = {
     val resizedImages = sizes.map { processImageSize =>
-      log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat imageWidth=${image.getWidth} imageHeight=${image.getHeight} to $processImageSize")
+      log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat to $processImageSize")
 
-      def process(): Try[BufferedImage] = processImageSize match {
+      def process(): Try[File] = processImageSize match {
         case c if c.operation == ProcessImageOperation.Crop => photoshop.cropImage(image, outFormat, c.size.width, c.size.height)
         case s => photoshop.resizeImage(image, outFormat, s.size.width, s.size.height)
       }
 
       process().map { resizedImage =>
-        bufferedImageToInputStream(resizedImage, outFormat).map {
-          case (is, bytes) =>
-            val key = ImagePath(baseLabel, hash, ImageSize(resizedImage), processImageSize.operation, outFormat)
-            ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes, processImageSize.operation)
+        validateAndGetImageInfo(resizedImage).map { imageInfo =>
+          println(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
+          val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
+          ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, resizedImage.length().toInt, processImageSize.operation)
         }
       }.flatten match {
         case Success(img) => Right(img)
@@ -285,12 +243,8 @@ trait ProcessedImageHelper {
   }
 
   // Returns None if image could not be read.
-  protected def validateAndLoadImageFile(file: File): Try[BufferedImage] = {
-    // ImageIO both can return null and throw exceptions. Isolate them.
-    Try(Option(ImageIO.read(file))).map(t => Try(t.getOrElse(throw new Exception("ImageIO returned null image")))).flatten.map { image =>
-      log.info(s"Validated and loaded. ${image.getHeight} x ${image.getWidth}")
-      image
-    }
+  protected def validateAndGetImageInfo(file: File)(implicit photoshop: Photoshop): Try[RawImageInfo] = {
+    photoshop.imageInfo(file)
   }
 
   protected val inputFormatToOutputFormat: ImageFormat => ImageFormat = {
@@ -325,18 +279,6 @@ trait ProcessedImageHelper {
     case "bmp" => Some(ImageFormat("bmp"))
     case "gif" => Some(ImageFormat("gif"))
     case _ => None
-  }
-
-  protected def bufferedImageToInputStream(img: BufferedImage, format: ImageFormat): Try[(ByteArrayInputStream, Int)] = {
-    val os = new ByteArrayOutputStream()
-    Try(ImageIO.write(img, imageFormatToJavaFormatName(format), os)) match {
-      case Success(true) =>
-        val is = new ByteArrayInputStream(os.toByteArray)
-        os.close()
-        Success((is, os.size))
-      case Success(false) => Failure(new RuntimeException(s"No valid writer for $format"))
-      case Failure(ex) => Failure(ex)
-    }
   }
 
   protected def detectImageType(file: TemporaryFile): Option[ImageFormat] = {
@@ -418,6 +360,45 @@ trait ProcessedImageHelper {
     }
     ImageHash(bigIntStr)
   }
+}
+
+object ProcessedImageHelper {
+  val blacklistedUrl = Set(
+    "http://s0.wp.com/i/blank.jpg",
+    "https://s0.wp.com/i/blank.jpg",
+    "http://wordpress.com/i/blank.jpg",
+    "http://assets.tumblr.com/images/og/link_200.png",
+    "https://ssl.gstatic.com/accounts/ui/avatar_2x.png",
+    "http://cdn.sstatic.net/askubuntu/img/apple-touch-icon@2.png",
+    "http://assets.tumblr.com/images/og/text_200.png"
+  )
+  val blacklistedHash = Set(
+    "bf322fb70d88a207194c5d25f189d692", // wordpress blank image
+    "25b2026ce9381eb01b786361d06c6330", // weird useless icon that has tons of URLs
+    "1d38edd471862bc4b31a6e882a8cd478", // noise.png, a blank image, tons of URLs
+    "1300018473cc0038187aaa0e2604fa27", // wordpress ghost user image
+    "9a35b7c212298d54eed6841ada897fd1", // google spritesheet
+    "8c65758da1765bb830f80ce4403bad13", // common wordpress theme background
+    "55d25e9dc950d5db4d53a3b195c046c6", // tracking pixel
+    "acd642661699ba6a4dc1679e1bab76c1", // common wordpress theme background
+    "8bdcfa66ef2b8ac0a9fb33401eef40e4", // infoq logo
+    "d57486ab23b722832d87a0e238acfd62", // common wordpress theme background
+    "a0d449084ea7eb23a14f0c5c2f8a7dea", // common blogger theme background
+    "b40e39a8e3747e74f4dfcf6d88ecc535", // common wordpress theme background
+    "3f7702975298d2f0b583c83b1ce189f5", // common web forum logo
+    "c4d171422792ac800e504a7a8b2eb624", // google spritesheet
+    "c8f1281dd971abb027322c76e3f55835", // common wordpress theme background
+    "92860867f25ce200ea94779d2d55d737", // common wordpress theme background
+    "a922e59e0e523071923eb2c51517b832", // black image,
+    "000775e04f04f071b6d1000035238e6c", // tumblr link image
+    "04d3fc7ff4e9f9fccc166beabd397558", // stackoverflow logo
+    "7dce329f880b899a462be1c476c79291", // blogger ghost image
+    "c8fcb8f216e75f1c02b93fbc689a81c1", // askubuntu logo
+    "989d155fe0261a9d9938549a3c2f8168", // ebay spritesheet
+    "30d57a48f6f155affd542a528dd02506", // Aa icon
+    "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
+    "cb6b256050c23a71b2b4996e88f77225" // missing link logo
+  )
 }
 
 sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageSize, val operation: ProcessImageOperation) {
