@@ -16,21 +16,22 @@ class ABookRecommendationController @Inject() (
     abookUserRecommendationCommander: ABookUserRecommendationCommander,
     abookOrganizationRecommendationCommander: AbookOrganizationRecommendationCommander) extends ABookServiceController {
 
-  def getUserRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
+  def getFriendRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
     abookUserRecommendationCommander.getUserRecommendations(userId, offset, limit, bePatient).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
   }
 
-  def getRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getRecommendations(orgId, memberId, offset, limit).map { recommendedUsers =>
+  def getRecommendationsForOrg(orgId: Id[Organization], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async(parse.json) { request =>
+    val memberIds = (request.body \ "usersToFilterOnContacts").as[Set[Id[User]]]
+    abookOrganizationRecommendationCommander.getRecommendations(orgId, memberIds, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
   }
 
-  def hideUserRecommendationForUser(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
+  def hideFriendRecommendationForUser(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
     abookUserRecommendationCommander.hideFriendRecommendation(userId, irrelevantUserId)
     Ok
   }
@@ -40,7 +41,7 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def getNonUserRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
+  def getInviteRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
     abookUserRecommendationCommander.getNonUserRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
@@ -48,7 +49,7 @@ class ABookRecommendationController @Inject() (
     }
   }
 
-  def hideNonUserRecommendationForUser(userId: Id[User]) = Action(parse.json) { request =>
+  def hideInviteRecommendationForUser(userId: Id[User]) = Action(parse.json) { request =>
     val network = (request.body \ "network").as[SocialNetworkType]
     val irrelevantFriendId = (request.body \ "irrelevantFriendId").as(EitherFormat[EmailAddress, Id[SocialUserInfo]])
     abookUserRecommendationCommander.hideInviteRecommendation(userId, network, irrelevantFriendId)
