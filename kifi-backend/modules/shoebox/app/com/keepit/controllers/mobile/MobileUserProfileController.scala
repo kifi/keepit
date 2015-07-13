@@ -37,6 +37,38 @@ class MobileUserProfileController @Inject() (
   implicit val executionContext: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
 
+  def profile(id: ExternalId[User]) = MaybeUserAction { request =>
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        userCommander.profile(user.username, request.userOpt) match {
+          case None => NotFound(s"can't find username ${user.username}")
+          case Some(profile) =>
+            val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+            val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+              val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+              val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+              (numConnections, userBio)
+            }
+
+            val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+            val jsonProfileInfo = Json.toJson(UserProfileStats(
+              numLibraries = numLibraries,
+              numFollowedLibraries = numFollowedLibs,
+              numCollabLibraries = numCollabLibraries,
+              numKeeps = profile.numKeeps,
+              numConnections = numConnections,
+              numFollowers = userProfileCommander.countFollowers(profile.userId, request.userOpt.map(_.id.get)),
+              numTags = collectionCommander.getCount(profile.userId),
+              numInvitedLibraries = numInvitedLibs,
+              biography = userBiography
+            )).as[JsObject]
+
+            Ok(jsonFriendInfo ++ jsonProfileInfo)
+        }
+      }.getOrElse(NotFound)
+    }
+  }
+
   def profile(username: String) = MaybeUserAction { request =>
     val viewer = request.userOpt
     userCommander.profile(Username(username), viewer) match {
