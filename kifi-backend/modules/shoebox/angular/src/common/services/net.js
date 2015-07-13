@@ -20,6 +20,7 @@ angular.module('kifi')
       getLibraryByUserSlug: get(shoebox, '/users/:username/libraries/:slug?showPublishedLibraries=1', 30),
       getLibraryById: get(shoebox, '/libraries/:id', 30),
 
+      userOrOrg: get(shoebox, '/user-or-org/:handle', 30),
       getKeep: get(shoebox, '/keeps/:id'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),
       addKeepsToLibrary: post(shoebox, '/libraries/:id/keeps'),
