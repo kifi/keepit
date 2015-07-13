@@ -50,6 +50,45 @@ object CropImageRequest {
   def apply(width: Int, height: Int): CropImageRequest = new CropImageRequest(ImageSize(width, height))
 }
 
+object ProcessedImageHelper {
+  val blacklistedUrl = Set(
+    "http://s0.wp.com/i/blank.jpg",
+    "https://s0.wp.com/i/blank.jpg",
+    "http://wordpress.com/i/blank.jpg",
+    "http://assets.tumblr.com/images/og/link_200.png",
+    "https://ssl.gstatic.com/accounts/ui/avatar_2x.png",
+    "http://cdn.sstatic.net/askubuntu/img/apple-touch-icon@2.png",
+    "http://assets.tumblr.com/images/og/text_200.png"
+  )
+  val blacklistedHash = Set(
+    "bf322fb70d88a207194c5d25f189d692", // wordpress blank image
+    "25b2026ce9381eb01b786361d06c6330", // weird useless icon that has tons of URLs
+    "1d38edd471862bc4b31a6e882a8cd478", // noise.png, a blank image, tons of URLs
+    "1300018473cc0038187aaa0e2604fa27", // wordpress ghost user image
+    "9a35b7c212298d54eed6841ada897fd1", // google spritesheet
+    "8c65758da1765bb830f80ce4403bad13", // common wordpress theme background
+    "55d25e9dc950d5db4d53a3b195c046c6", // tracking pixel
+    "acd642661699ba6a4dc1679e1bab76c1", // common wordpress theme background
+    "8bdcfa66ef2b8ac0a9fb33401eef40e4", // infoq logo
+    "d57486ab23b722832d87a0e238acfd62", // common wordpress theme background
+    "a0d449084ea7eb23a14f0c5c2f8a7dea", // common blogger theme background
+    "b40e39a8e3747e74f4dfcf6d88ecc535", // common wordpress theme background
+    "3f7702975298d2f0b583c83b1ce189f5", // common web forum logo
+    "c4d171422792ac800e504a7a8b2eb624", // google spritesheet
+    "c8f1281dd971abb027322c76e3f55835", // common wordpress theme background
+    "92860867f25ce200ea94779d2d55d737", // common wordpress theme background
+    "a922e59e0e523071923eb2c51517b832", // black image,
+    "000775e04f04f071b6d1000035238e6c", // tumblr link image
+    "04d3fc7ff4e9f9fccc166beabd397558", // stackoverflow logo
+    "7dce329f880b899a462be1c476c79291", // blogger ghost image
+    "c8fcb8f216e75f1c02b93fbc689a81c1", // askubuntu logo
+    "989d155fe0261a9d9938549a3c2f8168", // ebay spritesheet
+    "30d57a48f6f155affd542a528dd02506", // Aa icon
+    "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
+    "cb6b256050c23a71b2b4996e88f77225" // missing link logo
+  )
+}
+
 trait ProcessedImageHelper {
 
   val log: Logger
@@ -64,9 +103,12 @@ trait ProcessedImageHelper {
       case Some(format) =>
         log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
-          case Success(hash) =>
+          case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
             log.info(s"[pih] Hashed: ${hash.hash}")
             Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
+          case Success(hash) => // blacklisted hash
+            log.info(s"[pih] Blacklisted: ${hash.hash}")
+            Future.successful(Left(ImageProcessState.BlacklistedImage))
           case Failure(ex) =>
             Future.successful(Left(ImageProcessState.HashFailed(ex)))
         }
@@ -77,19 +119,27 @@ trait ProcessedImageHelper {
 
   def fetchAndHashRemoteImage(imageUrl: String): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
     log.info(s"[pih] Fetching $imageUrl")
-    fetchRemoteImage(imageUrl).map {
-      case (format, file) =>
-        log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
-        hashImageFile(file.file) match {
-          case Success(hash) =>
-            log.info(s"[pih] Hashed: ${hash.hash}")
-            Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
-          case Failure(ex) =>
-            Left(ImageProcessState.HashFailed(ex))
-        }
-    }.recover {
-      case ex: Throwable =>
-        Left(ImageProcessState.SourceFetchFailed(ex))
+    if (ProcessedImageHelper.blacklistedUrl.contains(imageUrl)) {
+      Future.successful(Left(ImageProcessState.BlacklistedImage))
+    } else {
+      val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
+        case (format, file) =>
+          log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
+          hashImageFile(file.file) match {
+            case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
+              log.info(s"[pih] Hashed: ${hash.hash}")
+              Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
+            case Success(hash) => // blacklisted hash
+              log.info(s"[pih] Blacklisted: $imageUrl / ${hash.hash}")
+              Left(ImageProcessState.BlacklistedImage)
+            case Failure(ex) =>
+              Left(ImageProcessState.HashFailed(ex))
+          }
+      }
+      loadedF.recover {
+        case ex: Throwable =>
+          Left(ImageProcessState.SourceFetchFailed(ex))
+      }
     }
   }
 
@@ -154,7 +204,7 @@ trait ProcessedImageHelper {
   }
 
   // All the ProcessImageRequests in A that are also in B
-  def intersectProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
+  protected def intersectProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
     @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
     val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
     A filter {
