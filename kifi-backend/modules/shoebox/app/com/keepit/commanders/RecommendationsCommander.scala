@@ -171,10 +171,10 @@ class RecommendationsCommander @Inject() (
     }.getOrElse(Future.successful(None))
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
+  def updatesFromFollowedLibraries(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
 
     val keeps: Seq[Keep] = db.readWrite { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeExtId, afterExtId)
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, limit, beforeExtId, afterExtId)
     }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
       case (keep, (acc, seenUriIds)) =>
         if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
