@@ -45,12 +45,12 @@ class OrganizationAvatarCommanderImpl @Inject() (
         validateAndGetImageInfo(sourceImage.file.file) match {
           case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
           case Success(imageInfo) =>
-            persistOrganizationAvatarsFromBufferedSourceImage(sourceImage, imageInfo, orgId)
+            persistOrganizationAvatarsFromSourceImage(sourceImage, imageInfo, orgId)
         }
     }
   }
 
-  def persistOrganizationAvatarsFromBufferedSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
+  def persistOrganizationAvatarsFromSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
     val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
     val existingAvatars = db.readOnlyMaster { implicit session =>
       orgAvatarRepo.getByImageHash(sourceImage.hash)
@@ -91,21 +91,18 @@ class OrganizationAvatarCommanderImpl @Inject() (
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
     val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
 
-    val sourceImageReadyToPersistMaybe = existingAvatars.find(_.kind == ProcessImageOperation.Original) match {
-      case Some(sourceImageInfo) => Success(None)
+    val sourceImageReadyToPersist = existingAvatars.find(_.kind == ProcessImageOperation.Original) match {
+      case Some(sourceImageInfo) => None
       case None =>
         val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
-        Success(Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, sourceImage.file.file.length().toInt, ProcessImageOperation.Original)))
+        Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, sourceImage.file.file.length().toInt, ProcessImageOperation.Original))
     }
 
-    sourceImageReadyToPersistMaybe match {
-      case Success(sourceImageReadyToPersist) =>
-        processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop) match {
-          case Left(processingError) =>
-            Left(processingError)
-          case Right(modifiedImagesReadyToPersist) =>
-            Right(modifiedImagesReadyToPersist ++ sourceImageReadyToPersist)
-        }
+    processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop) match {
+      case Left(processingError) =>
+        Left(processingError)
+      case Right(modifiedImagesReadyToPersist) =>
+        Right(modifiedImagesReadyToPersist ++ sourceImageReadyToPersist)
     }
   }
 
@@ -156,5 +153,5 @@ object OrganizationAvatarConfiguration {
   val scaleSizes = Seq(ScaledImageSize.Small, ScaledImageSize.Medium)
   val cropSizes = Seq(CroppedImageSize.Small)
   val numSizes = scaleSizes.length + cropSizes.length
-  val imagePathPrefix = "organization"
+  val imagePathPrefix = "oa"
 }

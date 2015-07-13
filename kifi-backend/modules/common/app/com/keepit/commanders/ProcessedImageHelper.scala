@@ -142,7 +142,7 @@ trait ProcessedImageHelper {
 
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
-          println(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
+          log.info(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
           val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
           ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, resizedImage.length().toInt, processImageSize.operation)
         }
