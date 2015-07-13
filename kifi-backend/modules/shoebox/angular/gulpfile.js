@@ -336,7 +336,7 @@ gulp.task('scripts', ['jshint'], function () {
     .pipe(remember(jsCache))
     .pipe(order())
     .pipe(concat(pkgName + '.js'))
-    .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
+    .pipe(gulp.dest(outDir))
     .pipe(gulpif(isProdMode, makeMinJs()));
 });
 
