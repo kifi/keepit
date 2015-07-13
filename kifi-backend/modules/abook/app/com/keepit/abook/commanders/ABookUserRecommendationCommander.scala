@@ -36,6 +36,7 @@ class ABookUserRecommendationCommander @Inject() (
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
     oldWTICommander: WTICommander,
+    abookRecommendationHelper: AbookRecommendationHelper,
     clock: Clock) extends Logging {
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
@@ -141,7 +142,7 @@ class ABookUserRecommendationCommander @Inject() (
   private def generateFutureNonUserRecommendations(userId: Id[User], relevantNetworks: Set[SocialNetworkType]): Future[Stream[UserInviteRecommendation]] = {
     val (futureExistingInvites, futureNormalizedUserNames) = {
       if (relevantNetworks.isEmpty) (Future.successful(Seq.empty[Invitation]), Future.successful(Set.empty[String]))
-      else (shoebox.getInvitations(userId), getNormalizedUsernames(userId))
+      else (shoebox.getInvitations(userId), abookRecommendationHelper.getNormalizedUsernames(Left(userId)))
     }
 
     val futureEmailInviteRecommendations = {
@@ -158,7 +159,7 @@ class ABookUserRecommendationCommander @Inject() (
             socialFriends <- futureSocialFriends
             normalizedUserNames <- futureNormalizedUserNames
           } yield {
-            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(normalize(socialFriend.fullName))
+            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(abookRecommendationHelper.normalize(socialFriend.fullName))
             socialFriends.collect { case socialFriend if relevantNetworks.contains(socialFriend.networkType) && !mayAlreadyBeOnKifi(socialFriend) => socialFriend.id -> socialFriend }.toMap
           }
         }
@@ -269,7 +270,7 @@ class ABookUserRecommendationCommander @Inject() (
     val relevantEmailAccounts = allContacts.groupBy(_.emailAccountId).filter {
       case (emailAccountId, contacts) =>
         val mayAlreadyBeOnKifi = contacts.head.contactUserId.isDefined || contacts.exists { contact =>
-          contact.name.exists { name => normalizedUserNames.contains(normalize(name)) }
+          contact.name.exists { name => normalizedUserNames.contains(abookRecommendationHelper.normalize(name)) }
         }
         !mayAlreadyBeOnKifi && EmailAddress.isLikelyHuman(contacts.head.email)
     }
@@ -311,21 +312,6 @@ class ABookUserRecommendationCommander @Inject() (
       invitation.timesSent > 1 &&
       !invitation.lastSentAt.exists(_.isAfter(clock.now().minusDays(7)))
   }
-
-  private def getNormalizedUsernames(userId: Id[User]): Future[Set[String]] = {
-    val fConnectionIds = shoebox.getFriends(userId)
-
-    for {
-      connectionIds <- fConnectionIds
-      basicUsers <- shoebox.getBasicUsers(connectionIds.toSeq)
-    } yield {
-      val fullNames = basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName))
-      fullNames.toSet.map(normalize)
-    }
-  }
-
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private def normalize(fullName: String): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(fullName.trim, Normalizer.Form.NFD), "").toLowerCase
 
   private val consolidateRelatedEntities = new RequestConsolidator[Id[User], Option[SociallyRelatedEntitiesForUser]](1 second)
   private def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]] = {

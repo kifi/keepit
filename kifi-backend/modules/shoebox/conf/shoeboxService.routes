@@ -933,8 +933,8 @@ GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controlle
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
-GET     /internal/shoebox/database/getMembersByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getMembersByOrganizationId(orgId: Id[Organization])
-GET     /internal/shoebox/database/getInviteEndpointsByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getInviteEndpointsByOrganizationId(orgId: Id[Organization])
+GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
+GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 

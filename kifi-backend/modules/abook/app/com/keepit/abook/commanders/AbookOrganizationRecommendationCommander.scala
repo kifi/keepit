@@ -35,6 +35,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
     oldWTICommander: WTICommander,
+    abookRecommendationHelper: AbookRecommendationHelper,
     clock: Clock) extends Logging {
 
   def hideUserRecommendation(organizationId: Id[Organization], memberId: Id[User], irrelevantMemberId: Id[User]): Unit = {
@@ -43,7 +44,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  def hideNonUserRecommendation(organizationId: Id[Organization], memberId: Id[User], emailAddress: EmailAddress): Unit = {
+  def hideEmailRecommendation(organizationId: Id[Organization], memberId: Id[User], emailAddress: EmailAddress): Unit = {
     db.readWrite { implicit session =>
       val emailAccount = emailAccountRepo.internByAddress(emailAddress)
       organizationEmailInviteRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, emailAccount.id.get)
@@ -62,9 +63,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
     fRecommendations
   }
 
-  def getNonUserRecommendations(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
+  def getEmailRecommendations(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
     val start = clock.now()
-    val fRecommendations = generateFutureNonUserRecommendations(orgId, memberId).map {
+    val fRecommendations = generateFutureEmailRecommendations(orgId, memberId).map {
       orgInviteRecoStream => orgInviteRecoStream.slice(offset, offset + limit).toSeq
     }
     fRecommendations.onSuccess {
@@ -118,9 +119,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureNonUserRecommendations(orgId: Id[Organization], memberId: Id[User]): Future[Stream[OrganizationInviteRecommendation]] = {
+  private def generateFutureEmailRecommendations(orgId: Id[Organization], memberId: Id[User]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fExistingInvites = shoebox.getOrganizationInviteViews(orgId)
-    val fNormalizedUsernames = getNormalizedUsernames(orgId)
+    val fNormalizedUsernames = abookRecommendationHelper.getNormalizedUsernames(Right(orgId))
     getSociallyRelatedEntities(orgId).flatMap { relatedEntities =>
       val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
@@ -147,7 +148,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     val relevantEmailAccounts = viewersContacts.groupBy(_.emailAccountId).filter {
       case (emailAccountId, contacts) =>
         val mayAlreadyBeOnKifi = contacts.head.contactUserId.isDefined || contacts.exists { contact =>
-          contact.name.exists { name => normalizedUsernames.contains(normalize(name)) }
+          contact.name.exists { name => normalizedUsernames.contains(abookRecommendationHelper.normalize(name)) }
         }
         !mayAlreadyBeOnKifi && EmailAddress.isLikelyHuman(contacts.head.email)
     }
@@ -179,21 +180,6 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
     recommendations.take(relevantEmailAccounts.size)
   }
-
-  private def getNormalizedUsernames(orgId: Id[Organization]): Future[Set[String]] = {
-    val fMemberIds = shoebox.getOrganizationMembers(orgId)
-
-    for {
-      memberIds <- fMemberIds
-      basicUsers <- shoebox.getBasicUsers(memberIds.toSeq)
-    } yield {
-      val fullNames = basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName))
-      fullNames.toSet.map(normalize)
-    }
-  }
-
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private def normalize(fullName: String): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(fullName.trim, Normalizer.Form.NFD), "").toLowerCase
 
   private val consolidateRelatedEntities = new RequestConsolidator[Id[Organization], Option[SociallyRelatedEntitiesForOrg]](1 second)
   private def getSociallyRelatedEntities(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]] = {

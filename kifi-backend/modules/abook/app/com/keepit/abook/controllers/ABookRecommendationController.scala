@@ -49,7 +49,7 @@ class ABookRecommendationController @Inject() (
   }
 
   def getNonUserRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getNonUserRecommendations(orgId, memberId: Id[User], offset, limit).map { recommendedUsers =>
+    abookOrganizationRecommendationCommander.getEmailRecommendations(orgId, memberId: Id[User], offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -64,7 +64,7 @@ class ABookRecommendationController @Inject() (
 
   def hideNonUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
     val emailAddress = (request.body \ "irrelevantEmail").as[EmailAddress]
-    abookOrganizationRecommendationCommander.hideNonUserRecommendation(orgId, memberId, emailAddress)
+    abookOrganizationRecommendationCommander.hideEmailRecommendation(orgId, memberId, emailAddress)
     Ok
   }
 
