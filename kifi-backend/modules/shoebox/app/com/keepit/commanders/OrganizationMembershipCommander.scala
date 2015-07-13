@@ -1,19 +1,18 @@
 package com.keepit.commanders
 
-import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import com.keepit.common.json
 import play.api.libs.json._
-import com.keepit.model.OrganizationPermission._
 
 import scala.util.control.NoStackTrace
 
@@ -32,6 +31,7 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
+  def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
@@ -53,6 +53,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userRepo: UserRepo,
+    keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
@@ -84,6 +87,12 @@ class OrganizationMembershipCommanderImpl @Inject() (
         case false => Seq.empty[OrganizationInvite]
       }
       buildMaybeMembers(members, invitees)
+    }
+  }
+
+  def getMemberIds(orgId: Id[Organization]): Set[Id[User]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
     }
   }
 

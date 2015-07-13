@@ -38,11 +38,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 10 hours), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
 
@@ -165,8 +160,12 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def sociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SociallyRelatedEntitiesForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEntitiesForOrgCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesForOrgCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 day))
 
   @Provides @Singleton
   def librariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

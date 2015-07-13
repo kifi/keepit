@@ -43,7 +43,7 @@ class ChecklistCommander @Inject() (
           val all = Seq(
             "install_ext" -> hasExt,
             "install_mobile" -> hasMobile,
-            "invite_fiends" -> hasInvitedFriends,
+            //"invite_friends" -> hasInvitedFriends,
             "follow_libs" -> followsSeveralLibs,
             "keep_pages" -> keptSeveralPages,
             "import_bookmarks" -> importedBrowserBookmarks,
@@ -51,15 +51,22 @@ class ChecklistCommander @Inject() (
             "twitter_sync" -> hasTwitterSync
           )
 
-          val first = if (hasMobile) {
-            "install_mobile" -> hasMobile
+          val (firstOpt, restChoices) = if (hasMobile && hasExt) {
+            val rest = all.filterNot(e => e._1 == "install_ext" || e._1 == "install_mobile")
+            (None, rest)
           } else {
-            "install_ext" -> hasExt
+            val first = if (hasMobile) {
+              "install_mobile" -> hasMobile
+            } else {
+              "install_ext" -> hasExt
+            }
+            val rest = all.filterNot(_ == first)
+            (Some(first), rest)
           }
 
           val rest = {
             val restSize = checklistSize - 1
-            val (complete, incomplete) = all.filterNot(_ == first).partition(_._2)
+            val (complete, incomplete) = restChoices.partition(_._2)
             val incompleteShuffled = Random.shuffle(incomplete).take(restSize)
             val completeShuffled = if (incompleteShuffled.length <= restSize) {
               Random.shuffle(complete).take(restSize - incompleteShuffled.length)
@@ -67,7 +74,10 @@ class ChecklistCommander @Inject() (
             Random.shuffle(incompleteShuffled ++ completeShuffled).take(restSize)
           }
 
-          first +: rest
+          firstOpt match {
+            case Some(first) => first +: rest
+            case None => rest
+          }
         }
     }
   }

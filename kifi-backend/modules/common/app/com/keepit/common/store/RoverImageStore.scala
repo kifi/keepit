@@ -35,6 +35,7 @@ class S3RoverImageStoreImpl @Inject() (
     if (contentLength > 0) {
       om.setCacheControl("public, max-age=31556926") // standard way to cache "forever" (ie, one year)
       om.setContentLength(contentLength)
+
       asyncUpload(s3ImageConfig.bucketName, key.path, is, om).imap { case _ => () }
     } else {
       Future.failed {

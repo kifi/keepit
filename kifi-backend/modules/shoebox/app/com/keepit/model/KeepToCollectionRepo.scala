@@ -14,7 +14,6 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
-  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]]
   def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
@@ -71,21 +70,6 @@ class KeepToCollectionRepoImpl @Inject() (
       } yield kc
 
       query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
-    }
-  }
-
-  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]] = {
-    if (keep.isActive) {
-      collectionsForKeepCache.getOrElse(CollectionsForKeepKey(keep.id.get)) {
-        val query = for {
-          kc <- rows if kc.bookmarkId === keep.id.get && kc.state === KeepToCollectionStates.ACTIVE
-          c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-        } yield kc
-
-        query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
-      }
-    } else {
-      Seq.empty
     }
   }
 

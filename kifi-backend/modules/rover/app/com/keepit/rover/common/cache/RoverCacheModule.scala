@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.article.ArticleInfoUriCache
 import com.keepit.rover.document.{ RecentFetches, RecentFetchesDomainCache }
-import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache, RoverHttpProxyAllCache }
+import com.keepit.rover.model.{ RoverUrlRuleAllCache, RoverArticleImagesCache, RoverArticleSummaryCache, RoverHttpProxyAllCache }
 import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.rover.store.UrlContentSignatureCache
 import com.keepit.shoebox.model.KeepImagesCache
@@ -29,11 +29,6 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 10 hours), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -208,4 +203,10 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UrlContentSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def urlRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverUrlRuleAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
 }

@@ -42,12 +42,16 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   margin: 0 auto 50px
   max-width: rightColWidth + 20px
 
+  > * + *
+    margin-top: 20px;
+
   @media (min-width: twoColMinWidth)
     display: table-cell
     vertical-align: top
     margin: 0
     width: rightColWidth
     padding-left: colGapWidth
+
 
 .kf-reco
   margin-bottom: 20px
@@ -134,6 +138,9 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   border-top: 0
   border-radius: 0 0 10px 10px
   padding: 10px 0 0
+
+  .kf-keep-header
+    display: none
 
 // Icons
 .kf-reco-icon

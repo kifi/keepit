@@ -30,7 +30,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-import com.keepit.common.json.TupleFormat
+import com.keepit.common.json.{ EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -58,6 +58,8 @@ class ShoeboxController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
+  orgInviteRepo: OrganizationInviteRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
@@ -69,6 +71,8 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
+  organizationInviteCommander: OrganizationInviteCommander,
+  organizationMembershipCommander: OrganizationMembershipCommander,
   userPersonaRepo: UserPersonaRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
   rover: RoverServiceClient)(implicit private val clock: Clock,
@@ -483,5 +487,21 @@ class ShoeboxController @Inject() (
   def getUserActivePersonas(userId: Id[User]) = Action { request =>
     val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
     Ok(Json.toJson(model))
+  }
+
+  def getMembersByOrganizationId(orgId: Id[Organization]) = Action { request =>
+    val memberIds = organizationMembershipCommander.getMemberIds(orgId)
+    Ok(Json.toJson(memberIds))
+  }
+
+  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = Action { request =>
+    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
+
+    val invites = organizationInviteCommander.getInvitesByOrganizationId(orgId)
+    val inviteEndpoints: Set[Either[Id[User], EmailAddress]] = invites.collect {
+      case invite if invite.userId.nonEmpty => Left(invite.userId.get)
+      case invite if invite.emailAddress.nonEmpty => Right(invite.emailAddress.get)
+    }
+    Ok(Json.toJson(inviteEndpoints))
   }
 }

@@ -3,7 +3,6 @@ section-border = defaultBorder
 section-border-radius = 10px
 
 .kf-gd
-  margin-top: 20px
   line-height: 14px
   font-size: 12px
 
@@ -31,9 +30,18 @@ goodie-text-pad = 8px
   &:last-child
     margin-bottom: 5px
 
-  .sprite
+  &:hover
+    .symbol-sprite
+      stroke: blueColor
+
+  .symbol-sprite
     float: left
     margin-right: goodie-text-pad
+    width: 35px
+    height: 35px
+    fill: transparent
+    stroke: accentGreen
+    stroke-width: 15
 
   .sprite-import-bookmarks-icon
   .sprite-import-from-other-services-icon

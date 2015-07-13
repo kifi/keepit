@@ -175,7 +175,7 @@ class EmailTemplateProcessorImpl @Inject() (
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = {
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = try {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -232,6 +232,8 @@ class EmailTemplateProcessorImpl @Inject() (
           ).encode
       }
     })
+  } catch {
+    case ex: IndexOutOfBoundsException => log.error(s"[EmailTemplate] IOOB Exception. Text: $text"); throw ex
   }
 
   // used to gather the types of objects we need to replace the tags with real values

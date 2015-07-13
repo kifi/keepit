@@ -155,7 +155,7 @@ case class LinkedInProfileArticle(
 
 case object LinkedInProfileArticle extends ArticleKind[LinkedInProfileArticle] {
   val typeCode = "linked_in_profile"
-  val version = VersionNumber[Article](1)
+  val version = VersionNumber[Article](2)
   def formatByVersion(thatVersion: VersionNumber[Article]) = thatVersion match {
     case `version` => Json.format[LinkedInProfileArticle]
     case _ => throw new UnknownArticleVersionException(this, version, thatVersion)

@@ -29,18 +29,6 @@ import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Future
 import com.keepit.common.crypto.PublicIdConfiguration
 
-class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
-
-  protected def httpClient: com.keepit.common.net.HttpClient = ???
-
-  def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
-
-  def getProxy(url: String): Future[Option[HttpProxy]] = ???
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-}
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -660,4 +648,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = Future.successful(Seq())
 
   def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
+
+  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = Future.successful(Set.empty)
+
+  def getMembersByOrganizationId(orgId: Id[Organization]) = Future.successful(Set.empty)
 }

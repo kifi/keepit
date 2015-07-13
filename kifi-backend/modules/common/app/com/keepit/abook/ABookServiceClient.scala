@@ -57,8 +57,8 @@ trait ABookServiceClient extends ServiceClient {
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
-  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople]
-  def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeople]
+  def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeopleForUser]
+  def getIrrelevantPeopleForOrg(orgId: Id[Organization]): Future[IrrelevantPeopleForOrg]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -249,11 +249,11 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.hideInviteRecommendation(userId), payload).map(_ => ())
   }
 
-  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
-    call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
+  def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeopleForUser] = {
+    call(ABook.internal.getIrrelevantPeopleForUser(userId)).map(_.json.as[IrrelevantPeopleForUser])
   }
 
-  def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeople] = {
-    call(ABook.internal.getIrrelevantPeopleForUser(userId)).map(_.json.as[IrrelevantPeople])
+  def getIrrelevantPeopleForOrg(orgId: Id[Organization]): Future[IrrelevantPeopleForOrg] = {
+    call(ABook.internal.getIrrelevantPeopleForOrg(orgId)).map(_.json.as[IrrelevantPeopleForOrg])
   }
 }

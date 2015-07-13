@@ -123,15 +123,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def unkeepMultiple() = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { rawBookmarks =>
-      Ok(Json.obj("removedKeeps" -> keepsCommander.unkeepMultiple(rawBookmarks, request.userId)))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "parse_error"))
-    }
-  }
-
   def saveCollection() = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {

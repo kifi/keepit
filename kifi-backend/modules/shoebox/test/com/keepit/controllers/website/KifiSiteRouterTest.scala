@@ -3,6 +3,7 @@ package com.keepit.controllers.website
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
 import com.keepit.common.crypto.FakeCryptoModule
@@ -36,6 +37,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
   val modules = Seq(
     FakeExecutionContextModule(),
+    FakeActorSystemModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),

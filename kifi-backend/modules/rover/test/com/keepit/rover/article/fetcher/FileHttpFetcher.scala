@@ -13,7 +13,7 @@ class FileHttpFetcher extends HttpFetcher {
   override def fetch[A](request: FetchRequest)(f: (FetchResult[HttpInputStream]) => A)(implicit ec: ExecutionContext): Future[A] = {
     val FileFetcherFormat(url, file) = request.url
     val stream = new HttpInputStream(new FileInputStream(file))
-    val context = FetchContext.ok(url)
+    val context = FetchContext.ok(url, request.proxy)
     val result = FetchResult(context, Some(stream))
     Future.successful(f(result))
   }

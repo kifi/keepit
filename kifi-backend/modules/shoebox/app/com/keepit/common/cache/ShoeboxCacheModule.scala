@@ -43,6 +43,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def richIpAddressCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RichIpAddressCache(stats, accessLog, (innerRepo, 60 minutes), (outerRepo, 3 days))
+
+  @Singleton
+  @Provides
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
 
@@ -120,11 +125,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def urlPatternRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UrlPatternRulesAllCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def httpProxyAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new HttpProxyAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -340,8 +340,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def sociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SociallyRelatedEntitiesForUserCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def sociallyRelatedEntitiesForOrgCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesForOrgCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
   def userHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

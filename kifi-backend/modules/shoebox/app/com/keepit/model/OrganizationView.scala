@@ -1,126 +1,116 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
+import com.keepit.social.BasicUser
 import com.kifi.macros.json
-import play.api.http.Status._
-import play.api.libs.json.Json
-import play.api.mvc.Results.Status
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
+// OrganizationView should ONLY contain public information. No internal ids.
+case class OrganizationView(
+  orgId: PublicId[Organization],
+  ownerId: ExternalId[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  avatarPath: Option[ImagePath],
+  members: Seq[BasicUser],
+  numMembers: Int,
+  numLibraries: Int)
+object OrganizationView {
+  private val defaultWrites: Writes[OrganizationView] = (
+    (__ \ 'id).write[PublicId[Organization]] and
+    (__ \ 'ownerId).write[ExternalId[User]] and
+    (__ \ 'handle).write[OrganizationHandle] and
+    (__ \ 'name).write[String] and
+    (__ \ 'description).writeNullable[String] and
+    (__ \ 'avatarPath).writeNullable[ImagePath] and
+    (__ \ 'members).write[Seq[BasicUser]] and
+    (__ \ 'numMembers).write[Int] and
+    (__ \ 'numLibraries).write[Int]
+  )(unlift(OrganizationView.unapply))
+
+  val website = defaultWrites
+  val mobileV1 = defaultWrites
+}
+
+// OrganizationCard should ONLY contain public information. No internal ids.
+case class OrganizationCard(
+  orgId: PublicId[Organization],
+  ownerId: ExternalId[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  avatarPath: Option[ImagePath],
+  numMembers: Int,
+  numLibraries: Int)
+object OrganizationCard {
+  private val defaultWrites: Writes[OrganizationCard] = (
+    (__ \ 'id).write[PublicId[Organization]] and
+    (__ \ 'ownerId).write[ExternalId[User]] and
+    (__ \ 'handle).write[OrganizationHandle] and
+    (__ \ 'name).write[String] and
+    (__ \ 'description).writeNullable[String] and
+    (__ \ 'avatarPath).writeNullable[ImagePath] and
+    (__ \ 'numMembers).write[Int] and
+    (__ \ 'numLibraries).write[Int]
+  )(unlift(OrganizationCard.unapply))
+
+  val website = defaultWrites
+  val mobileV1 = defaultWrites
+}
+
+// OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
+// OrganizationInviteCommander to notify members when a new user joins their
+// organization. I would like to get rid of them.
 @json case class OrganizationImageInfo(path: ImagePath)
-
 object OrganizationImageInfo {
   def createInfo(img: OrganizationAvatar) = OrganizationImageInfo(img.imagePath)
 }
-
 @json
 case class OrganizationNotificationInfo(
   id: PublicId[Organization],
   name: String,
   handle: Option[PrimaryOrganizationHandle],
   image: Option[OrganizationImageInfo])
-
-case class OrganizationView(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath], members: Seq[Id[User]],
-  numMembers: Int, numLibraries: Int)
-
-case class OrganizationCard(orgId: Id[Organization], handle: OrganizationHandle, name: String, description: Option[String], avatarPath: Option[ImagePath],
-  numMembers: Int, numLibraries: Int)
-
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
     OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo))
   }
 }
 
-case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
+case class OrganizationInitialValues(name: String, description: Option[String] = None) {
+  def asOrganizationModifications: OrganizationModifications = {
+    OrganizationModifications(
+      name = Some(name),
+      description = description
+    )
+  }
+}
+object OrganizationInitialValues {
+  private val defaultReads: Reads[OrganizationInitialValues] = (
+    (__ \ 'name).read[String] and
+    (__ \ 'description).readNullable[String]
+  )(OrganizationInitialValues.apply _)
 
-sealed abstract class OrganizationMembershipRequest {
-  def orgId: Id[Organization]
-  def requesterId: Id[User]
-  def targetId: Id[User]
+  val website = defaultReads
+  val mobileV1 = defaultReads
+
 }
 
-@json
-case class OrganizationMembershipAddRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User],
-  targetId: Id[User],
-  newRole: OrganizationRole) extends OrganizationMembershipRequest
-
-@json
-case class OrganizationMembershipModifyRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User],
-  targetId: Id[User],
-  newRole: OrganizationRole) extends OrganizationMembershipRequest
-
-@json
-case class OrganizationMembershipRemoveRequest(
-  orgId: Id[Organization],
-  requesterId: Id[User],
-  targetId: Id[User]) extends OrganizationMembershipRequest
-
-@json
-case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest, membership: OrganizationMembership)
-@json
-case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
-@json
-case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
-
-@json
 case class OrganizationModifications(
   name: Option[String] = None,
   description: Option[String] = None,
   basePermissions: Option[BasePermissions] = None)
+object OrganizationModifications {
+  private val defaultReads: Reads[OrganizationModifications] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'basePermissions).readNullable[BasePermissions]
+  )(OrganizationModifications.apply _)
 
-sealed abstract class OrganizationRequest
-
-@json
-case class OrganizationCreateRequest(
-  requesterId: Id[User],
-  initialValues: OrganizationModifications) extends OrganizationRequest
-
-@json
-case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
-
-@json
-case class OrganizationModifyRequest(
-  requesterId: Id[User],
-  orgId: Id[Organization],
-  modifications: OrganizationModifications) extends OrganizationRequest
-@json
-case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
-
-@json
-case class OrganizationDeleteRequest(
-  requesterId: Id[User],
-  orgId: Id[Organization]) extends OrganizationRequest
-@json
-case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
-
-sealed abstract class OrganizationFail(val status: Int, val message: String) {
-  def asErrorResponse = Status(status)(Json.obj("error" -> message))
-}
-
-//TODO: when modifying these, make sure we do not break existing Mobile Controllers that are calling .asErrorResponse. Preferably don't modify, just add as needed.
-object OrganizationFail {
-  case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(UNAUTHORIZED, "insufficient_permissions")
-  case object HANDLE_UNAVAILABLE extends OrganizationFail(FORBIDDEN, "handle_unavailable")
-  case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
-  case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
-  case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
-  case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
-
-  def apply(str: String): OrganizationFail = {
-    str match {
-      case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
-      case HANDLE_UNAVAILABLE.message => HANDLE_UNAVAILABLE
-      case NOT_A_MEMBER.message => NOT_A_MEMBER
-      case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
-      case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
-      case BAD_PARAMETERS.message => BAD_PARAMETERS
-    }
-  }
+  val website = defaultReads
+  val mobileV1 = defaultReads
 }

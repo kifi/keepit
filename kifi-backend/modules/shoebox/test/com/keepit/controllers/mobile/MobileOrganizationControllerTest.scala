@@ -2,11 +2,8 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.LibraryFactoryHelper._
@@ -15,13 +12,12 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
+import play.api.libs.json.{ JsArray, JsObject, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.Future
-import scala.util.Success
 
 class MobileOrganizationControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -55,7 +51,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val (user, org) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val handle = PrimaryOrganizationHandle(original = OrganizationHandle("Kifi"), normalized = OrganizationHandle("kifi"))
+            val handle = OrganizationHandle("kifi")
             val org = OrganizationFactory.organization().withHandle(handle).withOwner(user).withName("Forty Two Kifis").saved
             LibraryFactory.libraries(10).map(_.published().withOrganization(org.id)).saved
             LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(org.id)).saved
@@ -70,9 +66,9 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(response) === OK
 
           val jsonResponse = Json.parse(contentAsString(response))
-          (jsonResponse \ "name").as[String] === "Forty Two Kifis"
-          (jsonResponse \ "handle").as[String] === "Kifi"
-          (jsonResponse \ "numLibraries").as[Int] === 10
+          (jsonResponse \ "organization" \ "name").as[String] === "Forty Two Kifis"
+          (jsonResponse \ "organization" \ "handle").as[String] === "kifi"
+          (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10
         }
       }
     }
@@ -94,8 +90,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(response) === OK
 
           val jsonResponse = Json.parse(contentAsString(response))
-          jsonResponse must haveClass[JsArray]
-          val cards = jsonResponse.as[Seq[JsObject]]
+          (jsonResponse \ "organizations") must haveClass[JsArray]
+          val cards = (jsonResponse \ "organizations").as[Seq[JsObject]]
           cards.foreach { card => (card \ "name").as[String] === "Justice League" }
           cards.map { card => (card \ "numLibraries").as[Int] }.toSet === (1 to 10).toSet
         }
@@ -152,8 +148,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          (createResponseJson \ "name").as[String] === orgName
-          (createResponseJson \ "description").as[Option[String]] === Some(orgDescription)
+          (createResponseJson \ "organization" \ "name").as[String] === orgName
+          (createResponseJson \ "organization" \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }
@@ -161,7 +157,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
     "when modifyOrganization is called:" in {
       def setupModify(implicit injector: Injector) = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Captain", "America").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("Earth"), normalized = OrganizationHandle("earth"))).saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Worldwide Consortium of Earth").withHandle(OrganizationHandle("Earth")).saved
         (org, owner)
       }
 
@@ -222,7 +218,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       def setupDelete(implicit injector: Injector) = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Dr", "Papaya").saved
         val member = UserFactory.user().withName("Hansel", "Schmidt").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(PrimaryOrganizationHandle(original = OrganizationHandle("papaya_republic"), normalized = OrganizationHandle("earth"))).saved
+        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(OrganizationHandle("papaya_republic")).saved
         inject[OrganizationMembershipRepo].save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
         (org, owner, member)
       }

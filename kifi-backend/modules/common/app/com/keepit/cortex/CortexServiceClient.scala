@@ -23,16 +23,6 @@ trait CortexServiceClient extends ServiceClient {
   type LDAVersion = ModelVersion[DenseLDA]
   type LDAVersionOpt = Option[LDAVersion]
 
-  def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]]
-  def word2vecKeywordsAndBOW(text: String): Future[Map[String, String]]
-  def word2vecURIKeywords(uri: Id[NormalizedURI]): Future[Option[Word2VecKeywords]]
-  def word2vecBatchURIKeywords(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]]
-  def word2vecURISimilairty(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]): Future[Option[Float]]
-  def word2vecUserSimilarity(user1Keeps: Seq[Id[NormalizedURI]], user2Keeps: Seq[Id[NormalizedURI]]): Future[Option[Float]]
-  def word2vecQueryUriSimilarity(query: String, uri: Id[NormalizedURI]): Future[Option[Float]]
-  def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]]
-  def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]]
-
   def defaultLDAVersion(): Future[ModelVersion[DenseLDA]]
   def ldaNumOfTopics(implicit version: LDAVersionOpt = None): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int)(implicit version: LDAVersionOpt = None): Future[Seq[LDATopicInfo]]
@@ -69,64 +59,6 @@ class CortexServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
-
-  def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]] = {
-    call(Cortex.internal.word2vecSimilairty(word1, word2)).map { r =>
-      Json.fromJson[Option[Float]](r.json).get
-    }
-  }
-
-  def word2vecKeywordsAndBOW(text: String): Future[Map[String, String]] = {
-    val payload = Json.obj("query" -> text)
-    call(Cortex.internal.keywordsAndBow(), payload).map { r =>
-      Json.fromJson[Map[String, String]](r.json).get
-    }
-  }
-
-  def word2vecURIKeywords(uri: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
-    call(Cortex.internal.uriKeywords(uri)).map { r =>
-      r.json.as[Option[Word2VecKeywords]]
-    }
-  }
-
-  def word2vecBatchURIKeywords(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
-    val payload = Json.toJson(uris)
-    call(Cortex.internal.batchGetURIKeywords(), payload) map { r => r.json.as[Seq[Option[Word2VecKeywords]]] }
-  }
-
-  def word2vecURISimilairty(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]): Future[Option[Float]] = {
-    call(Cortex.internal.word2vecURISimilarity(uri1, uri2)).map { r =>
-      Json.fromJson[Option[Float]](r.json).get
-    }
-  }
-
-  def word2vecUserSimilarity(user1Keeps: Seq[Id[NormalizedURI]], user2Keeps: Seq[Id[NormalizedURI]]): Future[Option[Float]] = {
-    val payload = Json.obj("uris1" -> user1Keeps.map { _.id }, "uris2" -> user2Keeps.map { _.id })
-    call(Cortex.internal.word2vecUserSimilarity(), payload).map { r =>
-      Json.fromJson[Option[Float]](r.json).get
-    }
-  }
-
-  def word2vecQueryUriSimilarity(query: String, uri: Id[NormalizedURI]): Future[Option[Float]] = {
-    val payload = Json.obj("query" -> query, "uri" -> uri.id)
-    call(Cortex.internal.word2vecQueryUriSimilarity(), payload).map { r =>
-      Json.fromJson[Option[Float]](r.json).get
-    }
-  }
-
-  def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]] = {
-    val payload = Json.obj("userUris" -> userUris.map { _.id }, "uri" -> uri.id)
-    call(Cortex.internal.word2vecUserUriSimilarity(), payload).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]] = {
-    val payload = Json.obj("userUris" -> userUris.map { _.id }, "feedUris" -> feedUris.map { _.id })
-    call(Cortex.internal.word2vecFeedUserUris(), payload).map { r =>
-      Json.fromJson[Seq[Id[NormalizedURI]]](r.json).get
-    }
-  }
 
   def defaultLDAVersion(): Future[ModelVersion[DenseLDA]] = {
     call(Cortex.internal.defulatLDAVersion()).map { r => (r.json).as[ModelVersion[DenseLDA]] }

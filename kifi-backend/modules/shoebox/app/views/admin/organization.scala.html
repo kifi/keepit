@@ -1,0 +1,78 @@
+@import com.keepit.commanders.OrganizationStatistics
+@(
+orgStats: OrganizationStatistics
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Organization: " + orgStats.name, stylesheets = List("admin_user")) {
+<table class="org-summary table table-bordered" style="width:600px">
+    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
+    <tr><td>Name</td>
+        <td>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
+            <input id="set-name-input" type="text" name="name" value="@orgStats.name">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Handle</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+                <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
+    <tr><td>Description</td>
+        <td>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+            <input id="set-description-input" type="text" name="description" value="@orgStats.description">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+
+</table>
+
+<table class="org-members table table-bordered" style="width:600px">
+    <tr>
+        <th>Member Id</th>
+        <th>Member Name</th>
+        <th>Role</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+        <tr>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+            <td>@membership.role</td>
+            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+        </tr>
+    }
+</table>
+
+<table class="org-candidates table table-bordered" style="width:600px">
+    <tr>
+        <th>Candidate Id</th>
+        <th>Candidate Name</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(candidate <- orgStats.candidates.toSeq) {
+        <tr>
+            <td>@candidate.userId</td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+        </tr>
+    }
+</table>
+<br/>
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+    <input id="add-candidate-input" type="text" name="candidate-id" placeholder="Candidate Id goes here">
+    <input type="Submit" value="Add">
+</form>
+}
