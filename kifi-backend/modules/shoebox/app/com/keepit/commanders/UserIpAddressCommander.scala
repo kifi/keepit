@@ -126,7 +126,7 @@ class UserIpAddressEventLogger @Inject() (
       s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
       s"\torgs (${orgs.map(_.name).mkString(",")})" +
       s"\tcandidates (${candOrgs.map(_.name + "~").mkString(",")})" +
-      s"\t${if (newMember) "*NEW CLUSTER MEMBER*"}"
+      s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
   }
 
   private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
