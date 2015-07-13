@@ -55,15 +55,24 @@ angular.module('kifi')
         url: '/:username',
         template: '<ui-view />',
         onEnter: [
-          '$state', '$stateParams',
-          function ($state, $stateParams) {
-            if ($stateParams.username === 'adam') {
-              $state.go('userProfile.libraries.following', $stateParams);
-            } else {
-              $state.go('userProfile.libraries.own', $stateParams);
-            }
+          'net', '$state', '$stateParams',
+          function (net, $state, $stateParams) {
+            net.userOrOrg($stateParams.username).then(function (response) {
+              var type = response.data.type;
+
+              if (type === 'user') {
+                $state.go('userProfile.libraries.own', $stateParams, { location: false });
+              } else if (type === 'org') {
+                $state.go('orgProfile', $stateParams, { location: false });
+              }
+            });
           }
         ]
+      })
+      .state('orgProfile', {
+        url: '/:handle',
+        templateUrl: 'orgProfile/orgProfile.tpl.html',
+        controller: 'OrgProfileCtrl'
       })
       .state('userProfile', {
         url: '/:username',
@@ -105,7 +114,6 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileFollowers.tpl.html',
         controller: 'UserProfileFollowersCtrl'
       })
-
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:handle/:librarySlug?authToken',
