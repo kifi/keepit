@@ -124,8 +124,8 @@ class UserIpAddressEventLogger @Inject() (
     s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
       s"\t$primaryMail" +
       s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
-      s"\torgs (${orgs.map(_.name).mkString(",")})" +
-      s"\tcandidates (${candOrgs.map(_.name + "~").mkString(",")})" +
+      (if (orgs.nonEmpty) { "\torgs " + orgs.map(_.name).mkString(" ") } else "") +
+      (if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(_.name + "~").mkString(" ") } else "") +
       s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
   }
 
