@@ -38,14 +38,16 @@ orgStats: OrganizationStatistics
         <th>Role</th>
         <th># of libraries</th>
         <th># of keeps</th>
+        <th># of chats</th>
     </tr>
     @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
         <tr>
             <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
-            <td>@adminHelper.userDisplay(orgStats.userStatistics(membership.userId).user)</td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
             <td>@membership.role</td>
-            <td>@orgStats.userStatistics(membership.userId).librariesCreated</td>
-            <td>@orgStats.userStatistics(membership.userId).publicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
         </tr>
     }
 </table>
@@ -56,13 +58,15 @@ orgStats: OrganizationStatistics
         <th>Candidate Name</th>
         <th># of libraries</th>
         <th># of keeps</th>
+        <th># of chats</th>
     </tr>
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
             <td>@candidate.userId</td>
-            <td>@adminHelper.userDisplay(orgStats.userStatistics(candidate.userId).user)</td>
-            <td>@orgStats.userStatistics(candidate.userId).librariesCreated</td>
-            <td>@orgStats.userStatistics(candidate.userId).publicKeeps</td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
         </tr>
     }
 </table>
