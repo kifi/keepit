@@ -14,8 +14,6 @@ case class CortexDevModule() extends CortexModule(
   userActionsModule = DevRemoteUserActionsHelperModule(),
   cacheModule = CortexCacheModule(HashMapMemoryCacheModule()),
   commonStoreModule = CortexCommonDevStoreModule(),
-  commitInfoModule = CommitInfoDevStoreModule(),
-  featureStoreModule = FeatureDevStoreModule(),
   statModelStoreModule = StatModelDevStoreModule(),
   modelModule = CortexDevModelModule(),
   ldaInfoModule = LDAInfoStoreDevModule(),

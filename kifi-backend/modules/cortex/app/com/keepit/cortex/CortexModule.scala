@@ -3,7 +3,7 @@ package com.keepit.cortex
 import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.cortex.nlp.NLPModule
-import com.keepit.cortex.store.{ CommitInfoStoreModule, CortexCommonStoreModule, FeatureStoreModule, StatModelStoreModule }
+import com.keepit.cortex.store.{ CortexCommonStoreModule, StatModelStoreModule }
 import com.keepit.curator.ProdCuratorServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.rover.ProdRoverServiceClientModule
@@ -23,8 +23,6 @@ abstract class CortexModule(
     val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val commonStoreModule: CortexCommonStoreModule,
-    val commitInfoModule: CommitInfoStoreModule,
-    val featureStoreModule: FeatureStoreModule,
     val statModelStoreModule: StatModelStoreModule,
     val modelModule: CortexModelModule,
     val ldaInfoModule: LDAInfoStoreModule,

@@ -34,11 +34,11 @@ class KeywordSummaryCommander @Inject() (
   }
 
   def getWord2VecKeywords(id: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
-    cortex.word2vecURIKeywords(id)
+    Future.successful(None)
   }
 
   def batchGetWord2VecKeywords(ids: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
-    cortex.word2vecBatchURIKeywords(ids)
+    Future.successful(ids.map { _ => None })
   }
 
   // FYI this is very slow. Be careful calling it. (Yingjie)
