@@ -66,8 +66,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
   def generateFutureRecommendations(orgId: Id[Organization], memberId: Id[User]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fExistingInvites = shoebox.getOrganizationInviteViews(orgId)
-    val fEmailInviteRecommendations = generateFutureEmailRecommendations(orgId, memberId, fExistingInvites)
-    val fUserInviteRecommendations = generateFutureUserRecommendations(orgId, fExistingInvites).map(_.getOrElse(Stream.empty))
+    val fRelatedEntities = getSociallyRelatedEntities(orgId)
+    val fEmailInviteRecommendations = generateFutureEmailRecommendations(orgId, memberId, fRelatedEntities, fExistingInvites)
+    val fUserInviteRecommendations = generateFutureUserRecommendations(orgId, fRelatedEntities, fExistingInvites).map(_.getOrElse(Stream.empty))
 
     for {
       emailRecommendations <- fEmailInviteRecommendations
@@ -100,8 +101,8 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureUserRecommendations(orgId: Id[Organization], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Option[Stream[OrganizationInviteRecommendation]]] = {
-    val fRelatedUsers = getSociallyRelatedEntities(orgId).map(_.map(_.users))
+  private def generateFutureUserRecommendations(orgId: Id[Organization], fRelatedEntities: Future[Option[SociallyRelatedEntitiesForOrg]], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Option[Stream[OrganizationInviteRecommendation]]] = {
+    val fRelatedUsers = fRelatedEntities.map(_.map(_.users))
     val fOrgMembers = shoebox.getOrganizationMembers(orgId)
     val fFakeUsers = shoebox.getAllFakeUsers()
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
@@ -121,10 +122,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureEmailRecommendations(orgId: Id[Organization], memberId: Id[User], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Stream[OrganizationInviteRecommendation]] = {
-    val fExistingInvites = shoebox.getOrganizationInviteViews(orgId)
+  private def generateFutureEmailRecommendations(orgId: Id[Organization], memberId: Id[User], fRelatedEntities: Future[Option[SociallyRelatedEntitiesForOrg]], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fNormalizedUsernames = abookRecommendationHelper.getNormalizedUsernames(Right(orgId))
-    getSociallyRelatedEntities(orgId).flatMap { relatedEntities =>
+    fRelatedEntities.flatMap { relatedEntities =>
       val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
