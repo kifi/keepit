@@ -261,8 +261,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             (org, starkTowersOrg)
           }
           // no privs on org, cannot move from personal space.
+          implicit val publicIdConfig = inject[PublicIdConfiguration]
           val cannotMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(org.id.get))))))
           cannotMoveOrg.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === None
@@ -272,13 +273,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // move from personal space to org space
           val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(org.id.get))))))
           canMoveOrg.isRight === true
           canMoveOrg.right.get.organizationId === org.id
 
           // prevent move from org to one without privs
           val attemptToStealLibrary = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(starkOrg.id.get))))))
           attemptToStealLibrary.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === org.id
@@ -289,7 +290,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.OWNER)) // how did he pull that off.
           }
           val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(starkOrg.id.get))))))
           moveOrganization.isRight === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -297,7 +298,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // try to move library back to owner out of org space.
           val moveHome = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userIron.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(None))))
           moveHome.isLeft === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -305,10 +306,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // owner moves the library home.
           val moveHomeSucceeds = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(None))))
           moveHomeSucceeds.isRight === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
-            libraryRepo.get(libShield.id.get).organizationId === None
+            libraryRepo.get(libShield.id.get).space === LibrarySpace.fromUserId(userAgent.id.get)
           }
         }
       }
@@ -525,32 +526,32 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // User does not own the library
-        libraryCommander.canMoveToOrg(Id[User](0), newLibrary.id.get, organization.id) === false
+        libraryCommander.canMoveTo(Id[User](0), newLibrary.id.get, organization.id.get) === false
 
         // User owns the library
         // Can move libraries to organizations you are part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(true)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, organization.id.get) must equalTo(true)
         // Cannot inject libraries to random organizations.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = organization.id)) }
         // Can move libraries out of organizations you are part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(true)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(true)
         // Cannot inject libraries from an organization you are part of to a random organization.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = otherOrg.id)) }
         // Cannot remove libraries from other organizations you are not part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)
         // Prevent Company Espionage and library stealing!!
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, organization.id.get) must equalTo(false)
         // What about if your library is in an organization and you leave
         db.readWrite { implicit s =>
           val membership = orgMemberRepo.getByOrgIdAndUserId(organization.id.get, user.id.get)
           orgMemberRepo.save(membership.get.copy(state = OrganizationMembershipStates.INACTIVE))
         }
         // You're out of luck.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)
       }
     }
 
