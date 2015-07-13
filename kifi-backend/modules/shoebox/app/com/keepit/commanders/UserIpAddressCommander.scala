@@ -119,6 +119,15 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
+  private def formatUser(user: User, candidateOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
+    val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
+    s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
+      s"\t$primaryMail" +
+      s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
+      s"\torgs/cand:${orgs.map(_.name).mkString(",")}/${candidateOrgs.map(_.name).mkString(",")}" +
+      s"\t${if (newMember) { "\t*<-- New Member in Cluster!!!*" }}"
+  }
+
   private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
@@ -126,13 +135,13 @@ class UserIpAddressEventLogger @Inject() (
       ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
     )
 
-    val userDeclarations = users.map {
-      case (user, candidateOrgs, orgs) =>
-        val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
-        val userDeclaration = s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>\t$primaryMail\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}\torgs/cand:${orgs.map(_.name).mkString(",")}/${candidateOrgs.map(_.name).mkString(",")}"
-        if (newUserId.contains(user.id.get)) {
-          userDeclaration + "\t*<-- New Member in Cluster!!!*"
-        } else userDeclaration
+    val userDeclarations = newUserId match {
+      case Some(newUser) => users.collect {
+        case (user, candidateOrgs, orgs) if user.id == newUserId => formatUser(user, candidateOrgs, orgs)
+      }
+      case None => users.map {
+        case (user, candidateOrgs, orgs) => formatUser(user, candidateOrgs, orgs)
+      }
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
