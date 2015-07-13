@@ -119,7 +119,7 @@ trait ProcessedImageHelper {
           case Right(resizedSet) =>
             val original = {
               val key = ImagePath(baseLabel, sourceImage.hash, imageSize, ProcessImageOperation.Original, sourceImage.format)
-              ImageProcessState.ReadyToPersist(key, outFormat, image, imageInfo, image.length().toInt, ProcessImageOperation.Original)
+              ImageProcessState.ReadyToPersist(key, outFormat, image, imageInfo, ProcessImageOperation.Original)
             }
             Right(resizedSet ++ Set(original))
           case Left(err) => Left(err)
@@ -144,7 +144,7 @@ trait ProcessedImageHelper {
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
           log.info(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
           val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
-          ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, resizedImage.length().toInt, processImageSize.operation)
+          ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageSize.operation)
         }
       }.flatten match {
         case Success(img) => Right(img)

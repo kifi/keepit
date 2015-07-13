@@ -380,10 +380,11 @@ class KeepImageCommanderImpl @Inject() (
     toPersist: Set[ImageProcessState.ReadyToPersist], keepId: Id[Keep], source: ImageSource,
     overwriteExistingImage: Boolean, amendExistingImages: Boolean): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
-      log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
-      val is: InputStream = new FileInputStream(image.image)
-      val putF = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
+      val size = image.file.length.toInt
+      log.info(s"[kic] Persisting ${image.key} ($size B)")
+      val is: InputStream = new FileInputStream(image.file)
+      val putF = imageStore.put(image.key, is, size, imageFormatToMimeType(image.format)).map { r =>
+        ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
       }
       putF.onComplete { _ => is.close() }
       putF

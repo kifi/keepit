@@ -141,11 +141,12 @@ class LibraryImageCommanderImpl @Inject() (
 
   private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
-      log.info(s"[lic] Persisting ${image.key} (${image.bytes} B)")
-      val is: InputStream = new FileInputStream(image.image)
+      val size = image.file.length.toInt
+      log.info(s"[lic] Persisting ${image.key} ($size B)")
+      val is: InputStream = new FileInputStream(image.file)
 
-      val put = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
+      val put = imageStore.put(image.key, is, size, imageFormatToMimeType(image.format)).map { r =>
+        ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
       }
       put.onComplete { _ => is.close() }
       put

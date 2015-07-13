@@ -44,7 +44,7 @@ class RoverImageFetcher @Inject() (
               case Some(sourceImageInfo) => None
               case None =>
                 val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
-                Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, sourceImage.file.file.length().toInt, ProcessImageOperation.Original))
+                Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, ProcessImageOperation.Original))
             }
 
             // Prepare Processed Images
@@ -65,9 +65,9 @@ class RoverImageFetcher @Inject() (
                 // Upload all images
 
                 val uploads = (processedImagesReadyToPersist ++ sourceImageReadyToPersist).map { image =>
-                  val is: InputStream = new FileInputStream(image.image)
-                  val put = imageStore.put(image.key, is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
-                    ImageProcessState.UploadedImage(image.key, image.format, image.image, image.imageInfo, image.processOperation)
+                  val is: InputStream = new FileInputStream(image.file)
+                  val put = imageStore.put(image.key, is, image.file.length.toInt, imageFormatToMimeType(image.format)).imap { _ =>
+                    ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
                   }
                   put.onComplete { _ => is.close() }
                   put

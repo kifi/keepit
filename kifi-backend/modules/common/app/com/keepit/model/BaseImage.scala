@@ -75,8 +75,8 @@ object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
   case class ImageValid(image: File, format: ImageFormat, hash: ImageHash, processOperation: ProcessImageOperation) extends ImageStoreInProgress
-  case class ReadyToPersist(key: ImagePath, format: ImageFormat, image: File, imageInfo: RawImageInfo, bytes: Int, processOperation: ProcessImageOperation) extends ImageStoreInProgress
-  case class UploadedImage(key: ImagePath, format: ImageFormat, image: File, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class ReadyToPersist(key: ImagePath, format: ImageFormat, file: File, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class UploadedImage(key: ImagePath, format: ImageFormat, file: File, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress
 
   // Failures
   case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailure("upstream_provider_failed", Some(ex))
