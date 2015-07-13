@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -9,8 +10,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import views.html
 
+import scala.concurrent.{ ExecutionContext, Future }
+
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
+    implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
@@ -29,14 +33,14 @@ class AdminOrganizationController @Inject() (
   def organizationsView = AdminUserPage { implicit request =>
     val orgsStats = db.readOnlyMaster { implicit session =>
       val orgIds = orgRepo.all.map(_.id.get)
-      orgIds.map { orgId => orgId -> statsCommander.organizationStatistics(orgId) }.toMap
+      orgIds.map { orgId => orgId -> statsCommander.organizationStatisticsOverview(orgId) }.toMap
     }
 
     Ok(html.admin.organizations(orgsStats, fakeOwnerId))
   }
-  def organizationViewById(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+  def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
     val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId) }
-    Ok(html.admin.organization(orgStats))
+    orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
   def createOrganization() = AdminUserPage { request =>
