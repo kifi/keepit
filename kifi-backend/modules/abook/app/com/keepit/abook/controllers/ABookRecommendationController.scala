@@ -23,8 +23,8 @@ class ABookRecommendationController @Inject() (
     }
   }
 
-  def getUserRecommendationsForOrg(orgId: Id[Organization], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getUserRecommendations(orgId, offset, limit, bePatient).map { recommendedUsers =>
+  def getRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
+    abookOrganizationRecommendationCommander.getRecommendations(orgId, memberId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -43,13 +43,6 @@ class ABookRecommendationController @Inject() (
   def getNonUserRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
     abookUserRecommendationCommander.getNonUserRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
-      val json = Json.toJson(recommendedUsers)
-      Ok(json)
-    }
-  }
-
-  def getNonUserRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getEmailRecommendations(orgId, memberId: Id[User], offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

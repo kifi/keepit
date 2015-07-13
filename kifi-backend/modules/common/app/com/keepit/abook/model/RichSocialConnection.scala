@@ -78,16 +78,13 @@ object UserInviteRecommendation {
 }
 
 case class OrganizationInviteRecommendation(
-  emailAddress: EmailAddress,
-  name: Option[String],
-  firstInvitedAt: Option[DateTime],
+  target: Either[Id[User], EmailAddress],
   score: Double)
 
 object OrganizationInviteRecommendation {
+  implicit val eitherFormat = EitherFormat[Id[User], EmailAddress]
   implicit val format = (
-    (__ \ 'emailAddress).format[EmailAddress] and
-    (__ \ 'name).formatNullable[String] and
-    (__ \ 'firstInvitedAt).formatNullable(DateTimeJsonFormat) and
+    (__ \ 'target).format[Either[Id[User], EmailAddress]] and
     (__ \ 'score).format[Double]
   )(OrganizationInviteRecommendation.apply, unlift(OrganizationInviteRecommendation.unapply))
 }

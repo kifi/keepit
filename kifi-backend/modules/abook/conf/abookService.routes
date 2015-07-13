@@ -36,9 +36,8 @@ GET      /internal/abook/user/:userId/getNonUserRecommendationsForUser       @co
 POST     /internal/abook/user/:userId/hideNonUserRecommendationForUser       @com.keepit.abook.controllers.ABookRecommendationController.hideNonUserRecommendationForUser(userId: Id[User])
 GET      /internal/abook/user/:userId/getIrrelevantPeopleForUser     @com.keepit.abook.controllers.ABookRecommendationController.getIrrelevantPeopleForUser(userId: Id[User])
 
-GET      /internal/abook/org/:orgId/getUserRecommendationsForOrg       @com.keepit.abook.controllers.ABookRecommendationController.getUserRecommendationsForOrg(orgId: Id[Organization], offset: Int ?= 0, limit: Int ?= 5)
+GET      /internal/abook/org/:orgId/getRecommendationsForOrg       @com.keepit.abook.controllers.ABookRecommendationController.getRecommendationsForOrg(orgId: Id[Organization], memberid: Id[User], offset: Int ?= 0, limit: Int ?= 5)
 POST     /internal/abook/org/:orgId/hideUserRecommendationForOrg       @com.keepit.abook.controllers.ABookRecommendationController.hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User])
-GET      /internal/abook/org/:orgId/getNonUserRecommendationsForOrg       @com.keepit.abook.controllers.ABookRecommendationController.getNonUserRecommendationsForOrg(orgId: Id[Organization], memberId: Id[User], offset: Int ?= 0, limit: Int ?= 5)
 POST     /internal/abook/org/:orgId/hideNonUserRecommendationForOrg       @com.keepit.abook.controllers.ABookRecommendationController.hideNonUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User])
 GET      /internal/abook/org/:orgId/getIrrelevantPeopleForOrg   @com.keepit.abook.controllers.ABookRecommendationController.getIrrelevantPeopleForOrg(orgId: Id[Organization])
 
