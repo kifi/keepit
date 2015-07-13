@@ -70,7 +70,7 @@ angular.module('kifi')
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
         // When routing among the nested states, track page view again.
-        if (/^userProfile/.test(toState.name) && /^userProfile/.test(fromState.name) && toParams.username === fromParams.username) {
+        if (/^userProfile/.test(toState.name) && /^userProfile/.test(fromState.name) && toParams.handle === fromParams.handle) {
           trackPageView();
           setCurrentPageOrigin();
         }
