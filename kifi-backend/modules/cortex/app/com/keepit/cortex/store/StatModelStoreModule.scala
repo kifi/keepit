@@ -26,12 +26,6 @@ case class StatModelProdStoreModule() extends StatModelStoreModule {
     new S3LDAModelStore(bucketName, amazonS3Client, accessLog)
   }
 
-  @Singleton
-  @Provides
-  def word2vecStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecStore = {
-    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
-    new S3Word2VecStore(bucketName, amazonS3Client, accessLog)
-  }
 }
 
 case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule(StatModelProdStoreModule()) with StatModelStoreModule {
@@ -53,20 +47,6 @@ case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule(StatModelP
     ) getOrElse {
         val store = new InMemoryLDAModelStore
         (ModelVersions.availableLDAVersions.take(2) zip ldas).foreach { case (version, lda) => store.+=(version, lda) }
-        store
-      }
-  }
-
-  @Singleton
-  @Provides
-  def word2vecStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecStore = {
-    whenConfigured(S3_CORTEX_BUCKET)(
-      prodStoreModule.word2vecStore(amazonS3Client, accessLog)
-    ) getOrElse {
-        val store = new InMemoryWord2VecStore
-        val version = ModelVersions.word2vecVersion
-        val word2vec = Word2VecImpl(dim, mapper)
-        store.+=(version, word2vec)
         store
       }
   }
