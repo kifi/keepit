@@ -11,7 +11,7 @@ angular.module('kifi')
     compile: function () {
       return function (scope, element, attrs) {
         element[0].innerHTML = '<use xlink:href="#' + attrs.icon + '" />';
-        element[0].classList.add('symbol-sprite');
+        element[0].className += ('symbol-sprite');
       };
     }
   };
