@@ -1,6 +1,6 @@
 package com.keepit.cortex.tagcloud
 
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ Timer, Logging }
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.rover.article.EmbedlyArticle
 import com.keepit.rover.article.content.{ EmbedlyContent, ArticleContentExtractor }
@@ -15,8 +15,12 @@ object TagCloudGenerator extends Logging {
   val TOP_K = 50
 
   def generate(corpus: LibraryCorpus, experiment: Boolean = false): SuggestedSearchTerms = {
+    val timer = new Timer()
     val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus, experiment)
+    log.info(s"extract from corpus: ${timer.timeSinceLastTime() / 1000f} seconds")
+
     val (twoGrams, threeGrams) = (NGramHelper.generateNGramsForCorpus(docs, 2), NGramHelper.generateNGramsForCorpus(docs, 3))
+    log.info(s"2-grams and 3-grams: ${timer.timeSinceLastTime() / 1000f} seconds")
 
     val top2grams = topKcounts(twoGrams, 50).toArray.sortBy(-_._2)
     log.info(s"${docs.count(_.size > 100)} good docs retrieved. ${twoGrams.size} two grams generated. top ones: ${top2grams.mkString(", ")}")
@@ -38,6 +42,7 @@ object TagCloudGenerator extends Logging {
     log.info("oneGramEntities: " + oneGramEntities)
     log.info("keyGrams: " + keyGrams)
 
+    log.info(s"all the rest: ${timer.timeSinceLastTime() / 1000f} seconds")
     val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K).flatMap { case (w, c) => normalizeToAscii(w).map { x => (x, c) } } // may lose some tokens
     SuggestedSearchTerms(result.map { case (w, c) => (w, c * 1f) })
   }

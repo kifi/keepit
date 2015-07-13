@@ -26,7 +26,13 @@ trait Logging {
 }
 
 class Timer(startTime: Long = System.currentTimeMillis()) {
+  private var lastTime = System.currentTimeMillis()
   def timeSinceStarted: Long = System.currentTimeMillis() - startTime
+  def timeSinceLastTime(): Long = {
+    val elapsed = System.currentTimeMillis() - lastTime
+    lastTime += elapsed
+    elapsed
+  }
 }
 
 /**
