@@ -49,7 +49,7 @@ case class LibraryAddRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
 @json
-case class OrganizationMoveRequest(destination: Option[Id[Organization]] = None)
+case class OrganizationMoveRequest(orgId: Option[PublicId[Organization]])
 
 @json
 case class LibraryModifyRequest(
@@ -62,9 +62,24 @@ case class LibraryModifyRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   // We can move the library from org to user space.
-  // If the move request's orgId is None, the move is treated as going to the
-  // owner's personal LibrarySpace
-  orgId: Option[OrganizationMoveRequest] = None)
+  orgMove: Option[OrganizationMoveRequest] = None)
+
+object ModifyRequest {
+  private val defaultReads: Reads[LibraryModifyRequest] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscription).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[OrganizationMoveRequest]
+  )(LibraryModifyRequest.apply _)
+
+  val website = defaultReads
+  val mobileV1 = defaultReads
+}
 
 case class LibraryInfo(
   id: PublicId[Library],

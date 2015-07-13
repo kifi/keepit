@@ -20,6 +20,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
+import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
@@ -34,7 +35,7 @@ import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
@@ -71,7 +72,7 @@ trait LibraryCommander {
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
-  def canMoveToOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean
+  def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
@@ -612,10 +613,30 @@ class LibraryCommanderImpl @Inject() (
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
       val targetMembership = targetMembershipOpt.get
-      val currentSpace = LibrarySpace(userId, organizationId = targetLib.organizationId)
-      val newSpace = LibrarySpace(userId, organizationId = modifyReq.orgId.flatMap(_.destination).orElse(targetLib.organizationId))
+      val currentSpace = targetLib.space
+      val newSpaceOpt = modifyReq.orgMove.map { orgMove =>
+        orgMove.orgId match {
+          case None =>
+            println("trying to move lib to owner space")
+            LibrarySpace.fromUserId(targetLib.ownerId)
+          case Some(pubId) =>
+            LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+        }
+      }
 
-      def validName(newNameOpt: Option[String]): Either[LibraryFail, String] = {
+      def validSpace(newSpaceOpt: Option[LibrarySpace]): Either[LibraryFail, LibrarySpace] = {
+        newSpaceOpt match {
+          case None => Right(targetLib.space)
+          case Some(newSpace) =>
+            if (canMoveTo(userId = userId, libId = libraryId, to = newSpace)) {
+              Right(newSpace)
+            } else {
+              Left(LibraryFail(BAD_REQUEST, "invalid_space"))
+            }
+        }
+      }
+
+      def validName(newNameOpt: Option[String], newSpace: LibrarySpace): Either[LibraryFail, String] = {
         newNameOpt match {
           case None => Right(targetLib.name)
           case Some(name) =>
@@ -632,15 +653,7 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
-      def validOrg(newOrg: Option[OrganizationMoveRequest]): Either[LibraryFail, Option[Id[Organization]]] = {
-        newOrg match {
-          case None => Right(targetLib.organizationId)
-          case Some(orgMoveReq) if canMoveToOrg(userId = userId, libId = libraryId, to = orgMoveReq.destination) => Right(orgMoveReq.destination)
-          case _ => Left(LibraryFail(BAD_REQUEST, "invalid_org_id"))
-        }
-      }
-
-      def validSlug(newSlugOpt: Option[String]): Either[LibraryFail, LibrarySlug] = {
+      def validSlug(newSlugOpt: Option[String], newSpace: LibrarySpace): Either[LibraryFail, LibrarySlug] = {
         newSlugOpt match {
           case None => Right(targetLib.slug)
           case Some(slugStr) =>
@@ -660,15 +673,27 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
+      def validVisibility(newVisibilityOpt: Option[LibraryVisibility], newSpace: LibrarySpace): Either[LibraryFail, LibraryVisibility] = {
+        newVisibilityOpt match {
+          case None => Right(targetLib.visibility)
+          case Some(newVisibility) =>
+            newSpace match {
+              case _: UserSpace if newVisibility == LibraryVisibility.ORGANIZATION => Left(LibraryFail(BAD_REQUEST, "invalid_visibility"))
+              case _ => Right(newVisibility)
+            }
+
+        }
+      }
+
       val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {
-        newName <- validName(modifyReq.name).right
-        newSlug <- validSlug(modifyReq.slug).right
-        newOrgId <- validOrg(modifyReq.orgId).right
+        newSpace <- validSpace(newSpaceOpt).right
+        newName <- validName(modifyReq.name, newSpace).right
+        newSlug <- validSlug(modifyReq.slug, newSpace).right
+        newVisibility <- validVisibility(modifyReq.visibility, newSpace).right
       } yield {
         val newDescription = modifyReq.description.orElse(targetLib.description)
-        val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         val newInviteToCollab = modifyReq.whoCanInvite.orElse(targetLib.whoCanInvite)
@@ -688,6 +713,11 @@ class LibraryCommanderImpl @Inject() (
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
+          }
+
+          val newOrgId = newSpace match {
+            case OrganizationSpace(orgId) => Some(orgId)
+            case UserSpace(_) => None
           }
 
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId))
@@ -726,7 +756,7 @@ class LibraryCommanderImpl @Inject() (
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
           "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
-          "orgId" -> (newOrgId != targetLib.organizationId)
+          "space" -> (newSpace != targetLib.space)
         )
         (lib, edits)
       }
@@ -808,19 +838,21 @@ class LibraryCommanderImpl @Inject() (
     library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
-  def canMoveToOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean = {
-    // lib.ownerId = userId && userId is in `from` and `to`
-    db.readOnlyMaster { implicit s =>
+  def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
+    db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libId)
-      val from: Option[Id[Organization]] = library.organizationId
-      (from match {
-        case Some(fromOrg) =>
+      val from: LibrarySpace = library.space
+      val userOwnsLibrary = library.ownerId == userId
+      val canMoveFromSpace = from match {
+        case OrganizationSpace(fromOrg) =>
           organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
-        case None => (library.ownerId == userId) // Can move libraries from Personal space to Organization Space.
-      }) && (to match {
-        case Some(toOrg) => organizationMembershipCommander.getPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
-        case None => (library.ownerId == userId) // Can move from Organization Space to Personal space.
-      })
+        case UserSpace(fromUser) => fromUser == userId // Can move libraries from Personal space to Organization Space.
+      }
+      val canMoveToSpace = to match {
+        case OrganizationSpace(toOrg) => organizationMembershipCommander.getPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
+        case UserSpace(toUser) => toUser == userId // Can move from Organization Space to Personal space.
+      }
+      userOwnsLibrary && canMoveFromSpace && canMoveToSpace
     }
   }
 
