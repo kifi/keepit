@@ -86,6 +86,7 @@ object ImageProcessState {
   case class InvalidImage(ex: Throwable) extends ImageStoreFailure("invalid_image", Some(ex))
   case class DbPersistFailed(ex: Throwable) extends ImageStoreFailure("db_persist_failed", Some(ex))
   case class CDNUploadFailed(ex: Throwable) extends ImageStoreFailure("cdn_upload_failed", Some(ex))
+  case object BlacklistedImage extends ImageStoreFailure("blacklisted_image")
 
   // Success
   case class StoreSuccess(format: ImageFormat, size: ImageSize, bytes: Int) extends ImageProcessState with ImageProcessSuccess
