@@ -51,14 +51,42 @@ angular.module('kifi')
         },
         reloadOnSearch: false  // controller handles search query changes itself
       })
+      .state('userOrOrg', {
+        url: '/:handle',
+        onEnter: [
+          'net', '$state', '$stateParams',
+          function (net, $state, $stateParams) {
+            net.userOrOrg($stateParams.handle).then(function (response) {
+              var type = response.data.type;
+
+              if (type === 'user') {
+                $state.go('userProfile.libraries.own', $stateParams, { location: false });
+              } else if (type === 'org') {
+                $state.go('orgProfile.members', $stateParams, { location: false });
+              }
+            });
+          }
+        ]
+      })
+      .state('orgProfile', {
+        url: '/:handle',
+        templateUrl: 'orgProfile/orgProfile.tpl.html',
+        controller: 'OrgProfileCtrl',
+        'abstract': true
+      })
+      .state('orgProfile.members', {
+        url: '',
+        controller: 'OrgProfileMembersCtrl',
+        templateUrl: 'orgProfile/orgProfileMembers.tpl.html'
+      })
       .state('userProfile', {
-        url: '/:username',
+        url: '/:handle',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
           userProfileActionService: 'userProfileActionService',
           profile: ['userProfileActionService', '$stateParams', function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.username);
+            return userProfileActionService.getProfile($stateParams.handle);
           }]
         },
         'abstract': true
@@ -91,7 +119,6 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileFollowers.tpl.html',
         controller: 'UserProfileFollowersCtrl'
       })
-
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:username/:librarySlug?authToken',
