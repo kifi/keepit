@@ -53,7 +53,6 @@ angular.module('kifi')
       })
       .state('userOrOrg', {
         url: '/:handle',
-        // template: '<ui-view />',
         onEnter: [
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
