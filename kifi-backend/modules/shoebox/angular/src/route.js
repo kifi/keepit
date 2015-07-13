@@ -52,12 +52,11 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:username',
-        template: '<ui-view />',
+        url: '/:handle',
         onEnter: [
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
-            net.userOrOrg($stateParams.username).then(function (response) {
+            net.userOrOrg($stateParams.handle).then(function (response) {
               var type = response.data.type;
 
               if (type === 'user') {
@@ -73,20 +72,21 @@ angular.module('kifi')
         url: '/:handle',
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
-        abstract: true
+        'abstract': true
       })
       .state('orgProfile.members', {
-        url: '/members',
-        templateUrl: 'orgProfile/members.tpl.html'
+        url: '',
+        controller: 'OrgProfileMembersCtrl',
+        templateUrl: 'orgProfile/orgProfileMembers.tpl.html'
       })
       .state('userProfile', {
-        url: '/:username',
+        url: '/:handle',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
           userProfileActionService: 'userProfileActionService',
           profile: ['userProfileActionService', '$stateParams', function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.username);
+            return userProfileActionService.getProfile($stateParams.handle);
           }]
         },
         'abstract': true
