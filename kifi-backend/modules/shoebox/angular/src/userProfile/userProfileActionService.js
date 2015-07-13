@@ -13,20 +13,20 @@ angular.module('kifi')
       return res.data;
     }
 
-    var profileClutch = new Clutch(function (handle) {
-      return $http.get(routeService.getUserProfile(handle)).then(getData);
+    var profileClutch = new Clutch(function (username) {
+      return $http.get(routeService.getUserProfile(username)).then(getData);
     }, clutchParams);
 
-    var librariesClutch = new Clutch(function (handle, filter, page, size) {
-      return $http.get(routeService.getUserLibraries(handle, filter, page, size)).then(getData);
+    var librariesClutch = new Clutch(function (username, filter, page, size) {
+      return $http.get(routeService.getUserLibraries(username, filter, page, size)).then(getData);
     }, clutchParams);
 
-    var connectionsClutch = new Clutch(function (handle, limit) {
-      return $http.get(routeService.getProfileConnections(handle, limit)).then(getData);
+    var connectionsClutch = new Clutch(function (username, limit) {
+      return $http.get(routeService.getProfileConnections(username, limit)).then(getData);
     }, clutchParams);
 
-    var followersClutch = new Clutch(function (handle, limit) {
-      return $http.get(routeService.getProfileFollowers(handle, limit)).then(getData);
+    var followersClutch = new Clutch(function (username, limit) {
+      return $http.get(routeService.getProfileFollowers(username, limit)).then(getData);
     }, clutchParams);
 
     return {

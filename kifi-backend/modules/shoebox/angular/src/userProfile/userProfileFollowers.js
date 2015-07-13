@@ -28,7 +28,7 @@ angular.module('kifi')
       return !users || !remainingUserIds || remainingUserIds.length;
     };
 
-    userProfileActionService.getFollowers($stateParams.handle, fetchPageSize).then(function (data) {
+    userProfileActionService.getFollowers($stateParams.username, fetchPageSize).then(function (data) {
       $scope.users = users = data.users;
       remainingUserIds = data.ids;
       loading = false;
