@@ -19,7 +19,7 @@ angular.module('kifi')
           return match[1] + match[2]; // remove trailing slash
         }
       })
-      .when('/:handle/libraries', '/:handle')
+      .when('/:username/libraries', '/:username')
       .otherwise('/');  // last resort
 
     // Set up the states.
@@ -121,13 +121,13 @@ angular.module('kifi')
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:handle/:librarySlug?authToken',
+        url: '/:username/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
-            return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
+            return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
           }],
           libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
             if (library.image) {

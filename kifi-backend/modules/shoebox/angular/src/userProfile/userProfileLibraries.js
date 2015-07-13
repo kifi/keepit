@@ -7,7 +7,7 @@ angular.module('kifi')
   'profileService', 'userProfileActionService', 'modalService', 'userProfilePageNames',
   function ($scope, $rootScope, $state, $stateParams, $timeout,
             profileService, userProfileActionService, modalService, userProfilePageNames) {
-    var handle = $stateParams.handle;
+    var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber;
     var hasMoreLibraries;
@@ -50,7 +50,7 @@ angular.module('kifi')
       loading = true;
 
       var filter = $scope.libraryType;
-      userProfileActionService.getLibraries(handle, filter, fetchPageNumber, fetchPageSize).then(function (data) {
+      userProfileActionService.getLibraries(username, filter, fetchPageNumber, fetchPageSize).then(function (data) {
         if ($scope.libraryType === filter) {
           var libs = data[filter];
           hasMoreLibraries = libs.length === fetchPageSize;  // important to do before filtering below
@@ -212,7 +212,7 @@ angular.module('kifi')
       lib.membership = membership;
       if (membership) {
         lib.invite = null;
-        var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'handle');
+        var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
         if (membership.access === 'read_write') {  // started collaborating
           if (oldMem && oldMem.access === 'read_only') {
             lib.numFollowers--;
@@ -244,7 +244,7 @@ angular.module('kifi')
         action: 'clickedLibraryCard',
         subAction: subAction,
         libraryName: lib.name,
-        libraryOwnerhandle: lib.owner.handle,
+        libraryOwnerUserName: lib.owner.username,
         libraryId: lib.id,
         libraryOwnerUserId: lib.owner.id,
         profileTab: currentPageName
