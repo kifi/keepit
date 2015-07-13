@@ -617,7 +617,6 @@ class LibraryCommanderImpl @Inject() (
       val newSpaceOpt = modifyReq.orgMove.map { orgMove =>
         orgMove.orgId match {
           case None =>
-            println("trying to move lib to owner space")
             LibrarySpace.fromUserId(targetLib.ownerId)
           case Some(pubId) =>
             LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
