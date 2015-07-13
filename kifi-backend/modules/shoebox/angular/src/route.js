@@ -51,6 +51,20 @@ angular.module('kifi')
         },
         reloadOnSearch: false  // controller handles search query changes itself
       })
+      .state('userOrOrg', {
+        url: '/:username',
+        template: '<ui-view />',
+        onEnter: [
+          '$state', '$stateParams',
+          function ($state, $stateParams) {
+            if ($stateParams.username === 'adam') {
+              $state.go('userProfile.libraries.following', $stateParams);
+            } else {
+              $state.go('userProfile.libraries.own', $stateParams);
+            }
+          }
+        ]
+      })
       .state('userProfile', {
         url: '/:username',
         templateUrl: 'userProfile/userProfile.tpl.html',
