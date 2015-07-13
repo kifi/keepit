@@ -56,7 +56,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(resized).get
       resizedInfo.width === 20
       resizedInfo.height === 12 // == 38 * 20 / 66
-      range(imageByteSize(resized), 329)
+      range(imageByteSize(resized), 352)
     }
 
     "box resize jpg" in {
@@ -72,7 +72,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resizedInfo.width === 100
       resizedInfo.height === 98
 
-      range(imageByteSize(resized), 2330)
+      range(imageByteSize(resized), 1990)
       //      persistImage(resized, "jpg") === 2324
     }
 
@@ -102,7 +102,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(resized).get
       resizedInfo.width === 52
       resizedInfo.height === 30
-      range(imageByteSize(resized), 678, 0.25)
+      range(imageByteSize(resized), 877, 0.25)
       //      persistImage(resized, "png") === 606
     }
 
@@ -114,7 +114,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(resized).get
       resizedInfo.width === 153
       resizedInfo.height === 150
-      range(imageByteSize(resized), 3670)
+      range(imageByteSize(resized), 3281)
       //      persistImage(resized, "jpg") === 3663
     }
 
@@ -147,7 +147,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       resizedInfo.height === 200
-      range(imageByteSize(cropped), 7127)
+      range(imageByteSize(cropped), 5764)
     }
 
     "box crop gif" in {
@@ -178,7 +178,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       resizedInfo.height === 100
-      range(imageByteSize(cropped), 23865)
+      range(imageByteSize(cropped), 19672)
     }
 
     "optimize jpg" in {
@@ -195,7 +195,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resizedInfo.width === 1200
       resizedInfo.height === 720
 
-      range(imageByteSize(resized), 65445)
+      range(imageByteSize(resized), 60611)
     }
 
     "optimize png" in {
