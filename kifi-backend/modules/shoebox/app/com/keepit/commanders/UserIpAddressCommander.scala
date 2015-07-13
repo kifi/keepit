@@ -119,13 +119,14 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  private def formatUser(user: User, candidateOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
+  private def formatUser(user: User, candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
     val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
     s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
       s"\t$primaryMail" +
       s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
-      s"\torgs/cand:${orgs.map(_.name).mkString(",")}/${candidateOrgs.map(_.name).mkString(",")}" +
-      s"\t${if (newMember) { "\t*<-- New Member in Cluster!!!*" }}"
+      s"\torgs (${orgs.map(_.name).mkString(",")})" +
+      s"\tcandidates (${candOrgs.map(_.name + "~").mkString(",")})" +
+      s"\t${if (newMember) "*NEW CLUSTER MEMBER*"}"
   }
 
   private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
@@ -135,13 +136,8 @@ class UserIpAddressEventLogger @Inject() (
       ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
     )
 
-    val userDeclarations = newUserId match {
-      case Some(newUser) => users.collect {
-        case (user, candidateOrgs, orgs) if user.id == newUserId => formatUser(user, candidateOrgs, orgs)
-      }
-      case None => users.map {
-        case (user, candidateOrgs, orgs) => formatUser(user, candidateOrgs, orgs)
-      }
+    val userDeclarations = users.map {
+      case (user, candidateOrgs, orgs) => formatUser(user, candidateOrgs, orgs, user.id == newUserId)
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
@@ -158,6 +154,9 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
+  def allFromSameOrg(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
+    clusterUsers.map { case (_, candidates, orgs) => candidates.toSet | orgs.toSet }.reduce(_ & _).nonEmpty
+
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyMaster { implicit session =>
@@ -173,8 +172,12 @@ class UserIpAddressEventLogger @Inject() (
 
       ipInfoOpt foreach { ipInfo =>
         if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-          val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
-          httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+          if (allFromSameOrg(usersFromCluster)) {
+            log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or candidates of the same organization")
+          } else {
+            val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
+            httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+          }
         }
       }
     }

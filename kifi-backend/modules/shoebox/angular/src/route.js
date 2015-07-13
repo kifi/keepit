@@ -53,7 +53,6 @@ angular.module('kifi')
       })
       .state('userOrOrg', {
         url: '/:handle',
-        // template: '<ui-view />',
         onEnter: [
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
@@ -72,7 +71,7 @@ angular.module('kifi')
       .state('orgProfile', {
         url: '/:handle',
         templateUrl: 'orgProfile/orgProfile.tpl.html',
-
+        controller: 'OrgProfileCtrl',
         'abstract': true
       })
       .state('orgProfile.members', {
