@@ -63,7 +63,7 @@ angular.module('kifi')
               if (type === 'user') {
                 $state.go('userProfile.libraries.own', $stateParams, { location: false });
               } else if (type === 'org') {
-                $state.go('orgProfile', $stateParams, { location: false });
+                $state.go('orgProfile.members', $stateParams, { location: false });
               }
             });
           }
@@ -72,7 +72,12 @@ angular.module('kifi')
       .state('orgProfile', {
         url: '/:handle',
         templateUrl: 'orgProfile/orgProfile.tpl.html',
-        controller: 'OrgProfileCtrl'
+        controller: 'OrgProfileCtrl',
+        abstract: true
+      })
+      .state('orgProfile.members', {
+        url: '/members',
+        templateUrl: 'orgProfile/members.tpl.html'
       })
       .state('userProfile', {
         url: '/:username',
