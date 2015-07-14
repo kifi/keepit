@@ -1,10 +1,26 @@
 <div class="kf-oph">
   <div class="kf-oph-top">
     <a class="kf-oph-pic-a">
-      <img class="kf-oph-pic" />
+      <img class="kf-uph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
     </a>
-    <h1 class="kf-uph-name">{{profile|name}}</h1>
-  </div>
-  <div class="kf-oph-nav">
+    <div class="kf-oph-bio">
+      <h1 class="kf-uph-name">{{profile.name}}</h1>
+      <p class="kf-uph-description">{{profile.description}}</p>
+      <p ng-if="profile.link" class="kf-uph-link">
+        <a ng-href="profile.link">{{profile.link}}</a>
+      </p>
+      <table>
+        <thead>
+          <th>Boards</th>
+          <th>Members</th>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{profile.numLibraries|num}}</td>
+            <td>{{profile.numMembers|num}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

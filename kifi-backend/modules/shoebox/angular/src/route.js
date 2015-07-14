@@ -53,7 +53,7 @@ angular.module('kifi')
       })
       .state('userOrOrg', {
         url: '/:handle',
-        onEnter: [
+        controller: [
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
             net.userOrOrg($stateParams.handle).then(function (response) {
@@ -74,9 +74,21 @@ angular.module('kifi')
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
         resolve: {
-          profile: ['$stateParams', function($stateParams) {
-            return $stateParams.organization;
-          }]
+          profile: [
+            'net', '$state', '$stateParams',
+            function (net, $state, $stateParams) {
+              // return the Promise to make its value available to the controller
+              return net.userOrOrg($stateParams.handle).then(function (response) {
+                var type = response.data.type;
+
+                if (type === 'org') { // sanity check
+                  return response.data.result.organization;
+                } else {
+                  throw new Error('orgProfile state was given invalid type ' + type);
+                }
+              });
+            }
+          ]
         },
         'abstract': true
       })
@@ -90,10 +102,21 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
-          userProfileActionService: 'userProfileActionService',
-          profile: ['userProfileActionService', '$stateParams', function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.handle);
-          }]
+          profile: [
+            'net', '$state', '$stateParams',
+            function (net, $state, $stateParams) {
+              // return the Promise to make its value available to the controller
+              return net.userOrOrg($stateParams.handle).then(function (response) {
+                var type = response.data.type;
+
+                if (type === 'user') { // sanity check
+                  return response.data.result;
+                } else {
+                  throw new Error('userProfile state was given invalid type ' + type);
+                }
+              });
+            }
+          ]
         },
         'abstract': true
       })

@@ -316,7 +316,7 @@ actionGapBelow = 3px
   &:hover
     text-decoration: underline
 
-.kf-oph-bio
+.kf-oph-description
   max-width: 400px
   margin: 0 auto 4px
   color: #d8d8d8
@@ -335,56 +335,3 @@ actionGapBelow = 3px
 
     &:hover
       text-decoration: underline
-
-.kf-oph-nav
-  margin: 10px auto 0
-  display: inline-block
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    margin-top: 2px
-
-  &::before
-    content: ''
-    display: block
-    height: 1px
-    background-color: #fff
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    &::before
-      transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
-
-.kf-oph-nav-a
-  display: inline-block
-  padding: 6px 10px
-  color: #9fa3aa
-
-  &[href]:hover
-    background-color: alpha(#fff, 5%)
-
-  &:not([href])
-    color: accentGreen
-    cursor: default
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    padding: 3px 5px
-
-.kf-oph-nav-name
-  line-height: 20px
-  font-size: 12px
-  text-transform: uppercase
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 12px
-    font-size: 7px
-
-.kf-oph-nav-count
-  color: #fff
-  line-height: 24px
-  font-size: 18px
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 15px
-    font-size: 11px
-
-  :not([href])>&
-    color: inherit
