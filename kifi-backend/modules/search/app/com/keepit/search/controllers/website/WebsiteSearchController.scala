@@ -225,7 +225,7 @@ class WebsiteSearchController @Inject() (
 
   def search(
     query: String,
-    userFilter: Option[String],
+    proximityFilter: Option[String],
     libraryFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
@@ -243,8 +243,11 @@ class WebsiteSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-    val userFilterFuture = getUserFilterFuture(userFilter)
-    val libraryFilterFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), libraryAuth, request)
+
+    val libraryScopeFuture = getLibraryScope(libraryFilter, request.userIdOpt, libraryAuth)
+    val userScopeFuture = Future.successful(None)
+    val organizationScopeFuture = Future.successful(None)
+    val proximityScope = getProximityScope(proximityFilter)
 
     val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
       if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default
@@ -253,7 +256,8 @@ class WebsiteSearchController @Inject() (
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, parsedOrderBy, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      val uriSearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, uriContext)
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchFilterFuture, parsedOrderBy, maxUris, lastUUIDStr, None, debugOpt).flatMap { uriSearchResult =>
         getWebsiteUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
@@ -277,7 +281,8 @@ class WebsiteSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, userFilterFuture, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      val librarySearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, libraryContext)
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchFilterFuture, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val libraryIds = libraryRecordsAndVisibilityById.keySet
@@ -370,7 +375,8 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userFilter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      val userSearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, userContext)
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userSearchFilterFuture, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val futureFriends = searchFactory.getFriends(userId)
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)

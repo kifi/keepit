@@ -19,7 +19,7 @@ import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.common.core._
-import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
+import com.keepit.search.{ DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
 import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 
@@ -47,7 +47,7 @@ class AugmentationCommanderImpl @Inject() (
     val futureAugmentationResponse = augmentation(itemAugmentationRequest)
     val userId = itemAugmentationRequest.context.userId
     val futureFriends = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)))
-    val futureLibraries = searchFactory.getLibraryIdsFuture(userId, LibraryContext.None).imap(_._2.map(Id[Library](_)))
+    val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
     val futureOrganizations = searchFactory.getOrganizations(userId).imap(_.map(Id[Organization](_)))
 
     for {
@@ -96,7 +96,7 @@ class AugmentationCommanderImpl @Inject() (
       val userId = context.userId
       val futureUsers = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)) + userId)
       val futureRestrictedUsers = searchFactory.getRestrictedUsers(Some(context.userId).filter(_.id >= 0)).imap(_.map(Id[User](_)))
-      val futureLibraries = searchFactory.getLibraryIdsFuture(userId, LibraryContext.None).imap(_._2.map(Id[Library](_)))
+      val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
       val futureOrganizations = searchFactory.getOrganizations(userId).imap(_.map(Id[Organization](_)))
 
       for {

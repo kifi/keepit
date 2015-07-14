@@ -17,11 +17,10 @@ import scala.concurrent.Future
 case class LibrarySearchRequest(
   userId: Id[User],
   experiments: Set[ExperimentType],
-  queryString: String,
-  filter: Option[Either[Id[User], String]],
-  context: Option[String],
-  lang1: Lang,
-  lang2: Option[Lang],
+  query: String,
+  filter: SearchFilter,
+  firstLang: Lang,
+  secondLang: Option[Lang],
   maxHits: Int,
   disablePrefixSearch: Boolean,
   predefinedConfig: Option[SearchConfig],
@@ -29,10 +28,7 @@ case class LibrarySearchRequest(
   explain: Option[Id[Library]])
 
 object LibrarySearchRequest {
-  implicit val format = {
-    implicit val filterFormat = EitherFormat[Id[User], String]
-    Json.format[LibrarySearchRequest]
-  }
+  implicit val format = Json.format[LibrarySearchRequest]
 }
 
 case class LibrarySearchResult(hits: Seq[LibraryShardHit], show: Boolean, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]], explanation: Option[LibrarySearchExplanation])
@@ -44,8 +40,7 @@ trait LibrarySearchCommander {
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filterFuture: Future[Option[Either[Id[User], String]]],
-    context: Option[String],
+    filterFuture: Future[SearchFilter],
     maxHits: Int,
     disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
@@ -65,28 +60,25 @@ class LibrarySearchCommanderImpl @Inject() (
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    futureFilter: Future[Option[Either[Id[User], String]]],
-    context: Option[String],
+    futureFilter: Future[SearchFilter],
     maxHits: Int,
     disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[Library]]): Future[LibrarySearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
-    val futureLangs = languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None)
     futureFilter.flatMap { filter =>
-      futureLangs.flatMap {
+      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, filter.library).flatMap {
         case (lang1, lang2) =>
-          val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
+          val request = LibrarySearchRequest(userId, experiments, query, filter, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
           val futureRemoteLibraryShardResults = searchClient.distSearchLibraries(remotePlan, request)
           val futureLocalLibraryShardResult = distSearchLibraries(localShards, request)
           val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
           val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
-          val searchFilter = SearchFilter(filter, LibraryContext.None, context)
           for {
             results <- futureResults
             (config, searchExperimentId) <- configFuture
-          } yield toLibrarySearchResult(results.flatten, maxHits, searchFilter, config, searchExperimentId)
+          } yield toLibrarySearchResult(results.flatten, maxHits, filter, config, searchExperimentId)
       }
     }
   }
@@ -107,8 +99,7 @@ class LibrarySearchCommanderImpl @Inject() (
         val debug = request.debug
         if (debug.isDefined) debugOption.debug(debug.get)
 
-        val searchFilter = SearchFilter(request.filter, LibraryContext.None, request.context)
-        val searches = searchFactory.getLibrarySearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, request.disablePrefixSearch, searchFilter, searchConfig, request.experiments, request.explain)
+        val searches = searchFactory.getLibrarySearches(shards, request.userId, request.query, request.firstLang, request.secondLang, request.maxHits, request.disablePrefixSearch, request.filter, searchConfig, request.experiments, request.explain)
         val futureResults: Seq[Future[LibraryShardResult]] = searches.map { librarySearch =>
           if (debug.isDefined) librarySearch.debug(debugOption)
           SafeFuture { librarySearch.execute() }

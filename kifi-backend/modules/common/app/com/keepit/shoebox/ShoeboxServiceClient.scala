@@ -124,6 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]]
   def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]]
 }
@@ -764,6 +765,10 @@ class ShoeboxServiceClientImpl @Inject() (
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
     val payload = Json.obj("domainNames" -> domainNames)
     call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
+  }
+
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = {
+    call(Shoebox.internal.hasOrganizationMembership(orgId, userId)).map(_.json.as[Boolean])
   }
 
   def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]] = {

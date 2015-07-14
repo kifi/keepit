@@ -432,8 +432,8 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
-    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken)))
+    val authorized = libraryCommander.canViewLibrary(userIdOpt, libraryId, authToken)
+    Ok(JsBoolean(authorized))
   }
 
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = Action { request =>
@@ -487,6 +487,11 @@ class ShoeboxController @Inject() (
   def getUserActivePersonas(userId: Id[User]) = Action { request =>
     val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
     Ok(Json.toJson(model))
+  }
+
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = Action { request =>
+    val hasMembership = organizationMembershipCommander.getMembership(orgId, userId).isDefined
+    Ok(JsBoolean(hasMembership))
   }
 
   def getMembersByOrganizationId(orgId: Id[Organization]) = Action { request =>

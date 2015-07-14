@@ -1,65 +1,47 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{ Library, Organization, User }
 import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
+import com.kifi.macros.json
 
-abstract class SearchFilter(val userFilter: Option[Id[User]], val libraryContext: LibraryContext, context: Option[String]) {
+sealed trait SearchScope
+
+@json
+case class LibraryScope(id: Id[Library], authorized: Boolean) extends SearchScope
+@json
+case class OrganizationScope(id: Id[Organization], authorized: Boolean) extends SearchScope
+@json
+case class UserScope(id: Id[User]) extends SearchScope
+@json
+case class ProximityScope(proximity: String) extends SearchScope
+
+object ProximityScope {
+  val mine = ProximityScope("m")
+  val network = ProximityScope("f")
+  val all = ProximityScope("a")
+  private val valid = Set(mine, network, all)
+  def parse(proximity: String): Option[ProximityScope] = Some(ProximityScope(proximity.toLowerCase.trim)).filter(valid.contains)
+}
+
+@json
+case class SearchFilter(
+    proximity: Option[ProximityScope],
+    user: Option[UserScope],
+    library: Option[LibraryScope],
+    organization: Option[OrganizationScope],
+    context: Option[String]) {
+
+  import ProximityScope._
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
-  def includeMine: Boolean
-  def includeNetwork: Boolean
-  def includeOthers: Boolean
-  def isDefault = false
+  val isDefault: Boolean = proximity.isEmpty
+  val includeMine: Boolean = !proximity.exists(_ == network)
+  val includeNetwork: Boolean = !proximity.exists(_ == mine)
+  val includeOthers: Boolean = !proximity.exists(Set(mine, network).contains)
 }
 
 object SearchFilter {
-
-  def apply(filter: Option[Either[Id[User], String]], library: LibraryContext, context: Option[String]): SearchFilter = {
-    filter match {
-      case Some(Right("m")) =>
-        SearchFilter.mine(None, library, context)
-      case Some(Right("f")) =>
-        SearchFilter.network(None, library, context)
-      case Some(Right("a")) =>
-        SearchFilter.all(None, library, context)
-      case Some(Left(userId)) =>
-        SearchFilter.all(Some(userId), library, context)
-      case _ => SearchFilter.default(None, library, context)
-    }
-  }
-
-  def default(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
-    new SearchFilter(user, library, context) {
-      def includeMine = true
-      def includeNetwork = true
-      def includeOthers = true
-      override def isDefault = true
-    }
-  }
-
-  def all(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
-    new SearchFilter(user, library, context) {
-      def includeMine = true
-      def includeNetwork = true
-      def includeOthers = true
-    }
-  }
-
-  def mine(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
-    new SearchFilter(user, library, context) {
-      def includeMine = true
-      def includeNetwork = false
-      def includeOthers = false
-    }
-  }
-
-  def network(user: Option[Id[User]] = None, library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
-    new SearchFilter(user, library, context) {
-      def includeMine = false
-      def includeNetwork = true
-      def includeOthers = false
-    }
-  }
+  val default = SearchFilter(None, None, None, None, None)
 }

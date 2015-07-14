@@ -5,7 +5,6 @@ import com.keepit.search.index._
 import com.keepit.common.util.Configuration
 import com.keepit.search._
 import com.keepit.inject.AppScoped
-import com.keepit.search.result._
 import com.keepit.common.db.Id
 import com.keepit.model._
 import scala.concurrent.Future
@@ -41,29 +40,16 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
     acceptLangs: Seq[String],
     experiments: Set[ExperimentType],
     query: String,
-    filter: Future[Option[Either[Id[User], String]]],
-    libraryContextFuture: Future[LibraryContext],
+    filter: Future[SearchFilter],
     orderBy: SearchRanking,
     maxHits: Int,
     lastUUIDStr: Option[String],
-    context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None) = Future.successful(plainResults(query))
 
   def distSearchUris(
     shards: Set[Shard[NormalizedURI]],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    experiments: Set[ExperimentType],
-    query: String,
-    filter: Option[Either[Id[User], String]],
-    library: LibraryContext,
-    orderBy: SearchRanking,
-    maxHits: Int,
-    context: Option[String],
-    predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): Future[UriShardResult] = ???
+    request: UriSearchRequest): Future[UriShardResult] = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}

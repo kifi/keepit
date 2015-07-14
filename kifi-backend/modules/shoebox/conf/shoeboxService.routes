@@ -937,6 +937,7 @@ GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controlle
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
+GET     /internal/shoebox/database/hasOrganizationMembership   @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
 GET     /internal/shoebox/database/getMembersByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getMembersByOrganizationId(orgId: Id[Organization])
 GET     /internal/shoebox/database/getInviteEndpointsByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getInviteEndpointsByOrganizationId(orgId: Id[Organization])
 
@@ -960,6 +961,7 @@ GET      /internal/shoebox/database/getInvitations                              
 GET      /internal/shoebox/database/getSocialConnections                        @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
+POST     /internal/shoebox/database/canViewLibrary             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
@@ -972,7 +974,6 @@ GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controlle
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
-POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 # Angular assets
