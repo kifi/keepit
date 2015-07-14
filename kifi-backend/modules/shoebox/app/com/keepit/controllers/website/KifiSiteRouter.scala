@@ -90,6 +90,17 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
+  def serveWebAppIfHandleFound(handle: Handle) = WebAppPage { implicit request =>
+    lookupHandle(handle) map {
+      case (handleOwner, redirectStatusOpt) =>
+        redirectStatusOpt map { status =>
+          Redirect(s"/${handle.urlEncoded}${dropPathSegment(request.uri)}", status)
+        } getOrElse {
+          AngularApp.app()
+        }
+    } getOrElse notFound(request)
+  }
+
   def serveWebAppIfUserIsSelf(username: Username) = WebAppPage { implicit request =>
     request match {
       case r: UserRequest[_] =>
@@ -132,7 +143,7 @@ class KifiSiteRouter @Inject() (
           case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
           case Right(user) => Handle.fromUsername(user.username)
         }
-        if (foundHandle != handle) { // user moved or username normalization
+        if (foundHandle != handle) { // owner moved or handle normalization
           (handleOwner, Some(if (!isPrimary) 301 else 303))
         } else {
           (handleOwner, None)

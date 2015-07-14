@@ -6,7 +6,7 @@ import com.keepit.commanders.{ LibraryCommander, UserCommander }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -20,6 +20,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactory
 
 import org.specs2.mutable.Specification
@@ -55,10 +56,11 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     "route correctly" in {
       running(new ShoeboxApplication(modules: _*)) {
         // Database population
-        val (user1, user2) = db.readWrite { implicit session =>
+        val (user1, user2, org) = db.readWrite { implicit session =>
           val u1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abez").saved
           val u2 = UserFactory.user().withName("Léo", "HasAnAccentInHisName").withUsername("léo1221").saved
-          (u1, u2)
+          val org = OrganizationFactory.organization().withName("Kifi").withHandle(OrganizationHandle("kifiorghandle")).withOwner(u1).saved
+          (u1, u2, org)
         }
 
         val userCommander = inject[UserCommander]
@@ -238,6 +240,17 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/friends/requests/refresh")) must beRedirect(303, "/abez/connections")
         route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
         route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
+
+        // user-or-orgs
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
+        val orgLibrary = {
+          val libraryRequest = LibraryAddRequest(name = "Kifi Lib", visibility = LibraryVisibility.PUBLISHED, slug = "kifi-lib")
+          val Right(orgLibrary) = libraryCommander.addLibrary(libraryRequest, user1.id.get)
+          val Right(finalLibrary) = libraryCommander.modifyLibrary(orgLibrary.id.get, user1.id.get, LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(org.id.get))))))
+          finalLibrary
+        }
+        route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
+        route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
 
         // catching mobile
         {
