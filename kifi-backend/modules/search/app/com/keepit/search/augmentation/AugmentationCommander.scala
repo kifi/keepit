@@ -205,7 +205,7 @@ class AugmentationCommanderImpl @Inject() (
             case DISCOVERABLE =>
               uniqueKeepers += userId
               otherDiscoverableKeeps += 1
-            case SECRET => // ignore
+            case SECRET | ORGANIZATION => // ignore
           }
 
           docId = docs.nextDoc()

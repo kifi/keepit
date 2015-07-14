@@ -650,9 +650,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
 
+  def getOrganizationInviteViews(orgId: Id[Organization]) = Future.successful(Set.empty)
+
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = Future.successful(false)
 
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = Future.successful(Set.empty)
-
-  def getMembersByOrganizationId(orgId: Id[Organization]) = Future.successful(Set.empty)
+  def getOrganizationMembers(orgId: Id[Organization]) = Future.successful(Set.empty)
 }

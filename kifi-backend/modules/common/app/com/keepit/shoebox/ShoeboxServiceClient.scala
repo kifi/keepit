@@ -124,9 +124,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]]
+  def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
-  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]]
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -767,16 +767,15 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
   }
 
+  def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
+    call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
+  }
+
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = {
     call(Shoebox.internal.hasOrganizationMembership(orgId, userId)).map(_.json.as[Boolean])
   }
 
-  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]] = {
-    call(Shoebox.internal.getMembersByOrganizationId(orgId)).map(_.json.as[Set[Id[User]]])
-  }
-
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]] = {
-    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
-    call(Shoebox.internal.getInviteEndpointsByOrganizationId(orgId)).map(_.json.as[Set[Either[Id[User], EmailAddress]]])
+  def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]] = {
+    call(Shoebox.internal.getOrganizationInviteViews(orgId)).map(_.json.as[Set[OrganizationInviteView]])
   }
 }

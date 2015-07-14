@@ -209,6 +209,7 @@ POST    /m/1/invite                             @com.keepit.controllers.mobile.M
 
 # Profile Page
 GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserProfileController.profile(username)
+GET     /m/2/user/:id/profile                   @com.keepit.controllers.mobile.MobileUserProfileController.profile(id)
 GET     /m/1/user/:username/connections             @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
@@ -699,6 +700,7 @@ POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
+POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 
@@ -929,9 +931,8 @@ GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controlle
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
-GET     /internal/shoebox/database/hasOrganizationMembership   @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
-GET     /internal/shoebox/database/getMembersByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getMembersByOrganizationId(orgId: Id[Organization])
-GET     /internal/shoebox/database/getInviteEndpointsByOrganizationId      @com.keepit.controllers.internal.ShoeboxController.getInviteEndpointsByOrganizationId(orgId: Id[Organization])
+GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
+GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
