@@ -75,6 +75,7 @@ POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.control
 GET         /internal/search/index/refreshWriter        @com.keepit.search.controllers.search.ArticleIndexerController.refreshWriter()
 
 GET         /internal/search/indexInfo/listAll        @com.keepit.search.controllers.search.IndexController.listIndexInfo
+GET         /internal/search/index/versions           @com.keepit.search.controllers.search.IndexController.versions
 POST        /internal/search/index/library/document  @com.keepit.search.controllers.search.IndexController.getLibraryDocument()
 
 

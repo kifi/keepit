@@ -16,6 +16,7 @@ sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, back
   require(backupVersion >= activeVersion)
   def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.hasBackupCapability) backupVersion else activeVersion
   def getVersionsForCleanup(): Seq[IndexerVersion] = (0 until activeVersion.value).map { v => IndexerVersion(v) }
+  def active: IndexerVersion = activeVersion
 }
 
 object IndexerVersionProviders {
@@ -32,4 +33,20 @@ object IndexerVersionProviders {
   case object Keep extends IndexerVersionProvider(4, 4)
   case object Organization extends IndexerVersionProvider(1, 1)
   case object OrganizationMembership extends IndexerVersionProvider(1, 1)
+
+  val allActiveVersions: Map[String, Int] = {
+    Map("article" -> Article.active.value,
+      "uriGraph" -> URIGraph.active.value,
+      "collection" -> Collection.active.value,
+      "user" -> User.active.value,
+      "userGraph" -> UserGraph.active.value,
+      "searchFriend" -> SearchFriend.active.value,
+      "message" -> Message.active.value,
+      "phrase" -> Phrase.active.value,
+      "library" -> Library.active.value,
+      "libraryMembership" -> LibraryMembership.active.value,
+      "keep" -> Keep.active.value,
+      "organization" -> Organization.active.value,
+      "organizationMembership" -> OrganizationMembership.active.value)
+  }
 }
