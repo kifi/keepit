@@ -51,13 +51,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "100.0",
-      "myFriendBoost" -> "1.5",
+      "myNetworkBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",
       "dampingHalfDecayMine" -> "6.0",
-      "dampingHalfDecayFriends" -> "4.0",
+      "dampingHalfDecayNetwork" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
-      "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24"
@@ -96,13 +95,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "boost value for user source in user search",
-      "myFriendBoost" -> "boost value for my friends in user search",
+      "myNetworkBoost" -> "boost value for my friends in user search",
 
       "proximityBoost" -> "boosting by proximity",
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
+      "dampingHalfDecayNetwork" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search"
@@ -118,7 +116,7 @@ object SearchConfig {
     val map = new mutable.HashMap[UserSegment, SearchConfig]() {
       override def default(key: UserSegment): SearchConfig = SearchConfig.defaultConfig
     }
-    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
+    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayNetwork" -> "2.5", "percentMatch" -> "85"))
   }
   def byUserSegment(seg: UserSegment): SearchConfig = segmentConfigs(seg)
 

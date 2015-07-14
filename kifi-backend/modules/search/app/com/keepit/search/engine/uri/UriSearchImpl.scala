@@ -38,7 +38,7 @@ class UriSearchImpl(
 
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")

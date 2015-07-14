@@ -10,7 +10,7 @@ import scala.math._
 class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
 
@@ -86,7 +86,7 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
       networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayNetwork) // damping the scores by rank
           queue.insert(score, null, hit.hit)
       }
       queue.foreach { h => hits.insert(h) }
