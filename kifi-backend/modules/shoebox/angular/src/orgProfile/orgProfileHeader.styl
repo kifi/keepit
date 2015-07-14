@@ -1,20 +1,22 @@
-uphSmallMaxDim = 736px // for @media max-height and max-width
+ophSmallMaxDim = 736px // for @media max-height and max-width
+ophImageWidth = 200px
 
 .kf-oph
   background: pageHeaderColor
   color: #fff
-  padding-bottom: 25px
+  padding-bottom: 75px
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     padding-bottom: 12px
 
 .kf-oph-top
   position: relative
-  padding-top: 20px
-  max-width: appMaxWidth
+  padding-top: 75px
+  max-width: 550px
   margin: 0 auto
+  display: flex
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     padding-top: 12px
 
 .kf-oph-connect-banner
@@ -281,16 +283,17 @@ actionGapBelow = 3px
     height: 20px
 
 .kf-oph-pic-a
-  display: inline-block
+  width: ophImageWidth
 
 .kf-oph-pic
-  width: 100px
-  height: 100px
-  border-radius: 50%
+  width: 100%
+  border-radius: 10px
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    width: 60px
-    height: 60px
+.kf-oph-about
+  text-align: left
+  width: 100%
+  width: 'calc(100% - %s)' % ophImageWidth
+  margin-left: 25px
 
 .kf-oph-name
   margin-top: 6px
@@ -298,34 +301,24 @@ actionGapBelow = 3px
   font-size: 21px
   font-weight: normal
   color: inherit
+  box-sizing: border-box
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     line-height: 20px
     font-size: 14px
 
-.kf-oph-bio-add
-  background: none
-  outline: none
-  border: none
-  padding: 0
-  color: accentGreen
-  line-height: 1.6em
-  font-size: 0.9em
-  font-smoothing: antialiased
-
-  &:hover
-    text-decoration: underline
-
 .kf-oph-description
-  max-width: 400px
-  margin: 0 auto 4px
+  margin: 0 auto 20px
   color: #d8d8d8
   line-height: 1.6em
   font-size: 0.9em
   font-smoothing: antialiased
   word-break: break-word
+  border-bottom: 1px solid white
+  width: 100%
+  padding-bottom: 20px
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     max-width: 88%
     line-height: 16px
     font-size: 10px
@@ -335,3 +328,16 @@ actionGapBelow = 3px
 
     &:hover
       text-decoration: underline
+
+.kf-oph-link
+  color: accentGreent
+
+.kf-oph-stats
+  width: 175px
+  text-align: center
+  margin: 0px auto
+
+  th
+    text-transform: uppercase
+    font-weight: 100
+    font-size: 0.7em
