@@ -391,16 +391,14 @@ class KeepImageCommanderImpl @Inject() (
     }
 
     Future.sequence(uploads).map { results =>
-      val keepImages = results.map {
-        case uploadedImage =>
+      val keepImages = results.map { uploadedImage =>
+        val isOriginal = uploadedImage.processOperation match {
+          case Original => true
+          case _ => false
+        }
 
-          val isOriginal = uploadedImage.processOperation match {
-            case Original => true
-            case _ => false
-          }
-
-          val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.imageInfo.width, height = uploadedImage.imageInfo.height, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
-          ki
+        val ki = KeepImage(keepId = keepId, imagePath = uploadedImage.key, format = uploadedImage.format, width = uploadedImage.imageInfo.width, height = uploadedImage.imageInfo.height, source = source, sourceImageUrl = originalImage.sourceImageUrl, sourceFileHash = originalImage.hash, isOriginal = isOriginal, kind = uploadedImage.processOperation)
+        ki
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
         if (amendExistingImages) {
