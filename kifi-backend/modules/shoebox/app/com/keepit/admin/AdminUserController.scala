@@ -983,6 +983,7 @@ class AdminUserController @Inject() (
     } else {
       UnprocessableEntity("Invalid input")
     }
+
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>

@@ -117,7 +117,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
       } yield {
         val recommendations = relatedUsers.related.map { case (userId, score) => OrganizationInviteRecommendation(Left(userId), score) }
         val irrelevantRecommendations = members ++ invitees.flatMap(_.userId) ++ fakeUsers ++ rejectedRecommendations
-        Some(recommendations.toStream.filter(reco => !irrelevantRecommendations.contains(reco.target.left.get)))
+        Some(recommendations.toStream.filter(reco => !irrelevantRecommendations.contains(reco.identifier.left.get)))
       }
     }
   }

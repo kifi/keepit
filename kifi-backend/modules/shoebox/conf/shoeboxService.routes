@@ -701,6 +701,8 @@ POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
+POST    /admin/organization/:id/addCandidateFromReco    @com.keepit.controllers.admin.AdminOrganizationController.addCandidateFromReco(id: Id[Organization], recoId: Id[User])
+POST    /admin/organization/:id/addMemberFromReco       @com.keepit.controllers.admin.AdminOrganizationController.addMemberFromReco(id: Id[Organization], recoId: Id[User])
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 

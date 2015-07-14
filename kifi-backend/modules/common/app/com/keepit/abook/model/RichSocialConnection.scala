@@ -78,7 +78,7 @@ object UserInviteRecommendation {
 }
 
 case class OrganizationInviteRecommendation(
-  target: Either[Id[User], EmailAddress],
+  identifier: Either[Id[User], EmailAddress],
   score: Double)
 
 object OrganizationInviteRecommendation {

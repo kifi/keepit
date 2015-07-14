@@ -39,7 +39,8 @@ class AdminOrganizationController @Inject() (
     Ok(html.admin.organizations(orgsStats, fakeOwnerId))
   }
   def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
-    val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId) }
+    val numMemberRecommendations = request.body.asFormUrlEncoded.flatMap(_.get("numMemberRecos").map(_.head.toInt)).getOrElse(20)
+    val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId, numMemberRecommendations) }
     orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
@@ -69,6 +70,16 @@ class AdminOrganizationController @Inject() (
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
     val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(description = description))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def addMemberFromReco(orgId: Id[Organization], recoId: Id[User]) = AdminUserPage { request =>
+    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, recoId, OrganizationRole.MEMBER))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def addCandidateFromReco(orgId: Id[Organization], recoId: Id[User]) = AdminUserPage { request =>
+    orgMembershipCandidateCommander.addCandidates(orgId, Set(recoId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 }
