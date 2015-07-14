@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 angular.module('kifi')
 
@@ -13,5 +13,5 @@ angular.module('kifi')
       scope = scope;
       element = element;
     }
-  }
+  };
 }]);
