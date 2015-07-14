@@ -190,20 +190,6 @@ angular.module('kifi')
       },
 
       ////////////////////////////
-      // Org Profile           //
-      ////////////////////////////
-      getOrgProfile: function (handle) {
-        return route('/organization/' + handle + '/profile');
-      },
-      getOrgLibraries: function (handle, filter, opt_page, opt_size) {
-        return route('/organization/' + handle + '/libraries', {
-          filter: filter,
-          page: _.isUndefined(opt_page) ? [] : opt_page,
-          size: _.isUndefined(opt_size) ? [] : opt_size
-        });
-      },
-
-      ////////////////////////////
       // User Profile           //
       ////////////////////////////
       getUserProfile: function (handle) {

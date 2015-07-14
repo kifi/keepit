@@ -1,5 +1,19 @@
 <div class="kf-oph">
   <div class="kf-oph-top">
+
+    <div class="kf-oph-actions" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
+      <div class="kf-oph-dropdown-parent" kf-hover-menu>
+        <a ui-sref="settings" ng-click="trackClickedSettings()">
+          <span class="kf-oph-settings-icon svg-settings-gear"></span>
+          <span class="kf-oph-action-text">Settings</span>
+        </a>
+        <menu class="kf-dropdown-menu">
+          <button class="kf-dropdown-menu-item" ng-click="showDescriptionModal()">Edit your description</button>
+          <a class="kf-dropdown-menu-item" ui-sref="settings" ng-click="trackClickedSettings()">More settings</a>
+        </menu>
+      </div>
+    </div>
+
     <a class="kf-oph-pic-a">
       <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
     </a>
@@ -16,8 +30,12 @@
         </thead>
         <tbody>
           <tr>
-            <td>{{profile.numLibraries|num}}</td>
-            <td>{{profile.numMembers|num}}</td>
+            <td>
+              <a ui-sref="orgProfile.boards">{{profile.numLibraries|num}}</a>
+            </td>
+            <td>
+              <a ui-sref="orgProfile.members">{{profile.numMembers|num}}</a>
+            </td>
           </tr>
         </tbody>
       </table>

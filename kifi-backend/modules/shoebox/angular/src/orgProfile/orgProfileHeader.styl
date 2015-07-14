@@ -12,12 +12,14 @@ ophImageWidth = 200px
 .kf-oph-top
   position: relative
   padding-top: 75px
-  max-width: 550px
+  max-width: 480px
   margin: 0 auto
   display: flex
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     padding-top: 12px
+    margin-left: 20px
+    margin-right: 20px
 
 .kf-oph-connect-banner
   display: inline-block
@@ -74,10 +76,7 @@ ophImageWidth = 200px
 .kf-oph-actions
   position: absolute
   top: 10px
-  right: appSidePad1
-
-  @media (min-width: appSidePad2MinWidth)
-    right: appSidePad2
+  right: 0
 
 .kf-oph-connect
   display: inline-block
@@ -319,7 +318,6 @@ actionGapBelow = 3px
   padding-bottom: 20px
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    max-width: 88%
     line-height: 16px
     font-size: 10px
 
@@ -341,3 +339,6 @@ actionGapBelow = 3px
     text-transform: uppercase
     font-weight: 100
     font-size: 0.7em
+
+  td
+    font-size: 1.2em
