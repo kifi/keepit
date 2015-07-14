@@ -122,17 +122,18 @@ class UserStatisticsCommander @Inject() (
 
   def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
     val membersStatsFut = userIds.map { userId =>
+      val numChatsFut = elizaClient.getUserThreadStats(userId)
       val (numPrivateKeeps, numPublicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
       val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
-      val numChatsFut = elizaClient.getUserThreadStats(userId)
+      val user = userRepo.get(userId)
       for (
         numChats <- numChatsFut
       ) yield {
         userId -> MemberStatistics(
-          user = userRepo.get(userId),
+          user = user,
           numChats = numChats.all,
           numPublicKeeps = numPublicKeeps,
           numLibrariesCreated = numLibrariesCreated,
