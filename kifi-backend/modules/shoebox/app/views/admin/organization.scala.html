@@ -81,6 +81,7 @@ orgStats: OrganizationStatistics
     <input type="button" name="Refresh">
 </form>
 
+@*
 <table class="org-member-recos table table-bordered" style="width:600px">
     <tr>
         <th>Recommendation Identifier</th>
@@ -97,7 +98,7 @@ orgStats: OrganizationStatistics
         </tr>
     }
 </table>
-}
+*@
 
 <script type="text/javascript">
     function addCandidate(orgId, candidateId) {
@@ -108,3 +109,4 @@ orgStats: OrganizationStatistics
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
     };
 </script>
+}
