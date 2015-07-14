@@ -135,7 +135,7 @@ class UriResultCollectorTest extends Specification {
       hit.score === 2.0f * (UriResultCollector.MIN_MATCHING + 0.01f) * 3.0f // sum * pctMatch * click boost
     }
 
-    "collect safe hits by category" in {
+    "collect hits by category" in {
       val collector = new UriResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
@@ -150,12 +150,12 @@ class UriResultCollectorTest extends Specification {
       ctx.degree = 1
       ctx.flush()
       ctx.set(10)
-      ctx.visibility = Visibility.OTHERS | Visibility.SAFE
+      ctx.visibility = Visibility.OTHERS
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.visibility = Visibility.NETWORK | Visibility.SAFE
+      ctx.visibility = Visibility.NETWORK
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -166,16 +166,6 @@ class UriResultCollectorTest extends Specification {
       ctx.flush()
       ctx.set(40)
       ctx.visibility = Visibility.OWNER
-      ctx.addScore(0, 1.0f)
-      ctx.degree = 1
-      ctx.flush()
-      ctx.set(50)
-      ctx.visibility = Visibility.OTHERS
-      ctx.addScore(0, 1.0f)
-      ctx.degree = 1
-      ctx.flush()
-      ctx.set(60)
-      ctx.visibility = Visibility.NETWORK
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()

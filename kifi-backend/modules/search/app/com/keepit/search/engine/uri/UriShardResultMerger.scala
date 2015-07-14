@@ -10,9 +10,9 @@ import scala.math._
 class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
+  private[this] val minMyKeeps = config.asInt("minMyKeeps")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
@@ -81,12 +81,12 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     }
 
     if (networkHits.size > 0) {
-      val queue = createQueue(maxHits - min(minMyBookmarks, hits.size))
-      hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
+      val queue = createQueue(maxHits - min(minMyKeeps, hits.size))
+      hits.discharge(hits.size - minMyKeeps).foreach { h => queue.insert(h) }
 
       networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayNetwork) // damping the scores by rank
           queue.insert(score, null, hit.hit)
       }
       queue.foreach { h => hits.insert(h) }
