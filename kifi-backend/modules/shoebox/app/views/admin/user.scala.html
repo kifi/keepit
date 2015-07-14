@@ -67,9 +67,8 @@
     <tr>
         <th>Ignore for potential organizations?</th>
         <td>
-            <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline">
-                <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"}>
-                <button type="submit" class="btn btn-default">Save</button>
+            <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline" id="ignore-potential-orgs-form">
+                <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check">
             </form>
         </td>
     </tr>
@@ -359,6 +358,19 @@
           $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperimentAction(user.id.get, "____")'.replace("____", $(this).data("exp")),
             {type: "DELETE"}).done(done).fail(fail);
         }
+        function done() {
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+      });
+
+      $("#ignore-potential-orgs-check").on("change", function () {
+        var $form = $("#ignore-potential-orgs-form");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($form);
+        $.post('@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)', $form.serialize())
+            .done(done).fail(fail);
         function done() {
           $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
         }

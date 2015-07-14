@@ -1008,7 +1008,7 @@ class AdminUserController @Inject() (
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
 
-  def setIgnoreForPotentialOrganizations(userId: Id[User]) = AdminUserPage(parse.urlFormEncoded) { implicit request =>
+  def setIgnoreForPotentialOrganizations(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val ignorePotentialOrgs = request.body.get("ignorePotentialOrgs").isDefined
     db.readWrite { implicit session =>
       userValueRepo.setValue(userId, UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, ignorePotentialOrgs)
