@@ -70,7 +70,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     val fRecommendations = shoebox.getUserExperiments(viewerId).flatMap { experiments =>
       experiments match {
         case experiments if experiments.contains(ExperimentType.ADMIN) => generateFutureRecommendations(orgId, viewerId, true).map(_.slice(offset, offset + limit).toSeq)
-        case _ => Future.failed(new NotAuthorizedException("No authority to make this request"))
+        case _ => Future.failed(new NotAuthorizedException(s"User $viewerId is not allowed to view raw recommendations for org $orgId"))
       }
     }
     fRecommendations.onSuccess {
@@ -171,15 +171,6 @@ class AbookOrganizationRecommendationCommander @Inject() (
         !mayAlreadyBeOnKifi && EmailAddress.isLikelyHuman(contacts.head.email)
     }
 
-    val existingEmailInvitesByLowerCaseAddress = existingInvites.collect {
-      case emailInvite if emailInvite.emailAddress.isDefined =>
-        emailInvite.emailAddress.get.address.toLowerCase -> emailInvite
-    }.toMap
-
-    val relevantEmailInvites = relevantEmailAccounts.mapValues { contacts =>
-      existingEmailInvitesByLowerCaseAddress.get(contacts.head.email.address.toLowerCase)
-    }.collect { case (emailAccountId, Some(existingInvite)) => emailAccountId -> existingInvite }
-
     @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = {
       (!disclosePrivateEmails && relevantEmailAccounts.contains(emailAccountId)) &&
         !rejectedRecommendations.contains(emailAccountId)
@@ -187,7 +178,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
-        val emailAccount = emailAccountRepo.get(emailAccountId)
+        val emailAccount = db.readOnlyMaster { implicit session => emailAccountRepo.get(emailAccountId) }
         OrganizationInviteRecommendation(Right(emailAccount.address), score)
     }
     recommendations.take(relevantEmailAccounts.size)
