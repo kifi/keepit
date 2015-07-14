@@ -51,7 +51,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
-  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
@@ -461,12 +461,11 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.keptAt desc, r.id desc)).drop(offset).take(limit).list
   }
 
-  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    (orgIdOpt match {
-      case None => sql"select * from bookmark where library_id = $libraryId and organization_id is not null limit ${limit.value} offset ${offset.value}"
-      case _ => sql"select * from bookmark where library_id = $libraryId and (organization_id != ${orgIdOpt.get} or organization_id is null) limit ${limit.value} offset ${offset.value}"
-    }).as[Keep].list
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]] = {
+    expectedOrgId match {
+      case None => (for (b <- rows if b.libraryId === libraryId && b.organizationId.isDefined) yield b.id).take(limit.value).list.toSet
+      case Some(orgId) => (for (b <- rows if b.libraryId === libraryId && (b.organizationId.isEmpty || b.organizationId =!= orgId)) yield b.id).take(limit.value).list.toSet
+    }
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
