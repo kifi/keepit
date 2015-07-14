@@ -51,15 +51,72 @@ angular.module('kifi')
         },
         reloadOnSearch: false  // controller handles search query changes itself
       })
+      .state('userOrOrg', {
+        url: '/:handle',
+        controller: [
+          'net', '$state', '$stateParams',
+          function (net, $state, $stateParams) {
+            net.userOrOrg($stateParams.handle).then(function (response) {
+              var type = response.data.type,
+                  profile = _.merge($stateParams, response.data.result);
+              if (type === 'user') {
+                $state.go('userProfile.libraries.own', profile, { location: false });
+              } else if (type === 'org') {
+                $state.go('orgProfile.members', profile, { location: false });
+              }
+            });
+          }
+        ]
+      })
+      .state('orgProfile', {
+        url: '/:handle',
+        params: { organization: null },
+        templateUrl: 'orgProfile/orgProfile.tpl.html',
+        controller: 'OrgProfileCtrl',
+        resolve: {
+          profile: [
+            'net', '$state', '$stateParams',
+            function (net, $state, $stateParams) {
+              // return the Promise to make its value available to the controller
+              return net.userOrOrg($stateParams.handle).then(function (response) {
+                var type = response.data.type;
+
+                if (type === 'org') { // sanity check
+                  return response.data.result.organization;
+                } else {
+                  throw new Error('orgProfile state was given invalid type ' + type);
+                }
+              });
+            }
+          ]
+        },
+        'abstract': true
+      })
+      .state('orgProfile.members', {
+        url: '',
+        controller: 'OrgProfileMembersCtrl',
+        templateUrl: 'orgProfile/orgProfileMembers.tpl.html'
+      })
       .state('userProfile', {
-        url: '/:username',
+        url: '/:handle',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
-          userProfileActionService: 'userProfileActionService',
-          profile: ['userProfileActionService', '$stateParams', function (userProfileActionService, $stateParams) {
-            return userProfileActionService.getProfile($stateParams.username);
-          }]
+          profile: [
+            'net', '$state', '$stateParams',
+            function (net, $state, $stateParams) {
+              // return the Promise to make its value available to the controller
+              return net.userOrOrg($stateParams.handle).then(function (response) {
+                var type = response.data.type;
+
+                if (type === 'user') { // sanity check
+                  return response.data.result;
+                } else {
+                  throw new Error('userProfile state was given invalid type ' + type);
+                }
+              });
+            }
+          ]
         },
         'abstract': true
       })
@@ -91,7 +148,6 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileFollowers.tpl.html',
         controller: 'UserProfileFollowersCtrl'
       })
-
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:username/:librarySlug?authToken',
