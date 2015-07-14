@@ -210,16 +210,9 @@ object ArticleVisibilityEvaluator {
 final class ArticleVisibilityEvaluator(val unsafeDocIterator: DocIdSetIterator) extends AnyVal {
 
   @inline
-  private def isSafe(doc: Int): Boolean = {
-    if (unsafeDocIterator.docID < doc) unsafeDocIterator.advance(doc)
-    unsafeDocIterator.docID > doc
-  }
-
-  @inline
   def apply(doc: Int): Int = {
     // todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons.
-    if (isSafe(doc)) (Visibility.OTHERS | Visibility.SAFE)
-    else Visibility.OTHERS
+    Visibility.OTHERS
   }
 
 }

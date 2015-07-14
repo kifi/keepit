@@ -24,8 +24,6 @@ abstract class UriSearch(articleSearcher: Searcher, keepSearcher: Searcher, time
   def execute(): UriShardResult
   def explain(uriId: Id[NormalizedURI]): UriSearchExplanation
 
-  @inline def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
-
   def getKeepRecord(keepId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
     if (keepId >= 0) keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, keepId) else None
   }

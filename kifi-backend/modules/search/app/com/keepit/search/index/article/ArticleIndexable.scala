@@ -38,8 +38,9 @@ object ArticleFields {
 object ArticleIndexable {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](INACTIVE, REDIRECTED)
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state) || !uri.shouldHaveContent
-  def isSafe(searcher: Searcher, uriId: Long): Boolean = {
-    searcher.getLongDocValue(ArticleFields.safeField, uriId).exists(_ > 0)
+  @inline
+  def isSafe(articleSearcher: Searcher, uriId: Long): Boolean = {
+    articleSearcher.getLongDocValue(ArticleFields.safeField, uriId).exists(_ > 0)
   }
 }
 
