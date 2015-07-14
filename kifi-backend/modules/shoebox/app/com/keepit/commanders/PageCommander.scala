@@ -161,7 +161,7 @@ class PageCommander @Inject() (
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
-    val libraryMap = libraryRepo.getLibraries(libraryIds.toSet).filter(_._2.state != LibraryStates.ACTIVE)
+    val libraryMap = libraryRepo.getLibraries(libraryIds.toSet).filter(_._2.state == LibraryStates.ACTIVE)
     libraryIds.map(libraryMap)
   }
 
