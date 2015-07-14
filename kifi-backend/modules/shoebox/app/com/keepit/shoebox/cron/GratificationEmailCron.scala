@@ -1,6 +1,6 @@
 package com.keepit.shoebox.cron
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.emails.{ GratificationCommander, GratificationEmailSender }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
@@ -34,7 +34,7 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourFor9amPacificTime = 9 + -offsetHoursToUtc
     val utcHourFor5pmPacificTime = 17 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0/30 ${utcHourFor5pmPacificTime+1}-${utcHourFor5pmPacificTime+3} ? * MON" // scheduled to send to QA
+    val cronTimeEveryday = s"0 0/30 ${utcHourFor5pmPacificTime + 1}-${utcHourFor5pmPacificTime + 3} ? * MON" // scheduled to send to QA
     cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
     val cronTimeTues = s"0 0 $utcHourFor9amPacificTime ? * TUE"
