@@ -144,7 +144,7 @@ class LibraryImageCommanderImpl @Inject() (
       log.info(s"[lic] Persisting ${image.key}")
 
       val put = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
+        ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
       }
       put
     }

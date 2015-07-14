@@ -382,7 +382,7 @@ class KeepImageCommanderImpl @Inject() (
     val uploads = toPersist.map { image =>
       log.info(s"[kic] Persisting ${image.key}")
       val putF = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
+        ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
       }
       putF
     }
