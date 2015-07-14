@@ -267,7 +267,9 @@ class AdminUserController @Inject() (
       (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
-    val experiments = db.readOnlyReplica { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
+    val (experiments, potentialOrganizations) = db.readOnlyReplica { implicit s =>
+      (userExperimentRepo.getUserExperiments(user.id.get), orgRepo.getPotentialForUser(userId))
+    }
 
     for {
       abookInfos <- abookInfoF
@@ -276,7 +278,7 @@ class AdminUserController @Inject() (
     } yield {
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers))
+        contacts, invitedByUsers, potentialOrganizations))
     }
   }
 
