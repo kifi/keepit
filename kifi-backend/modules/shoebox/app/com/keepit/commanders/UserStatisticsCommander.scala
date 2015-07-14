@@ -66,7 +66,7 @@ case class OrganizationStatistics(
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationInviteRecommendation])
+  memberRecommendations: Option[Seq[OrganizationInviteRecommendation]] = None)
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -158,7 +158,9 @@ class UserStatisticsCommander @Inject() (
 
     val membersStatsFut = membersStatistics(userIds)
 
-    val fMemberRecommendations = abook.getAllOrgRecommendationsForAdmin(orgId, adminId, 0, numMemberRecos)
+    //val fMemberRecommendations = abook.getAllOrgRecommendationsForAdmin(orgId, adminId, 0, numMemberRecos)
+
+    val fMemberRecommendations = Future(Seq.empty)
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
@@ -179,7 +181,7 @@ class UserStatisticsCommander @Inject() (
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
-      memberRecommendations = memberRecos
+      memberRecommendations = Some(memberRecos)
     )
   }
   def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {

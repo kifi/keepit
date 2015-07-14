@@ -172,7 +172,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
 
     @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = {
-      (!disclosePrivateEmails && relevantEmailAccounts.contains(emailAccountId)) &&
+      (disclosePrivateEmails || (!disclosePrivateEmails && relevantEmailAccounts.contains(emailAccountId))) &&
         !rejectedRecommendations.contains(emailAccountId)
     }
 
