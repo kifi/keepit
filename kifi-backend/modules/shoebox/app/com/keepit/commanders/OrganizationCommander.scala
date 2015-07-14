@@ -19,7 +19,7 @@ trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
   def getOrganizationView(orgId: Id[Organization]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard]
-  def getLibraries(orgId: Id[Organization]): Seq[LibraryCardInfo]
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo]
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -40,6 +40,7 @@ class OrganizationCommanderImpl @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    libraryCommander: LibraryCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
@@ -106,7 +107,11 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numPublicLibs)
   }
 
-  def getLibraries(orgId: Id[Organization]): Seq[LibraryCardInfo] = ???
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo] = {
+    val allLibraries = db.readOnlyReplica { implicit session => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }
+    val visibleLibraries = allLibraries.filter(lib => libraryCommander.canViewLibrary(userIdOpt, lib))
+    libraryCommander.getLibrarySummaries(visibleLibraries.drop(offset.value.toInt).take(limit.value.toInt).map(_.id.get).toSeq)
+  }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
     getValidationError(request).isEmpty

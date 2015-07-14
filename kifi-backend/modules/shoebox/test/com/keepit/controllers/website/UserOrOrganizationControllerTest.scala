@@ -138,7 +138,6 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         }
       }
       "get an org" in {
-        skipped("not implemented yet :(")
         withDb(modules: _*) { implicit injector =>
           val (user, org) = testSetup
 

@@ -820,10 +820,12 @@ class LibraryCommanderImpl @Inject() (
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
-            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
-              library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty ||
-              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty ||
-              getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+            val userIsInLibrary = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty
+            val userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
+            val userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+            val userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
+            val libIsOrgVisible = library.visibility == LibraryVisibility.ORGANIZATION
+            userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (libIsOrgVisible && userIsInOrg)
           case None =>
             getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
         }

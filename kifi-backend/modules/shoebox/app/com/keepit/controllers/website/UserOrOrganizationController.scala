@@ -66,7 +66,7 @@ class UserOrOrganizationController @Inject() (
       case Some(handleOwnerObject) =>
         val (action, actionType) = handleOwnerObject match {
           case (Left(org), _) =>
-            (orgController.getLibraries(Organization.publicId(org.id.get)), "org")
+            (orgController.getOrganizationLibraries(Organization.publicId(org.id.get), offset = page * pageSize, limit = pageSize), "org")
           case (Right(user), _) =>
             (userProfileController.getProfileLibraries(user.username, page, pageSize, filter), "user")
         }
