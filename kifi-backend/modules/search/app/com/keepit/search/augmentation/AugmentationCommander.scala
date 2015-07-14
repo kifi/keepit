@@ -19,7 +19,7 @@ import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.common.core._
-import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
+import com.keepit.search.{ DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
 import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 
@@ -47,7 +47,7 @@ class AugmentationCommanderImpl @Inject() (
     val futureAugmentationResponse = augmentation(itemAugmentationRequest)
     val userId = itemAugmentationRequest.context.userId
     val futureFriends = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)))
-    val futureLibraries = searchFactory.getLibraryIdsFuture(userId, LibraryContext.None).imap(_._2.map(Id[Library](_)))
+    val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
     for {
       augmentationResponse <- futureAugmentationResponse
       friends <- futureFriends
@@ -90,7 +90,7 @@ class AugmentationCommanderImpl @Inject() (
 
       // todo(Léo): clean up these sets to avoid back and forth conversions between typed Ids and Long
 
-      val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, LibraryContext.None).imap {
+      val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, None).imap {
         case (_, followedLibraries, _, _) => followedLibraries.map(Id[Library](_))
       }
 

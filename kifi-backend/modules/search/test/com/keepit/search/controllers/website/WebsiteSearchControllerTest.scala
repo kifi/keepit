@@ -94,7 +94,7 @@ object ExtSearchControllerTest {
     "test" -> new UriSearchResult(
       uuid = ExternalId[ArticleSearchResult]("98765432-1234-5678-9abc-fedcba987654"),
       query = "test",
-      searchFilter = SearchFilter.default(),
+      searchFilter = SearchFilter.default,
       firstLang = Lang("en"),
       result = UriShardResult(
         hits = Seq(

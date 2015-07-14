@@ -44,22 +44,22 @@ class ExtSearchController @Inject() (
   def search2(
     query: String,
     maxHits: Int,
-    filter: Option[String],
+    proximityFilter: Option[String],
     lastUUIDStr: Option[String],
     context: Option[String],
     extVersion: Option[KifiExtVersion],
     debug: Option[String] = None) = UserAction { request =>
 
-    val libraryContextFuture = getLibraryFilterFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(filter)
+
+    val uriSearchFilterFuture = makeSearchFilter(getProximityScope(proximityFilter), Future.successful(None), Future.successful(None), Future.successful(None), context)
 
     val orderBy = SearchRanking.default
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt)
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchFilterFuture, orderBy, maxHits, lastUUIDStr, None, debugOpt)
     val jsonResultFuture = plainResultFuture.imap { result =>
       val textMatchesByHit = UriShardHit.getMatches(result.query, result.firstLang, result.hits)
       val experimentIdJson = result.searchExperimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
