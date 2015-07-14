@@ -310,7 +310,7 @@ object ABook extends Service {
     def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
-    def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getUserRecommendations", Param("offset", offset), Param("limit", limit), Param("bePatient", bePatient))
+    def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getFriendRecommendations", Param("offset", offset), Param("limit", limit), Param("bePatient", bePatient))
     def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
     def getInviteRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getNonUserRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
     def hideInviteRecommendationForUser(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideNonUserRecommendation")
