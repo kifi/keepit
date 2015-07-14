@@ -66,7 +66,7 @@ class RoverImageFetcher @Inject() (
 
                 val uploads = (processedImagesReadyToPersist ++ sourceImageReadyToPersist).map { image =>
                   val put = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).imap { _ =>
-                    ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
+                    ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
                   }
                   put
                 }
