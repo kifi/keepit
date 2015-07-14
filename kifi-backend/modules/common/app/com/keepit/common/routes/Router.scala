@@ -317,9 +317,11 @@ object ABook extends Service {
     def hideInviteRecommendationForUser(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideNonUserRecommendation")
     def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeople")
     def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeople")
-    def getRecommendationsForOrg(orgId: Id[Organization], usersToFilterOnContacts: Set[Id[User]], offset: Int, limit: Int) = ServiceRoute(POST, s"internal/abook/org/$orgId/getRecommendations")
+    def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = ServiceRoute(POST, s"internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerId", viewerId), Param("offset", offset), Param("limit", limit))
     def hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"internal/abook/org/$orgId/hideUserRecommendation")
     def hideNoneUserRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideNonUserRecommendation")
+    def getAllOrgRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = ServiceRoute(POST, s"internal/abook/org/$orgId/getAllOrgRecommendationsForAdmin", Param("orgId", orgId), Param("viewerId", viewerId), Param("offset", offset), Param("limit", limit))
+
   }
 }
 
