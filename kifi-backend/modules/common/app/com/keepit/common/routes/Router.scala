@@ -159,6 +159,7 @@ object Shoebox extends Service {
     def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
+    def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/hasOrganizationMembership", Param("orgId", orgId), Param("userId", userId))
     def getMembersByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getMembersByOrganizationId", Param("orgId", orgId))
     def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getInviteEndpointsByOrganizationId", Param("orgId", orgId))
   }

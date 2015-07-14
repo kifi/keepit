@@ -489,6 +489,11 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(model))
   }
 
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = Action { request =>
+    val hasMembership = organizationMembershipCommander.getMembership(orgId, userId).isDefined
+    Ok(JsBoolean(hasMembership))
+  }
+
   def getMembersByOrganizationId(orgId: Id[Organization]) = Action { request =>
     val memberIds = organizationMembershipCommander.getMemberIds(orgId)
     Ok(Json.toJson(memberIds))
