@@ -707,8 +707,8 @@ class LibraryCommanderImpl @Inject() (
 
         val lib = db.readWrite { implicit s =>
           if (newSpace != currentSpace || newSlug != targetLib.slug) {
-            libraryAliasRepo.reclaim(currentSpace, newSlug)
-            libraryAliasRepo.alias(newSpace, targetLib.slug, targetLib.id.get)
+            libraryAliasRepo.reclaim(newSpace, newSlug) // There is now a real library there; dump the alias
+            libraryAliasRepo.alias(currentSpace, targetLib.slug, targetLib.id.get) // Make a new alias for where targetLib used to live
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))

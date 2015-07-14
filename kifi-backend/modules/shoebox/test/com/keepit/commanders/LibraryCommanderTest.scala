@@ -25,6 +25,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.BasicUser
@@ -362,6 +363,84 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
             allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
           }
+        }
+      }
+      "correctly alias libraries when they are moved" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val publicIdConfig = inject[PublicIdConfiguration]
+          val libraryCommander = inject[LibraryCommander]
+
+          val (ironMan, earthOrg, starkOrg, ironLib) = db.readWrite { implicit session =>
+            val captainPlanet = UserFactory.user().withName("Captain", "Planet").withUsername("captainplanet").saved
+            val ironMan = UserFactory.user().withName("Tony", "Stark").withUsername("ironman").saved
+            val earthOrg = OrganizationFactory.organization().withName("Earth").withOwner(captainPlanet).withMembers(Seq(ironMan)).saved
+            val starkOrg = OrganizationFactory.organization().withName("Stark Towers").withOwner(ironMan).saved
+            val ironLib = LibraryFactory.library().withName("Hero Stuff").withSlug("herostuff").withUser(ironMan).saved
+            (ironMan, earthOrg, starkOrg, ironLib)
+          }
+
+          // There shouldn't be any aliases initially
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryAliasRepo].count === 0
+          }
+
+          // Move it into starkOrg
+          val response1 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(starkOrg.id.get))))))
+          println(response1)
+          response1.isRight === true
+
+          // Now the library should live in starkOrg, but there is still an alias from ironMan
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryAliasRepo].count === 1
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
+            ironManAlias.isDefined === true
+            ironManAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Move it back into ironMan's personal space
+          val response2 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(None))))
+          response2.isRight === true
+
+          // The ironMan one was reclaimed, so it should be inactive now
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff")).isDefined === true
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"), excludeState = None)
+            ironManAlias.isDefined === true
+            ironManAlias.get.state === LibraryAliasStates.INACTIVE
+
+            val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
+            starkOrgAlias.isDefined === true
+            starkOrgAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Move it into earthOrg
+          val response3 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(earthOrg.id.get))))))
+          response3.isRight === true
+
+          // Two aliases now, both ironMan and starkOrg
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(earthOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryAliasRepo].count === 2
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
+            ironManAlias.isDefined === true
+            ironManAlias.get.libraryId === ironLib.id.get
+
+            val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
+            starkOrgAlias.isDefined === true
+            starkOrgAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Try to move it back into starkOrg, should fail since by default members cannot remove libraries
+          val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(starkOrg.id.get))))))
+          response4.isLeft === true
         }
       }
     }
