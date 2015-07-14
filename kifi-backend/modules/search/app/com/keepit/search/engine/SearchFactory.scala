@@ -64,8 +64,8 @@ class SearchFactory @Inject() (
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     queryString: String,
-    lang1: Lang,
-    lang2: Option[Lang],
+    firstLang: Lang,
+    secondLang: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     orderBy: SearchRanking,
@@ -83,10 +83,10 @@ class SearchFactory @Inject() (
     val orgIdsFuture = getOrganizations(userId)
 
     val parser = new KQueryParser(
-      DefaultAnalyzer.getAnalyzer(lang1),
-      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
-      lang2.map(DefaultAnalyzer.getAnalyzer),
-      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      DefaultAnalyzer.getAnalyzer(firstLang),
+      DefaultAnalyzer.getAnalyzerWithStemmer(firstLang),
+      secondLang.map(DefaultAnalyzer.getAnalyzer),
+      secondLang.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
       config,
       phraseDetector,
@@ -132,7 +132,7 @@ class SearchFactory @Inject() (
             clickHistoryFuture,
             monitoredAwait,
             timeLogs,
-            (lang1, lang2)
+            (firstLang, secondLang)
           )
         }
       case None => Seq.empty[UriSearch]
