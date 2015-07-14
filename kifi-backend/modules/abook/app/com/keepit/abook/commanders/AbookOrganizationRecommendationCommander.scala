@@ -185,16 +185,10 @@ class AbookOrganizationRecommendationCommander @Inject() (
         !rejectedRecommendations.contains(emailAccountId)
     }
 
-    @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
-
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
-        val firstInvitedAt = relevantEmailInvites.get(emailAccountId).map(_.createdAt)
-        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
-          emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
-        }
-        val validName = preferredContact.name.filter(isValidName(_, preferredContact.email))
-        OrganizationInviteRecommendation(Right(preferredContact.email), score)
+        val emailAccount = emailAccountRepo.get(emailAccountId)
+        OrganizationInviteRecommendation(Right(emailAccount.address), score)
     }
     recommendations.take(relevantEmailAccounts.size)
   }
