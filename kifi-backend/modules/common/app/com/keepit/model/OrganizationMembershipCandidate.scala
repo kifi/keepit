@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.{ ModelWithSeqNumber, SequenceNumber, Id, ModelWithState, State, States }
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -20,12 +21,12 @@ case class OrganizationMembershipCandidate(
   def withState(newState: State[OrganizationMembershipCandidate]): OrganizationMembershipCandidate = this.copy(state = newState)
 
   def sanitizeForDelete: OrganizationMembershipCandidate = this.copy(state = OrganizationMembershipCandidateStates.INACTIVE)
+  def toIngestableOrganizationMembershipCandidate: IngestableOrganizationMembershipCandidate = IngestableOrganizationMembershipCandidate(this.id.get, this.createdAt, this.state, this.orgId, this.userId, this.seq)
+
 }
 
 object OrganizationMembershipCandidateStates extends States[OrganizationMembershipCandidate] {
   def all = Set(ACTIVE, INACTIVE)
-
-  def toIngestableOrganizationMembershipCandidate(from: OrganizationMembershipCandidate): IngestableOrganizationMembershipCandidate = IngestableOrganizationMembershipCandidate(from.id.get, from.createdAt, from.state, from.orgId, from.userId, from.seq)
 }
 
 object OrganizationMembershipCandidate {
@@ -40,6 +41,7 @@ object OrganizationMembershipCandidate {
   )(OrganizationMembershipCandidate.apply, unlift(OrganizationMembershipCandidate.unapply))
 }
 
+@json
 case class IngestableOrganizationMembershipCandidate(
   id: Id[OrganizationMembershipCandidate],
   createdAt: DateTime,
