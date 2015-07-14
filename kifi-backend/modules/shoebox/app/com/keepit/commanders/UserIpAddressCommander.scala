@@ -119,13 +119,16 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
+  private def linkToOrg(flag: String = "")(org: Organization): String =
+    s"<http://admin.kifi.com/admin/organization/${org.id.get.id}|${org.name}$flag>"
+
   private def formatUser(user: User, candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
     val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
     s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
       s"\t$primaryMail" +
       s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
-      (if (orgs.nonEmpty) { "\torgs " + orgs.map(_.name).mkString(" ") } else "") +
-      (if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(_.name + "~").mkString(" ") } else "") +
+      (if (orgs.nonEmpty) { "\torgs " + orgs.map(linkToOrg("")).mkString(" ") } else "") +
+      (if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(linkToOrg("~")).mkString(" ") } else "") +
       s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
   }
 
