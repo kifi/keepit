@@ -45,9 +45,9 @@ class ABookUserRecommendationCommander @Inject() (
     }
   }
 
-  def getUserRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false): Future[Option[Seq[Id[User]]]] = {
+  def getUserRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
     val start = clock.now()
-    val futureRecommendations = generateFutureUserRecommendations(userId, bePatient).map(_.map {
+    val futureRecommendations = generateFutureUserRecommendations(userId).map(_.map {
       userIdAndScoreStream => userIdAndScoreStream.slice(offset, offset + limit).map(_._1).toSeq
     })
     futureRecommendations.onSuccess {
@@ -118,7 +118,7 @@ class ABookUserRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureUserRecommendations(userId: Id[User], bePatient: Boolean = false): Future[Option[Stream[(Id[User], Double)]]] = {
+  private def generateFutureUserRecommendations(userId: Id[User]): Future[Option[Stream[(Id[User], Double)]]] = {
     val futureRelatedUsers = getSociallyRelatedEntities(userId).map(_.map(_.users))
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsRecipientIdBySender(userId)
