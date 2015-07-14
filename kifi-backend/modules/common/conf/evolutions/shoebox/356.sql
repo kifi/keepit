@@ -16,6 +16,6 @@ ALTER TABLE organization_membership_candidate ADD seq BIGINT(20) NOT NULL DEFAUL
 
 CREATE INDEX organization_membership_candidate_seq_index ON organization_membership_candidate(seq);
 
-insert into evolutions (name, description) values('355.sql', 'add organization_membership_candidate_sequence');
+insert into evolutions (name, description) values('356.sql', 'add organization_membership_candidate_sequence');
 
 # --- !Downs
