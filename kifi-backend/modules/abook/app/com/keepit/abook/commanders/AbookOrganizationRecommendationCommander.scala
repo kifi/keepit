@@ -144,12 +144,12 @@ class AbookOrganizationRecommendationCommander @Inject() (
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => organizationEmailInviteRecommendationRepo.getIrrelevantRecommendations(orgId) }
-        val allContacts = if (!disclosePrivateEmails) { db.readOnlyMaster { implicit session => contactRepo.getByUserId(viewerId) } } else { Seq.empty }
+        val viewersContacts = if (!disclosePrivateEmails) { db.readOnlyMaster { implicit session => contactRepo.getByUserId(viewerId) } } else { Seq.empty }
         for {
           existingInvites <- fExistingInvites
           normalizedUserNames <- fNormalizedUsernames
         } yield {
-          generateEmailInviteRecommendations(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, disclosePrivateEmails, allContacts, normalizedUserNames, existingInvites)
+          generateEmailInviteRecommendations(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, disclosePrivateEmails, viewersContacts, normalizedUserNames, existingInvites)
         }
       }
     }
