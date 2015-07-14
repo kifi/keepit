@@ -79,6 +79,7 @@ class UserIpAddressEventLogger @Inject() (
     db: Database,
     userRepo: UserRepo,
     userIpAddressRepo: UserIpAddressRepo,
+    userValueRepo: UserValueRepo,
     httpClient: HttpClient,
     userStatisticsCommander: UserStatisticsCommander,
     richIpAddressCache: RichIpAddressCache,
@@ -100,15 +101,18 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType == "NONE") {
       log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + event.userAgent)
     }
-    val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
 
-    val cluster = db.readWrite { implicit session =>
+    val (cluster, ignoreForPotentialOrgs) = db.readWrite { implicit session =>
+      val ignoreForPotentialOrgs = userValueRepo.getValue(event.userId, UserValues.ignoreForPotentialOrganizations)
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
+
+      val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
       userIpAddressRepo.saveIfNew(model)
-      currentCluster.toSet
+
+      (currentCluster.toSet, ignoreForPotentialOrgs)
     }
 
-    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.size >= 1) {
+    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }

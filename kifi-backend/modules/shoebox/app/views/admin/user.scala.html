@@ -12,7 +12,8 @@
   econtactCount: Int,
   contacts: Seq[com.keepit.abook.model.RichContact],
   invitedBy: Seq[User],
-  potentialOrganizations: Seq[Organization]
+  potentialOrganizations: Seq[Organization],
+  ignoreForPotentialOrganizations: Boolean
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -63,6 +64,15 @@
           @for(u <- invitedBy) { <div>@adminHelper.userDisplay(u)</div> }
         </td>
       </tr>
+    <tr>
+        <th>Ignore for potential organizations?</th>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline">
+                <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"}>
+                <button type="submit" class="btn btn-default">Save</button>
+            </form>
+        </td>
+    </tr>
       <tr>
           <th>Potential Organizations</th>
           <td>
