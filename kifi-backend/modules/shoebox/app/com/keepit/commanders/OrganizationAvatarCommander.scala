@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.{ ImagePath, ImageSize, OrganizationAvatarStore }
+import com.keepit.common.store.{ RoverImageStore, ImagePath, ImageSize }
 import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
@@ -28,7 +28,7 @@ trait OrganizationAvatarCommander {
 class OrganizationAvatarCommanderImpl @Inject() (
     db: Database,
     orgAvatarRepo: OrganizationAvatarRepo,
-    imageStore: OrganizationAvatarStore,
+    imageStore: RoverImageStore,
     implicit val photoshop: Photoshop,
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
@@ -62,12 +62,10 @@ class OrganizationAvatarCommanderImpl @Inject() (
       case Left(processingError) => Future.successful(Left(processingError))
       case Right(processedImagesReadyToPersist) =>
         val uploads = processedImagesReadyToPersist.map { image =>
-          val is: InputStream = new FileInputStream(image.file)
 
-          val put = imageStore.put(image.key, is, image.file.length.toInt, imageFormatToMimeType(image.format)).imap { _ =>
-            ImageProcessState.UploadedImage(image.key, image.format, image.file, image.imageInfo, image.processOperation)
+          val put = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).imap { _ =>
+            ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
           }
-          put.onComplete { _ => is.close() }
           put
         }
 
