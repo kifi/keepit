@@ -3,7 +3,7 @@ package com.keepit.search.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.model.{ DetailedLibraryView }
-import com.keepit.search.index.Indexable
+import com.keepit.search.index.{ IndexerVersionProviders, Indexable }
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexerPlugin }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
@@ -58,6 +58,10 @@ class IndexController @Inject() (
       orgMemIndexerPlugin.indexInfos
     )
     Ok(Json.toJson(infos))
+  }
+
+  def versions() = Action { implicit request =>
+    Ok(Json.toJson(IndexerVersionProviders.allActiveVersions))
   }
 
   def getLibraryDocument = Action(parse.json) { implicit request =>
