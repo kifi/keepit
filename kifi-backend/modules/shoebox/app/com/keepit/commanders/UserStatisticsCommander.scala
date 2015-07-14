@@ -1,11 +1,15 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.common.time._
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class UserStatistics(
   user: User,
@@ -18,22 +22,70 @@ case class UserStatistics(
   experiments: Set[ExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
-  librariesFollowed: Int)
+  librariesFollowed: Int,
+  orgs: Seq[Organization],
+  orgCandidates: Seq[Organization])
+
+case class OrganizationStatisticsOverview(
+  org: Organization,
+  orgId: Id[Organization],
+  pubId: PublicId[Organization],
+  ownerId: Id[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  numLibraries: Int,
+  numKeeps: Int,
+  members: Set[OrganizationMembership],
+  candidates: Set[OrganizationMembershipCandidate])
+
+case class MemberStatistics(
+  user: User,
+  numChats: Int,
+  numPublicKeeps: Int,
+  numLibrariesCreated: Int,
+  numLibrariesCollaborating: Int,
+  numLibrariesFollowing: Int,
+
+  numSharedChats: Int,
+  numSharedLibraries: Int)
+
+case class OrganizationStatistics(
+  org: Organization,
+  orgId: Id[Organization],
+  pubId: PublicId[Organization],
+  ownerId: Id[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  numLibraries: Int,
+  numKeeps: Int,
+  numChats: Int,
+  members: Set[OrganizationMembership],
+  candidates: Set[OrganizationMembershipCandidate],
+  membersStatistics: Map[Id[User], MemberStatistics])
 
 class UserStatisticsCommander @Inject() (
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val executionContext: ExecutionContext,
     db: Database,
     kifiInstallationRepo: KifiInstallationRepo,
     keepRepo: KeepRepo,
     emailRepo: UserEmailAddressRepo,
+    elizaClient: ElizaServiceClient,
+    libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
     userRepo: UserRepo,
-    userExperimentRepo: UserExperimentRepo) {
+    userExperimentRepo: UserExperimentRepo,
+    orgRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
-    val inviters = invites.map(_.senderUserId).flatten
+    val inviters = invites.flatMap(_.senderUserId)
     userRepo.getAllUsers(inviters).values.toSeq
   }
 
@@ -44,8 +96,11 @@ class UserStatisticsCommander @Inject() (
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+    val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+    val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
 
-    UserStatistics(user,
+    UserStatistics(
+      user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
@@ -55,7 +110,91 @@ class UserStatisticsCommander @Inject() (
       userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations,
       librariesCreated,
-      librariesFollowed)
+      librariesFollowed,
+      orgs,
+      orgCandidates
+    )
+  }
+
+  def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
+    val membersStatsFut = userIds.map { userId =>
+      val (numPrivateKeeps, numPublicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
+      val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
+      val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
+      val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+      val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
+      val numChatsFut = elizaClient.getUserThreadStats(userId)
+      for (
+        numChats <- numChatsFut
+      ) yield {
+        userId -> MemberStatistics(
+          user = userRepo.get(userId),
+          numChats = numChats.all,
+          numPublicKeeps = numPublicKeeps,
+          numLibrariesCreated = numLibrariesCreated,
+          numLibrariesCollaborating = numLibrariesCollaborating,
+          numLibrariesFollowing = numLibrariesFollowing,
+          numSharedLibraries = 0, //TODO(ryan): fix
+          numSharedChats = 0 // TODO(ryan): fix
+        )
+      }
+    }
+    Future.sequence(membersStatsFut).imap(_.toMap)
+  }
+
+  def organizationStatistics(orgId: Id[Organization])(implicit session: RSession): Future[OrganizationStatistics] = {
+    val org = orgRepo.get(orgId)
+    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val numKeeps = libraries.map(_.keepCount).sum
+
+    val members = orgMembershipRepo.getAllByOrgId(orgId)
+    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+
+    val membersStatsFut = membersStatistics(userIds)
+
+    val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
+
+    for (
+      membersStats <- membersStatsFut
+    ) yield OrganizationStatistics(
+      org = org,
+      orgId = orgId,
+      pubId = Organization.publicId(orgId),
+      ownerId = org.ownerId,
+      handle = org.getHandle,
+      name = org.name,
+      description = org.description,
+      numLibraries = libraries.size,
+      numKeeps = numKeeps,
+      numChats = numChats,
+      members = members,
+      candidates = candidates,
+      membersStatistics = membersStats
+    )
+  }
+  def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {
+    val org = orgRepo.get(orgId)
+    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val numKeeps = libraries.map(_.keepCount).sum
+
+    val members = orgMembershipRepo.getAllByOrgId(orgId)
+    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+
+    OrganizationStatisticsOverview(
+      org = org,
+      orgId = orgId,
+      pubId = Organization.publicId(orgId),
+      ownerId = org.ownerId,
+      handle = org.getHandle,
+      name = org.name,
+      description = org.description,
+      numLibraries = libraries.size,
+      numKeeps = numKeeps,
+      members = members,
+      candidates = candidates
+    )
   }
 
 }

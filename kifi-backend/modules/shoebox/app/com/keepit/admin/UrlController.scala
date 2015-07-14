@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -20,7 +21,7 @@ import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsBoolean, JsObject, Json }
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -29,6 +30,10 @@ class UrlController @Inject() (
     uriRepo: NormalizedURIRepo,
     urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
+    domainRepo: DomainRepo,
+    domainTagRepo: DomainTagRepo,
+    domainToTagRepo: DomainToTagRepo,
+    sensitivityUpdater: SensitivityUpdater,
     urlRenormalizeCommander: URLRenormalizeCommander,
     orphanCleaner: OrphanCleaner,
     uriIntegrityPlugin: UriIntegrityPlugin,
@@ -36,7 +41,6 @@ class UrlController @Inject() (
     urlPatternRuleRepo: UrlPatternRuleRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    httpProxyRepo: HttpProxyRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
@@ -201,71 +205,6 @@ class UrlController @Inject() (
     }
   }
 
-  def getPatterns = AdminUserPage { implicit request =>
-    val (patterns, proxies) = db.readOnlyReplica { implicit session =>
-      (urlPatternRuleRepo.all.sortBy(_.id.get.id), httpProxyRepo.all())
-    }
-    Ok(html.admin.urlPatternRules(patterns, proxies))
-  }
-
-  def savePatterns = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    db.readWrite { implicit session =>
-      for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
-        val id = Id[UrlPatternRule](key.toLong)
-        val oldPat = urlPatternRuleRepo.get(id)
-        val newPat = oldPat.copy(
-          pattern = body("pattern_" + key),
-          example = Some(body("example_" + key)).filter(!_.isEmpty),
-          state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
-          isUnscrapable = body.contains("unscrapable_" + key),
-          useProxy = body("proxy_" + key) match {
-            case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
-          },
-          normalization = body("normalization_" + key) match {
-            case "None" => None
-            case scheme => Some(Normalization(scheme))
-          },
-          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty),
-          nonSensitive = body("non_sensitive_" + key) match {
-            case "None" => None
-            case "true" => Some(true)
-            case "false" => Some(false)
-          }
-        )
-
-        if (newPat != oldPat) {
-          urlPatternRuleRepo.save(newPat)
-        }
-      }
-      val newPat = body("new_pattern")
-      if (newPat.nonEmpty) {
-        urlPatternRuleRepo.save(UrlPatternRule(
-          pattern = newPat,
-          example = Some(body("new_example")).filter(!_.isEmpty),
-          state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
-          isUnscrapable = body.contains("new_unscrapable"),
-          useProxy = body("new_proxy") match {
-            case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
-          },
-          normalization = body("new_normalization") match {
-            case "None" => None
-            case scheme => Some(Normalization(scheme))
-          },
-          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty),
-          nonSensitive = body("new_non_sensitive") match {
-            case "None" => None
-            case "true" => Some(true)
-            case "false" => Some(false)
-          }
-        ))
-      }
-    }
-    Redirect(routes.UrlController.getPatterns)
-  }
-
   def pornDomainFlag() = AdminUserPage { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val regex = body.get("regex").get
@@ -379,5 +318,99 @@ class UrlController @Inject() (
       log.info("[CleaningKeeps] All Done!")
     }
     Ok(s"Starting at page $firstPage of size $pageSize, it's on!")
+  }
+
+  def searchDomain = AdminUserPage { implicit request =>
+    Ok(html.admin.domainFind())
+  }
+
+  def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
+    val hostname = request.body.get("hostname").get.head
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(hostname, None)
+    }
+
+    domain.map { domain => Redirect(routes.UrlController.getDomain(domain.id.get)) }.getOrElse(NotFound)
+  }
+
+  def getDomain(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(id)
+    }
+    Ok(html.admin.domain(domain))
+  }
+
+  def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readWrite { implicit s =>
+      val domain = domainRepo.get(id)
+      val domainToggled = domain.copy(isEmailProvider = !domain.isEmailProvider) //domain
+      domainRepo.save(domainToggled)
+    }
+    Redirect(routes.UrlController.getDomain(id))
+  }
+
+  def getDomainTags = AdminUserPage { implicit request =>
+    val tags = db.readOnlyReplica { implicit session =>
+      domainTagRepo.all
+    }
+    Ok(html.admin.domainTags(tags))
+  }
+
+  def saveDomainTags = AdminUserPage { implicit request =>
+    val tagIdValue = """sensitive_([0-9]+)""".r
+    val sensitiveTags = request.body.asFormUrlEncoded.get.keys
+      .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
+    val tagsToSave = db.readOnlyReplica { implicit s =>
+      domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
+        case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
+          tag.withSensitive(Some(sensitive))
+      }
+    }
+    tagsToSave.foreach { tag =>
+      db.readWrite { implicit s =>
+        domainTagRepo.save(tag)
+      }
+      Future {
+        val domainIds = db.readOnlyMaster { implicit s =>
+          domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
+        }
+        db.readWrite { implicit s =>
+          sensitivityUpdater.clearDomainSensitivity(domainIds)
+        }
+      }
+    }
+    Redirect(routes.UrlController.getDomainTags)
+  }
+
+  def getDomainOverrides = AdminUserPage { implicit request =>
+    val domains = db.readOnlyReplica { implicit session =>
+      domainRepo.getOverrides()
+    }
+    Ok(html.admin.domainOverrides(domains))
+  }
+
+  def saveDomainOverrides = AdminUserAction { implicit request =>
+    val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
+      case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
+    }.toMap
+    val domainsToRemove = db.readOnlyReplica { implicit session =>
+      domainRepo.getOverrides()
+    }.filterNot(d => domainSensitiveMap.contains(d.hostname))
+
+    db.readWrite { implicit s =>
+      domainSensitiveMap.foreach {
+        case (domainName, sensitive) if Domain.isValid(domainName) =>
+          val domain = domainRepo.get(domainName)
+            .getOrElse(Domain(hostname = domainName))
+            .withManualSensitive(Some(sensitive))
+          domainRepo.save(domain)
+        case (domainName, _) =>
+          log.debug("Invalid domain: %s" format domainName)
+      }
+      domainsToRemove.foreach { domain =>
+        domainRepo.save(domain.withManualSensitive(None))
+      }
+    }
+    Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 }

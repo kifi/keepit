@@ -1,19 +1,18 @@
 package com.keepit.commanders
 
-import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import com.keepit.common.json
 import play.api.libs.json._
-import com.keepit.model.OrganizationPermission._
 
 import scala.util.control.NoStackTrace
 
@@ -55,6 +54,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userRepo: UserRepo,
+    keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {

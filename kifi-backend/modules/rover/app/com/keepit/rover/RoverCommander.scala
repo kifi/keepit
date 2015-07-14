@@ -11,6 +11,7 @@ import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolde
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
+import com.keepit.rover.rule.RoverHttpProxyCommander
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.rover.store.ContentSignatureCommander
 import com.keepit.common.time._

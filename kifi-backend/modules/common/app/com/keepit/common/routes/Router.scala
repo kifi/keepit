@@ -119,8 +119,6 @@ object Shoebox extends Service {
     def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
     def kifiHit() = ServiceRoute(POST, "/internal/shoebox/database/kifiHit")
     def getHelpRankInfo() = ServiceRoute(POST, "/internal/shoebox/database/getHelpRankInfo")
-    def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
-    def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def getFriendRequestRecipientIdBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestRecipientIdBySender", Param("senderId", senderId))
     def getUserValue(userId: Id[User], key: UserValueName) = ServiceRoute(GET, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
     def setUserValue(userId: Id[User], key: UserValueName) = ServiceRoute(POST, "/internal/shoebox/database/userValue", Param("userId", userId), Param("key", key))
@@ -334,15 +332,6 @@ object Cortex extends Service {
   type LDAVersionOpt = Option[LDAVersion]
 
   object internal {
-    def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
-    def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
-    def uriKeywords(uri: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/word2vec/uriKeywords", Param("uri", uri))
-    def batchGetURIKeywords() = ServiceRoute(POST, "/internal/cortex/word2vec/batchUriKeywords")
-    def word2vecURISimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = ServiceRoute(GET, s"/internal/cortex/word2vec/uriSimilarity", Param("uri1", uri1), Param("uri2", uri2))
-    def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
-    def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
-    def word2vecUserUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userUriSimilarity")
-    def word2vecFeedUserUris() = ServiceRoute(POST, "/internal/cortex/word2vec/feedUserUris")
 
     def defulatLDAVersion() = ServiceRoute(GET, "/internal/cortex/lda/defaultVersion")
     def ldaNumOfTopics(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics", Param("version", version))
@@ -422,6 +411,11 @@ object Rover extends Service {
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/rover/pornDetector/getModel")
     def detectPorn() = ServiceRoute(POST, s"/internal/rover/pornDetector/detect")
     def whitelist() = ServiceRoute(POST, s"/internal/rover/pornDetector/whitelist")
+
+    def getAllProxies() = ServiceRoute(GET, s"/internal/rover/getAllProxies")
+    def saveProxy() = ServiceRoute(POST, s"/internal/rover/saveProxy")
+    def getAllUrlRules() = ServiceRoute(GET, s"/internal/rover/getAllUrlRules")
+    def saveUrlRule() = ServiceRoute(POST, s"/internal/rover/saveUrlRule")
   }
 }
 

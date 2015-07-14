@@ -1,14 +1,12 @@
 package com.keepit.rover.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
-import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.Repo
+import com.keepit.common.cache._
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.{ Database, DbRepo, DataBaseComponent, Repo }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -23,7 +21,7 @@ case class RoverHttpProxy(
     alias: String,
     host: String,
     port: Int,
-    scheme: String,
+    scheme: ProxyScheme,
     username: Option[String],
     password: Option[String]) extends ModelWithState[RoverHttpProxy] {
 
@@ -34,6 +32,7 @@ case class RoverHttpProxy(
 }
 
 object RoverHttpProxy {
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[RoverHttpProxy]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -42,10 +41,34 @@ object RoverHttpProxy {
     (__ \ 'alias).format[String] and
     (__ \ 'host).format[String] and
     (__ \ 'port).format[Int] and
-    (__ \ 'scheme).format[String] and
+    (__ \ 'scheme).format[ProxyScheme] and
     (__ \ 'username).formatNullable[String] and
     (__ \ 'password).formatNullable[String]
   )(RoverHttpProxy.apply, unlift(RoverHttpProxy.unapply))
+
+  def applyFromDbRow(id: Option[Id[RoverHttpProxy]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[RoverHttpProxy],
+    alias: String,
+    host: String,
+    port: Int,
+    scheme: String,
+    username: Option[String],
+    password: Option[String]) = RoverHttpProxy(id, createdAt, updatedAt, state, alias, host, port, ProxyScheme.fromName(scheme), username, password)
+
+  def unapplyToDbRow(proxy: RoverHttpProxy) = Some(
+    proxy.id,
+    proxy.createdAt,
+    proxy.updatedAt,
+    proxy.state,
+    proxy.alias,
+    proxy.host,
+    proxy.port,
+    ProxyScheme.toName(proxy.scheme),
+    proxy.username,
+    proxy.password)
+
 }
 
 object RoverHttpProxyStates extends States[RoverHttpProxy]
@@ -73,7 +96,7 @@ class RoverHttpProxyRepoImpl @Inject() (
     def scheme = column[String]("scheme", O.NotNull)
     def username = column[String]("username", O.Nullable)
     def password = column[String]("password", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, alias, host, port, scheme, username.?, password.?) <> ((RoverHttpProxy.apply _).tupled, RoverHttpProxy.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, alias, host, port, scheme, username.?, password.?) <> ((RoverHttpProxy.applyFromDbRow _).tupled, RoverHttpProxy.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new HttpProxyTable(tag)

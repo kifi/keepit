@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.model.RichContact
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -26,6 +27,9 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteCommander: OrganizationInviteCommander,
+    userRepo: UserRepo,
+    keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     implicit val executionContext: ExecutionContext,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends OrganizationMembershipCandidateCommander with Logging {
 

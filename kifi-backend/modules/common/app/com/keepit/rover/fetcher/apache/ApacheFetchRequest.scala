@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URISanitizer, URI }
 import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect, FetchRequest }
+import com.keepit.rover.model.{ HttpProxy, ProxyScheme }
 import org.apache.http.HttpHeaders._
 import org.apache.http.{ StatusLine, HttpHost }
 import org.apache.http.auth.{ UsernamePasswordCredentials, AuthScope }
@@ -39,7 +40,7 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
 
   def url: String = httpGet.getURI.toString
   def isAborted: Boolean = httpGet.isAborted
-  def info: FetchRequestInfo = RedirectInterceptor.getFetchRequestContext(httpContext).get
+  def info(proxy: Option[HttpProxy]): FetchRequestInfo = RedirectInterceptor.getFetchRequestContext(httpContext, proxy).get
 
   def execute(): Try[ApacheFetchResponse] = {
     Try {
@@ -95,14 +96,14 @@ object ApacheFetchRequest {
     if (disableGzip) httpGet.addHeader(ACCEPT_ENCODING, "")
 
     request.proxy.map { httpProxy =>
-      val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
+      val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.host, httpProxy.port, ProxyScheme.toName(httpProxy.scheme))).build()
       httpGet.setConfig(requestConfigWithProxy)
       for {
         user <- httpProxy.username
         password <- httpProxy.password
       } yield {
         val credentials = new BasicCredentialsProvider()
-        credentials.setCredentials(new AuthScope(httpProxy.hostname, httpProxy.port), new UsernamePasswordCredentials(user, password))
+        credentials.setCredentials(new AuthScope(httpProxy.host, httpProxy.port), new UsernamePasswordCredentials(user, password))
         httpContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credentials)
       }
     }

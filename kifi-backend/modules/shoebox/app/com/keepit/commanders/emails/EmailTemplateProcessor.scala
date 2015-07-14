@@ -204,7 +204,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
           libOwner.fullName
-        case tags.keepName => keep.title.getOrElse("this keep")
+        case tags.keepName => keep.title.getOrElse("Untitled Keep")
         case tags.keepUrl => keep.url
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
