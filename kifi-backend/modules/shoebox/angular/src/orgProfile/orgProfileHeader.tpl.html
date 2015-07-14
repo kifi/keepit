@@ -1,28 +1,19 @@
 <div class="kf-oph">
-  <div class="kf-oph-top">
-
-    <div class="kf-oph-actions" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
-      <div class="kf-oph-dropdown-parent" kf-hover-menu>
-        <a ui-sref="settings" ng-click="trackClickedSettings()">
-          <span class="kf-oph-settings-icon svg-settings-gear"></span>
-          <span class="kf-oph-action-text">Settings</span>
-        </a>
-        <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="showDescriptionModal()">Edit your description</button>
-          <a class="kf-dropdown-menu-item" ui-sref="settings" ng-click="trackClickedSettings()">More settings</a>
-        </menu>
-      </div>
-    </div>
+  <div class="kf-oph-top" ng-class="editing ? 'kf-editing' : ''">
 
     <a class="kf-oph-pic-a">
       <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
+      <button class="kf-oph-pic-edit">Upload Photo</button>
     </a>
     <div class="kf-oph-about">
-      <h1 class="kf-oph-name">{{profile.name}}</h1>
-      <p class="kf-oph-description">{{profile.description}}</p>
+      <input class="kf-edit-field kf-oph-name" type=text ng-value="profile.name">
+
+      <input class="kf-edit-field kf-oph-description" type="text" ng-value="profile.description" />
+
       <p ng-if="profile.link" class="kf-uph-link">
         <a ng-href="profile.link">{{profile.link}}</a>
       </p>
+
       <table class="kf-oph-stats">
         <thead>
           <th>Boards</th>
