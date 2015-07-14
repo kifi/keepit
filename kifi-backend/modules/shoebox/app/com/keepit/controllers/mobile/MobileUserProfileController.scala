@@ -37,7 +37,7 @@ class MobileUserProfileController @Inject() (
   implicit val executionContext: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
 
-  def profile(id: ExternalId[User]) = MaybeUserAction { request =>
+  def profileFromUserId(id: ExternalId[User]) = MaybeUserAction { request =>
     val viewer = request.userOpt
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id)
