@@ -268,7 +268,7 @@ class AdminUserController @Inject() (
     }
 
     val (experiments, potentialOrganizations) = db.readOnlyReplica { implicit s =>
-      (userExperimentRepo.getUserExperiments(user.id.get), orgRepo.getPotentialForUser(userId))
+      (userExperimentRepo.getUserExperiments(user.id.get), orgRepo.getPotentialOrganizationsForUser(userId))
     }
 
     for {

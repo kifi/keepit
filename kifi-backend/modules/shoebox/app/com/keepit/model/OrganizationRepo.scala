@@ -20,7 +20,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult }
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
-  def getPotentialForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
+  def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
 }
 
 @Singleton
@@ -92,7 +92,7 @@ class OrganizationRepoImpl @Inject() (
     save(model.sanitizeForDelete)
   }
 
-  def getPotentialForUser(userId: Id[User])(implicit session: RSession): Seq[Organization] = {
+  def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     sql"""
