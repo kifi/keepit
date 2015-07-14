@@ -35,8 +35,8 @@ object SearchConfig {
       // UriSearch
       "libraryNameBoost" -> "0.5",
       "maxResultClickBoost" -> "20.0",
-      "minMyBookmarks" -> "2",
-      "myBookmarkBoost" -> "1.5",
+      "minMyKeeps" -> "2",
+      "myKeepBoost" -> "1.5",
       "usefulPageBoost" -> "1.1",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.01",
@@ -79,8 +79,8 @@ object SearchConfig {
       // UriSearch
       "libraryNameBoost" -> "boost value for library name in uri search",
       "maxResultClickBoost" -> "boosting by recent result clicks",
-      "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
-      "myBookmarkBoost" -> "importance of my bookmark",
+      "minMyKeeps" -> "the minimum number of my bookmarks in a search result",
+      "myKeepBoost" -> "importance of my bookmark",
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
