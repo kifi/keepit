@@ -630,6 +630,8 @@ GET     /admin/data/renormalization/:page                                      @
 GET     /admin/data/batchURIMigration                                          @com.keepit.controllers.admin.UrlController.batchURIMigration
 GET     /admin/data/batchURLMigration                                          @com.keepit.controllers.admin.UrlController.batchURLMigration
 POST    /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
+GET     /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.getPatterns
+POST    /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/remigrate                                                  @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST    /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])

@@ -276,7 +276,7 @@ class UserProfileController @Inject() (
    * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
    */
   def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
+    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds) map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recommendedUserIds) => {
         val head = recommendedUserIds.take(fullInfoLimit)
