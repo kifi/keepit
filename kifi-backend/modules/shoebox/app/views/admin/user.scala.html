@@ -11,7 +11,8 @@
   abookInfos: Seq[ABookInfo],
   econtactCount: Int,
   contacts: Seq[com.keepit.abook.model.RichContact],
-  invitedBy: Seq[User]
+  invitedBy: Seq[User],
+  potentialOrganizations: Seq[Organization]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -61,6 +62,12 @@
         <td>
           @for(u <- invitedBy) { <div>@adminHelper.userDisplay(u)</div> }
         </td>
+      </tr>
+      <tr>
+          <th>Potential Organizations</th>
+          <td>
+              @adminHelper.orgsDisplay(potentialOrganizations)
+          </td>
       </tr>
       <tr>
         <th>Created At</th><td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
