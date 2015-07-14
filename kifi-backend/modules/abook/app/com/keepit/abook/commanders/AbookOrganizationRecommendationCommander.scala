@@ -56,7 +56,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
   def getRecommendations(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
     val start = clock.now()
-    val fRecommendations = generateFutureRecommendations(orgId, viewerId).map {
+    val fRecommendations = generateFutureRecommendations(orgId, viewerId, false).map {
       recoStream => recoStream.slice(offset, offset + limit).toSeq
     }
     fRecommendations.onSuccess {
