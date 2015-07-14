@@ -123,5 +123,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = Future.successful(IrrelevantPeopleForOrg.empty(orgId))
 
-  def getRecommendationsForOrg(orgId: Id[Organization], usersToFilterOnContacts: Set[Id[User]], offset: Int, limit: Int) = Future.successful(Seq.empty)
+  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = Future.successful(Seq.empty)
+
+  def getAllOrgRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = Future.successful(Seq.empty)
 }

@@ -147,7 +147,7 @@ class UserStatisticsCommander @Inject() (
     Future.sequence(membersStatsFut).imap(_.toMap)
   }
 
-  def organizationStatistics(orgId: Id[Organization], numMemberRecos: Int = 20)(implicit session: RSession): Future[OrganizationStatistics] = {
+  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20)(implicit session: RSession): Future[OrganizationStatistics] = {
     val org = orgRepo.get(orgId)
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
     val numKeeps = libraries.map(_.keepCount).sum
@@ -158,7 +158,7 @@ class UserStatisticsCommander @Inject() (
 
     val membersStatsFut = membersStatistics(userIds)
 
-    val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, userIds, 0, numMemberRecos)
+    val fMemberRecommendations = abook.getAllOrgRecommendationsForAdmin(orgId, adminId, 0, numMemberRecos)
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
