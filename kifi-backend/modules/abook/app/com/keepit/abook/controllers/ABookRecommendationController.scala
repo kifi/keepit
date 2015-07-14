@@ -16,14 +16,14 @@ class ABookRecommendationController @Inject() (
     abookUserRecommendationCommander: ABookUserRecommendationCommander,
     abookOrganizationRecommendationCommander: AbookOrganizationRecommendationCommander) extends ABookServiceController {
 
-  def getFriendRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
-    abookUserRecommendationCommander.getUserRecommendations(userId, offset, limit, bePatient).map { recommendedUsers =>
+  def getFriendRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
+    abookUserRecommendationCommander.getUserRecommendations(userId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
   }
 
-  def getRecommendationsForOrg(orgId: Id[Organization], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async(parse.json) { request =>
+  def getRecommendationsForOrg(orgId: Id[Organization], offset: Int, limit: Int) = Action.async(parse.json) { request =>
     val memberIds = (request.body \ "usersToFilterOnContacts").as[Set[Id[User]]]
     abookOrganizationRecommendationCommander.getRecommendations(orgId, memberIds, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
