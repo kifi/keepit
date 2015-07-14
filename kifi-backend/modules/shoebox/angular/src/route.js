@@ -57,12 +57,12 @@ angular.module('kifi')
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
             net.userOrOrg($stateParams.handle).then(function (response) {
-              var type = response.data.type;
-
+              var type = response.data.type,
+                  profile = _.merge($stateParams, response.data.result);
               if (type === 'user') {
-                $state.go('userProfile.libraries.own', $stateParams, { location: false });
+                $state.go('userProfile.libraries.own', profile, { location: false });
               } else if (type === 'org') {
-                $state.go('orgProfile.members', $stateParams, { location: false });
+                $state.go('orgProfile.members', profile, { location: false });
               }
             });
           }
@@ -70,8 +70,14 @@ angular.module('kifi')
       })
       .state('orgProfile', {
         url: '/:handle',
+        params: { organization: null },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
+        resolve: {
+          profile: ['$stateParams', function($stateParams) {
+            return $stateParams.organization;
+          }]
+        },
         'abstract': true
       })
       .state('orgProfile.members', {
