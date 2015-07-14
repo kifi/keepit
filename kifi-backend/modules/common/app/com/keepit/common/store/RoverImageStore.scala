@@ -1,6 +1,6 @@
 package com.keepit.common.store
 
-import java.io.{ File, InputStream }
+import java.io.{ FileInputStream, File, InputStream }
 
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
@@ -14,9 +14,10 @@ import play.api.Play.current
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 trait RoverImageStore {
-  def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit]
+  def put(key: ImagePath, file: File, mimeType: String): Future[Unit]
   def get(key: ImagePath): Future[TemporaryFile]
 }
 
@@ -29,20 +30,29 @@ class S3RoverImageStoreImpl @Inject() (
     implicit val transferManager: TransferManager,
     implicit val executionContext: ExecutionContext) extends RoverImageStore with S3AsyncHelper {
 
-  def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit] = {
+  def put(key: ImagePath, file: File, mimeType: String): Future[Unit] = {
     val om = new ObjectMetadata()
     om.setContentType(mimeType)
-    if (contentLength > 0) {
-      om.setCacheControl("public, max-age=31556926") // standard way to cache "forever" (ie, one year)
-      om.setContentLength(contentLength)
+    val isT = Try(new FileInputStream(file))
+    val contentLength = isT.map(_ => file.length().toInt).getOrElse(0)
+    val result = (isT, contentLength) match {
+      case (Success(is), len) if len > 0 =>
+        om.setCacheControl("public, max-age=31556926") // standard way to cache "forever" (ie, one year)
+        om.setContentLength(contentLength)
 
-      asyncUpload(s3ImageConfig.bucketName, key.path, is, om).imap { case _ => () }
-    } else {
-      Future.failed {
-        new RuntimeException(s"Invalid contentLength for $key: $contentLength")
-      }
+        asyncUpload(s3ImageConfig.bucketName, key.path, is, om).imap { case _ => () }
+      case (Failure(ex), _) =>
+        Future.failed {
+          new RuntimeException(s"Couldn't read file ${file.getAbsolutePath} for $key", ex)
+        }
+      case (_, len) =>
+        Future.failed {
+          new RuntimeException(s"Invalid contentLength $len for $key: $contentLength. $isT")
+        }
     }
-  } andThen { case _ => is.close() }
+    result.onComplete { case _ => isT.map(_.close()) }
+    result
+  }
 
   def get(key: ImagePath): Future[TemporaryFile] = {
     asyncDownload(s3ImageConfig.bucketName, key.path)
@@ -55,12 +65,11 @@ class InMemoryRoverImageStoreImpl() extends RoverImageStore {
 
   val cache = mutable.HashMap[ImagePath, TemporaryFile]()
 
-  def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit] = {
+  def put(key: ImagePath, file: File, mimeType: String): Future[Unit] = {
     val tf = TemporaryFile(prefix = "test-file", suffix = ".png")
     tf.file.deleteOnExit()
     // Intentionally does not write the data to the actual file. If this is needed, please add a mutable flag in this class.
     cache.put(key, tf)
-    is.close()
     Future.successful(())
   }
   def get(key: ImagePath): Future[TemporaryFile] = {
