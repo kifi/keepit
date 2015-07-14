@@ -94,8 +94,8 @@ angular.module('kifi')
       })
       .state('orgProfile.members', {
         url: '',
-        controller: 'OrgProfileMembersCtrl',
-        templateUrl: 'orgProfile/orgProfileMembers.tpl.html'
+        controller: 'OrgProfileMemberManageCtrl',
+        templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html'
       })
       .state('userProfile', {
         url: '/:handle',
