@@ -570,9 +570,6 @@ GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDControl
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
-GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
-GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
-
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
@@ -738,11 +735,6 @@ GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocket
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
-
-GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
-POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
-POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
-POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
 GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String])
 GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)
