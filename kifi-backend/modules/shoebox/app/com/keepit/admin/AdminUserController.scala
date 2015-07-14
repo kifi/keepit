@@ -247,7 +247,7 @@ class AdminUserController @Inject() (
   }
 
   private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
-    var userId = user.id.get
+    val userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
@@ -267,8 +267,11 @@ class AdminUserController @Inject() (
       (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
-    val (experiments, potentialOrganizations) = db.readOnlyReplica { implicit s =>
-      (userExperimentRepo.getUserExperiments(user.id.get), orgRepo.getPotentialOrganizationsForUser(userId))
+    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
+      (
+        userExperimentRepo.getUserExperiments(user.id.get),
+        orgRepo.getPotentialOrganizationsForUser(userId),
+        userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations))
     }
 
     for {
@@ -278,7 +281,7 @@ class AdminUserController @Inject() (
     } yield {
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations))
+        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations))
     }
   }
 
@@ -1003,6 +1006,14 @@ class AdminUserController @Inject() (
 
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
+  }
+
+  def setIgnoreForPotentialOrganizations(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val ignorePotentialOrgs = request.body.get("ignorePotentialOrgs").isDefined
+    db.readWrite { implicit session =>
+      userValueRepo.setValue(userId, UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, ignorePotentialOrgs)
+    }
+    Redirect(routes.AdminUserController.userView(userId))
   }
 
 }
