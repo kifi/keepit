@@ -74,16 +74,16 @@ object SearchConfig {
       // Shared Search Parameters (should probably not be shared)
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a result to show up",
       "halfDecayHours" -> "the time the recency boost becomes half",
-      "recencyBoost" -> "importance of the recent bookmarks",
+      "recencyBoost" -> "importance of the recent keeps",
 
       // UriSearch
       "libraryNameBoost" -> "boost value for library name in uri search",
       "maxResultClickBoost" -> "boosting by recent result clicks",
-      "minMyKeeps" -> "the minimum number of my bookmarks in a search result",
-      "myKeepBoost" -> "importance of my bookmark",
+      "minMyKeeps" -> "the minimum number of my keeps in a search result",
+      "myKeepBoost" -> "importance of my keep",
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
-      "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
-      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
+      "sharingBoostInNetwork" -> "importance of the number of friends sharing the keep",
+      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the keep",
       "newContentBoost" -> "importance of a new content introduced to the network",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
 
@@ -98,9 +98,9 @@ object SearchConfig {
       "myNetworkBoost" -> "boost value for my friends in user search",
 
       "proximityBoost" -> "boosting by proximity",
-      "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dampingHalfDecayNetwork" -> "how many top hits in friends' bookmarks are important",
-      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
+      "dampingHalfDecayMine" -> "how many top hits in my keeps are important",
+      "dampingHalfDecayNetwork" -> "how many top hits in friends' keeps are important",
+      "dampingHalfDecayOthers" -> "how many top hits in others' keep are important",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search"
