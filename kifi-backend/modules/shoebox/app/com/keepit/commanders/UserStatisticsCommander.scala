@@ -1,6 +1,8 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.model.OrganizationInviteRecommendation
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -63,7 +65,8 @@ case class OrganizationStatistics(
   numChats: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
-  membersStatistics: Map[Id[User], MemberStatistics])
+  membersStatistics: Map[Id[User], MemberStatistics],
+  memberRecommendations: Seq[OrganizationInviteRecommendation])
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -81,7 +84,8 @@ class UserStatisticsCommander @Inject() (
     userExperimentRepo: UserExperimentRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
-    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo) {
+    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -142,7 +146,7 @@ class UserStatisticsCommander @Inject() (
     Future.sequence(membersStatsFut).imap(_.toMap)
   }
 
-  def organizationStatistics(orgId: Id[Organization])(implicit session: RSession): Future[OrganizationStatistics] = {
+  def organizationStatistics(orgId: Id[Organization], numMemberRecos: Int = 20)(implicit session: RSession): Future[OrganizationStatistics] = {
     val org = orgRepo.get(orgId)
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
     val numKeeps = libraries.map(_.keepCount).sum
@@ -153,11 +157,14 @@ class UserStatisticsCommander @Inject() (
 
     val membersStatsFut = membersStatistics(userIds)
 
+    val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, userIds, 0, numMemberRecos)
+
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
-    for (
+    for {
       membersStats <- membersStatsFut
-    ) yield OrganizationStatistics(
+      memberRecos <- fMemberRecommendations
+    } yield OrganizationStatistics(
       org = org,
       orgId = orgId,
       pubId = Organization.publicId(orgId),
@@ -170,7 +177,8 @@ class UserStatisticsCommander @Inject() (
       numChats = numChats,
       members = members,
       candidates = candidates,
-      membersStatistics = membersStats
+      membersStatistics = membersStats,
+      memberRecommendations = memberRecos
     )
   }
   def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {

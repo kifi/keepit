@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ Id, ModelWithState, State, States }
+import com.keepit.common.db.{ ModelWithSeqNumber, SequenceNumber, Id, ModelWithState, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -12,7 +12,8 @@ case class OrganizationMembershipCandidate(
     updatedAt: DateTime = currentDateTime,
     state: State[OrganizationMembershipCandidate] = OrganizationMembershipCandidateStates.ACTIVE,
     orgId: Id[Organization],
-    userId: Id[User]) extends ModelWithState[OrganizationMembershipCandidate] {
+    userId: Id[User],
+    seq: SequenceNumber[OrganizationMembershipCandidate] = SequenceNumber.ZERO) extends ModelWithState[OrganizationMembershipCandidate] with ModelWithSeqNumber[OrganizationMembershipCandidate] {
 
   def withId(id: Id[OrganizationMembershipCandidate]): OrganizationMembershipCandidate = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembershipCandidate = this.copy(updatedAt = now)
@@ -23,6 +24,8 @@ case class OrganizationMembershipCandidate(
 
 object OrganizationMembershipCandidateStates extends States[OrganizationMembershipCandidate] {
   def all = Set(ACTIVE, INACTIVE)
+
+  def toIngestableOrganizationMembershipCandidate(from: OrganizationMembershipCandidate): IngestableOrganizationMembershipCandidate = IngestableOrganizationMembershipCandidate(from.id.get, from.createdAt, from.state, from.orgId, from.userId, from.seq)
 }
 
 object OrganizationMembershipCandidate {
@@ -32,6 +35,15 @@ object OrganizationMembershipCandidate {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[OrganizationMembershipCandidate]) and
     (__ \ 'orgId).format[Id[Organization]] and
-    (__ \ 'userId).format[Id[User]]
+    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'seq).format(SequenceNumber.format[OrganizationMembershipCandidate])
   )(OrganizationMembershipCandidate.apply, unlift(OrganizationMembershipCandidate.unapply))
 }
+
+case class IngestableOrganizationMembershipCandidate(
+  id: Id[OrganizationMembershipCandidate],
+  createdAt: DateTime,
+  state: State[OrganizationMembershipCandidate],
+  orgId: Id[Organization],
+  userId: Id[User],
+  seq: SequenceNumber[OrganizationMembershipCandidate])

@@ -39,7 +39,8 @@ class AdminOrganizationController @Inject() (
     Ok(html.admin.organizations(orgsStats, fakeOwnerId))
   }
   def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
-    val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId) }
+    val numMemberRecommendations = request.body.asFormUrlEncoded.flatMap(_.get("numMemberRecos").map(_.head.toInt)).getOrElse(20)
+    val orgStats = db.readOnlyMaster { implicit session => statsCommander.organizationStatistics(orgId, numMemberRecommendations) }
     orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
@@ -54,6 +55,12 @@ class AdminOrganizationController @Inject() (
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
+  def addMember(orgId: Id[Organization]) = AdminUserPage { request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
     val name: String = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0).get
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = Some(name)))

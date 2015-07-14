@@ -28,6 +28,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case orgUpdate: OrganizationGraphUpdate => processOrganizationGraphUpdate(orgUpdate)
     case orgMemUpdate: OrganizationMembershipGraphUpdate => processOrganizationMembershipGraphUpdate(orgMemUpdate)
     case userIpAddressUpdate: UserIpAddressGraphUpdate => processUserIpAddressGraphUpdate(userIpAddressUpdate)
+    case orgMemCandidateUpdate: OrganizationMembershipCandidateGraphUpdate => processOrganizationMembershipCandidateUpdate(orgMemCandidateUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -206,7 +207,6 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.removeEdgeIfExists(update.abookId, update.emailAccountId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.emailAccountId, update.abookId, EmptyEdgeReader)
     } else {
-
       writer.saveVertex(AddressBookData(update.abookId))
       writer.saveVertex(UserData(update.userId))
       writer.saveVertex(EmailAccountData(update.emailAccountId))
@@ -247,6 +247,17 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
       writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
     case OrganizationMembershipStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+  }
+
+  private def processOrganizationMembershipCandidateUpdate(update: OrganizationMembershipCandidateGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationMembershipCandidateStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+    case OrganizationMembershipCandidateStates.ACTIVE =>
       writer.saveVertex(OrganizationData(update.orgId))
       writer.saveVertex(UserData(update.userId))
       writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))

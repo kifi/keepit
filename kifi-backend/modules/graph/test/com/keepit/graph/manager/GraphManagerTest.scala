@@ -59,6 +59,7 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           // org to users
           v.moveTo(VertexDataId[OrganizationReader](1))
           nbs = getNeighbors(v, (OrganizationReader, UserReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2, 3)
 
           // library to users
           v.moveTo(VertexDataId[LibraryReader](1))
