@@ -98,13 +98,13 @@ class OrganizationRepoImpl @Inject() (
     sql"""
           select organization.* from (
             select user_ip_addresses.user_id as id from (
-              select distinct ip_address from user_ip_addresses where user_id = 1
+              select distinct ip_address from user_ip_addresses where user_id = $userId
             ) as ip
-              inner join user_ip_addresses on user_ip_addresses.ip_address = ip.ip_address where user_ip_addresses.user_id != 1
+              inner join user_ip_addresses on user_ip_addresses.ip_address = ip.ip_address where user_ip_addresses.user_id != $userId
             union
-              select user_2 as id from user_connection where user_connection.user_1 = 1
+              select user_2 as id from user_connection where user_connection.user_1 = $userId
             union
-              select user_1 as id from user_connection where user_connection.user_2 = 1
+              select user_1 as id from user_connection where user_connection.user_2 = $userId
           ) as user
             inner join organization_membership on organization_membership.user_id = user.id
             inner join organization on organization.id = organization_membership.organization_id
