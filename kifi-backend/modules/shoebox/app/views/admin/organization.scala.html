@@ -88,13 +88,23 @@ orgStats: OrganizationStatistics
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td>x</td>
+            <td>@if(reco.identifier.isLeft) { reco.identifier.left.get } else { reco.identifier.right.get }</td>
             <td>@reco.score</td>
             @if(reco.identifier.isLeft) {
-                <td><input type="button" name="Add member" onclick="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidateFromReco(orgStats.orgId, reco.identifier.left.get)"></td>
-                <td><input type="button" name="Add member" onclick="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMemberFromReco(orgStats.orgId, reco.identifier.left.get)"></td>
+                <td><input type="button" name="Add candidate" onclick="addCandidate(orgStats.orgId, reco.identifier.left.get)"></td>
+                <td><input type="button" name="Add member" onclick="addMember(orgStats.orgId, reco.identifier.left.get"></td>
             }
         </tr>
     }
 </table>
 }
+
+<script type="text/javascript">
+    function addCandidate(orgId, candidateId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId });
+    };
+
+    function addMember(orgId, memberId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
+    };
+</script>

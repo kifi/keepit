@@ -55,6 +55,12 @@ class AdminOrganizationController @Inject() (
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
+  def addMember(orgId: Id[Organization]) = AdminUserPage { request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
     val name: String = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0).get
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = Some(name)))
@@ -70,16 +76,6 @@ class AdminOrganizationController @Inject() (
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
     val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(description = description))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
-  }
-
-  def addMemberFromReco(orgId: Id[Organization], recoId: Id[User]) = AdminUserPage { request =>
-    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, recoId, OrganizationRole.MEMBER))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
-  }
-
-  def addCandidateFromReco(orgId: Id[Organization], recoId: Id[User]) = AdminUserPage { request =>
-    orgMembershipCandidateCommander.addCandidates(orgId, Set(recoId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 }
