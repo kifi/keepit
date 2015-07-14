@@ -85,35 +85,6 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
-    "convert image to input stream" in {
-      withInjector(modules: _*) { implicit injector =>
-        new FakeProcessedImageHelper {
-          {
-            val image = dummyImage(200, 300)
-            val res = bufferedImageToInputStream(image, ImageFormat.PNG)
-            res.isSuccess === true
-            res.get._1 !== null
-            res.get._1.read === 137 // first byte of PNG image
-            res.get._2 must be_>(50) // check if file is greater than 50B
-          }
-          {
-            val image = dummyImage(200, 300)
-            val res = bufferedImageToInputStream(image, ImageFormat.JPG)
-            res.isSuccess === true
-            res.get._1 !== null
-            res.get._1.read === 255 // first byte of JPEG image
-            res.get._1.read === 216 // second byte of JPEG image
-            res.get._2 must be_>(256) // check if file is greater than 256B, which is smaller than any legit jpeg
-          }
-          {
-            val res = bufferedImageToInputStream(null, ImageFormat.JPG)
-            res.isSuccess === false
-          }
-        }
-        1 === 1
-      }
-    }
-
     "hash files with MD5" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {

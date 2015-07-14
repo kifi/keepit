@@ -33,6 +33,7 @@ trait OrganizationMembershipCommander {
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
+  def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership]
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
 
@@ -57,6 +58,12 @@ class OrganizationMembershipCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
+
+  def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
+    db.readWrite { implicit session =>
+      organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+    }
+  }
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
     val org = organizationRepo.get(orgId)

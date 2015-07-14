@@ -4,7 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -18,10 +18,7 @@ import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
-import org.specs2.mutable.{ SpecificationLike, Specification }
-
-import scala.collection.mutable.ArrayBuffer
-import scala.util.{ Failure, Try }
+import org.specs2.mutable.{ SpecificationLike }
 
 class LibraryCheckerTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   def modules = Seq(
@@ -99,23 +96,6 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         }
         // The last membership seq num is equal to the seqnum we set into libraryChecker.MEMBER_COUNT_NAME systemValueRepo sequence number.
         seqNum === memberSeqNum
-      }
-    }
-
-    "pagination is lazy" in {
-      withDb(modules: _*) { implicit injector =>
-        val libraryChecker = inject[LibraryChecker]
-        val buffer: ArrayBuffer[Long] = new ArrayBuffer[Long]()
-        val iterator = (limit: Limit, offset: Offset) => {
-          val values = offset.value until (offset.value + limit.value)
-          buffer ++= values
-          values
-        }
-        libraryChecker.stream(iterator, needed = Limit(1000), Limit(10)) { x =>
-          // buffer only increases when we get a new page, because we are only adding to it on new page in our iterator function.
-          buffer.size === 10 * (1 + x / 10)
-        }
-        "" === ""
       }
     }
 

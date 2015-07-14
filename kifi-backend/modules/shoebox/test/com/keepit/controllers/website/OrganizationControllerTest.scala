@@ -12,7 +12,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, JsObject, Json }
+import play.api.libs.json.{ JsValue, JsArray, JsObject, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -79,7 +79,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             val user = UserFactory.user().saved
             for (i <- 1 to 10) {
               val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").saved
-              LibraryFactory.libraries(i).map(_.published().withOrganization(org.id)).saved
+              LibraryFactory.libraries(i).map(_.published().withUser(user).withOrganization(org.id)).saved
             }
             user
           }
@@ -97,20 +97,72 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         }
       }
     }
-    def setup(numMembers: Int = 0, numInvitedUsers: Int = 0)(implicit injector: Injector) = {
-      db.readWrite { implicit session =>
-        val members = UserFactory.users(numMembers).saved
-        val invitedUsers = UserFactory.users(numInvitedUsers).saved
-        val owner = UserFactory.user().withName("A", "Moneybags").saved
+    "serve up library cards for an org's libraries" in {
+      def setupLibraries(numPublicLibs: Int, numOrgLibs: Int, numPrivateLibs: Int)(implicit injector: Injector) = db.readWrite { implicit session =>
+
+        val owner = UserFactory.user().saved
+        val member = UserFactory.user().saved
+        val nonmember = UserFactory.user().saved
 
         val org = OrganizationFactory.organization()
           .withName("Moneybags, LLC")
           .withOwner(owner)
-          .withMembers(members)
-          .withInvitedUsers(invitedUsers)
+          .withMembers(Seq(member))
           .saved
 
-        (org, owner, members, invitedUsers)
+        val publicLibs = LibraryFactory.libraries(numPublicLibs).map(_.published().withUser(owner).withOrganization(org.id)).saved
+        val orgLibs = LibraryFactory.libraries(numOrgLibs).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withUser(owner).withOrganization(org.id)).saved
+        val privateLibs = LibraryFactory.libraries(numPrivateLibs).map(_.secret().withUser(member).withOrganization(org.id)).saved
+        (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs)
+      }
+
+      "give all org libraries to a member" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (numPublicLibs, numOrgLibs, numPrivateLibs) = (11, 27, 42)
+          val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
+
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
+          val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
+          status(response) === OK
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "libraries") must haveClass[JsArray]
+          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs
+        }
+      }
+      "give public libraries to a nonmember" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (numPublicLibs, numOrgLibs, numPrivateLibs) = (11, 27, 42)
+          val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
+
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(nonmember, Set(ExperimentType.ORGANIZATION))
+          val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
+          val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
+          status(response) === OK
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "libraries") must haveClass[JsArray]
+          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs
+        }
+      }
+      "give a member their private org-libraries" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (numPublicLibs, numOrgLibs, numPrivateLibs) = (11, 27, 42)
+          val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
+
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(member, Set(ExperimentType.ORGANIZATION))
+          val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
+          val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
+          status(response) === OK
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "libraries") must haveClass[JsArray]
+          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs + numPrivateLibs
+        }
       }
     }
     "create an organization" in {

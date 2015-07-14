@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.net.URI
+import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
@@ -650,6 +651,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
 
   def getOrganizationInviteViews(orgId: Id[Organization]) = Future.successful(Set.empty)
+
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = Future.successful(false)
 
   def getOrganizationMembers(orgId: Id[Organization]) = Future.successful(Set.empty)
 }
