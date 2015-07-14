@@ -99,7 +99,7 @@ object SearchConfig {
 
       "proximityBoost" -> "boosting by proximity",
       "dampingHalfDecayMine" -> "how many top hits in my keeps are important",
-      "dampingHalfDecayNetwork" -> "how many top hits in friends' keeps are important",
+      "dampingHalfDecayNetwork" -> "how many top hits in network' keeps are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' keep are important",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
