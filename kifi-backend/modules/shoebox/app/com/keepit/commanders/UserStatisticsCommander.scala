@@ -182,7 +182,7 @@ class UserStatisticsCommander @Inject() (
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
-      memberRecommendations = memberRecos
+      memberRecommendations = memberRecos,
       experiments = experiments
     )
   }

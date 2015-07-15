@@ -8,21 +8,21 @@ orgStats: OrganizationStatistics
     <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
     <tr><td>Name</td>
         <td>
-        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
+        <form action="#" method="POST" class="form-inline set-name">
             <input id="set-name-input" type="text" name="name" value="@orgStats.name">
             <input type="Submit" value="Change">
         </form>
         </td></tr>
     <tr><td>Handle</td>
         <td>
-            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+            <form action="#" method="POST" class="form-inline set-handle">
                 <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
                 <input type="Submit" value="Change">
             </form>
         </td></tr>
     <tr><td>Description</td>
         <td>
-        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+        <form action="#" method="POST" class="form-inline set-description">
             <input id="set-description-input" type="text" name="description" value="@orgStats.description">
             <input type="Submit" value="Change">
         </form>
@@ -81,7 +81,7 @@ orgStats: OrganizationStatistics
     }
 </table>
 <br/>
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+<form action="#" method="POST" class="form-inline add-candidate">
     <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
     <input type="Submit" value="Add">
 </form>
@@ -111,14 +111,50 @@ orgStats: OrganizationStatistics
 
 
 <script type="text/javascript">
+    $('.set-name').on("submit", function() {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)", $('.set-name').serialize())
+      .done(function(data) {
+        alert("Updated Name");
+      }).fail(function(data) {
+        alert("Bad Request: " + data.responseText);
+      });
+      return false;
+    });
+    $('.set-handle').on("submit", function() {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)", $('.set-handle').serialize())
+      .done(function(data) {
+        alert("Updated Handle");
+      }).fail(function(data) {
+        alert("Bad Request: " + data.responseText);
+      });
+      return false;
+    });
+    $('.set-description').on("submit", function() {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)", $('.set-description').serialize())
+      .done(function(data) {
+        alert("Updated Description");
+      }).fail(function(data) {
+        alert("Bad Request: " + data.responseText);
+      });
+      return false;
+    });
+    $('.add-candidate').on("submit", function() {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", $('.add-candidate').serialize())
+      .done(function(data) {
+        location.reload
+      }).fail(function(data) {
+        alert("Bad Request: " + data.responseText);
+      });
+      return false;
+    });
     function addCandidate(orgId, candidateId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId })
-      location.reload();
+        .done(location.reload);
     }
 
     function addMember(orgId, memberId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
-      location.reload();
+        .done(location.reload);
     }
 
     $("#experiments").on("click", "input", function() {

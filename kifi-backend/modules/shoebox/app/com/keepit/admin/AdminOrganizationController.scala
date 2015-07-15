@@ -52,25 +52,25 @@ class AdminOrganizationController @Inject() (
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
     val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name)))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView)
+    NoContent
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    NoContent
   }
 
   def addMember(orgId: Id[Organization]) = AdminUserPage { request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
     orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    NoContent
   }
 
   def setName(orgId: Id[Organization]) = AdminUserPage { request =>
     val name: String = request.body.asFormUrlEncoded.flatMap(_.get("name").flatMap(_.headOption)).filter(_.length > 0).get
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(name = Some(name)))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    NoContent
   }
 
   def setHandle(orgId: Id[Organization]) = AdminUserPage { request =>
@@ -78,13 +78,13 @@ class AdminOrganizationController @Inject() (
     db.readWrite { implicit session =>
       handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle)
     }
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    NoContent
   }
 
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
     val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(description = description))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    NoContent
   }
 
   def addExperimentAction(orgId: Id[Organization], experiment: String) = AdminUserAction { request =>
