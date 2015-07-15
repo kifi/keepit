@@ -62,6 +62,7 @@ object UserViewTypes {
   case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
   case class ByExperimentUsersViewType(exp: UserExperimentType) extends UserViewType
+  case object UsersPotentialOrgsViewType extends UserViewType
 }
 import UserViewTypes._
 
@@ -326,6 +327,7 @@ class AdminUserController @Inject() (
   def allUsersView = usersView(0)
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
+  def allUsersPotentialOrgsView = usersPotentialOrgsView(0)
 
   def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
     val usersF = Future {
@@ -339,6 +341,11 @@ class AdminUserController @Inject() (
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
           case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
+          case UsersPotentialOrgsViewType =>
+            (
+              userRepo.pageUsersWithPotentialOrgs(page, pageSize),
+              userRepo.countUsersWithPotentialOrgs()
+            )
         }
       }
     }
@@ -403,6 +410,10 @@ class AdminUserController @Inject() (
 
   def fakeUsersView(page: Int = 0) = AdminUserPage.async { implicit request =>
     userStatisticsPage(FakeUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
+  }
+
+  def usersPotentialOrgsView(page: Int = 0) = AdminUserPage.async { implicit request =>
+    userStatisticsPage(UsersPotentialOrgsViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
