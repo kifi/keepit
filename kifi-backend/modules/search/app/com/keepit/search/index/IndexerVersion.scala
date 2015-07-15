@@ -21,8 +21,6 @@ sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, back
 
 object IndexerVersionProviders {
   case object Article extends IndexerVersionProvider(8, 8)
-  case object URIGraph extends IndexerVersionProvider(0, 0)
-  case object Collection extends IndexerVersionProvider(0, 0)
   case object User extends IndexerVersionProvider(4, 4)
   case object UserGraph extends IndexerVersionProvider(0, 0)
   case object SearchFriend extends IndexerVersionProvider(0, 0)
@@ -30,14 +28,12 @@ object IndexerVersionProviders {
   case object Phrase extends IndexerVersionProvider(0, 0)
   case object Library extends IndexerVersionProvider(10, 10)
   case object LibraryMembership extends IndexerVersionProvider(3, 3)
-  case object Keep extends IndexerVersionProvider(4, 4)
+  case object Keep extends IndexerVersionProvider(4, 5)
   case object Organization extends IndexerVersionProvider(1, 1)
   case object OrganizationMembership extends IndexerVersionProvider(1, 1)
 
   val allActiveVersions: Map[String, Int] = {
     Map("article" -> Article.active.value,
-      "uriGraph" -> URIGraph.active.value,
-      "collection" -> Collection.active.value,
       "user" -> User.active.value,
       "userGraph" -> UserGraph.active.value,
       "searchFriend" -> SearchFriend.active.value,
