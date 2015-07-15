@@ -5,7 +5,7 @@ import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.{ Searcher, IdMapper, WrappedSubReader }
+import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
@@ -20,7 +20,7 @@ class UriFromKeepsScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    filter: SearchFilter,
+    protected val filter: SearchFilter,
     recencyOnly: Boolean,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -34,6 +34,7 @@ class UriFromKeepsScoreVectorSource(
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
+    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
     val idMapper = reader.getIdMapper
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
@@ -41,13 +42,12 @@ class UriFromKeepsScoreVectorSource(
 
     // load all discoverable URIs in the network with no score.
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
-    loadDiscoverableURIs(idFilter, reader, idMapper, uriIdDocValues, writer, output)
+    loadDiscoverableURIs(keepVisibilityEvaluator, idFilter, reader, uriIdDocValues, writer, output)
 
     // execute the query
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
     val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
 
@@ -87,7 +87,7 @@ class UriFromKeepsScoreVectorSource(
     }
   }
 
-  private def loadDiscoverableURIs(idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
+  private def loadDiscoverableURIs(keepVisibilityEvaluator: KeepVisibilityEvaluator, idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
     val lastTotal = output.size
     myFriendIds.foreachLong { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
@@ -96,7 +96,7 @@ class UriFromKeepsScoreVectorSource(
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
 
-          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+          if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
@@ -113,8 +113,7 @@ class UriFromKeepsScoreVectorSource(
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
-
-          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+          if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
             // write to the buffer
             output.alloc(writer, Visibility.MEMBER, 8) // id (8 bytes)
             writer.putLong(uriId)

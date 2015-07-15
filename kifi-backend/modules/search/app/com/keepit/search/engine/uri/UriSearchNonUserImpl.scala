@@ -34,7 +34,7 @@ class UriSearchNonUserImpl(
 
     val collector = new NonUserUriResultCollector(numHitsToReturn, percentMatch / 100.0f, explanation)
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, -1L, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
 

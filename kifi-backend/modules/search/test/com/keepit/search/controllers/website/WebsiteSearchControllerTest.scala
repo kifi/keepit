@@ -40,7 +40,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = inject[WebsiteSearchController].search("test", None, None, 2, None, None, 0, None, 0, None, false, None, None, None, None)(request)
+        val result = inject[WebsiteSearchController].search("test", None, None, None, None, 2, None, None, 0, None, 0, None, false, None, None, None, None)(request)
         status(result) === OK
         contentType(result) === Some("application/json")
 
@@ -94,7 +94,7 @@ object ExtSearchControllerTest {
     "test" -> new UriSearchResult(
       uuid = ExternalId[ArticleSearchResult]("98765432-1234-5678-9abc-fedcba987654"),
       query = "test",
-      searchFilter = SearchFilter.default,
+      searchFilter = SearchFilter.empty,
       firstLang = Lang("en"),
       result = UriShardResult(
         hits = Seq(

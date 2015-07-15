@@ -80,7 +80,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId)
+    val orgIdsFuture = getOrganizations(userId, filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
@@ -105,6 +105,9 @@ class SearchFactory @Inject() (
 
         // if this is a user restricted search, add a user filter query
         filter.user.foreach(addUserFilterToUriSearch(engBuilder, _))
+
+        // if this is a organization restricted search, add an organization filter query
+        filter.organization.foreach(addOrganizationFilterToUriSearch(engBuilder, _))
 
         val librarySearcher = libraryIndexer.getSearcher
 
@@ -168,11 +171,16 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getOrganizations(userId: Id[User]): Future[Set[Long]] = {
+  def getOrganizations(userId: Id[User], organizationScope: Option[OrganizationScope]): Future[Set[Long]] = {
     orgIdsReqConsolidater(userId) { userId =>
       SafeFuture {
         val searcher = orgMemembershipIndexer.getSearcher
         OrganizationMembershipIndexable.getOrgsByMember(searcher, userId)
+      }
+    }.map { orgIds =>
+      organizationScope match {
+        case Some(organization) if organization.authorized => orgIds + organization.id.id
+        case None => orgIds
       }
     }
   }
@@ -283,6 +291,7 @@ class SearchFactory @Inject() (
 
   private def addLibraryFilterToUriSearch(engBuilder: QueryEngineBuilder, library: LibraryScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, library.id.id.toString))) }
   private def addUserFilterToUriSearch(engBuilder: QueryEngineBuilder, user: UserScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, user.id.id.toString))) }
+  private def addOrganizationFilterToUriSearch(engBuilder: QueryEngineBuilder, organization: OrganizationScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.orgField, organization.id.id.toString))) }
 
   def getLibrarySearches(
     shards: Set[Shard[NormalizedURI]],
@@ -302,7 +311,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId)
+    val orgIdsFuture = getOrganizations(userId, filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
@@ -322,7 +331,6 @@ class SearchFactory @Inject() (
         // if this is a user restricted search, add a user filter queries
         filter.user.foreach { user =>
           addUserFilterToLibrarySearch(engBuilder, user)
-          addUserFilterToUriSearch(engBuilder, user)
         }
 
         val librarySearcher = libraryIndexer.getSearcher
@@ -378,7 +386,7 @@ class SearchFactory @Inject() (
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId)
+    val orgIdsFuture = getOrganizations(userId, filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
