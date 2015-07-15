@@ -612,17 +612,6 @@ class LibraryCommanderImpl @Inject() (
     if (!targetMembershipOpt.exists(_.canWrite)) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
     } else {
-      val targetMembership = targetMembershipOpt.get
-      val currentSpace = targetLib.space
-      val newSpaceOpt = modifyReq.orgMove.map { orgMove =>
-        orgMove.orgId match {
-          case None =>
-            LibrarySpace.fromUserId(targetLib.ownerId)
-          case Some(pubId) =>
-            LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
-        }
-      }
-
       def validSpace(newSpaceOpt: Option[LibrarySpace]): Either[LibraryFail, LibrarySpace] = {
         newSpaceOpt match {
           case None => Right(targetLib.space)
@@ -684,6 +673,9 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
+      val targetMembership = targetMembershipOpt.get
+      val currentSpace = targetLib.space
+      val newSpaceOpt = modifyReq.space
       val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {

@@ -48,10 +48,31 @@ case class LibraryAddRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
-@json
-case class OrganizationMoveRequest(orgId: Option[PublicId[Organization]])
+case class ExternalLibraryModifyRequest(
+  name: Option[String] = None,
+  slug: Option[String] = None,
+  visibility: Option[LibraryVisibility] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  externalSpace: Option[ExternalLibrarySpace] = None)
 
-@json
+object ExternalLibraryModifyRequest {
+  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscription).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
+  )(ExternalLibraryModifyRequest.apply _)
+}
+
 case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
@@ -61,25 +82,7 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  // We can move the library from org to user space.
-  orgMove: Option[OrganizationMoveRequest] = None)
-
-object ModifyRequest {
-  private val defaultReads: Reads[LibraryModifyRequest] = (
-    (__ \ 'name).readNullable[String] and
-    (__ \ 'slug).readNullable[String] and
-    (__ \ 'visibility).readNullable[LibraryVisibility] and
-    (__ \ 'description).readNullable[String] and
-    (__ \ 'color).readNullable[LibraryColor] and
-    (__ \ 'listed).readNullable[Boolean] and
-    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscription).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[OrganizationMoveRequest]
-  )(LibraryModifyRequest.apply _)
-
-  val website = defaultReads
-  val mobileV1 = defaultReads
-}
+  space: Option[LibrarySpace] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],

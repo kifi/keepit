@@ -21,6 +21,7 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
@@ -52,6 +53,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     FakeSocialGraphModule(),
     FakeShoeboxServiceModule()
   )
+
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+  private def controller(implicit injector: Injector) = inject[LibraryController]
+  private def route = com.keepit.controllers.website.routes.LibraryController
 
   private def fakeImage1 = {
     val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
@@ -146,7 +151,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "modify library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -222,9 +226,55 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "move a library from space to space" in {
+      withDb(modules: _*) { implicit injector =>
+        val libraryController = inject[LibraryController]
+
+        val (user, lib, org) = db.readWrite { implicit s =>
+          val user = UserFactory.user().saved
+          val lib = LibraryFactory.library().withSlug("libfoo").withUser(user).saved
+          val org = OrganizationFactory.organization().withOwner(user).saved
+          (user, lib, org)
+        }
+
+        val libPubId = Library.publicId(lib.id.get)
+        val orgPubId = Organization.publicId(org.id.get)
+
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+
+        // At first, lib is in the user space
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+        }
+
+        val testPath = route.modifyLibrary(libPubId).url
+        val inputJson1 = Json.obj("space" -> Json.obj("org" -> orgPubId))
+        val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
+        val result1 = controller.modifyLibrary(libPubId)(request1)
+        status(result1) === OK
+
+        // Now it's in the org space
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+        }
+
+        val inputJson2 = Json.obj("space" -> Json.obj("user" -> user.externalId))
+        val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
+        val result2 = controller.modifyLibrary(libPubId)(request2)
+        status(result2) === OK
+
+        // Back in user space
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+        }
+      }
+    }
+
     "remove library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -257,7 +307,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get library by public id" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -391,7 +440,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get library by path" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -489,7 +537,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get libraries of user" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2015, 1, 1, 0, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2015, 1, 1, 0, 0, 0, 2, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
@@ -551,7 +598,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "invite users to library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -639,7 +685,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
       "succeed when inviter tries to uninvite" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
           val libraryController = inject[LibraryController]
           val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
           val libraryId = Library.publicId(library.id.get)
@@ -662,7 +707,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
       "fail when someone else tries to uninvite" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
           val libraryController = inject[LibraryController]
           val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
           val libraryId = Library.publicId(library.id.get)
@@ -684,7 +728,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
       "fail for invalid library id" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
           val libraryController = inject[LibraryController]
           val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
           val libraryId = PublicId[Library]("x")
@@ -706,7 +749,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
       "fail for invalid user type" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
           val libraryController = inject[LibraryController]
           val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
           val libraryId = Library.publicId(library.id.get)
@@ -728,7 +770,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
       "fail for invalid user externalId" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val config = inject[PublicIdConfiguration]
           val libraryController = inject[LibraryController]
           val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
           val libraryId = Library.publicId(library.id.get)
@@ -751,7 +792,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "join or decline library invites" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -804,7 +844,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "leave library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -834,7 +873,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get keeps" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -929,7 +967,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     "copy & move keeps between libraries" in {
       withDb(modules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
 
         val (userA, userB, lib1, lib2, keep1, keep2) = db.readWrite { implicit s =>
@@ -1039,7 +1076,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get members" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -1130,7 +1166,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "add keeps to library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -1232,7 +1267,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "remove keeps from library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -1304,7 +1338,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "update keep in library" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -1349,7 +1382,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (user, keep, lib)
         }
         val libraryController = inject[LibraryController]
-        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubId1 = Library.publicId(lib1.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.editKeepNote(pubId1, keep1.externalId).url
         inject[FakeUserActionsHelper].setUser(user1)
 
@@ -1400,8 +1433,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         def updateLibraryMembership(user: User, targetUser: User, lib: Library, access: String) = {
           val libraryController = inject[LibraryController]
-          val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
           inject[FakeUserActionsHelper].setUser(user)
+          val pubLibId = Library.publicId(lib.id.get)
           val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId).url
           val jsonBody = Json.obj("access" -> access)
           libraryController.updateLibraryMembership(pubLibId, targetUser.externalId)(FakeRequest("POST", testPath).withBody(jsonBody))
