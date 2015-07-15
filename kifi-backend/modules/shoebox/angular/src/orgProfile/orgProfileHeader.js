@@ -10,8 +10,22 @@ angular.module('kifi')
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope, element) {
-      scope = scope;
-      element = element;
+      scope.editing = false;
+      var lastSavedInfo = {};
+
+      scope.toggleEditing = function () {
+        scope.editing = !scope.editing;
+        lastSavedInfo = angular.extend(lastSavedInfo, scope.profile);
+      }
+
+      scope.undo = function () {
+        scope.profile = angular.extend(scope.profile, lastSavedInfo);
+        scope.toggleEditing()
+      }
+
+      scope.save = function () {
+        
+      }
     }
   };
 }]);

@@ -1,16 +1,31 @@
 <div class="kf-oph">
   <div class="kf-oph-top" ng-class="editing ? 'kf-editing' : ''">
 
+    <div class="kf-oph-actions">
+      <button ng-hide="editing" ng-click="toggleEditing()">Edit</button>
+
+      <button ng-show="editing" ng-click="undo()">Cancel</button>
+      <button ng-show="editing" ng-click="save()">Save</button>
+    </div>
+
     <a class="kf-oph-pic-a">
       <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
       <button class="kf-oph-pic-edit">Upload Photo</button>
     </a>
     <div class="kf-oph-about">
-      <input class="kf-edit-field kf-oph-name" type=text ng-value="profile.name">
+      <input class="kf-edit-field kf-oph-name" type=text ng-model="profile.name">
 
-      <input class="kf-edit-field kf-oph-description" type="text" ng-value="profile.description" />
+      <input class="kf-edit-field kf-oph-description" type="text" ng-model="profile.description" />
 
-      <p ng-if="profile.link" class="kf-uph-link">
+      <input
+        ng-if="editing"
+        class="kf-edit-field kf-oph-link"
+        type="text"
+        ng-model="profile.link"
+        placeholder="http://example.com"
+      />
+
+      <p ng-if="profile.link && !editing" class="kf-uph-link">
         <a ng-href="profile.link">{{profile.link}}</a>
       </p>
 
