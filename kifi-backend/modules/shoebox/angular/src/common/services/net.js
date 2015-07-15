@@ -22,6 +22,7 @@ angular.module('kifi')
 
       userOrOrg: get(shoebox, '/user-or-org/:handle', 30),
       updateOrgProfile: post(shoebox, '/organization/:id/modify'),
+      getOrgMembers: get(shoebox, '/organizations/:id/members', 30),
 
       getKeep: get(shoebox, '/keeps/:id'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),

@@ -57,12 +57,11 @@ angular.module('kifi')
           'net', '$state', '$stateParams',
           function (net, $state, $stateParams) {
             net.userOrOrg($stateParams.handle).then(function (response) {
-              var type = response.data.type,
-                  profile = _.merge($stateParams, response.data.result);
+              var type = response.data.type;
               if (type === 'user') {
-                $state.go('userProfile.libraries.own', profile, { location: false });
+                $state.go('userProfile.libraries.own', $stateParams, { location: false });
               } else if (type === 'org') {
-                $state.go('orgProfile.members', profile, { location: false });
+                $state.go('orgProfile.members', $stateParams, { location: false });
               }
             });
           }
@@ -82,7 +81,12 @@ angular.module('kifi')
                 var type = response.data.type;
 
                 if (type === 'org') { // sanity check
-                  return response.data.result.organization;
+                  if (response.data.result && response.data.result.error) {
+                    throw new Error(response.data.result.error);
+                  } else {
+                    // success
+                    return response.data.result.organization;
+                  }
                 } else {
                   throw new Error('orgProfile state was given invalid type ' + type);
                 }

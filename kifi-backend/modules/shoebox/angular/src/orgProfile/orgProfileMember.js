@@ -7,73 +7,67 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
-      scope: {
-        member: '='
+      $scope: {
+        member: '=',
+        me: '='
       },
       replace: true,
-      link: function (scope) {
-        var member = scope.member;
-        member.role = member.role || 'Member';
-
-        scope.isOwner = function () {
-          return member.role === 'Owner';
-        };
-
-        scope.hiddenStyle = { 'display': 'none' };
-
-        var controlsOpen = false;
-
-        scope.isOpen = function () {
-          return controlsOpen;
-        };
-
-        scope.toggleControls = function () {
-          controlsOpen = !controlsOpen;
-        };
-
-        var _cachedMembershipActionText = null;
-
-        scope.membershipActionText = function () {
-          if (!_cachedMembershipActionText) {
-
-            var myUsername = 'stephen';
-            // var myUsername = profileService.me.username;
-
-            if (member.username === myUsername) {
-              _cachedMembershipActionText = 'leave organization';
-            } else if (!member.verified){
-              _cachedMembershipActionText = 'resend invite';
-            } else if (scope.$parent.profile.members[0].username === myUsername) {
-              _cachedMembershipActionText = 'remove member';
-            }else {
-              _cachedMembershipActionText = '';
-            }
+      link: function ($scope) {
+        $scope.$on('memberOpened', function (e, openedMember) {
+          if ($scope.member !== openedMember) {
+            close();
           }
+        });
 
-          return _cachedMembershipActionText;
+        var _controlsOpen = false;
+
+        function open() {
+          _controlsOpen = true;
+          $scope.$emit('openedMember', $scope.member);
+        }
+
+        function close() {
+          _controlsOpen = false;
+        }
+
+        $scope.isOpen = function () {
+          return _controlsOpen;
         };
 
-        scope.showMembershipAction = function () {
-          return !!scope.membershipActionText();
-        };
-
-        scope.triggerMembershipAction = function () {
-          if (scope.membershipActionText() === 'resend invite') {
-            //alert('Resent invite');
-            return;
-          }
-
-          if (scope.$parent.removeMember) {
-            scope.$parent.removeMember(member);
+        $scope.toggleControls = function () {
+          if (_controlsOpen) {
+            close();
+          } else {
+            open();
           }
         };
 
-        scope.triggerMakeAdmin = function () {
-          member.role = 'Owner';
+        $scope.hasAcceptedInvitation = function () {
+          return !$scope.member.lastInvitedAt;
         };
 
-        scope.showMakeAdmin = function () {
-          return !scope.isOwner() && member.verified;
+        $scope.shouldShowMakeAdmin = function () {
+          return $scope.me.role === 'owner' && $scope.member.role !== 'owner' && $scope.hasAcceptedInvitation();
+        };
+
+        $scope.shouldShowRemove = function () {
+          return $scope.me.role === 'owner';
+        };
+
+        $scope.shouldShowInvite = function () {
+          return !$scope.hasAcceptedInvitation();
+        };
+
+        $scope.triggerInvite = function () {
+          $scope.$emit('inviteMember', $scope.member);
+        };
+
+        $scope.triggerRemove = function () {
+          $scope.$emit('removeMember', $scope.member);
+        };
+
+        $scope.triggerMakeAdmin = function () {
+          $scope.$emit('promoteMember', $scope.member);
         };
       }
     };
