@@ -20,7 +20,6 @@ import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -676,12 +675,7 @@ class LibraryCommanderImpl @Inject() (
 
       val targetMembership = targetMembershipOpt.get
       val currentSpace = targetLib.space
-      val newSpaceOpt = db.readOnlyMaster { implicit session =>
-        modifyReq.space.map {
-          case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
-          case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
-        }
-      }
+      val newSpaceOpt = modifyReq.space
       val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {

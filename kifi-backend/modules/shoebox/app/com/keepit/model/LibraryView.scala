@@ -48,7 +48,7 @@ case class LibraryAddRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
-case class LibraryModifyRequest(
+case class ExternalLibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
@@ -57,10 +57,10 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[ExternalLibrarySpace] = None)
+  externalSpace: Option[ExternalLibrarySpace] = None)
 
-object LibraryModifyRequest {
-  implicit val reads: Reads[LibraryModifyRequest] = (
+object ExternalLibraryModifyRequest {
+  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'slug).readNullable[String] and
     (__ \ 'visibility).readNullable[LibraryVisibility] and
@@ -70,8 +70,19 @@ object LibraryModifyRequest {
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscription).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace]
-  )(LibraryModifyRequest.apply _)
+  )(ExternalLibraryModifyRequest.apply _)
 }
+
+case class LibraryModifyRequest(
+  name: Option[String] = None,
+  slug: Option[String] = None,
+  visibility: Option[LibraryVisibility] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  space: Option[LibrarySpace] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],

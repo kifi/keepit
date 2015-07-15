@@ -264,7 +264,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // no privs on org, cannot move from personal space.
           implicit val publicIdConfig = inject[PublicIdConfiguration]
           val cannotMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(org.id.get))))
+            LibraryModifyRequest(space = Some(org.id.get)))
           cannotMoveOrg.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === None
@@ -274,13 +274,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // move from personal space to org space
           val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(org.id.get))))
+            LibraryModifyRequest(space = Some(org.id.get)))
           canMoveOrg.isRight === true
           canMoveOrg.right.get.organizationId === org.id
 
           // prevent move from org to one without privs
           val attemptToStealLibrary = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(starkOrg.id.get))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           attemptToStealLibrary.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === org.id
@@ -291,7 +291,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.OWNER)) // how did he pull that off.
           }
           val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(starkOrg.id.get))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           moveOrganization.isRight === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -299,7 +299,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // try to move library back to owner out of org space.
           val moveHome = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userIron.id.get,
-            LibraryModifyRequest(space = Some(userIron.externalId)))
+            LibraryModifyRequest(space = Some(userIron.id.get)))
           moveHome.isLeft === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -307,7 +307,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // owner moves the library home.
           val moveHomeSucceeds = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(space = Some(userAgent.externalId)))
+            LibraryModifyRequest(space = Some(userAgent.id.get)))
           moveHomeSucceeds.isRight === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).space === LibrarySpace.fromUserId(userAgent.id.get)
@@ -386,7 +386,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // Move it into starkOrg
           val response1 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(starkOrg.id.get))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           println(response1)
           response1.isRight === true
 
@@ -402,7 +402,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // Move it back into ironMan's personal space
           val response2 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
-            LibraryModifyRequest(space = Some(ironMan.externalId)))
+            LibraryModifyRequest(space = Some(ironMan.id.get)))
           response2.isRight === true
 
           // The ironMan one was reclaimed, so it should be inactive now
@@ -420,7 +420,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // Move it into earthOrg
           val response3 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(earthOrg.id.get))))
+            LibraryModifyRequest(space = Some(earthOrg.id.get)))
           response3.isRight === true
 
           // Two aliases now, both ironMan and starkOrg
@@ -439,7 +439,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // Try to move it back into starkOrg, should fail since by default members cannot remove libraries
           val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
-            LibraryModifyRequest(space = Some(Organization.publicId(starkOrg.id.get))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           response4.isLeft === true
         }
       }
