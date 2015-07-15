@@ -68,7 +68,7 @@
         <th>ignore4org</th>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline" id="ignore-potential-orgs-form">
-                We don't think this user should be associated with an organization now <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check">
+                <label><input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check"> We don't think this user should be associated with an organization now</label>
             </form>
         </td>
     </tr>
@@ -78,16 +78,14 @@
               <ul>
                   @for( org <- potentialOrganizations ) {
                   <li>
-                    <span style="margin : 2 px">
-                        <a data-hover="tooltip" title="@org.description+"
-                           class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
-                            @org.name
-                        </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a>
-                        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate">
-                            <input type="hidden" id="add-candidate-input" name="candidate-id" value="@{user.id.get.id}">
-                            <input type="Submit" value="Add candidate">
-                        </form>
-                    </span>
+                    <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate">
+                        <span style="margin : 2 px">
+                            <a data-hover="tooltip" title="@org.description+"
+                               class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+                                @org.name
+                            </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
+                        </span>
+                    </form>
                   </li>
                   }
               </ul>
