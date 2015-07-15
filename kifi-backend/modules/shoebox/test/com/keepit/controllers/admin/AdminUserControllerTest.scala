@@ -32,9 +32,9 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
       val dummySuperAdminOpt: User = UserFactory.user().withName("Andrew", "Conner").withUsername("andrew").saved // need a dummy user saved, since Andrew is a superAdmin and his userId == 3.
       val userAdminOpt: User = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
 
-      userExperimentRepo.save(UserExperiment(userId = userSuperAdminOpt.id.get, experimentType = ExperimentType.ADMIN))
-      userExperimentRepo.save(UserExperiment(userId = userAdminOpt.id.get, experimentType = ExperimentType.ADMIN))
-      userExperimentRepo.save(UserExperiment(userId = userNonAdminOpt.id.get, experimentType = ExperimentType.BYPASS_ABUSE_CHECKS))
+      userExperimentRepo.save(UserExperiment(userId = userSuperAdminOpt.id.get, experimentType = UserExperimentType.ADMIN))
+      userExperimentRepo.save(UserExperiment(userId = userAdminOpt.id.get, experimentType = UserExperimentType.ADMIN))
+      userExperimentRepo.save(UserExperiment(userId = userNonAdminOpt.id.get, experimentType = UserExperimentType.BYPASS_ABUSE_CHECKS))
       (userNonAdminOpt, userAdminOpt, userSuperAdminOpt)
     }
   }
@@ -57,11 +57,11 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
           adminUserController.removeExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
 
           // superAdmins can add or remove admins
-          adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Right(ExperimentType.ADMIN)
-          userExperimentRepo.getUserExperiments(userNonAdminOpt.id.get).contains(ExperimentType.ADMIN) must equalTo(true)
+          adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
+          userExperimentRepo.getUserExperiments(userNonAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(true)
 
-          adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Right(ExperimentType.ADMIN)
-          userExperimentRepo.getUserExperiments(userAdminOpt.id.get).contains(ExperimentType.ADMIN) must equalTo(false)
+          adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
+          userExperimentRepo.getUserExperiments(userAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(false)
         }
 
       }

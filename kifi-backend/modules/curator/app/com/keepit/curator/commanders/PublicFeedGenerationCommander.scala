@@ -26,7 +26,7 @@ class PublicFeedGenerationCommander @Inject() (
   val numPublicFeedLimit = 100
 
   private def specialCurators(): Future[Seq[Id[User]]] =
-    experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
+    experimentCommander.getUsersByExperiment(UserExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
   private def computePublicMasterScore(baseScore: Float, scores: PublicUriScores): Float = {
     baseScore * scores.multiplier.getOrElse(1.0f)

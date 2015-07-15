@@ -4,7 +4,7 @@ import java.text.Normalizer
 
 import com.amazonaws.services.cognitoidentity.model.NotAuthorizedException
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.abook.model.{ UserInviteRecommendation, EContact, EmailAccountInfo, EmailAccount, IrrelevantPeopleForOrg, OrganizationInviteRecommendation, OrganizationMemberRecommendationRepo, OrganizationEmailInviteRecommendationRepo, UserEmailInviteRecommendationRepo, TwitterInviteRecommendationRepo, LinkedInInviteRecommendationRepo, FacebookInviteRecommendationRepo, FriendRecommendationRepo, EContactRepo, EmailAccountRepo }
+import com.keepit.abook.model.{ OrganizationMemberRecommendation, UserInviteRecommendation, EContact, EmailAccountInfo, EmailAccount, IrrelevantPeopleForOrg, OrganizationInviteRecommendation, OrganizationMemberRecommendationRepo, UserEmailInviteRecommendationRepo, TwitterInviteRecommendationRepo, LinkedInInviteRecommendationRepo, FacebookInviteRecommendationRepo, FriendRecommendationRepo, EContactRepo, EmailAccountRepo }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -14,7 +14,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.graph.GraphServiceClient
 import com.keepit.graph.model.SociallyRelatedEntitiesForOrg
-import com.keepit.model.{ Invitation, ExperimentType, UserExperiment, OrganizationInviteView, User, Organization }
+import com.keepit.model.{ Invitation, UserExperimentType, UserExperiment, OrganizationInviteView, User, Organization }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import scala.concurrent.duration._
@@ -33,7 +33,6 @@ class AbookOrganizationRecommendationCommander @Inject() (
     linkedInInviteRecommendationRepo: LinkedInInviteRecommendationRepo,
     twitterInviteRecommendationRepo: TwitterInviteRecommendationRepo,
     userEmailInviteRecommendationRepo: UserEmailInviteRecommendationRepo,
-    organizationEmailInviteRecommendationRepo: OrganizationEmailInviteRecommendationRepo,
     orgMembershipRecommendationRepo: OrganizationMemberRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
@@ -43,14 +42,14 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
   def hideUserRecommendation(organizationId: Id[Organization], memberId: Id[User], irrelevantMemberId: Id[User]): Unit = {
     db.readWrite { implicit session =>
-      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, irrelevantMemberId)
+      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, Left(irrelevantMemberId))
     }
   }
 
   def hideEmailRecommendation(organizationId: Id[Organization], memberId: Id[User], emailAddress: EmailAddress): Unit = {
     db.readWrite { implicit session =>
       val emailAccount = emailAccountRepo.internByAddress(emailAddress)
-      organizationEmailInviteRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, emailAccount.id.get)
+      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, Right(emailAccount.id.get))
     }
   }
 
@@ -83,8 +82,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
     val fMembers = shoebox.getOrganizationMembers(organizationId)
     val fOrganizationInviteViews = shoebox.getOrganizationInviteViews(organizationId)
     val (irrelevantUsers, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
-      val irrelevantUsers = orgMembershipRecommendationRepo.getIrrelevantRecommendations(organizationId)
-      val irrelevantEmailAccounts = organizationEmailInviteRecommendationRepo.getIrrelevantRecommendations(organizationId)
+      val irrelevantRecos = orgMembershipRecommendationRepo.getIrrelevantRecommendations(organizationId)
+      val irrelevantUsers = irrelevantRecos.collect { case Left(userId) => userId }
+      val irrelevantEmailAccounts = irrelevantRecos.collect { case Right(emailAccountId) => emailAccountId }
       (irrelevantUsers, irrelevantEmailAccounts)
     }
     for {
@@ -129,7 +129,9 @@ class AbookOrganizationRecommendationCommander @Inject() (
       val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
-        val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => organizationEmailInviteRecommendationRepo.getIrrelevantRecommendations(orgId) }
+        val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => orgMembershipRecommendationRepo.getIrrelevantRecommendations(orgId) }.collect {
+          case Right(emailAccountId) => emailAccountId
+        }
         val allContacts = db.readOnlyMaster { implicit session =>
           if (!disclosePrivateEmails) {
             contactRepo.getByUserId(viewerId)

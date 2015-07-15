@@ -96,8 +96,12 @@ class OrganizationRepoImpl @Inject() (
           ) as membership
           on user.id = membership.user_id
       ) as membership
-        inner join organization on organization.id = membership.organization_id;
-      """.as[Id[Organization]].list.toSet
+        inner join organization on organization.id = membership.organization_id
+        where organization.id not in (
+          select organization_id from organization_membership where user_id = $userId
+          union
+            select organization_id from organization_membership_candidate where user_id = $userId
+        );""".as[Id[Organization]].list.toSet
 
     getByIds(orgIds).values.toSeq
   }

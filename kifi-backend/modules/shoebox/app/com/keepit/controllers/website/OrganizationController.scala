@@ -25,7 +25,7 @@ class OrganizationController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
-    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       request.body.validate[OrganizationInitialValues](OrganizationInitialValues.website) match {
         case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
@@ -75,7 +75,7 @@ class OrganizationController @Inject() (
 
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
-    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       val user = userCommander.getByExternalIds(Seq(extId)).values.head
       val publicOrgs = orgMembershipCommander.getAllOrganizationsForUser(user.id.get)

@@ -61,7 +61,9 @@ object UserViewTypes {
   case object AllUsersViewType extends UserViewType
   case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
-  case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
+  case class ByExperimentUsersViewType(exp: UserExperimentType) extends UserViewType
+  case object UsersPotentialOrgsViewType extends UserViewType
+  case object LinkedInUsersWithoutOrgsViewType extends UserViewType
 }
 import UserViewTypes._
 
@@ -326,6 +328,8 @@ class AdminUserController @Inject() (
   def allUsersView = usersView(0)
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
+  def allUsersPotentialOrgsView = usersPotentialOrgsView(0)
+  def allLinkedInUsersWithoutOrgsView = linkedInUsersWithoutOrgsView(0)
 
   def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
     val usersF = Future {
@@ -333,12 +337,22 @@ class AdminUserController @Inject() (
         userViewType match {
           case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
-          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
-          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
+          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
           case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
+          case UsersPotentialOrgsViewType =>
+            (
+              userRepo.pageUsersWithPotentialOrgs(page, pageSize),
+              userRepo.countUsersWithPotentialOrgs()
+            )
+          case LinkedInUsersWithoutOrgsViewType =>
+            (
+              userRepo.pageLinkedInUsersWithoutOrgs(page, pageSize),
+              userRepo.countLinkedInUsersWithoutOrgs()
+            )
         }
       }
     }
@@ -405,6 +419,14 @@ class AdminUserController @Inject() (
     userStatisticsPage(FakeUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
+  def usersPotentialOrgsView(page: Int = 0) = AdminUserPage.async { implicit request =>
+    userStatisticsPage(UsersPotentialOrgsViewType, page).map { p => Ok(html.admin.users(p, None)) }
+  }
+
+  def linkedInUsersWithoutOrgsView(page: Int = 0) = AdminUserPage.async { implicit request =>
+    userStatisticsPage(LinkedInUsersWithoutOrgsViewType, page).map { p => Ok(html.admin.users(p, None)) }
+  }
+
   def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val nameOpt = request.body.get("name").flatMap(_.headOption)
     val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
@@ -426,7 +448,7 @@ class AdminUserController @Inject() (
   }
 
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(ByExperimentUsersViewType(ExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(ByExperimentUsersViewType(UserExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def searchUsers() = AdminUserPage { implicit request =>
@@ -527,10 +549,10 @@ class AdminUserController @Inject() (
     SUPER_ADMIN_SET contains userId
   }
 
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+  def isAdminExperiment(expType: UserExperimentType) = expType == UserExperimentType.ADMIN
 
-  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType.get(experiment)
+  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType.get(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
@@ -557,13 +579,13 @@ class AdminUserController @Inject() (
     }
   }
 
-  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType(experiment)
+  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
       db.readWrite { implicit session =>
-        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, UserExperimentType(experiment))
         ue foreach { ue =>
           userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
           val experiments = userExperimentRepo.getUserExperiments(userId)

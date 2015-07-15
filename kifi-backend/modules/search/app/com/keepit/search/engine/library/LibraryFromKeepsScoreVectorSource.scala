@@ -19,13 +19,13 @@ class LibraryFromKeepsScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    filter: SearchFilter,
+    protected val filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.strictTextSearchFields)
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

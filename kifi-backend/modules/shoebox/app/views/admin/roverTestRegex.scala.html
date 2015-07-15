@@ -1,5 +1,5 @@
 @import com.keepit.common.controller.UserRequest
-@(regex: Option[String] = None, tests: Option[List[String]] = None)(implicit request: UserRequest[_])
+@(regex: Option[String] = None, tests: Option[Seq[String]] = None)(implicit request: UserRequest[_])
 
 @views.html.admin.admin("Test Regex") {
     <h3>Regex</h3>

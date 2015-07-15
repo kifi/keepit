@@ -21,6 +21,7 @@ object LibraryFields {
   val orgField = "org"
   val orgIdField = "orgId"
   val recordField = "rec"
+  val keepCountValueField = "kc"
 
   val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
   val textSearchFields = strictTextSearchFields + namePrefixField
@@ -100,6 +101,9 @@ object LibraryIndexable {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 
+  def getKeepCount(librarySearcher: Searcher, libId: Long): Option[Long] = {
+    librarySearcher.getLongDocValue(LibraryFields.keepCountValueField, libId)
+  }
 }
 
 class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, Library] {
@@ -136,6 +140,8 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     doc.add(buildIdValueField(orgIdField, library.orgId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
+
+    doc.add(buildLongValueField(keepCountValueField, library.keepCount))
 
     doc
   }

@@ -59,7 +59,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[FakeUserActionsHelper].setUser(members.head, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(members.head, Set(UserExperimentType.ORGANIZATION))
           val request = route.getMembers(publicOrgId)
           val result = controller.getMembers(publicOrgId, offset = 0, limit = n)(request)
           status(result) === OK
@@ -67,8 +67,10 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val json = Json.parse(contentAsString(result))
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
+          println(json \ "members")
           (json \ "members" \\ "id").length == n
           (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
+          (json \ "members" \\ "lastInvitedAt").length === 0 // members do not have open invitations
         }
       }
       "list an organization's invitees, if the requester can invite members" in {
@@ -81,7 +83,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
 
-          inject[FakeUserActionsHelper].setUser(members.head, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(members.head, Set(UserExperimentType.ORGANIZATION))
           val memberRequest = route.getMembers(publicOrgId)
           val memberResult = controller.getMembers(publicOrgId, offset = n, limit = n)(memberRequest)
           status(memberResult) === OK
@@ -93,7 +95,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
             resultInviteesList.length === 0
           }
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val ownerRequest = route.getMembers(publicOrgId)
           val ownerResult = controller.getMembers(publicOrgId, offset = n, limit = n)(ownerRequest)
           status(ownerResult) === OK
@@ -118,7 +120,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val ownerRequest = route.getMembers(publicOrgId)
           val ownerResult = controller.getMembers(publicOrgId, offset = 2 * n, limit = n)(ownerRequest)
           status(ownerResult) === OK
@@ -155,7 +157,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse("""{"members": []}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
           status(result) === BAD_REQUEST
@@ -167,7 +169,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}", "newRole": 42}]}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
           status(result) === BAD_REQUEST
@@ -183,7 +185,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}", "newRole": "owner"}]}""")
 
-          inject[FakeUserActionsHelper].setUser(m1, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(m1, Set(UserExperimentType.ORGANIZATION))
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
 
@@ -197,7 +199,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}", "newRole": "member"}]}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
           status(result) === OK
@@ -226,7 +228,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse("""{"members": []}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === BAD_REQUEST
@@ -238,7 +240,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
           val jsonPayload = Json.parse(s"""{"members": [{"userId": 42}]}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === BAD_REQUEST
@@ -254,7 +256,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}"}]}""")
 
-          inject[FakeUserActionsHelper].setUser(m1, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(m1, Set(UserExperimentType.ORGANIZATION))
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
 
@@ -268,7 +270,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
 
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}"}]}""")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === OK

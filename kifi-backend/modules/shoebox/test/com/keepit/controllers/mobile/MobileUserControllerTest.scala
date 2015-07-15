@@ -144,7 +144,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         ctrl.method === "GET"
 
         val controller = inject[MobileUserController]
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val call = controller.currentUser
         val result = call(FakeRequest())
@@ -186,7 +186,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
         val controller = inject[MobileUserController]
         val commander = inject[UserIpAddressEventLogger]
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val call = controller.currentUser
         val result = call(FakeRequest())

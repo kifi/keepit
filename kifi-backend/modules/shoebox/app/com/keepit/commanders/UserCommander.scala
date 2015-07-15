@@ -217,15 +217,16 @@ class UserCommander @Inject() (
   def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressOpt(address) match {
-        case None => Left("email not found")
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
-          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord)) {
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord.address.address)) {
             updateUserPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
           Right((): Unit)
+        case None => Left("unknown_email")
+        case _ => Left("permission_denied")
       }
     }
   }
@@ -533,14 +534,14 @@ class UserCommander @Inject() (
     }
   }
 
-  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[Map[UserValueName, JsValue]] = {
+  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
       val user = db.readOnlyMaster { implicit s =>
         userRepo.get(userId)
       }
       val time = clock.now()
-      val shouldShowDelightedQuestionFut = if (experiments.contains(ExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
+      val shouldShowDelightedQuestionFut = if (experiments.contains(UserExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
         Future.successful(true)
       } else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId).map { lastDelightedAnswerDate =>
@@ -575,7 +576,7 @@ class UserCommander @Inject() (
     })
   }
 
-  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject] = {
     getPrefUpdates(prefSet, userId, experiments) map { updates =>
       savePrefs(userId, updates)
     } recover {
@@ -750,7 +751,7 @@ class UserCommander @Inject() (
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     allFakeUsersCache.getOrElse(AllFakeUsersKey) {
       db.readOnlyMaster { implicit session =>
-        userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
+        userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet
       }
     }
   }

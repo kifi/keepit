@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.{ ExperimentType, User }
+import com.keepit.model.{ UserExperimentType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -129,12 +129,12 @@ object SearchConfig {
 class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
 
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Unit](ttl = 30 seconds)
-  @volatile private[this] var _activeExperiments: Map[ExperimentType, SearchConfig] = Map()
+  @volatile private[this] var _activeExperiments: Map[UserExperimentType, SearchConfig] = Map()
   @volatile private[this] var _activeExperimentsExpiration: Long = 0L
 
   val defaultConfig = SearchConfig.defaultConfig
 
-  def activeExperiments: Map[ExperimentType, SearchConfig] = {
+  def activeExperiments: Map[UserExperimentType, SearchConfig] = {
     if (_activeExperimentsExpiration < System.currentTimeMillis) {
       consolidateGetExperimentsReq("active") { k => SafeFuture { syncActiveExperiments } }
     }
@@ -155,20 +155,20 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }
 
-  def getConfig(userId: Id[User], userExperiments: Set[ExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+  def getConfig(userId: Id[User], userExperiments: Set[UserExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     val future = getConfigFuture(userId, userExperiments)
     monitoredAwait.result(future, 1 seconds, "getting search config")
   }
 
-  def getConfigFuture(userId: Id[User], userExperiments: Set[ExperimentType]): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+  def getConfigFuture(userId: Id[User], userExperiments: Set[UserExperimentType]): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
     val segFuture = shoeboxClient.getUserSegment(userId)
     userConfig.get(userId) match {
       case Some(config) => Future.successful((config, None))
       case None =>
         val (experimentConfig, experimentId) =
-          if (userExperiments.contains(ExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
+          if (userExperiments.contains(UserExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
           else userExperiments.collectFirst {
-            case experiment @ ExperimentType(SearchConfigExperiment.experimentTypePattern(id)) if activeExperiments.contains(experiment) =>
+            case experiment @ UserExperimentType(SearchConfigExperiment.experimentTypePattern(id)) if activeExperiments.contains(experiment) =>
               (activeExperiments(experiment), Some(Id[SearchConfigExperiment](id.toLong)))
           } getOrElse (SearchConfig.empty, None)
 
