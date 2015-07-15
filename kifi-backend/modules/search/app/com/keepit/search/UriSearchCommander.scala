@@ -23,7 +23,7 @@ import com.keepit.search.index.DefaultAnalyzer
 
 case class UriSearchRequest(
   userId: Id[User],
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   query: String,
   filter: SearchFilter,
   orderBy: SearchRanking,
@@ -43,7 +43,7 @@ trait UriSearchCommander {
   def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     filterFuture: Future[SearchFilter],
     orderBy: SearchRanking,
@@ -59,7 +59,7 @@ trait UriSearchCommander {
     uriId: Id[NormalizedURI],
     libraryId: Option[Id[Library]],
     lang: Option[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     debug: Option[String]): Future[Option[UriSearchExplanation]]
 
@@ -86,7 +86,7 @@ class UriSearchCommanderImpl @Inject() (
   def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     filterFuture: Future[SearchFilter],
     orderBy: SearchRanking,
@@ -221,7 +221,7 @@ class UriSearchCommanderImpl @Inject() (
 
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[UserExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)

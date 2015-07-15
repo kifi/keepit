@@ -44,7 +44,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         val (real, fake) = db.readWrite { implicit s =>
           val user1 = user().saved
           val user2 = user().saved
-          userExperimentRepo.save(UserExperiment(experimentType = ExperimentType.FAKE, userId = user2.id.get))
+          userExperimentRepo.save(UserExperiment(experimentType = UserExperimentType.FAKE, userId = user2.id.get))
           (user1.id.get, user2.id.get)
         }
 

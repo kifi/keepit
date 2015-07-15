@@ -61,7 +61,7 @@ class PageCommander @Inject() (
     }
   }
 
-  def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
+  def getPageDetails(url: String, userId: Id[User], experiments: Set[UserExperimentType]): KeeperInfo = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     // use the master. Keep, KeepToCollection, and Collection are heavily cached.
@@ -106,7 +106,7 @@ class PageCommander @Inject() (
       position, neverOnSite, shown, keepers, keeps)
   }
 
-  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
+  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
     val host: Option[String] = uri.host.map(_.name)
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
@@ -126,7 +126,7 @@ class PageCommander @Inject() (
 
     val relatedPagesF = uriInfoF.flatMap {
       case (uri, _) =>
-        if (uri.isDefined && experiments.contains(ExperimentType.RELATED_PAGE_INFO)) {
+        if (uri.isDefined && experiments.contains(UserExperimentType.RELATED_PAGE_INFO)) {
           relatedPageCommander.getRelatedPageInfo(uri.get.id.get).recover {
             case _ =>
               airbrake.notify(s"error in getting related page info for uri: ${uri.get.id.get}")

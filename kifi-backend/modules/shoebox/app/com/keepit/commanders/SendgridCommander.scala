@@ -10,7 +10,7 @@ import com.keepit.common.mail.template.EmailTrackingParam
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
-import com.keepit.model.{ EmailOptOutRepo, ExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.model.{ EmailOptOutRepo, UserExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
 
@@ -82,7 +82,7 @@ class SendgridCommander @Inject() (
         userExperimentCommander.getExperimentsByUser(userId).map { experiments =>
           val builder = heimdalContextBuilder()
           builder.addExistingContext(context)
-          builder += ("userStatus", ExperimentType.getUserStatus(experiments))
+          builder += ("userStatus", UserExperimentType.getUserStatus(experiments))
           builder.addExperiments(experiments)
           val userEventContext = builder.build
           heimdalClient.trackEvent(UserEvent(userId, userEventContext, UserEventTypes.WAS_NOTIFIED, eventTime))

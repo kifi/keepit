@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
-import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.model.UserExperimentType.ADMIN
 import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer

@@ -300,7 +300,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           Seq(keep0, keep1, keep2, keep3)
         }
 
-        shoebox.allUserExperiments(user2.id.get) = Set(UserExperiment(experimentType = ExperimentType.LIBRARIES, userId = user2.id.get))
+        shoebox.allUserExperiments(user2.id.get) = Set(UserExperiment(experimentType = UserExperimentType.LIBRARIES, userId = user2.id.get))
         shoebox.newKeepsInLibrariesExpectation(user2.id.get) = keeps
 
         val sumU43F = sender.sendToUser(user2.id.get)

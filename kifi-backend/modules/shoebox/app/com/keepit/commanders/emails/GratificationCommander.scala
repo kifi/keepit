@@ -64,7 +64,7 @@ class GratificationCommander @Inject() (
     if (!UNDER_EXPERIMENT) {
       FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
     } else {
-      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(ExperimentType.GRATIFICATION_EMAIL) }
+      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(UserExperimentType.GRATIFICATION_EMAIL) }
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
       fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }

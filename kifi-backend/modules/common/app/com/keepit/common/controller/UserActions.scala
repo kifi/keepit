@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.{ ExperimentType, KifiInstallation, User }
+import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
 import play.api.Play
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
@@ -51,7 +51,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   def userF = user0.get
   def user = user0.awaitGet
 
-  private val experiments0: Lazily[Set[ExperimentType]] = new Lazily(helper.getUserExperiments(userId))
+  private val experiments0: Lazily[Set[UserExperimentType]] = new Lazily(helper.getUserExperiments(userId))
   def experimentsF = experiments0.get
   def experiments = experiments0.awaitGet
 
@@ -65,7 +65,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
 // for backward-compatibility
 trait MaybeCostlyUserAttributes[T] { self: UserRequest[T] =>
   def user: User
-  def experiments: Set[ExperimentType]
+  def experiments: Set[UserExperimentType]
   def kifiInstallationId: Option[ExternalId[KifiInstallation]]
 }
 
@@ -90,7 +90,7 @@ trait UserActionsRequirements {
 
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]]
 
-  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]]
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]]
 
   def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]]
 

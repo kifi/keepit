@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.model.{ ExperimentType, Library }
+import com.keepit.model.{ UserExperimentType, Library }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ class ExtUserController @Inject() (
       val res1 = res.collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-        case a: AliasContactResult if request.experiments.contains(ExperimentType.ADMIN) => Json.toJson(a)
+        case a: AliasContactResult if request.experiments.contains(UserExperimentType.ADMIN) => Json.toJson(a)
       }
       Ok(Json.toJson(res1))
     }
