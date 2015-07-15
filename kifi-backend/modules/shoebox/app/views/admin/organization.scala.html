@@ -8,35 +8,35 @@ orgStats: OrganizationStatistics
     <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
     <tr><td>Name</td>
         <td>
-        <form action="#" method="POST" class="form-inline set-name">
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
             <input id="set-name-input" type="text" name="name" value="@orgStats.name">
             <input type="Submit" value="Change">
         </form>
         </td></tr>
     <tr><td>Handle</td>
         <td>
-            <form action="#" method="POST" class="form-inline set-handle">
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
                 <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
                 <input type="Submit" value="Change">
             </form>
         </td></tr>
     <tr><td>Description</td>
         <td>
-        <form action="#" method="POST" class="form-inline set-description">
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
             <input id="set-description-input" type="text" name="description" value="@orgStats.description">
             <input type="Submit" value="Change">
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
     <tr>
-        <th>Experiments</th>
-        <td id="experiments" class="form-inline">
-        @for(exp <- OrganizationExperimentType._ALL) {
-            <label class="checkbox">
-                <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
-            </label>
-        }
-        </td>
+    <th>Experiments</th>
+    <td id="experiments" class="form-inline">
+    @for(exp <- OrganizationExperimentType._ALL) {
+        <label class="checkbox">
+            <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
+        </label>
+    }
+    </td>
     </tr>
 
 </table>
@@ -81,7 +81,7 @@ orgStats: OrganizationStatistics
     }
 </table>
 <br/>
-<form action="#" method="POST" class="form-inline add-candidate">
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
     <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
     <input type="Submit" value="Add">
 </form>
@@ -110,70 +110,34 @@ orgStats: OrganizationStatistics
 </table>
 
 
-<script type="text/javascript">
-    $('.set-name').on("submit", function() {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)", $('.set-name').serialize())
-      .done(function(data) {
-        alert("Updated Name");
-      }).fail(function(data) {
-        alert("Bad Request: " + data.responseText);
-      });
-      return false;
-    });
-    $('.set-handle').on("submit", function() {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)", $('.set-handle').serialize())
-      .done(function(data) {
-        alert("Updated Handle");
-      }).fail(function(data) {
-        alert("Bad Request: " + data.responseText);
-      });
-      return false;
-    });
-    $('.set-description').on("submit", function() {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)", $('.set-description').serialize())
-      .done(function(data) {
-        alert("Updated Description");
-      }).fail(function(data) {
-        alert("Bad Request: " + data.responseText);
-      });
-      return false;
-    });
-    $('.add-candidate').on("submit", function() {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", $('.add-candidate').serialize())
-      .done(function(data) {
-        location.reload
-      }).fail(function(data) {
-        alert("Bad Request: " + data.responseText);
-      });
-      return false;
+    <script type="text/javascript">
+
+    $("#experiments").on("click", "input", function() {
+        var $td = $(this).closest("#experiments");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
     });
     function addCandidate(orgId, candidateId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId })
-        .done(location.reload);
-    }
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId });
+      location.reload();
+    };
 
     function addMember(orgId, memberId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
-        .done(location.reload);
-    }
-
-    $("#experiments").on("click", "input", function() {
-      var $td = $(this).closest("#experiments");
-      var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
-      if (this.checked) {
-        console.log($(this).data("exp"))
-        $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")))
-          .done(done).fail(fail);
-      } else {
-        $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")),
-          {type: "DELETE"}).done(done).fail(fail);
-      }
-      function done() {
-        $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
-      }
-      function fail() {
-        $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
-      }
-    });
+      location.reload();
+    };
 </script>
 }

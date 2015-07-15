@@ -26,21 +26,9 @@ fakeOwnerId: Id[User]
         </tr>
     }
 </table>
-<form action="#" method="POST" class="form-inline create-org">
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()" method="POST" class="form-inline create-org">
     <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
     <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
     <input type="Submit" value="Add">
 </form>
-
-    <script type="text/javascript">
-        $('.create-org').on("submit", function() {
-            $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()", $('.create-org').serialize())
-                .done(function(data) {
-                    location.reload
-                }).fail(function(data) {
-                    alert("Bad Request: " + data.responseText);
-                });
-                return false;
-            });
-    </script>
 }
