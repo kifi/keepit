@@ -76,6 +76,7 @@ angular.module('kifi')
           $rootScope.userLoggedIn ? 'not_friends' : '';
         scope.showConnectCallout = scope.intent === 'connect' && scope.connectionWithUser === 'not_friends';
         scope.sharing = false;
+        scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
         //
         // Scope Functions

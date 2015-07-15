@@ -61,7 +61,7 @@
       <div class="kf-uph-progress-check"></div>
     </div>
 
-    <h1 class="kf-uph-name" itemprop="name">{{profile|name}}</h1>
+    <h1 class="kf-uph-name" itemprop="name">{{profile|name}}<span ng-if="showAdminLink"><a class="kf-uph-admin-link" ng-href="https://admin.kifi.com/admin/user/{{profile.id}}">♡</a></span></h1>
     <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>
     <div class="kf-uph-bio" ng-bind-html="bioHtml"></div>
   </div>
