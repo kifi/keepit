@@ -113,7 +113,7 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
     }
   }
 
-  "OrganizationUserMayKnowRepo" should {
+  "OrganizationRecommendationForUserRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
         val orgUserMayKnowRepo = inject[OrganizationRecommendationForUserRepo]
