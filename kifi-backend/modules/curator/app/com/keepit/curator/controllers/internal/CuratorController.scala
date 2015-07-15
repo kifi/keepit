@@ -62,10 +62,10 @@ class CuratorController @Inject() (
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy =
-        if (experiments.contains(UserExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
+        if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
         else topScoreRecoStrategy
-      val scoringStrategy = if (experiments.contains(UserExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
-      val applyFeedback = experiments.contains(UserExperimentType.APPLY_RECO_FEEDBACK)
+      val scoringStrategy = if (experiments.contains(ExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
+      val applyFeedback = experiments.contains(ExperimentType.APPLY_RECO_FEEDBACK)
 
       val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context, applyFeedback)
 
@@ -159,7 +159,7 @@ class CuratorController @Inject() (
 
   private def scheduleToSendDigestEmail(userId: Id[User]) = {
     val sendEmailF = shoebox.getExperimentsByUserIds(Seq(userId)) flatMap { usersExperiments =>
-      if (usersExperiments(userId).contains(UserExperimentType.SEND_DIGEST_EMAIL_ON_REFRESH)) {
+      if (usersExperiments(userId).contains(ExperimentType.SEND_DIGEST_EMAIL_ON_REFRESH)) {
         shoebox.getUserValue(userId, UserValueName.LAST_DIGEST_EMAIL_SCHEDULED_AT) map { dateTimeStrOpt =>
           dateTimeStrOpt.isEmpty || dateTimeStrOpt.exists { dateTimeStr =>
             DateTimeJsonFormat.reads(JsString(dateTimeStr)).fold(

@@ -23,7 +23,7 @@ class KeepsAbuseMonitor(
     val afterAdding = newKeepCount + existingBookmarksCount
     if (afterAdding > absoluteError) {
       val message = s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. max allowed is $absoluteError"
-      if (db.readOnlyMaster { implicit s => experiments.get(userId, UserExperimentType.BYPASS_ABUSE_CHECKS).exists(_.isActive) }) {
+      if (db.readOnlyMaster { implicit s => experiments.get(userId, ExperimentType.BYPASS_ABUSE_CHECKS).exists(_.isActive) }) {
         log.info(message)
       } else {
         throw new AbuseMonitorException(message)
@@ -31,7 +31,7 @@ class KeepsAbuseMonitor(
     }
     if (afterAdding > absoluteWarn) {
       val message = s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. max allowed is $absoluteError"
-      if (db.readOnlyMaster { implicit s => experiments.get(userId, UserExperimentType.BYPASS_ABUSE_CHECKS).exists(_.isActive) }) {
+      if (db.readOnlyMaster { implicit s => experiments.get(userId, ExperimentType.BYPASS_ABUSE_CHECKS).exists(_.isActive) }) {
         log.info(message)
       } else {
         airbrake.notify(new AirbrakeError(message = Some(message), userId = Some(userId)))

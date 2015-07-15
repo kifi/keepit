@@ -7,7 +7,7 @@ import com.keepit.model.{
   UserExperimentRepo,
   UserRepo,
   UserStates,
-  UserExperimentType,
+  ExperimentType,
   ProbabilisticExperimentGenerator,
   ProbabilisticExperimentGeneratorRepo,
   Name
@@ -34,7 +34,7 @@ class AdminExperimentController @Inject() (
         experimentRepo.getDistinctExperimentsWithCounts().toMap)
     }
 
-    val experimentInfos = (UserExperimentType._ALL.zip(UserExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map {
+    val experimentInfos = (ExperimentType._ALL.zip(ExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map {
       case (experimentType, userCount) =>
         db.readOnlyMaster { implicit session =>
           val defaultDensity = generatorRepo.getByName(Name[ProbabilisticExperimentGenerator](experimentType.value + "-default"), None).map(_.density.density.map {
@@ -52,10 +52,10 @@ class AdminExperimentController @Inject() (
     val condition = (data \ "condition").as[String]
     val density = (data \ "density").as[JsObject].fields.map {
       case (name, percentage) =>
-        Probability(UserExperimentType(name), percentage.as[Double] / 100)
+        Probability(ExperimentType(name), percentage.as[Double] / 100)
     }
     db.readWrite { implicit session =>
-      generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[UserExperimentType](density), None, Some(UserExperimentType(condition)))
+      generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[ExperimentType](density), None, Some(ExperimentType(condition)))
     }
     Ok(data)
   }

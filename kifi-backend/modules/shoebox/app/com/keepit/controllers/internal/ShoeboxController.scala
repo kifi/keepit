@@ -315,7 +315,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(result))
   }
 
-  def getUsersByExperiment(experiment: UserExperimentType) = Action { request =>
+  def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
     val users = db.readOnlyMaster { implicit s =>
       val userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)

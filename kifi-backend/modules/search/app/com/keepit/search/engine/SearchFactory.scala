@@ -70,7 +70,7 @@ class SearchFactory @Inject() (
     filter: SearchFilter,
     orderBy: SearchRanking,
     config: SearchConfig,
-    experiments: Set[UserExperimentType]): Seq[UriSearch] = {
+    experiments: Set[ExperimentType]): Seq[UriSearch] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -148,7 +148,7 @@ class SearchFactory @Inject() (
     val futureFakeUserIds = fakeUserIdsReqConsolidator(this) { _ => shoeboxClient.getAllFakeUsers().imap(_.map(_.id)) }
     val futureIsFakeOrAdmin = userId match {
       case None => Future.successful(false)
-      case Some(id) => shoeboxClient.getUserExperiments(id).imap(experiments => experiments.contains(UserExperimentType.ADMIN) || experiments.contains(UserExperimentType.FAKE))
+      case Some(id) => shoeboxClient.getUserExperiments(id).imap(experiments => experiments.contains(ExperimentType.ADMIN) || experiments.contains(ExperimentType.FAKE))
     }
     for {
       isFakeOrAdmin <- futureIsFakeOrAdmin
@@ -303,7 +303,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
-    experiments: Set[UserExperimentType],
+    experiments: Set[ExperimentType],
     explain: Option[Id[Library]]): Seq[LibrarySearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -378,7 +378,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
-    experiments: Set[UserExperimentType],
+    experiments: Set[ExperimentType],
     explain: Option[Id[User]]): Seq[UserSearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -433,7 +433,7 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getConfigFuture(userId: Id[User], experiments: Set[UserExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+  def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
     predefinedConfig match {
       case None =>
         configReqConsolidator(userId) { k => searchConfigManager.getConfigFuture(userId, experiments) }

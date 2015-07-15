@@ -116,7 +116,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = try {
     timing(s"updateExperimentIfTestUser $userId") {
-      @inline def setExp(exp: UserExperimentType) {
+      @inline def setExp(exp: ExperimentType) {
         val marked = userExperimentCommander.userHasExperiment(userId, exp)
         if (marked)
           log.debug(s"test user $userId is already marked as $exp")

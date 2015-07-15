@@ -48,7 +48,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
       running(new ShoeboxApplication(modules: _*)) {
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
 
         val testPath = com.keepit.controllers.admin.routes.AdminPersonaController.getAllPersonas().url
         val request1 = FakeRequest("GET", testPath)
@@ -62,7 +62,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
         val testPath = com.keepit.controllers.admin.routes.AdminPersonaController.createPersona().url
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 4
@@ -100,7 +100,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
 
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
 
         db.readOnlyMaster { implicit s =>
           personaRepo.getByState(PersonaStates.ACTIVE).length === 4
@@ -181,7 +181,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
 
         val controller1 = inject[AdminBookmarksController]
         val testPath = com.keepit.controllers.admin.routes.AdminBookmarksController.populateKeepNotesWithTag(0, 10, 10).url
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
 
         // create new persona
         val request1 = FakeRequest("POST", testPath)

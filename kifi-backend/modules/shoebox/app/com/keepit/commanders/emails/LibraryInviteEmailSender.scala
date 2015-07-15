@@ -47,7 +47,7 @@ class LibraryInviteEmailSender @Inject() (
 
       }
 
-      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, UserExperimentType.PLAIN_EMAIL) }.getOrElse(false)
+      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.PLAIN_EMAIL) }.getOrElse(false)
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }

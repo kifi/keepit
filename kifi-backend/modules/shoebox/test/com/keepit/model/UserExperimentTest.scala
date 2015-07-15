@@ -23,14 +23,14 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[Database].readWrite { implicit session =>
-          expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = UserExperimentType.ADMIN))
+          expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentType.ADMIN))
         }
 
         inject[Database].readOnlyMaster { implicit session =>
-          expRepo.get(shanee.id.get, UserExperimentType.ADMIN) must beSome
-          expRepo.get(shanee.id.get, UserExperimentType.FAKE) must beNone
-          expRepo.get(santa.id.get, UserExperimentType.ADMIN) must beNone
-          expRepo.get(santa.id.get, UserExperimentType.FAKE) must beNone
+          expRepo.get(shanee.id.get, ExperimentType.ADMIN) must beSome
+          expRepo.get(shanee.id.get, ExperimentType.FAKE) must beNone
+          expRepo.get(santa.id.get, ExperimentType.ADMIN) must beNone
+          expRepo.get(santa.id.get, ExperimentType.FAKE) must beNone
         }
       }
     }
@@ -47,22 +47,22 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[Database].readWrite { implicit session =>
-          expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = UserExperimentType.ADMIN))
-          expRepo.save(UserExperiment(userId = santa.id.get, experimentType = UserExperimentType.ADMIN))
-          expRepo.save(UserExperiment(userId = santa.id.get, experimentType = UserExperimentType.FAKE))
+          expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentType.ADMIN))
+          expRepo.save(UserExperiment(userId = santa.id.get, experimentType = ExperimentType.ADMIN))
+          expRepo.save(UserExperiment(userId = santa.id.get, experimentType = ExperimentType.FAKE))
         }
 
         inject[Database].readWrite { implicit session =>
           val shanees = expRepo.getUserExperiments(shanee.id.get)
           shanees.size === 2
-          shanees.head === UserExperimentType.ADMIN
+          shanees.head === ExperimentType.ADMIN
           val santas = expRepo.getUserExperiments(santa.id.get)
           santas.size === 3
           val shachafs = expRepo.getUserExperiments(shachaf.id.get)
           shachafs.size === 1
-          val admins = expRepo.getByType(UserExperimentType.ADMIN)
+          val admins = expRepo.getByType(ExperimentType.ADMIN)
           admins.size === 2
-          val fakes = expRepo.getByType(UserExperimentType.FAKE)
+          val fakes = expRepo.getByType(ExperimentType.FAKE)
           fakes.size === 1
           fakes.head.userId === santa.id.get
         }
@@ -72,10 +72,10 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
   "ProbabilisticExperimentGenerator" should {
 
-    val firstExp = UserExperimentType("first")
-    val secondExp = UserExperimentType("second")
-    val thirdExp = UserExperimentType("third")
-    val conditionExp = UserExperimentType("condition")
+    val firstExp = ExperimentType("first")
+    val secondExp = ExperimentType("second")
+    val thirdExp = ExperimentType("third")
+    val conditionExp = ExperimentType("condition")
     val salt = "pepper"
 
     val firstDensity = ProbabilityDensity(Seq(

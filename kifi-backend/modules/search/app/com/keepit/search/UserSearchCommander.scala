@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, UserExperimentType, User }
+import com.keepit.model.{ NormalizedURI, ExperimentType, User }
 import com.keepit.search.engine.{ SearchFactory, DebugOption }
 import com.keepit.search.engine.user.{ UserSearch, UserShardResult, UserShardHit, UserSearchExplanation }
 import com.keepit.search.index.sharding.{ ActiveShards, Sharding, Shard }
@@ -19,7 +19,7 @@ import scala.concurrent.Future
 
 case class UserSearchRequest(
   userId: Id[User],
-  experiments: Set[UserExperimentType],
+  experiments: Set[ExperimentType],
   query: String,
   filter: SearchFilter,
   firstLang: Lang,
@@ -46,7 +46,7 @@ trait UserSearchCommander {
   def searchUsers(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[UserExperimentType],
+    experiments: Set[ExperimentType],
     query: String,
     futureFilter: Future[SearchFilter],
     maxHits: Int,
@@ -111,7 +111,7 @@ class UserSearchCommanderImpl @Inject() (
   def searchUsers(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[UserExperimentType],
+    experiments: Set[ExperimentType],
     query: String,
     futureFilter: Future[SearchFilter],
     maxHits: Int,

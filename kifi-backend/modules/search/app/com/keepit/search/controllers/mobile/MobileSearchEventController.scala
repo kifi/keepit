@@ -7,7 +7,7 @@ import com.keepit.search.tracking.{ SearchEventCommander, KifiHitContext, BasicS
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.UserExperimentType
+import com.keepit.model.ExperimentType
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -26,7 +26,7 @@ class MobileSearchEventController @Inject() (
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val searchResultUrl = (json \ "resultUrl").as[String]
-    val isDemo = request.experiments.contains(UserExperimentType.DEMO)
+    val isDemo = request.experiments.contains(ExperimentType.DEMO)
     val query = basicSearchContext.query
 
     SafeFuture {

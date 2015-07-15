@@ -63,22 +63,22 @@ class UserTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyMaster { implicit session =>
-          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE)().head === user
-          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE)().length === 0
-          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE) === 1
-          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE) === 0
+          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === user
+          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
+          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 1
+          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 0
         }
 
         db.readWrite { implicit session =>
-          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.FAKE))
+          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.FAKE))
         }
 
         db.readOnlyMaster { implicit session =>
           val updatedUser = userRepo.get(user.id.get)
-          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE)().length === 0
-          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE)().head === updatedUser
-          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE) === 0
-          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE) === 1
+          userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
+          userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === updatedUser
+          userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 0
+          userRepoImpl.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 1
         }
       }
     }

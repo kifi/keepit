@@ -172,8 +172,8 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
         val userCommander = inject[UserCommander]
         val experimentCommander = inject[LocalUserExperimentCommander]
-        experimentCommander.addExperimentForUser(Id[User](6), UserExperimentType.FAKE)
-        experimentCommander.getExperimentsByUser(Id[User](6)).contains(UserExperimentType.FAKE) === true
+        experimentCommander.addExperimentForUser(Id[User](6), ExperimentType.FAKE)
+        experimentCommander.getExperimentsByUser(Id[User](6)).contains(ExperimentType.FAKE) === true
 
         val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, userCommander, inject[LibraryQualityHelper], inject[RelatedLibrariesCache], inject[TopFollowedLibrariesCache], null)
         val resF = commander.suggestedLibrariesInfo(Id[Library](1), Some(Id[User](1)))

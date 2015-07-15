@@ -250,7 +250,7 @@ class OrganizationCommanderImpl @Inject() (
 
   // For use in the Admin Organization controller. Don't use it elsewhere.
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit = {
-    if (!request.experiments.contains(UserExperimentType.ADMIN)) {
+    if (!request.experiments.contains(ExperimentType.ADMIN)) {
       throw new IllegalAccessException("unsafeModifyOrganization called from outside the admin page!")
     }
     db.readWrite { implicit session =>

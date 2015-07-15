@@ -8,14 +8,14 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserExperiment] {
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[UserExperimentType]
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType]
   def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment]
-  def getUserIdsByExperiment(experimentType: UserExperimentType)(implicit session: RSession): Seq[Id[User]]
-  def get(userId: Id[User], experiment: UserExperimentType,
+  def getUserIdsByExperiment(experimentType: ExperimentType)(implicit session: RSession): Seq[Id[User]]
+  def get(userId: Id[User], experiment: ExperimentType,
     excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))(implicit session: RSession): Option[UserExperiment]
-  def getByType(experiment: UserExperimentType)(implicit session: RSession): Seq[UserExperiment]
-  def hasExperiment(userId: Id[User], experimentType: UserExperimentType)(implicit session: RSession): Boolean
-  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(UserExperimentType, Int)]
+  def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment]
+  def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean
+  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(ExperimentType, Int)]
 }
 
 @Singleton
@@ -32,7 +32,7 @@ class UserExperimentRepoImpl @Inject() (
   type RepoImpl = UserExperimentTable
   class UserExperimentTable(tag: Tag) extends RepoTable[UserExperiment](db, tag, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def experimentType = column[UserExperimentType]("experiment_type", O.NotNull)
+    def experimentType = column[ExperimentType]("experiment_type", O.NotNull)
     def * = (id.?, createdAt, updatedAt, userId, experimentType, state) <> ((UserExperiment.apply _).tupled, UserExperiment.unapply _)
   }
 
@@ -45,56 +45,56 @@ class UserExperimentRepoImpl @Inject() (
     saved
   }
 
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[UserExperimentType] = {
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = {
     (userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
       (for (f <- rows if f.userId === userId && f.state === UserExperimentStates.ACTIVE) yield f.experimentType).list
-    } :+ UserExperimentType.LIBRARIES) toSet
+    } :+ ExperimentType.LIBRARIES) toSet
   }
 
   def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment] = {
-    (for (f <- rows if f.userId === userId) yield f).list :+ UserExperiment(userId = userId, experimentType = UserExperimentType.LIBRARIES)
+    (for (f <- rows if f.userId === userId) yield f).list :+ UserExperiment(userId = userId, experimentType = ExperimentType.LIBRARIES)
   }
 
-  def getUserIdsByExperiment(experimentType: UserExperimentType)(implicit session: RSession) =
+  def getUserIdsByExperiment(experimentType: ExperimentType)(implicit session: RSession) =
     (for (f <- rows if f.experimentType === experimentType && f.state === UserExperimentStates.ACTIVE) yield f.userId).list
 
-  def get(userId: Id[User], experimentType: UserExperimentType,
+  def get(userId: Id[User], experimentType: ExperimentType,
     excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))(implicit session: RSession): Option[UserExperiment] = {
     val experiment = (for {
       f <- rows if f.userId === userId && f.experimentType === experimentType && f.state =!= excludeState.orNull
     } yield f).firstOption
-    if (experimentType == UserExperimentType.LIBRARIES && experiment.isEmpty) Some(UserExperiment(userId = userId, experimentType = UserExperimentType.LIBRARIES))
+    if (experimentType == ExperimentType.LIBRARIES && experiment.isEmpty) Some(UserExperiment(userId = userId, experimentType = ExperimentType.LIBRARIES))
     else experiment
   }
 
-  def hasExperiment(userId: Id[User], experimentType: UserExperimentType)(implicit session: RSession): Boolean = {
-    if (experimentType == UserExperimentType.LIBRARIES) true
+  def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean = {
+    if (experimentType == ExperimentType.LIBRARIES) true
     else getUserExperiments(userId).contains(experimentType)
   }
 
   override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
-    if (model.experimentType == UserExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
   override def deleteCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
-    if (model.experimentType == UserExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
-  def getByType(experiment: UserExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
+  def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
     val q = for {
       f <- rows if f.experimentType === experiment && f.state === UserExperimentStates.ACTIVE
     } yield f
     q.list
   }
 
-  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(UserExperimentType, Int)] = {
+  def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(ExperimentType, Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"SELECT experiment_type, COUNT(*) FROM user_experiment WHERE state='active' GROUP BY experiment_type;"
     query.as[(String, Int)].list.map {
       case (name, count) =>
-        (UserExperimentType(name), count)
+        (ExperimentType(name), count)
     }
   }
 }
