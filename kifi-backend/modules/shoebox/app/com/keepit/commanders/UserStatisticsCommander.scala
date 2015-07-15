@@ -68,7 +68,7 @@ case class OrganizationStatistics(
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
-experiments: Set[OrganizationExperimentType])
+  experiments: Set[OrganizationExperimentType])
 
 case class OrganizationMemberRecommendationInfo(
   userOrEmail: Either[User, EmailAddress],
