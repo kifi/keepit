@@ -240,7 +240,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libPubId = Library.publicId(lib.id.get)
         val orgPubId = Organization.publicId(org.id.get)
 
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
 
         // At first, lib is in the user space
         db.readOnlyMaster { implicit session =>
