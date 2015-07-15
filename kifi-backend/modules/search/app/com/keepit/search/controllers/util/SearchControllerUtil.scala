@@ -35,11 +35,7 @@ trait SearchControllerUtil {
 
   def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit =>
-      // todo(Léo): this is a hack to make sure keeps from a library are always shown canonically when searching that library.
-      // todo(Léo): Would need a similar hack to search user profiles.
-      // todo(Léo): Ideally we filter the search space within ScoreVectorSources and the final results (e.g. porn) within ResultCollectors (possibly with a special record flag).
-      val libraryId = kifiPlainResult.searchFilter.library.map(_.id) orElse hit.libraryId.map(Id[Library](_))
-      AugmentableItem(Id(hit.id), libraryId)
+      AugmentableItem(Id(hit.id), hit.libraryId.map(Id[Library](_)))
     }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
@@ -63,10 +59,10 @@ trait SearchControllerUtil {
     BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
   }
 
-  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
+  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[UserExperimentType]) = {
     request match {
       case userRequest: UserRequest[_] => (userRequest.userId, userRequest.experiments)
-      case _ => (nonUser, Set.empty[ExperimentType])
+      case _ => (nonUser, Set.empty[UserExperimentType])
     }
   }
 

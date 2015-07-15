@@ -22,7 +22,7 @@ case class UserStatistics(
   socialUsers: Seq[SocialUserInfo],
   privateKeeps: Int,
   publicKeeps: Int,
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
@@ -67,7 +67,8 @@ case class OrganizationStatistics(
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationMemberRecommendationInfo])
+  memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
+  experiments: Set[OrganizationExperimentType])
 
 case class OrganizationMemberRecommendationInfo(
   userOrEmail: Either[User, EmailAddress],
@@ -90,6 +91,7 @@ class UserStatisticsCommander @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgExperimentsRepo: OrganizationExperimentRepo,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -153,16 +155,16 @@ class UserStatisticsCommander @Inject() (
   }
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20): Future[OrganizationStatistics] = {
-    val (org, libraries, members, candidates, numKeeps, membersStatsFut) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-
+      val numKeeps = libraries.map(_.keepCount).sum
       val members = orgMembershipRepo.getAllByOrgId(orgId)
       val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-      val numKeeps = libraries.map(_.keepCount).sum
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+      val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
-      (org, libraries, members, candidates, numKeeps, membersStatsFut)
+      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
     }
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos)
@@ -195,7 +197,8 @@ class UserStatisticsCommander @Inject() (
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
-      memberRecommendations = memberRecos
+      memberRecommendations = memberRecos,
+      experiments = experiments
     )
   }
   def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {

@@ -50,7 +50,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     "upload new avatar, scaled and cropped" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
-        val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
+        val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()
 
@@ -75,7 +75,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     "deactivate old avatars when a new one is uploaded" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
-        val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
+        val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()
 
@@ -116,7 +116,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     "reuse existing images when possible" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
-        val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
+        val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, org2) = setup()
 

@@ -1,14 +1,12 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.engine.query.QueryUtil
+import com.keepit.search.SearchFilter
 import com.keepit.search.index.{ WrappedSubReader }
-import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.{ Term, NumericDocValues }
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.index.{ NumericDocValues }
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
@@ -20,6 +18,7 @@ trait VisibilityEvaluator { self: DebugOption =>
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
   protected val orgIdsFuture: Future[Set[Long]]
   protected val monitoredAwait: MonitoredAwait
+  protected val filter: SearchFilter
 
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
@@ -51,6 +50,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       trustedLibraryIds,
       authorizedLibraryIds,
       orgIds,
+      filter,
       userIdDocValues,
       libraryIdDocValues,
       orgIdDocValues,
@@ -67,6 +67,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       myFriendIds,
       restrictedUserIds,
       orgIds,
+      filter,
       ownerIdDocValues,
       orgIdDocValues,
       visibilityDocValues)
@@ -97,34 +98,46 @@ final class KeepVisibilityEvaluator(
     trustedLibraryIds: LongArraySet,
     authorizedLibraryIds: LongArraySet,
     orgIds: LongArraySet,
+    filter: SearchFilter,
     val userIdDocValues: NumericDocValues,
     val libraryIdDocValues: NumericDocValues,
     val orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
+  private val noFilter = (filter.libraryId < 0) && (filter.userId < 0) && (filter.orgId < 0) // optimization
+
+  @inline
+  private def isRelevant(libId: Long, keeperId: Long, orgId: Long) = {
+    (filter.libraryId < 0 || filter.libraryId == libId) && (filter.userId < 0 || filter.userId == keeperId) && (filter.orgId < 0 || filter.orgId == orgId)
+  }
+
+  def isRelevant(docId: Int): Boolean = noFilter || {
+    val libId = libraryIdDocValues.get(docId)
+    val keeperId = userIdDocValues.get(docId)
+    val orgId = orgIdDocValues.get(docId)
+    isRelevant(libId, keeperId, orgId)
+  }
 
   def apply(docId: Int): Int = {
     val libId = libraryIdDocValues.get(docId)
+    val keeperId = userIdDocValues.get(docId)
+    val orgId = orgIdDocValues.get(docId)
 
-    if (memberLibraryIds.findIndex(libId) >= 0) {
-      if (myOwnLibraryIds.findIndex(libId) >= 0) {
-        Visibility.OWNER // the keep is in my library (I may or may not have kept it)
-      } else {
-        val keeperId = userIdDocValues.get(docId)
-        if (keeperId == userId) {
+    if (noFilter || isRelevant(libId, keeperId, orgId)) {
+      if (memberLibraryIds.findIndex(libId) >= 0) {
+        if (myOwnLibraryIds.findIndex(libId) >= 0) {
+          Visibility.OWNER // the keep is in my library (I may or may not have kept it)
+        } else if (keeperId == userId) {
           Visibility.OWNER // the keep in a library I am a member of, and I kept it
         } else {
           Visibility.MEMBER // the keep is in a library I am a member of
         }
-      }
-    } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-      Visibility.MEMBER // the keep is in an authorized library
-    } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // keep is owned by an org that I am a member of
-      Visibility.MEMBER
-    } else {
-      if (visibilityDocValues.get(docId) == published) {
-        val keeperId = userIdDocValues.get(docId)
+      } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
+        Visibility.MEMBER // the keep is in an authorized library
+      } else if (orgIds.findIndex(orgId) >= 0) { // keep is owned by an org that I am a member of
+        Visibility.MEMBER
+      } else if (visibilityDocValues.get(docId) == published) {
         if (myFriendIds.findIndex(keeperId) >= 0) {
           Visibility.NETWORK // the keep is in a published library, and my friend kept it
         } else if (trustedLibraryIds.findIndex(libId) >= 0) {
@@ -137,6 +150,8 @@ final class KeepVisibilityEvaluator(
       } else {
         Visibility.RESTRICTED
       }
+    } else {
+      Visibility.RESTRICTED
     }
   }
 }
@@ -147,34 +162,54 @@ final class LibraryVisibilityEvaluator(
     myFriendIds: LongArraySet,
     restrictedUserIds: LongArraySet,
     orgIds: LongArraySet,
+    filter: SearchFilter,
     ownerIdDocValues: NumericDocValues,
     orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
+  private val noFilter = (filter.libraryId < 0) && (filter.userId < 0) && (filter.orgId < 0) // optimization
+
+  @inline
+  private def isRelevant(libId: Long, ownerId: Long, orgId: Long) = {
+    (filter.libraryId < 0 || filter.libraryId == libId) && (filter.userId < 0 || filter.userId == ownerId) && (filter.orgId < 0 || filter.orgId == orgId)
+  }
+
+  def isRelevant(docId: Int, libId: Long): Boolean = noFilter || {
+    val ownerId = ownerIdDocValues.get(docId)
+    val orgId = orgIdDocValues.get(docId)
+    isRelevant(libId, ownerId, orgId)
+  }
 
   def apply(docId: Int, libId: Long): Int = {
-    if (memberLibraryIds.findIndex(libId) >= 0) {
-      if (myOwnLibraryIds.findIndex(libId) >= 0) {
-        Visibility.OWNER // my library
-      } else {
-        Visibility.MEMBER // a library I am a member of
-      }
-    } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) { // library is owned by an org that I am a member of
-      Visibility.MEMBER
-    } else {
-      if (visibilityDocValues.get(docId) == published) {
-        val ownerId = ownerIdDocValues.get(docId)
-        if (myFriendIds.findIndex(ownerId) >= 0) {
-          Visibility.NETWORK // a published library owned by my friend
-        } else if (restrictedUserIds.findIndex(ownerId) >= 0) {
-          Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
+    val ownerId = ownerIdDocValues.get(docId)
+    val orgId = orgIdDocValues.get(docId)
+    if (noFilter || isRelevant(libId, ownerId, orgId)) {
+      if (memberLibraryIds.findIndex(libId) >= 0) {
+        if (myOwnLibraryIds.findIndex(libId) >= 0) {
+          Visibility.OWNER // my library
         } else {
-          Visibility.OTHERS // another published library
+          Visibility.MEMBER // a library I am a member of
         }
+      } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
+        // library is owned by an org that I am a member of
+        Visibility.MEMBER
       } else {
-        Visibility.RESTRICTED
+        if (visibilityDocValues.get(docId) == published) {
+          val ownerId = ownerIdDocValues.get(docId)
+          if (myFriendIds.findIndex(ownerId) >= 0) {
+            Visibility.NETWORK // a published library owned by my friend
+          } else if (restrictedUserIds.findIndex(ownerId) >= 0) {
+            Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
+          } else {
+            Visibility.OTHERS // another published library
+          }
+        } else {
+          Visibility.RESTRICTED
+        }
       }
+    } else {
+      Visibility.RESTRICTED
     }
   }
 }
@@ -198,28 +233,12 @@ final class UserVisibilityEvaluator(
 }
 
 object ArticleVisibilityEvaluator {
-  def apply(reader: WrappedSubReader): ArticleVisibilityEvaluator = {
-    val unsafeDocIterator: DocIdSetIterator = {
-      val it = reader.termDocsEnum(new Term(ArticleFields.Safety.field, ArticleFields.Safety.unsafe))
-      if (it == null) QueryUtil.emptyDocsEnum else it
-    }
-    new ArticleVisibilityEvaluator(unsafeDocIterator)
-  }
+  def apply() = new ArticleVisibilityEvaluator()
 }
 
-final class ArticleVisibilityEvaluator(val unsafeDocIterator: DocIdSetIterator) extends AnyVal {
-
-  @inline
-  private def isSafe(doc: Int): Boolean = {
-    if (unsafeDocIterator.docID < doc) unsafeDocIterator.advance(doc)
-    unsafeDocIterator.docID > doc
-  }
-
+final class ArticleVisibilityEvaluator() {
   @inline
   def apply(doc: Int): Int = {
-    // todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons.
-    if (isSafe(doc)) (Visibility.OTHERS | Visibility.SAFE)
-    else Visibility.OTHERS
+    Visibility.OTHERS // todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons. Keeping this structure in case we change that.
   }
-
 }

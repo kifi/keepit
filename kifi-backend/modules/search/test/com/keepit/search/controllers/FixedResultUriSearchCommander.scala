@@ -38,7 +38,7 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
   def searchUris(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     filter: Future[SearchFilter],
     orderBy: SearchRanking,
@@ -51,7 +51,7 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
     shards: Set[Shard[NormalizedURI]],
     request: UriSearchRequest): Future[UriShardResult] = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[UserExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

@@ -90,7 +90,7 @@ object LibrarySearch extends Logging {
   def merge(myHits: HitQueue, networkHits: HitQueue, othersHits: HitQueue, maxHits: Int, filter: SearchFilter, config: SearchConfig, explanation: Option[LibrarySearchExplanation])(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-    val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+    val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
     val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
     val minMyLibraries = config.asInt("minMyLibraries")
 
@@ -118,7 +118,7 @@ object LibrarySearch extends Logging {
 
       networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayNetwork)
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }

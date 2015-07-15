@@ -36,12 +36,17 @@ case class SearchFilter(
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
-  val isDefault: Boolean = proximity.isEmpty
+  val isDefault: Boolean = proximity.isEmpty && user.isEmpty && library.isEmpty && organization.isEmpty
+
   val includeMine: Boolean = !proximity.exists(_ == network)
   val includeNetwork: Boolean = !proximity.exists(_ == mine)
   val includeOthers: Boolean = !proximity.exists(Set(mine, network).contains)
+
+  val userId = user.map(_.id.id) getOrElse -1L
+  val libraryId = library.map(_.id.id) getOrElse -1L
+  val orgId = organization.map(_.id.id) getOrElse -1L
 }
 
 object SearchFilter {
-  val default = SearchFilter(None, None, None, None, None)
+  val empty = SearchFilter(None, None, None, None, None)
 }

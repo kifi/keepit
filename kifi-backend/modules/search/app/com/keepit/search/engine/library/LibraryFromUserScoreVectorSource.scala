@@ -25,7 +25,7 @@ class LibraryFromUserScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    filter: SearchFilter,
+    protected val filter: SearchFilter,
     config: SearchConfig,
     val monitoredAwait: MonitoredAwait,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {

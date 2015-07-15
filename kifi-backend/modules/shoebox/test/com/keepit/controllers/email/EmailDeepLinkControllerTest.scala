@@ -63,7 +63,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
           contentAsString(result).contains("""window.location = "http://www.google.com";""") === false
         }
 
-        inject[FakeUserActionsHelper].setUser(niven, Set(ExperimentType.MOBILE_REDIRECT))
+        inject[FakeUserActionsHelper].setUser(niven, Set(UserExperimentType.MOBILE_REDIRECT))
 
         {
           val path = com.keepit.controllers.email.routes.EmailDeepLinkController.handle(deepLink.token.value).toString()

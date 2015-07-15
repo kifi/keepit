@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.keep
 import com.keepit.common.db.Id
 import com.keepit.common.strings._
 import com.keepit.model._
-import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
+import com.keepit.search.index.{ Searcher, FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
@@ -38,6 +38,11 @@ object KeepFields {
   val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+}
+
+object KeepIndexable {
+  @inline
+  def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
 case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {

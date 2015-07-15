@@ -34,8 +34,12 @@ class AdminIndexInfoController @Inject() (
     }
   }
 
-  def viewIndexGrowth = AdminUserPage { implicit request =>
-    Ok(views.html.admin.indexGrowth())
+  def viewIndexGrowth = AdminUserPage.async { implicit request =>
+    def suffix(version: Int) = if (version > 0) s"_v$version" else ""
+
+    searchClient.indexerVersions().map { versions =>
+      Ok(views.html.admin.indexGrowth(versions.mapValues(suffix(_))))
+    }
   }
 }
 

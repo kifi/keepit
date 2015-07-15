@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.UserExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
@@ -154,7 +154,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
         c1.asInt("percentMatch") === 9000
         c1.asDouble("phraseBoost") === 10000.0
 
-        fakeShoeboxServiceClient.saveUserExperiment(UserExperiment(userId = greg.id.get, experimentType = ExperimentType.NO_SEARCH_EXPERIMENTS))
+        fakeShoeboxServiceClient.saveUserExperiment(UserExperiment(userId = greg.id.get, experimentType = UserExperimentType.NO_SEARCH_EXPERIMENTS))
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))
         c2.asInt("percentMatch") !== 9000
         c2.asDouble("phraseBoost") !== 10000.0
@@ -171,7 +171,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
       conf === SearchConfig.defaultConfig
 
       conf = SearchConfig.byUserSegment(new UserSegment(3))
-      conf.asFloat("dampingHalfDecayFriends") === 2.5f
+      conf.asFloat("dampingHalfDecayNetwork") === 2.5f
       conf.asInt("percentMatch") === 85
     }
   }

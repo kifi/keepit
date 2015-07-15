@@ -1,4 +1,4 @@
-@()(implicit request: com.keepit.common.controller.UserRequest[_])
+@(versionSuffixes: Map[String, String])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Index Growth", scripts = List("graphite")) {
 
@@ -69,19 +69,19 @@
 
     if (chart == "articleIndex") {
       options.title = "Article Index"
-      options.target = ["substr(stats.gauges.search.index.article_v1_*.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.article@{versionSuffixes("article")}_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "keepIndex") {
       options.title = "Keep Index"
-      options.target = ["substr(stats.gauges.search.index.keep_*.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.keep@{versionSuffixes("keep")}_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "libraryIndex") {
       options.title = "Library Index"
-      options.target = ["substr(stats.gauges.search.index.library_v2.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.library@{versionSuffixes("library")}.size,4,5)"]
       options.logBase = 2
     }
 
@@ -93,7 +93,7 @@
 
     if (chart == "otherIndex") {
       options.title = "Other Indices"
-      options.target = ["substr(stats.gauges.search.index.user.size,4,5)", "substr(stats.gauges.search.index.message.size,4,5)",
+      options.target = ["substr(stats.gauges.search.index.user@{versionSuffixes("user")}.size,4,5)", "substr(stats.gauges.search.index.message.size,4,5)",
         "substr(stats.gauges.search.index.userGraph.size,4,5)", "substr(stats.gauges.search.index.searchFriend.size,4,5)"]
       options.logBase = 2
     }

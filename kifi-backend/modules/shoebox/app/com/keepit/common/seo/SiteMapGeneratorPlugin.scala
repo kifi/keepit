@@ -49,7 +49,7 @@ trait SitemapGenerator {
   protected val experimentRepo: UserExperimentRepo
   protected val userCommander: UserCommander
   protected val db: Database
-  protected val fakeUsers = userCommander.getAllFakeUsers() ++ db.readOnlyReplica { implicit s => experimentRepo.getUserIdsByExperiment(ExperimentType.AUTO_GEN) }
+  protected val fakeUsers = userCommander.getAllFakeUsers() ++ db.readOnlyReplica { implicit s => experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN) }
 }
 
 object GenerateUserSitemap

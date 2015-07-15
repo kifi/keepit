@@ -48,7 +48,7 @@ class AugmentationCommanderImpl @Inject() (
     val userId = itemAugmentationRequest.context.userId
     val futureFriends = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)))
     val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
-    val futureOrganizations = searchFactory.getOrganizations(userId).imap(_.map(Id[Organization](_)))
+    val futureOrganizations = searchFactory.getOrganizations(userId, None).imap(_.map(Id[Organization](_)))
 
     for {
       augmentationResponse <- futureAugmentationResponse
@@ -97,7 +97,7 @@ class AugmentationCommanderImpl @Inject() (
       val futureUsers = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)) + userId)
       val futureRestrictedUsers = searchFactory.getRestrictedUsers(Some(context.userId).filter(_.id >= 0)).imap(_.map(Id[User](_)))
       val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
-      val futureOrganizations = searchFactory.getOrganizations(userId).imap(_.map(Id[Organization](_)))
+      val futureOrganizations = searchFactory.getOrganizations(userId, None).imap(_.map(Id[Organization](_)))
 
       for {
         users <- futureUsers

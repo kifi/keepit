@@ -72,7 +72,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String, String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
-  implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
+  implicit val userExperimentTypeMapper = MappedColumnType.base[UserExperimentType, String](_.value, UserExperimentType.apply)
+  implicit val orgExperimentTypeMapper = MappedColumnType.base[OrganizationExperimentType, String](_.value, OrganizationExperimentType.apply)
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
@@ -82,6 +83,10 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val libraryInvitePermissionTypeMapper = MappedColumnType.base[LibraryInvitePermissions, String](_.value, LibraryInvitePermissions.apply)
   implicit val usernameTypeMapper = MappedColumnType.base[Username, String](_.value, Username.apply)
   implicit val organizationHandleTypeMapper = MappedColumnType.base[OrganizationHandle, String](_.value, OrganizationHandle.apply)
+  implicit val basePermissionsMapper = MappedColumnType.base[BasePermissions, String](
+    { basePermissions => Json.stringify(Json.toJson(basePermissions)) },
+    { str => Json.parse(str).as[BasePermissions] }
+  )
   implicit val libraryKindTypeMapper = MappedColumnType.base[LibraryKind, String](_.value, LibraryKind.apply)
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
   implicit val hashtagTypeMapper = MappedColumnType.base[Hashtag, String](_.tag, Hashtag.apply)

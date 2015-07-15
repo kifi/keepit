@@ -64,6 +64,7 @@ trait SearchServiceClient extends ServiceClient {
   def version(): Future[String]
 
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
+  def indexerVersions(): Future[Map[String, Int]]
 
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
 
@@ -245,6 +246,10 @@ class SearchServiceClientImpl(
       case instance if instance.isHealthy =>
         callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
+  }
+
+  def indexerVersions(): Future[Map[String, Int]] = {
+    call(Search.internal.versions()).map { r => r.json.as[Map[String, Int]] }
   }
 
   def updateUserGraph() {

@@ -16,7 +16,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
-import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.model.UserExperimentType.ADMIN
 import com.keepit.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -227,6 +227,8 @@ class WebsiteSearchController @Inject() (
     query: String,
     proximityFilter: Option[String],
     libraryFilter: Option[String],
+    userFilter: Option[String],
+    organizationFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
     lastUUIDStr: Option[String],
@@ -245,8 +247,8 @@ class WebsiteSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val libraryScopeFuture = getLibraryScope(libraryFilter, request.userIdOpt, libraryAuth)
-    val userScopeFuture = Future.successful(None)
-    val organizationScopeFuture = Future.successful(None)
+    val userScopeFuture = getUserScope(userFilter)
+    val organizationScopeFuture = getOrganizationScope(organizationFilter, request.userIdOpt)
     val proximityScope = getProximityScope(proximityFilter)
 
     val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
