@@ -204,6 +204,7 @@ object SocialWanderlust {
     10015, // Kifi Editorial
     11784, // Kifi Product
     11785, // Kifi Eng
-    16707 // Kifi Twitter
+    16707, // Kifi Twitter
+    97543 // Fake Org Owner
   ).map(id => VertexId(Id[User](id)))
 }
