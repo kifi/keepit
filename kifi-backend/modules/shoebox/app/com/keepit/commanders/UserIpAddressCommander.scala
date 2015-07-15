@@ -90,7 +90,7 @@ class UserIpAddressEventLogger @Inject() (
     clock: Clock) extends Logging {
 
   private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
-  private val clusterMemoryTime = Period.weeks(10) // How long back do we look and still consider a user to be part of a cluster
+  private val clusterMemoryTime = Period.weeks(1) // How long back do we look and still consider a user to be part of a cluster
 
   def logUser(event: UserIpAddressEvent): Unit = {
     if (event.ip.ip.toString.startsWith("10.")) {
