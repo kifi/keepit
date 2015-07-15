@@ -217,15 +217,16 @@ class UserCommander @Inject() (
   def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressOpt(address) match {
-        case None => Left("email not found")
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
-          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord)) {
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord.address.address)) {
             updateUserPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
           Right((): Unit)
+        case None => Left("unknown_email")
+        case _ => Left("permission_denied")
       }
     }
   }
