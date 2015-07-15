@@ -158,7 +158,7 @@ class UserStatisticsCommander @Inject() (
 
     val membersStatsFut = membersStatistics(userIds)
 
-    //val fMemberRecommendations = abook.getAllOrgRecommendationsForAdmin(orgId, adminId, 0, numMemberRecos)
+    //val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, viewerId, disclosePrivateEmails, 0, numMemberRecos)
 
     val fMemberRecommendations = Future(Seq.empty)
 
