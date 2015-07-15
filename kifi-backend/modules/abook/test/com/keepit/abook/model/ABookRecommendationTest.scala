@@ -128,4 +128,22 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       }
     }
   }
+
+  "OrganizationUserMayKnowRepo" should {
+    "track irrelevant recommendations" in {
+      withDb() { implicit injector =>
+        val orgUserMayKnowRepo = inject[OrganizationRecommendationForUserRepo]
+        db.readWrite { implicit session =>
+          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+        }
+        db.readOnlyMaster { implicit session =>
+          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+        }
+      }
+    }
+  }
 }

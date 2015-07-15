@@ -33,7 +33,7 @@ class ABookUserRecommendationCommander @Inject() (
     userEmailInviteRecommendationRepo: UserEmailInviteRecommendationRepo,
     organizationEmailInviteRecommendationRepo: OrganizationEmailInviteRecommendationRepo,
     orgMembershipRecommendationRepo: OrganizationMemberRecommendationRepo,
-    userOrganizationRecommendationRepo: OrganizationRecommendationForUserRepo,
+    organizationRecommendationForUserRepo: OrganizationRecommendationForUserRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
     oldWTICommander: WTICommander,
@@ -83,6 +83,12 @@ class ABookUserRecommendationCommander @Inject() (
         log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
+  }
+
+  def hideOrganizationRecommendations(userId: Id[User], irrelevantOrgId: Id[Organization]): Unit = {
+    db.readWrite { implicit session =>
+      organizationRecommendationForUserRepo.recordIrrelevantRecommendation(userId, irrelevantOrgId)
+    }
   }
 
   def getOrganizationRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationUserMayKnow]] = {
@@ -257,14 +263,13 @@ class ABookUserRecommendationCommander @Inject() (
       val relatedOrganizations = relatedEntities.map(_.organizations.related) getOrElse Seq.empty
       if (relatedOrganizations.isEmpty) Stream.empty
       else {
-        val rejectedOrganizationRecommendations = db.readOnlyReplica { implicit session => userOrganizationRecommendationRepo.getIrrelevantRecommendations(userId) }
+        val rejectedOrganizationRecommendations = db.readOnlyReplica { implicit session => organizationRecommendationForUserRepo.getIrrelevantRecommendations(userId) }
         relatedOrganizations.toStream.collect {
           case (orgId, score) if !rejectedOrganizationRecommendations.contains(orgId) =>
             OrganizationUserMayKnow(orgId, score)
         }
       }
     }
-    Future.successful(Stream.empty)
   }
 
   private def generateSocialInviteRecommendations(
