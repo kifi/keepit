@@ -154,27 +154,27 @@ class UserStatisticsCommander @Inject() (
     Future.sequence(membersStatsFut).imap(_.toMap)
   }
 
-  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20)(implicit session: RSession): Future[OrganizationStatistics] = {
-    val org = orgRepo.get(orgId)
-    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-    val numKeeps = libraries.map(_.keepCount).sum
-
-    val members = orgMembershipRepo.getAllByOrgId(orgId)
-    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-    val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
-
-    val membersStatsFut = membersStatistics(userIds)
+  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20): Future[OrganizationStatistics] = {
+    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut) = db.readOnlyMaster { implicit session =>
+      val org = orgRepo.get(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+      val numKeeps = libraries.map(_.keepCount).sum
+      val members = orgMembershipRepo.getAllByOrgId(orgId)
+      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+      val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+      val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
+      val membersStatsFut = membersStatistics(userIds)
+      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
+    }
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos)
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.map { memberInviteReco =>
       memberInviteReco.identifier match {
-        case Right(email) => OrganizationMemberRecommendationInfo(Right(email), memberInviteReco.score)
-        case Left(userId) => {
-          val user = userRepo.get(userId)
+        case Right(email: EmailAddress) => OrganizationMemberRecommendationInfo(Right(email), memberInviteReco.score)
+        case Left(userId: Id[User]) =>
+          val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
           OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
-        }
       }
     })
 

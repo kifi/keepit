@@ -92,7 +92,7 @@ orgStats: OrganizationStatistics
 </form>
 
 
-<table class="org-member-recos table table-bordered" style="width:600px">
+<table class="org-member-recos table table-bordered" style="width:800px">
     <tr>
         <th>Recommended User</th>
         <th>Recommended Email</th>
@@ -100,8 +100,8 @@ orgStats: OrganizationStatistics
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td>@if(reco.userOrEmail.isLeft) { @{ adminHelper.userDisplay(reco.userOrEmail.left.get) } }</td>
-            <td>@if(reco.userOrEmail.isLeft) { @{ reco.userOrEmail.left.get.primaryEmail.getOrElse("") } } else { reco.userOrEmail.right.get }</td>
+            <td class="block">@if(reco.userOrEmail.isLeft) { @{ adminHelper.userDisplay(reco.userOrEmail.left.get) } }</td>
+            <td class="block">@if(reco.userOrEmail.isLeft) { @{ reco.userOrEmail.left.get.primaryEmail.getOrElse("") } } else { @{reco.userOrEmail.right.get} }</td>
             <td>@reco.score</td>
             @if(reco.userOrEmail.isLeft) {
                 <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.userOrEmail.left.get.id.get})"></td>
