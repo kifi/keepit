@@ -16,16 +16,16 @@ angular.module('kifi')
       scope.toggleEditing = function () {
         scope.editing = !scope.editing;
         lastSavedInfo = angular.extend(lastSavedInfo, scope.profile);
-      }
+      };
 
       scope.undo = function () {
         scope.profile = angular.extend(scope.profile, lastSavedInfo);
-        scope.toggleEditing()
-      }
+        scope.toggleEditing();
+      };
 
       var updateMe = function(data) {
         angular.extend(scope.profile, data);
-      }
+      };
 
       scope.save = function () {
         var data = {
@@ -41,7 +41,7 @@ angular.module('kifi')
           });
           return updateMe(res.data);
         });
-      }
+      };
     }
   };
 }]);
