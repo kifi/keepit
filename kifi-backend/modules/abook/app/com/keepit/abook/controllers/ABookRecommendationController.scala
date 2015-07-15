@@ -17,7 +17,7 @@ class ABookRecommendationController @Inject() (
     abookOrganizationRecommendationCommander: AbookOrganizationRecommendationCommander) extends ABookServiceController {
 
   def getFriendRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookUserRecommendationCommander.getUserRecommendations(userId, offset, limit).map { recommendedUsers =>
+    abookUserRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -49,7 +49,7 @@ class ABookRecommendationController @Inject() (
 
   def getInviteRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
-    abookUserRecommendationCommander.getNonUserRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
+    abookUserRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

@@ -30,6 +30,7 @@ case class SociallyRelatedEntitiesForUser(
   facebookAccounts: RelatedEntities[User, SocialUserInfo],
   linkedInAccounts: RelatedEntities[User, SocialUserInfo],
   emailAccounts: RelatedEntities[User, EmailAccountInfo],
+  organizations: RelatedEntities[User, Organization],
   createdAt: DateTime = currentDateTime)
 
 object SociallyRelatedEntitiesForUser {
@@ -39,10 +40,11 @@ object SociallyRelatedEntitiesForUser {
     (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
+    (__ \ 'organizations).format[RelatedEntities[User, Organization]] and
     (__ \ 'createdAt).format[DateTime]
   )(SociallyRelatedEntitiesForUser.apply _, unlift(SociallyRelatedEntitiesForUser.unapply))
 
-  def empty(userId: Id[User]): SociallyRelatedEntitiesForUser = SociallyRelatedEntitiesForUser(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+  def empty(userId: Id[User]): SociallyRelatedEntitiesForUser = SociallyRelatedEntitiesForUser(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
 case class SociallyRelatedEntitiesForOrg(

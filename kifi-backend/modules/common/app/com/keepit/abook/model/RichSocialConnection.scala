@@ -77,6 +77,17 @@ object UserInviteRecommendation {
   )(UserInviteRecommendation.apply, unlift(UserInviteRecommendation.unapply))
 }
 
+case class OrganizationUserMayKnow(
+  orgId: Id[Organization],
+  score: Double)
+
+object OrganizationUserMayKnow {
+  implicit val format = (
+    (__ \ 'id).format(Id.format[Organization]) and
+    (__ \ 'score).format[Double]
+  )(OrganizationUserMayKnow.apply, unlift(OrganizationUserMayKnow.unapply))
+}
+
 case class OrganizationInviteRecommendation(
   identifier: Either[Id[User], EmailAddress],
   name: Option[String],

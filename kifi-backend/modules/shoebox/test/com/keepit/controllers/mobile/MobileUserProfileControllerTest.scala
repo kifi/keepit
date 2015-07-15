@@ -430,7 +430,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
         inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
         // view as owner
