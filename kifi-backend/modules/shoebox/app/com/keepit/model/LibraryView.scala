@@ -48,10 +48,6 @@ case class LibraryAddRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
-@json
-case class OrganizationMoveRequest(orgId: Option[PublicId[Organization]])
-
-@json
 case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
@@ -61,11 +57,10 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  // We can move the library from org to user space.
-  orgMove: Option[OrganizationMoveRequest] = None)
+  space: Option[ExternalLibrarySpace] = None)
 
-object ModifyRequest {
-  private val defaultReads: Reads[LibraryModifyRequest] = (
+object LibraryModifyRequest {
+  implicit val reads: Reads[LibraryModifyRequest] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'slug).readNullable[String] and
     (__ \ 'visibility).readNullable[LibraryVisibility] and
@@ -74,11 +69,8 @@ object ModifyRequest {
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscription).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[OrganizationMoveRequest]
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
   )(LibraryModifyRequest.apply _)
-
-  val website = defaultReads
-  val mobileV1 = defaultReads
 }
 
 case class LibraryInfo(
