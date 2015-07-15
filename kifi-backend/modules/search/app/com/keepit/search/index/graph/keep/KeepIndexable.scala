@@ -25,6 +25,8 @@ object KeepFields {
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
+  val titlePrefixField = "tp"
+  val titleValueField = "tv"
   val contentField = "c"
   val contentStemmedField = "cs"
   val siteField = "site"
@@ -35,7 +37,10 @@ object KeepFields {
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
-  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val strictTextSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val textSearchFields = strictTextSearchFields + titlePrefixField
+
+  val maxPrefixLength = 8
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
@@ -76,6 +81,9 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
     doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+    doc.add(buildPrefixField(titlePrefixField, keep.title.getOrElse(""), maxPrefixLength))
+    doc.add(buildStringDocValuesField(titleValueField, keep.title.getOrElse("")))
+
     doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
 
     val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang

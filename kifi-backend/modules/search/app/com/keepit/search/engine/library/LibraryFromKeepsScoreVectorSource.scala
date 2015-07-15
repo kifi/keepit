@@ -25,7 +25,7 @@ class LibraryFromKeepsScoreVectorSource(
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.strictTextSearchFields)
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
