@@ -62,7 +62,7 @@ class UriSearchImpl(
       new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork, explanation)
     }
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
 
