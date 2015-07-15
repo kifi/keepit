@@ -79,12 +79,14 @@ object UserInviteRecommendation {
 
 case class OrganizationInviteRecommendation(
   identifier: Either[Id[User], EmailAddress],
+  name: Option[String],
   score: Double)
 
 object OrganizationInviteRecommendation {
   implicit val eitherFormat = EitherFormat[Id[User], EmailAddress]
   implicit val format = (
     (__ \ 'target).format[Either[Id[User], EmailAddress]] and
+    (__ \ 'name).formatNullable[String] and
     (__ \ 'score).format[Double]
   )(OrganizationInviteRecommendation.apply, unlift(OrganizationInviteRecommendation.unapply))
 }

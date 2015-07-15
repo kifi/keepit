@@ -59,8 +59,7 @@ trait ABookServiceClient extends ServiceClient {
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
   def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeopleForUser]
   def getIrrelevantPeopleForOrg(orgId: Id[Organization]): Future[IrrelevantPeopleForOrg]
-  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
-  def getAllOrgRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
+  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -259,12 +258,7 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getIrrelevantPeopleForOrg(orgId)).map(_.json.as[IrrelevantPeopleForOrg])
   }
 
-  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
-    call(ABook.internal.getRecommendationsForOrg(orgId, viewerId, offset, limit)).map(_.json.as[Seq[OrganizationInviteRecommendation]])
+  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
+    call(ABook.internal.getRecommendationsForOrg(orgId, viewerId, disclosePrivateEmails, offset, limit)).map(_.json.as[Seq[OrganizationInviteRecommendation]])
   }
-
-  def getAllOrgRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
-    call(ABook.internal.getAllOrgRecommendationsForAdmin(orgId, viewerId, offset, limit)).map(_.json.as[Seq[OrganizationInviteRecommendation]])
-  }
-
 }

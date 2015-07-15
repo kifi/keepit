@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
   def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact]
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
-  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
+  def getByUserId(userId: Id[User])(implicit session: RSession): Set[EContact]
   def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]]
   def countEmailContacts(userId: Id[User], distinctEmailAccounts: Boolean)(implicit session: RSession): Int
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
@@ -27,6 +27,7 @@ trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
   def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
   def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact]
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
+  def getByEmailAccountIds(emailAccountIds: Set[Id[EmailAccount]])(implicit session: RSession): Set[EContact]
 }
 
 @Singleton
@@ -102,8 +103,8 @@ class EContactRepoImpl @Inject() (
     (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(limit)
   }
 
-  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] = {
-    (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
+  def getByUserId(userId: Id[User])(implicit session: RSession): Set[EContact] = {
+    (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list.toSet
   }
 
   def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]] =
@@ -144,6 +145,10 @@ class EContactRepoImpl @Inject() (
       updatedContacts.foreach(invalidateCache)
     }
     updated > 0
+  }
+
+  def getByEmailAccountIds(emailAccountIds: Set[Id[EmailAccount]])(implicit session: RSession): Set[EContact] = {
+    (for (row <- rows if row.emailAccountId.inSet(emailAccountIds)) yield row).list.toSet
   }
 }
 
