@@ -76,7 +76,7 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
       userRepo.getAllActiveIds()
     } map { userIds =>
       val batchSizes = userIds.grouped(100) map { group =>
-        val realUsers = group.filterNot(fakeUsers.contains)
+        val realUsers = group.filterNot(userCommander.getAllFakeUsers().contains)
         val usersWithLibraries = db.readOnlyMaster { implicit ro =>
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         } filter { user =>
