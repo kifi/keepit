@@ -8,6 +8,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 
@@ -66,7 +67,11 @@ case class OrganizationStatistics(
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationInviteRecommendation])
+  memberRecommendations: Seq[OrganizationMemberRecommendationInfo])
+
+case class OrganizationMemberRecommendationInfo(
+  userOrEmail: Either[User, EmailAddress],
+  score: Double)
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -160,11 +165,21 @@ class UserStatisticsCommander @Inject() (
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos)
 
+    val fMemberRecoInfos = fMemberRecommendations.map(_.map { memberInviteReco =>
+      memberInviteReco.identifier match {
+        case Right(email) => OrganizationMemberRecommendationInfo(Right(email), memberInviteReco.score)
+        case Left(userId) => {
+          val user = userRepo.get(userId)
+          OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
+        }
+      }
+    })
+
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
     for {
       membersStats <- membersStatsFut
-      memberRecos <- fMemberRecommendations
+      memberRecos <- fMemberRecoInfos
     } yield OrganizationStatistics(
       org = org,
       orgId = orgId,

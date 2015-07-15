@@ -84,16 +84,18 @@ orgStats: OrganizationStatistics
 
 <table class="org-member-recos table table-bordered" style="width:600px">
     <tr>
-        <th>Recommendation Identifier</th>
+        <th>Recommended User</th>
+        <th>Recommended Email</th>
         <th>Recommendation Score</th>
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td>@if(reco.identifier.isLeft) { @{reco.identifier.left.get} } else { @{reco.identifier.right.get} }</td>
+            <td>@if(reco.userOrEmail.isLeft) { @{ adminHelper.userDisplay(reco.userOrEmail.left.get) } }</td>
+            <td>@if(reco.userOrEmail.isLeft) { @{ reco.userOrEmail.left.get.primaryEmail.getOrElse("") } } else { reco.userOrEmail.right.get }</td>
             <td>@reco.score</td>
-            @if(reco.identifier.isLeft) {
-                <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.identifier.left.get})"></td>
-                <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.identifier.left.get})"></td>
+            @if(reco.userOrEmail.isLeft) {
+                <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.userOrEmail.left.get.id.get})"></td>
+                <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.userOrEmail.left.get.id.get})"></td>
             }
         </tr>
     }
@@ -102,12 +104,14 @@ orgStats: OrganizationStatistics
 
 <script type="text/javascript">
     function addCandidate(orgId, candidateId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId });
-      location.reload();
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId }).done(done);
     };
 
     function addMember(orgId, memberId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
+    };
+
+    function done() {
       location.reload();
     };
 </script>
