@@ -126,8 +126,11 @@ class AdminRoverController @Inject() (
     Ok(views.html.admin.roverTestRegex())
   }
 
-  def testRegexFilled(regex: String, test: Option[String] = None) = AdminUserPage { implicit request =>
-    Ok(views.html.admin.roverTestRegex(Some(regex), test.map(t => List(t))))
+  def testRegexFilled = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val body = request.body
+    val regex = body.get("regex").flatMap(_.headOption)
+    val tests = body.get("tests")
+    Ok(views.html.admin.roverTestRegex(regex, tests))
   }
 
   def performRegexTest = AdminUserPage(parse.json) { implicit request =>
