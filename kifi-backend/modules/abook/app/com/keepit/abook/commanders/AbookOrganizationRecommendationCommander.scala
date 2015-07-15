@@ -54,25 +54,10 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  def getRecommendations(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
+  def getRecommendations(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
     val start = clock.now()
-    val fRecommendations = generateFutureRecommendations(orgId, viewerId, false).map {
+    val fRecommendations = generateFutureRecommendations(orgId, viewerId, disclosePrivateEmails).map {
       recoStream => recoStream.slice(offset, offset + limit).toSeq
-    }
-    fRecommendations.onSuccess {
-      case recommendations if recommendations.nonEmpty => log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for org $orgId with viewer $viewerId in ${clock.now().getMillis - start.getMillis}ms.")
-      case _ => log.info(s"Org recommendations are not available. Returning in ${clock.now().getMillis - start.getMillis}ms.")
-    }
-    fRecommendations
-  }
-
-  def getAllRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
-    val start = clock.now()
-    val fRecommendations = shoebox.getUserExperiments(viewerId).flatMap { experiments =>
-      experiments match {
-        case experiments if experiments.contains(ExperimentType.ADMIN) => generateFutureRecommendations(orgId, viewerId, true).map(_.slice(offset, offset + limit).toSeq)
-        case _ => Future.failed(new NotAuthorizedException(s"User $viewerId is not allowed to view raw recommendations for org $orgId"))
-      }
     }
     fRecommendations.onSuccess {
       case recommendations if recommendations.nonEmpty => log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for org $orgId with viewer $viewerId in ${clock.now().getMillis - start.getMillis}ms.")
