@@ -176,7 +176,12 @@ class UserStatisticsCommander @Inject() (
           val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
           OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
       }
-    }.filter(orgReco => orgReco.userOrEmail.isRight || !candidates.map(_.userId).contains(orgReco.userOrEmail.left.get.id.get)))
+    }.filter(orgReco =>
+        orgReco.userOrEmail.isRight ||
+        (!candidates.map(_.userId).contains(orgReco.userOrEmail.left.get.id.get) &&
+        !db.readOnlyMaster { implicit session => userExperimentRepo.hasExperiment(orgReco.userOrEmail.left.get.id.get, UserExperimentType.ADMIN) })
+      )
+    )
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
