@@ -1,8 +1,11 @@
 package com.keepit.model
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class OrganizationMembershipPoke(
     id: Option[Id[OrganizationMembershipPoke]] = None,
@@ -21,3 +24,16 @@ case class OrganizationMembershipPoke(
 }
 
 object OrganizationMembershipPokeStates extends States[OrganizationMembershipPoke]
+
+case class ExternalOrganizationMembershipPoke(
+  createdAt: DateTime = currentDateTime,
+  organizationId: PublicId[Organization],
+  userId: ExternalId[User])
+
+object ExternalOrganizationMembershipPoke {
+  implicit val writes: Writes[ExternalOrganizationMembershipPoke] = (
+    (__ \ 'lastPoked).write[DateTime] and
+    (__ \ 'organizationId).write[PublicId[Organization]] and
+    (__ \ 'userId).write[ExternalId[User]]
+  )(unlift(ExternalOrganizationMembershipPoke.unapply))
+}

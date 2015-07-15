@@ -61,6 +61,9 @@ object OrganizationFail {
   case object NO_VALID_INVITATIONS extends OrganizationFail(BAD_REQUEST, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
+  case object POKE_ON_COOLDOWN extends OrganizationFail(FORBIDDEN, "poke_on_cooldown")
+  case object ALREADY_A_MEMBER extends OrganizationFail(FORBIDDEN, "already_a_member")
+  case object ALREADY_INVITED extends OrganizationFail(FORBIDDEN, "already_invited")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -70,6 +73,9 @@ object OrganizationFail {
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
       case BAD_PARAMETERS.message => BAD_PARAMETERS
+      case POKE_ON_COOLDOWN.message => POKE_ON_COOLDOWN
+      case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
+      case ALREADY_INVITED.message => ALREADY_INVITED
     }
   }
 }
