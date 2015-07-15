@@ -14,7 +14,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.graph.GraphServiceClient
 import com.keepit.graph.model.SociallyRelatedEntitiesForOrg
-import com.keepit.model.{ Invitation, ExperimentType, UserExperiment, OrganizationInviteView, User, Organization }
+import com.keepit.model.{ Invitation, UserExperimentType, UserExperiment, OrganizationInviteView, User, Organization }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import scala.concurrent.duration._

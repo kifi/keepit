@@ -21,7 +21,7 @@ case class UserStatistics(
   socialUsers: Seq[SocialUserInfo],
   privateKeeps: Int,
   publicKeeps: Int,
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,

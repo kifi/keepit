@@ -18,7 +18,7 @@ import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationGeneratio
 import com.keepit.curator.model.{ RecommendationSource, UriRecommendation, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, Keep, NormalizedURI }
+import com.keepit.model.{ UserExperimentType, SocialUserInfo, NotificationCategory, User, Library, Keep, NormalizedURI }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImage, RoverUriSummary }
 import com.keepit.search.SearchServiceClient
@@ -379,7 +379,7 @@ class FeedDigestEmailSender @Inject() (
 
   private def getKeepsForLibrary(userId: Id[User], max: Int, exclude: Set[Id[NormalizedURI]]): Future[Seq[DigestLibraryItem]] = {
     userExperimentCommander.getExperimentsByUser(userId) flatMap { experiments =>
-      if (experiments.contains(ExperimentType.LIBRARIES)) {
+      if (experiments.contains(UserExperimentType.LIBRARIES)) {
         for {
           keeps <- shoebox.newKeepsInLibraryForEmail(userId, LIBRARY_KEEPS_TO_FETCH)
           dedupedKeeps = keeps.filterNot(c => exclude.contains(c.uriId))
