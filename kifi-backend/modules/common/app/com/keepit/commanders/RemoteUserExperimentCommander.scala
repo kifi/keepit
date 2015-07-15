@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.model.{ UserExperimentType, User, ProbabilisticExperimentGenerator, ProbabilisticExperimentGeneratorAllCache }
+import com.keepit.model.{ ExperimentType, User, ProbabilisticExperimentGenerator, ProbabilisticExperimentGeneratorAllCache }
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
@@ -21,10 +21,10 @@ class RemoteUserExperimentCommander @Inject() (
 
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]] = shoebox.getExperimentGenerators()
 
-  def getExperimentsByUser(userId: Id[User]): Future[Set[UserExperimentType]] = {
+  def getExperimentsByUser(userId: Id[User]): Future[Set[ExperimentType]] = {
     shoebox.getUserExperiments(userId).map { experimentSeq => addDynamicExperiments(userId, experimentSeq.toSet) }
   }
 
-  def getUsersByExperiment(experiment: UserExperimentType): Future[Set[User]] = shoebox.getUsersByExperiment(experiment)
+  def getUsersByExperiment(experiment: ExperimentType): Future[Set[User]] = shoebox.getUsersByExperiment(experiment)
 }
 

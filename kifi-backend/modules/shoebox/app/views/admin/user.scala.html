@@ -2,7 +2,7 @@
   totalBookmarks: Int,
   organizations: Seq[Organization],
   candidateOrganizations: Seq[Organization],
-  experiments: Set[UserExperimentType],
+  experiments: Set[ExperimentType],
   socialUsers: Seq[SocialUserBasicInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
@@ -144,7 +144,7 @@
       <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
-          @for(exp <- UserExperimentType._ALL) {
+          @for(exp <- ExperimentType._ALL) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -246,7 +246,7 @@
                 <td>@abook.oauth2TokenId</td>
                 <td>@abook.numContacts</td>
                 <td>@abook.numProcessed</td>
-                @if(experiments.contains(UserExperimentType.ADMIN)) {
+                @if(experiments.contains(ExperimentType.ADMIN)) {
                   <td>
                       <form class="form-inline" style="display:inline" action="/refreshContacts" method="GET">
                           <input type="hidden" name="abookId"  value=@abook.id>
@@ -267,7 +267,7 @@
             <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
             @for(contact <- contacts) {
             <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td>
-              @if(experiments.contains(UserExperimentType.ADMIN)) {
+              @if(experiments.contains(ExperimentType.ADMIN)) {
                 <td>
                     <form class="form-inline" style="display:inline" action="/invite" method="POST">
                         <input type="hidden" name="fullSocialId" value="email/@contact.email">

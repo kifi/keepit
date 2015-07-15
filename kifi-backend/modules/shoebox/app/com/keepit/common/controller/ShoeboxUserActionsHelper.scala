@@ -7,7 +7,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, UserExperimentType, SocialUserInfo }
+import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, ExperimentType, SocialUserInfo }
 import com.keepit.social.{ SocialNetworkType, SocialId }
 import play.api.mvc.{ WrappedRequest, Request, Controller }
 import securesocial.core.{ UserService, SecureSocial, Identity }
@@ -27,14 +27,14 @@ class ShoeboxUserActionsHelper @Inject() (
   override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, () => getSecureSocialUserFromRequest)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
-    userExperimentCommander.userHasExperiment(userId, UserExperimentType.ADMIN)
+    userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful {
     db.readOnlyMaster { implicit s => Some(userRepo.get(userId)) }
   }
 
-  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful {
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful {
     userExperimentCommander.getExperimentsByUser(userId)
   }
 

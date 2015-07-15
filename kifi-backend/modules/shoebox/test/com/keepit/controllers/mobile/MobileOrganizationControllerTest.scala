@@ -40,7 +40,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
 
@@ -60,7 +60,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           }
 
           val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
           status(response) === OK
@@ -84,7 +84,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
             user
           }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.getOrganizationsForUser(user.externalId)
           val response = controller.getOrganizationsForUser(user.externalId)(request)
           status(response) === OK
@@ -118,7 +118,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(Json.parse("""{"asdf": "qwer"}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -128,7 +128,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(Json.parse("""{"name": ""}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -142,7 +142,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val orgDescription = "Fun for the whole family"
           val createRequestJson = Json.parse(s"""{"name": "$orgName", "description": "$orgDescription"}""")
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
           val request = route.createOrganization().withBody(createRequestJson)
           val result = controller.createOrganization(request)
           status(result) === OK
@@ -164,7 +164,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       "succeed for valid name" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "name": "bob" }"""
@@ -177,7 +177,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       "succeed for valid modifications" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
           val json = """ {"none":["view_organization"],"owner":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
@@ -190,7 +190,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       "fail on invalid modifications" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "basePermissions": {"member":[]} }""" // all members must at least be able to view the organization
@@ -203,7 +203,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       "fail for missing role in basePermissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "basePermissions": {"owner": [], "none": []} }"""
@@ -228,7 +228,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val (org, owner, _) = setupDelete
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(ExperimentType.ORGANIZATION))
           val request = route.deleteOrganization(publicId)
           val result = controller.deleteOrganization(publicId)(request)
           status(result) === NO_CONTENT
@@ -240,7 +240,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val (org, _, member) = setupDelete
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(member, Set(ExperimentType.ORGANIZATION))
           val request = route.deleteOrganization(publicId)
           val result = controller.deleteOrganization(publicId)(request)
 

@@ -11,7 +11,7 @@ import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.{ FakeGraphServiceClientImpl, FakeGraphServiceModule, GraphServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ Keep, NormalizedURI, LibraryAccess, UserExperimentType, UserExperiment }
+import com.keepit.model.{ Keep, NormalizedURI, LibraryAccess, ExperimentType, UserExperiment }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 

@@ -13,7 +13,7 @@ import scala.util.hashing.MurmurHash3
 import com.keepit.common.math.ProbabilityDensity
 
 trait UserExperimentGenerator {
-  def apply(userId: Id[User], existingExperiments: Set[UserExperimentType]): Option[UserExperimentType]
+  def apply(userId: Id[User], existingExperiments: Set[ExperimentType]): Option[ExperimentType]
 }
 
 case class ProbabilisticExperimentGenerator(
@@ -22,9 +22,9 @@ case class ProbabilisticExperimentGenerator(
     updatedAt: DateTime = currentDateTime,
     state: State[ProbabilisticExperimentGenerator] = ProbabilisticExperimentGeneratorStates.ACTIVE,
     name: Name[ProbabilisticExperimentGenerator],
-    condition: Option[UserExperimentType],
+    condition: Option[ExperimentType],
     salt: String,
-    density: ProbabilityDensity[UserExperimentType]) extends ModelWithState[ProbabilisticExperimentGenerator] with UserExperimentGenerator {
+    density: ProbabilityDensity[ExperimentType]) extends ModelWithState[ProbabilisticExperimentGenerator] with UserExperimentGenerator {
 
   def withId(id: Id[ProbabilisticExperimentGenerator]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -36,7 +36,7 @@ case class ProbabilisticExperimentGenerator(
     (Int.MaxValue.toDouble - h) / (Int.MaxValue.toDouble - Int.MinValue.toDouble)
   }
 
-  def apply(userId: Id[User], userExperiments: Set[UserExperimentType]): Option[UserExperimentType] = {
+  def apply(userId: Id[User], userExperiments: Set[ExperimentType]): Option[ExperimentType] = {
     if (condition.isEmpty || userExperiments.contains(condition.get)) density.sample(hash(userId))
     else None
   }
@@ -49,9 +49,9 @@ object ProbabilisticExperimentGenerator {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[ProbabilisticExperimentGenerator]) and
     (__ \ 'name).format(Name.format[ProbabilisticExperimentGenerator]) and
-    (__ \ 'condition).formatNullable[UserExperimentType] and
+    (__ \ 'condition).formatNullable[ExperimentType] and
     (__ \ 'salt).format[String] and
-    (__ \ 'density).format(ProbabilityDensity.format[UserExperimentType])
+    (__ \ 'density).format(ProbabilityDensity.format[ExperimentType])
   )(ProbabilisticExperimentGenerator.apply, unlift(ProbabilisticExperimentGenerator.unapply))
 }
 

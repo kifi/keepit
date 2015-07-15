@@ -31,11 +31,11 @@ class UserIndexerTest extends Specification with CommonTestInjector {
 
     client.addEmails(emails: _*)
 
-    val exps = Seq(UserExperiment(userId = usersWithId(0).id.get, experimentType = UserExperimentType("admin")),
-      UserExperiment(userId = usersWithId(0).id.get, experimentType = UserExperimentType("can_connect")),
-      UserExperiment(userId = usersWithId(0).id.get, experimentType = UserExperimentType("can message all users")),
-      UserExperiment(userId = usersWithId(1).id.get, experimentType = UserExperimentType("fake")),
-      UserExperiment(userId = usersWithId(2).id.get, experimentType = UserExperimentType("admin"))
+    val exps = Seq(UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
+      UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
+      UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
+      UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
+      UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
     )
     exps.foreach { client.saveUserExperiment(_) }
 

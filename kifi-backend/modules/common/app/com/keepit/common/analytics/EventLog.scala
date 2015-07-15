@@ -63,7 +63,7 @@ trait EventMetadata {
   val prevEvents: Seq[ExternalId[Event]]
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Set[UserExperimentType], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Set[ExperimentType], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(
@@ -75,12 +75,12 @@ case class Event(
 object Events {
   def serverVersion(implicit fortyTwoServices: FortyTwoServices) = fortyTwoServices.currentService + ":" + fortyTwoServices.currentVersion
 
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[UserExperimentType],
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[ExperimentType],
     installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = clock.now,
       serverVersion = serverVersion(fortyTwoServices))
 
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[UserExperimentType],
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[ExperimentType],
     installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt,
       serverVersion = serverVersion(fortyTwoServices))

@@ -66,7 +66,7 @@ class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
     "getUsersByExperiment" in {
       withInjector(shoeboxServiceClientTestModules: _*) { implicit injector =>
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
-        val future = shoeboxServiceClient.getUsersByExperiment(UserExperimentType.ADMIN)
+        val future = shoeboxServiceClient.getUsersByExperiment(ExperimentType.ADMIN)
         Await.result(future, Duration(5, SECONDS)) === users.toSet
       }
     }

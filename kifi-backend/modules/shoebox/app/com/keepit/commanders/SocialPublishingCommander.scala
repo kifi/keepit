@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ UserExperimentType, Keep, Library, User }
+import com.keepit.model.{ ExperimentType, Keep, Library, User }
 import play.api.libs.json.JsValue
 
 trait SocialPublishingCommander {
@@ -14,7 +14,7 @@ trait SocialPublishingCommander {
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit
 
   def hasExplicitShareExperiment(userId: Id[User]) = {
-    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, UserExperimentType.EXPLICIT_SOCIAL_POSTING) }
+    db.readOnlyMaster { implicit session => experimentCommander.userHasExperiment(userId, ExperimentType.EXPLICIT_SOCIAL_POSTING) }
   }
 }
 

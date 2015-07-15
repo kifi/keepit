@@ -11,7 +11,7 @@ import com.keepit.common.math.ProbabilityDensity
 trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentGenerator] {
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator]
   def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]] = Some(ProbabilisticExperimentGeneratorStates.INACTIVE))(implicit session: RSession): Option[ProbabilisticExperimentGenerator]
-  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[UserExperimentType], salt: Option[String] = None, condition: Option[UserExperimentType] = None)(implicit session: RWSession): ProbabilisticExperimentGenerator
+  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[ExperimentType], salt: Option[String] = None, condition: Option[ExperimentType] = None)(implicit session: RWSession): ProbabilisticExperimentGenerator
 }
 
 @Singleton
@@ -25,9 +25,9 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject() (
   type RepoImpl = ProbabilisticExperimentGeneratorTable
   class ProbabilisticExperimentGeneratorTable(tag: Tag) extends RepoTable[ProbabilisticExperimentGenerator](db, tag, "probabilistic_experiment_generator") {
     def name = column[Name[ProbabilisticExperimentGenerator]]("name", O.NotNull)
-    def condition = column[UserExperimentType]("cond", O.Nullable)
+    def condition = column[ExperimentType]("cond", O.Nullable)
     def salt = column[String]("salt", O.NotNull)
-    def density = column[ProbabilityDensity[UserExperimentType]]("density", O.NotNull)
+    def density = column[ProbabilityDensity[ExperimentType]]("density", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, name, condition.?, salt, density) <> ((ProbabilisticExperimentGenerator.apply _).tupled, ProbabilisticExperimentGenerator.unapply _)
   }
 
@@ -51,7 +51,7 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject() (
     q.firstOption
   }
 
-  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[UserExperimentType], salt: Option[String], condition: Option[UserExperimentType])(implicit session: RWSession): ProbabilisticExperimentGenerator = {
+  def internByName(name: Name[ProbabilisticExperimentGenerator], density: ProbabilityDensity[ExperimentType], salt: Option[String], condition: Option[ExperimentType])(implicit session: RWSession): ProbabilisticExperimentGenerator = {
     val defaultSalt = name.name + "Salt"
     getByName(name, None) match {
       case Some(generator) if generator.state != ProbabilisticExperimentGeneratorStates.INACTIVE =>

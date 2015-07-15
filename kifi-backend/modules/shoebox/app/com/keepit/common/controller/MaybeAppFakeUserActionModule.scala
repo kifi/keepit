@@ -32,9 +32,9 @@ class MaybeAppFakeUserActionsHelper(
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
 
   var fixedUser: Option[User] = None
-  var fixedExperiments: Set[UserExperimentType] = Set[UserExperimentType]()
+  var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
 
-  def setUser(user: User, experiments: Set[UserExperimentType] = Set[UserExperimentType]()): MaybeAppFakeUserActionsHelper = {
+  def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): MaybeAppFakeUserActionsHelper = {
     fixedUser = Some(user)
     fixedExperiments = experiments
     log.info(s"[setUser] user=$user, experiments=$experiments")
@@ -49,12 +49,12 @@ class MaybeAppFakeUserActionsHelper(
   override def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful {
     fixedUser flatMap { _.id } orElse Play.maybeApplication flatMap { _ => request.session.getUserId }
   }
-  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(UserExperimentType.ADMIN))
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful {
     fixedUser orElse Play.maybeApplication map { _ => User(id = Some(userId), firstName = "foo", lastName = "bar", primaryUsername = Some(PrimaryUsername(Username("foo-bar"), Username("foo-bar")))) }
   }
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
-  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
   def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(None)
   def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
   def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))

@@ -151,7 +151,7 @@ class ExtPreferenceController @Inject() (
     Ok(Json.obj("host" -> host, "suppressed" -> suppress))
   }
 
-  private def loadUserPrefs(userId: Id[User], experiments: Set[UserExperimentType]): Future[UserPrefs] = {
+  private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
     val userValsFuture = db.readOnlyMasterAsync { implicit s => userValueRepo.getValues(userId, UserValues.ExtUserInitPrefs: _*) }
     val messagingEmailsFuture = db.readOnlyReplicaAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {

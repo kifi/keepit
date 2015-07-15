@@ -16,7 +16,7 @@ import com.keepit.common.zookeeper.{ ServiceDiscovery, ShardingCommander }
 import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{ UserExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User, NotificationCategory }
+import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User, NotificationCategory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.core._
@@ -69,7 +69,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
-  private def specialCurators(): Future[Set[Id[User]]] = experimentCommander.getUsersByExperiment(UserExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSet)
+  private def specialCurators(): Future[Set[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSet)
 
   private def computeMasterScore(scores: UriScores): Float = {
     (4 * scores.socialScore +
@@ -299,17 +299,17 @@ class RecommendationGenerationCommander @Inject() (
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = {
     if (shardingCommander.isRunnerFor(userId.id.toInt) && dbWriteThrottleLock.waiting < 1000) {
       experimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
-        val lock = if (experiments.contains(UserExperimentType.RECO_FASTLANE)) superSpecialLock else recommendationGenerationLock
+        val lock = if (experiments.contains(ExperimentType.RECO_FASTLANE)) superSpecialLock else recommendationGenerationLock
         lock.withLockFuture {
           getPerUserGenerationLock(userId).withLockFuture {
             if (shardingCommander.isRunnerFor(userId.id.toInt)) {
               val timer = new NamedStatsdTimer("perItemPerUser")
               val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse {
-                if (experiments.contains(UserExperimentType.RECO_FASTLANE)) db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) }
+                if (experiments.contains(ExperimentType.RECO_FASTLANE)) db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) }
                 else db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) }
               }
               val state: UserRecommendationGenerationState = getStateOfUser(userId)
-              val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state, experiments.contains(UserExperimentType.RECO_SUBSAMPLE))
+              val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state, experiments.contains(ExperimentType.RECO_SUBSAMPLE))
               val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
                 case (seeds, newSeqNum) =>
                   val newState = state.copy(seq = newSeqNum)
@@ -326,7 +326,7 @@ class RecommendationGenerationCommander @Inject() (
                     }
                     Future.successful(false)
                   } else {
-                    if (experiments.contains(UserExperimentType.NEXT_GEN_RECOS)) processSeedsNextGen(seeds, newState, userId, boostedKeepers, alwaysInclude) else processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude)
+                    if (experiments.contains(ExperimentType.NEXT_GEN_RECOS)) processSeedsNextGen(seeds, newState, userId, boostedKeepers, alwaysInclude) else processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude)
                   }
               }
               res.onSuccess {

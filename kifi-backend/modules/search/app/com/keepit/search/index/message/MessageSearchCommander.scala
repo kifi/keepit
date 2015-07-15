@@ -1,7 +1,7 @@
 package com.keepit.search.index.message
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ UserExperimentType, User }
+import com.keepit.model.{ ExperimentType, User }
 import com.keepit.search.{ SearchConfigManager, Lang, LangDetector }
 import com.keepit.search.index.DefaultAnalyzer
 
@@ -16,7 +16,7 @@ class MessageSearchCommander @Inject() (indexer: MessageIndexer, searchConfigMan
 
   val resultPageSize = 10
 
-  def search(userId: Id[User], query: String, page: Int, experiments: Set[UserExperimentType]): Future[Seq[JsValue]] = {
+  def search(userId: Id[User], query: String, page: Int, experiments: Set[ExperimentType]): Future[Seq[JsValue]] = {
     val lang = LangDetector.detect(query, Lang("en"))
 
     searchConfigManager.getConfigFuture(userId, experiments).map {

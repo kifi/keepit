@@ -9,7 +9,7 @@ import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.model.UserExperimentType.ADMIN
+import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.model._
 import com.keepit.test._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
