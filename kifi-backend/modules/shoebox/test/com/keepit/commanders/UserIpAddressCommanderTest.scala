@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.social.FakeSocialGraphModule
 import play.api.libs.json._
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
@@ -13,9 +14,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector {
+
+  val modules = Seq(
+    FakeSocialGraphModule()
+  )
+
   "UserIpAddressCommander" should {
     "correctly simplify user agent strings" in {
-      withInjector() { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val commander = inject[UserIpAddressEventLogger]
         val inputs = Seq(
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:20.0) Gecko/20100101 Firefox/20.0",
@@ -36,7 +42,7 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
     }
 
     "log and recall a user's ip" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val commander = inject[UserIpAddressEventLogger]
 
         commander.logUser(UserIpAddressEvent(Id[User](1), IpAddress("127.0.0.1"), UserAgent("iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)")))
@@ -45,7 +51,7 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
     }
 
     "ignore rapidly repeating visits" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val commander = inject[UserIpAddressEventLogger]
 
         val n = 10
@@ -59,7 +65,7 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
     }
 
     "find ip clusters" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val commander = inject[UserIpAddressEventLogger]
 
         val n = 5
