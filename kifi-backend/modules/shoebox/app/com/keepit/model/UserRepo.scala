@@ -44,6 +44,8 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
   def countUsersWithPotentialOrgs()(implicit session: RSession): Int
   def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def countLinkedInUsersWithoutOrgs()(implicit session: RSession): Int
+  def pageLinkedInUsersWithoutOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -330,6 +332,36 @@ class UserRepoImpl @Inject() (
         select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
       )
       limit $size offset ${size * page};
+      """.as[Id[User]].list
+
+    val userMaps = getUsers(ids)
+
+    ids.map(id => userMaps(id))
+  }
+
+  def countLinkedInUsersWithoutOrgs()(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select count(user.id) from social_user_info
+        inner join user on user.id = social_user_info.user_id
+        where social_user_info.network_type = 'linkedin'
+        and social_user_info.user_id is not null
+        and social_user_info.user_id not in (select user_id from organization_membership_candidate )
+        and social_user_info.user_id not in (select user_id from organization_membership);
+      """.as[Int].first
+  }
+
+  def pageLinkedInUsersWithoutOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val ids = sql"""
+      select user.id from social_user_info
+        inner join user on user.id = social_user_info.user_id
+        where social_user_info.network_type = 'linkedin'
+        and social_user_info.user_id is not null
+        and social_user_info.user_id not in (select user_id from organization_membership_candidate )
+        and social_user_info.user_id not in (select user_id from organization_membership)
+        limit $size offset ${size * page};
       """.as[Id[User]].list
 
     val userMaps = getUsers(ids)
