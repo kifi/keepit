@@ -16,7 +16,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
-import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.model.UserExperimentType.ADMIN
 import com.keepit.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

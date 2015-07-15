@@ -88,7 +88,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         status(impersonateResultFail) must equalTo(403)
 
         db.readWrite { implicit s =>
-          inject[UserExperimentRepo].save(UserExperiment(experimentType = ExperimentType.ADMIN, userId = admin.id.get))
+          inject[UserExperimentRepo].save(UserExperiment(experimentType = UserExperimentType.ADMIN, userId = admin.id.get))
         }
         val impersonateResult = route(impersonateRequest).get
         //status(impersonateResult) must equalTo(200)

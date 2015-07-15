@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{ ExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
+import com.keepit.model.{ UserExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -37,13 +37,13 @@ import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[UserExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
 case class SocketInfo(
   channel: Concurrent.Channel[JsArray],
   connectedAt: DateTime,
   userId: Id[User],
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   kifiVersion: Option[KifiVersion],
   userAgent: String,
   var ip: Option[String],
@@ -139,7 +139,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           userExperimentCommander.getExperimentsByUser(socialUser.userId.get).flatMap { experiments =>
             val userId = socialUser.userId.get
             val userAgent = request.headers.get("User-Agent").getOrElse("NA")
-            if (experiments.contains(ExperimentType.ADMIN)) {
+            if (experiments.contains(UserExperimentType.ADMIN)) {
               impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
                 for {
                   impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)

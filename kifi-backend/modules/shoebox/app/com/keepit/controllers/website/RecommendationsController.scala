@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.curator.model._
 import com.keepit.model._
 import org.joda.time.Days
-import com.keepit.model.{ LibraryRecommendationFeedback, Library, ExperimentType, NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, UserExperimentType, NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
 import com.keepit.common.net.UserAgent
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, Json }

@@ -45,7 +45,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
 
@@ -68,7 +68,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           status(result) must equalTo(NO_CONTENT)
@@ -90,7 +90,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
@@ -112,7 +112,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
@@ -125,7 +125,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             UserFactory.user().withName("New", "Guy").saved
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.acceptInvitation(PublicId[Organization]("12345"), "authToken")
           val result = controller.acceptInvitation(PublicId[Organization]("12345"), "authToken")(request)
 
@@ -151,7 +151,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val orgId = org.id.get
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.declineInvitation(publicOrgId)
           val result = controller.declineInvitation(publicOrgId)(request)
           status(result) must equalTo(NO_CONTENT)
@@ -170,7 +170,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             UserFactory.user().withName("New", "Guy").saved
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
           val request = route.declineInvitation(PublicId[Organization]("12345"))
           val result = controller.declineInvitation(PublicId[Organization]("12345"))(request)
 
@@ -191,7 +191,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -222,7 +222,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.OWNER))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -241,7 +241,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -260,7 +260,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             inviter
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val request = route.createAnonymousInviteToOrganization(PublicId[Organization]("12345")).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
           val result = controller.createAnonymousInviteToOrganization(PublicId[Organization]("12345"))(request)
 
@@ -291,7 +291,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
@@ -312,7 +312,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "owner"}
@@ -333,7 +333,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(cannot_invite, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(cannot_invite, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
@@ -352,7 +352,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           // guaranteed to be random, because it was generated with a random number generator.
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
