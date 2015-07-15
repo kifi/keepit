@@ -972,8 +972,8 @@ class AdminUserController @Inject() (
     db.readOnlyReplica { implicit s =>
       val users = userRepo.getAllUsers(userIds).values.toList
       val orgs = users map { user =>
-        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(0), Offset(1000)).map(_.orgId).toSet
-        val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(0), Offset(1000)).map(_.organizationId).toSet
+        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.orgId).toSet
+        val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
       }
       orgs.toMap
