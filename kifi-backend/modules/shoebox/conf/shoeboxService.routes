@@ -209,8 +209,8 @@ POST    /m/1/invite                             @com.keepit.controllers.mobile.M
 
 # Profile Page
 GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserProfileController.profile(username)
-GET     /m/2/user/:id/profile                   @com.keepit.controllers.mobile.MobileUserProfileController.profile(id)
-GET     /m/1/user/:username/connections             @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
+GET     /m/2/user/:id/profile                   @com.keepit.controllers.mobile.MobileUserProfileController.profileFromUserId(id: ExternalId[User])
+GET     /m/1/user/:username/connections         @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
@@ -695,6 +695,7 @@ GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminU
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
+POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.AdminUserController.setIgnoreForPotentialOrganizations(id: Id[User])
 
 
 GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])

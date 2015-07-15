@@ -195,6 +195,7 @@ object Search extends Service {
     def searchWithConfig() = ServiceRoute(POST, "/internal/searchWithConfig")
 
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
+    def versions() = ServiceRoute(GET, "/internal/search/index/versions")
     def updateUserGraph() = ServiceRoute(POST, "/internal/search/userGraph/update")
     def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
     def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
