@@ -21,7 +21,7 @@ case class UserStatistics(
   socialUsers: Seq[SocialUserInfo],
   privateKeeps: Int,
   publicKeeps: Int,
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
@@ -66,7 +66,8 @@ case class OrganizationStatistics(
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationInviteRecommendation])
+  memberRecommendations: Seq[OrganizationInviteRecommendation],
+  experiments: Set[OrganizationExperimentType])
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -85,6 +86,7 @@ class UserStatisticsCommander @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgExperimentsRepo: OrganizationExperimentRepo,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -155,6 +157,7 @@ class UserStatisticsCommander @Inject() (
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+    val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
 
     val membersStatsFut = membersStatistics(userIds)
 
@@ -179,7 +182,8 @@ class UserStatisticsCommander @Inject() (
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
-      memberRecommendations = memberRecos
+      memberRecommendations = memberRecos,
+      experiments = experiments
     )
   }
   def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {

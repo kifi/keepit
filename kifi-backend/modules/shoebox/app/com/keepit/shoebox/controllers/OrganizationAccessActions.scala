@@ -45,7 +45,7 @@ trait OrganizationAccessActions {
   def OrganizationAction(id: PublicId[Organization], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
     override def invokeBlock[A](maybeRequest: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
       maybeRequest match {
-        case request: UserRequest[_] if request.experiments.contains(ExperimentType.ORGANIZATION) =>
+        case request: UserRequest[_] if request.experiments.contains(UserExperimentType.ORGANIZATION) =>
           Organization.decodePublicId(id) match {
             case Success(orgId) =>
               val userIdOpt: Option[Id[User]] = request match {

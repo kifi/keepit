@@ -7,7 +7,7 @@ import com.keepit.heimdal._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
-import com.keepit.model.ExperimentType
+import com.keepit.model.UserExperimentType
 import com.keepit.search.tracking.{ SearchEventCommander, KifiHitContext, BasicSearchContext, SearchEngine }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.akka.SafeFuture
@@ -31,7 +31,7 @@ class ExtSearchEventController @Inject() (
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val searchResultUrl = (json \ "resultUrl").as[String]
-    val isDemo = request.experiments.contains(ExperimentType.DEMO)
+    val isDemo = request.experiments.contains(UserExperimentType.DEMO)
     val query = basicSearchContext.query
 
     SafeFuture {

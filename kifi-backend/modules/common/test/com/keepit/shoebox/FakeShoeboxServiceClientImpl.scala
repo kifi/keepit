@@ -462,12 +462,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(experimentWithId)
   }
 
-  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = {
+  def getUserExperiments(userId: Id[User]): Future[Seq[UserExperimentType]] = {
     val states = allUserExperiments.getOrElse(userId, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType).toSeq
     Future.successful(states)
   }
 
-  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[UserExperimentType]]] = {
     val exps = userIds.map { id =>
       val exps = allUserExperiments.getOrElse(id, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType)
       id -> exps
@@ -479,7 +479,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(allProbabilisticExperimentGenerators.values.filter(_.isActive).toSeq)
   }
 
-  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+  def getUsersByExperiment(experimentType: UserExperimentType): Future[Set[User]] = {
     Future.successful(allUserExperiments.toSeq.filter {
       case (user, experiments) =>
         experiments.map(_.experimentType).contains(experimentType)

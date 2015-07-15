@@ -86,8 +86,8 @@ class ExtAuthController @Inject() (
 
     if (isUpdate || isInstall) {
       SafeFuture {
-        if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(ExperimentType.VISITED)) {
-          experimentCommander.addExperimentForUser(userId, ExperimentType.VISITED)
+        if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(UserExperimentType.VISITED)) {
+          experimentCommander.addExperimentForUser(userId, UserExperimentType.VISITED)
         }
 
         val contextBuilder = heimdalContextBuilder()

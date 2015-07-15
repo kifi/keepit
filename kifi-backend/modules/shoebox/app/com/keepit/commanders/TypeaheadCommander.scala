@@ -266,7 +266,7 @@ class TypeaheadCommander @Inject() (
           val fb = hitsMap.get(SocialNetworks.FACEBOOK) getOrElse Seq.empty
           val lnkd = hitsMap.get(SocialNetworks.LINKEDIN) getOrElse Seq.empty
           // twtr is protected by experiment; once this goes away we can make this generic
-          val hasTwtrExp = db.readOnlyMaster { implicit ro => userExpRepo.hasExperiment(userId, ExperimentType.TWITTER_BETA) }
+          val hasTwtrExp = db.readOnlyMaster { implicit ro => userExpRepo.hasExperiment(userId, UserExperimentType.TWITTER_BETA) }
           val twtr = if (!hasTwtrExp) Seq.empty else hitsMap.get(SocialNetworks.TWITTER) getOrElse Seq.empty
           (fb ++ lnkd ++ twtr).map(hit => (hit.info.networkType, hit))
         }

@@ -704,6 +704,8 @@ POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
+POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
+DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 
@@ -968,7 +970,7 @@ POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
-GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
+GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: UserExperimentType)
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])

@@ -28,6 +28,16 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+    <tr>
+    <th>Experiments</th>
+    <td id="experiments" class="form-inline">
+    @for(exp <- OrganizationExperimentType._ALL) {
+        <label class="checkbox">
+            <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
+        </label>
+    }
+    </td>
+    </tr>
 
 </table>
 
@@ -100,7 +110,26 @@ orgStats: OrganizationStatistics
 </table>
 
 
-<script type="text/javascript">
+    <script type="text/javascript">
+
+    $("#experiments").on("click", "input", function() {
+        var $td = $(this).closest("#experiments");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
     function addCandidate(orgId, candidateId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId });
       location.reload();
