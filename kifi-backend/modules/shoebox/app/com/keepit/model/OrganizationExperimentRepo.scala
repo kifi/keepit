@@ -10,6 +10,8 @@ import com.keepit.common.time.Clock
 trait OrganizationExperimentRepo extends Repo[OrganizationExperiment] with RepoWithDelete[OrganizationExperiment] {
   def getOrganizationExperiments(orgId: Id[Organization])(implicit session: RSession): Set[OrganizationExperimentType]
   def getOrganizationsByExperiment(experimentType: OrganizationExperimentType)(implicit session: RSession): Seq[Id[Organization]]
+  def getByOrganizationIdAndExperimentType(orgId: Id[Organization], experimentType: OrganizationExperimentType, excludeStates: Set[State[OrganizationExperiment]] = Set(OrganizationExperimentStates.INACTIVE))(implicit session: RSession): Option[OrganizationExperiment]
+  def deactivate(model: OrganizationExperiment)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -45,6 +47,12 @@ class OrganizationExperimentRepoImpl @Inject() (
 
   def getOrganizationsByExperiment(experimentType: OrganizationExperimentType)(implicit session: RSession): Seq[Id[Organization]] = {
     (for (f <- rows if f.experimentType === experimentType && f.state === OrganizationExperimentStates.ACTIVE) yield f.orgId).list
+  }
+  def getByOrganizationIdAndExperimentType(orgId: Id[Organization], experimentType: OrganizationExperimentType, excludeStates: Set[State[OrganizationExperiment]] = Set(OrganizationExperimentStates.INACTIVE))(implicit session: RSession): Option[OrganizationExperiment] = {
+    (for (f <- rows if f.orgId === orgId && f.experimentType === experimentType && !f.state.inSet(excludeStates)) yield f).firstOption
+  }
+  def deactivate(model: OrganizationExperiment)(implicit session: RWSession): Unit = {
+    save(model.withState(OrganizationExperimentStates.INACTIVE))
   }
 
   override def invalidateCache(model: OrganizationExperiment)(implicit session: RSession): Unit = {
