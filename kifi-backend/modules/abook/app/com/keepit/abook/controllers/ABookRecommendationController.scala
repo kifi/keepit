@@ -23,15 +23,8 @@ class ABookRecommendationController @Inject() (
     }
   }
 
-  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = Action.async(parse.json) { request =>
-    abookOrganizationRecommendationCommander.getRecommendations(orgId, viewerId, offset, limit).map { recommendedUsers =>
-      val json = Json.toJson(recommendedUsers)
-      Ok(json)
-    }
-  }
-
-  def getAllOrgRecommendationsForAdmin(orgId: Id[Organization], viewerId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookOrganizationRecommendationCommander.getAllRecommendationsForAdmin(orgId, viewerId, offset, limit).map { recommendedUsers =>
+  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int) = Action.async(parse.json) { request =>
+    abookOrganizationRecommendationCommander.getRecommendations(orgId, viewerId, disclosePrivateEmails, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

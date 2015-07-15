@@ -233,7 +233,7 @@ class ABookUserRecommendationCommander @Inject() (
           existingInvites <- futureExistingInvites
           normalizedUserNames <- futureNormalizedUserNames
         } yield {
-          generateEmailInviteRecommendationsForUser(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames, existingInvites)
+          generateEmailInviteRecommendations(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames, existingInvites)
         }
       }
     }
@@ -260,10 +260,10 @@ class ABookUserRecommendationCommander @Inject() (
     recommendations.take(relevantSocialFriends.size)
   }
 
-  private def generateEmailInviteRecommendationsForUser(
+  private def generateEmailInviteRecommendations(
     relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
     rejectedRecommendations: Set[Id[EmailAccount]],
-    allContacts: Seq[EContact],
+    allContacts: Set[EContact],
     normalizedUserNames: Set[String],
     existingInvites: Seq[Invitation]): Stream[UserInviteRecommendation] = {
 
