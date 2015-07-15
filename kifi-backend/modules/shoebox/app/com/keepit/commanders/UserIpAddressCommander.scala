@@ -161,8 +161,8 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
-  def allFromSameOrg(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
-    clusterUsers.map { case (_, candidates, orgs) => candidates.toSet | orgs.toSet }.reduce(_ & _).nonEmpty
+  def allHaveOrg(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
+    clusterUsers.forall { case (_, orgs, cands) => orgs.nonEmpty || cands.nonEmpty }
 
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
@@ -179,7 +179,7 @@ class UserIpAddressEventLogger @Inject() (
 
       ipInfoOpt foreach { ipInfo =>
         if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-          if (allFromSameOrg(usersFromCluster)) {
+          if (allHaveOrg(usersFromCluster)) {
             log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or candidates of the same organization")
           } else {
             val msg = formatCluster(ipInfo, usersFromCluster, newUserId)

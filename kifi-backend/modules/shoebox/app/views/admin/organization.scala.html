@@ -77,11 +77,11 @@ orgStats: OrganizationStatistics
 </form>
 
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="POST" class="form-inline refresh-reco-list">
-    <input type="number" name="numMemberRecos" value="20">
-    <input type="button" name="Refresh">
+    # of Recommendations: <input type="number" name="numMemberRecos" value="20">
+    <input type="button" value="Refresh">
 </form>
 
-@*
+
 <table class="org-member-recos table table-bordered" style="width:600px">
     <tr>
         <th>Recommendation Identifier</th>
@@ -89,24 +89,26 @@ orgStats: OrganizationStatistics
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td>@if(reco.identifier.isLeft) { reco.identifier.left.get } else { reco.identifier.right.get }</td>
+            <td>@if(reco.identifier.isLeft) { @{reco.identifier.left.get} } else { @{reco.identifier.right.get} }</td>
             <td>@reco.score</td>
             @if(reco.identifier.isLeft) {
-                <td><input type="button" name="Add candidate" onclick="addCandidate(orgStats.orgId, reco.identifier.left.get)"></td>
-                <td><input type="button" name="Add member" onclick="addMember(orgStats.orgId, reco.identifier.left.get"></td>
+                <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.identifier.left.get})"></td>
+                <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.identifier.left.get})"></td>
             }
         </tr>
     }
 </table>
-*@
+
 
 <script type="text/javascript">
     function addCandidate(orgId, candidateId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId });
+      location.reload();
     };
 
     function addMember(orgId, memberId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId });
+      location.reload();
     };
 </script>
 }
