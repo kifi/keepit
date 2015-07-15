@@ -18,7 +18,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search._
-import com.keepit.model.ExperimentType._
+import com.keepit.model.UserExperimentType._
 import play.api.libs.json.JsArray
 import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import com.keepit.search.controllers.util.SearchControllerUtil

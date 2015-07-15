@@ -8,6 +8,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 
@@ -21,7 +22,7 @@ case class UserStatistics(
   socialUsers: Seq[SocialUserInfo],
   privateKeeps: Int,
   publicKeeps: Int,
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
@@ -66,7 +67,12 @@ case class OrganizationStatistics(
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationInviteRecommendation])
+  memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
+  experiments: Set[OrganizationExperimentType])
+
+case class OrganizationMemberRecommendationInfo(
+  userOrEmail: Either[User, EmailAddress],
+  score: Double)
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -85,6 +91,7 @@ class UserStatisticsCommander @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgExperimentsRepo: OrganizationExperimentRepo,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -147,24 +154,35 @@ class UserStatisticsCommander @Inject() (
     Future.sequence(membersStatsFut).imap(_.toMap)
   }
 
-  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20)(implicit session: RSession): Future[OrganizationStatistics] = {
-    val org = orgRepo.get(orgId)
-    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-    val numKeeps = libraries.map(_.keepCount).sum
-
-    val members = orgMembershipRepo.getAllByOrgId(orgId)
-    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-
-    val membersStatsFut = membersStatistics(userIds)
+  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 20): Future[OrganizationStatistics] = {
+    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut) = db.readOnlyMaster { implicit session =>
+      val org = orgRepo.get(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+      val numKeeps = libraries.map(_.keepCount).sum
+      val members = orgMembershipRepo.getAllByOrgId(orgId)
+      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+      val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+      val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
+      val membersStatsFut = membersStatistics(userIds)
+      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
+    }
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos)
+
+    val fMemberRecoInfos = fMemberRecommendations.map(_.map { memberInviteReco =>
+      memberInviteReco.identifier match {
+        case Right(email: EmailAddress) => OrganizationMemberRecommendationInfo(Right(email), memberInviteReco.score)
+        case Left(userId: Id[User]) =>
+          val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+          OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
+      }
+    }.filter(orgReco => orgReco.userOrEmail.isRight || !candidates.map(_.userId).contains(orgReco.userOrEmail.left.get.id.get)))
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
     for {
       membersStats <- membersStatsFut
-      memberRecos <- fMemberRecommendations
+      memberRecos <- fMemberRecoInfos
     } yield OrganizationStatistics(
       org = org,
       orgId = orgId,
@@ -179,7 +197,8 @@ class UserStatisticsCommander @Inject() (
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
-      memberRecommendations = memberRecos
+      memberRecommendations = memberRecos,
+      experiments = experiments
     )
   }
   def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {

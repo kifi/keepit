@@ -61,7 +61,7 @@ object UserViewTypes {
   case object AllUsersViewType extends UserViewType
   case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
-  case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
+  case class ByExperimentUsersViewType(exp: UserExperimentType) extends UserViewType
   case object UsersPotentialOrgsViewType extends UserViewType
 }
 import UserViewTypes._
@@ -335,10 +335,10 @@ class AdminUserController @Inject() (
         userViewType match {
           case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
-          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
-          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
+          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
           case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
           case UsersPotentialOrgsViewType =>
@@ -437,7 +437,7 @@ class AdminUserController @Inject() (
   }
 
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(ByExperimentUsersViewType(ExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(ByExperimentUsersViewType(UserExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def searchUsers() = AdminUserPage { implicit request =>
@@ -538,10 +538,10 @@ class AdminUserController @Inject() (
     SUPER_ADMIN_SET contains userId
   }
 
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+  def isAdminExperiment(expType: UserExperimentType) = expType == UserExperimentType.ADMIN
 
-  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType.get(experiment)
+  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType.get(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
@@ -568,13 +568,13 @@ class AdminUserController @Inject() (
     }
   }
 
-  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType(experiment)
+  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
       db.readWrite { implicit session =>
-        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, UserExperimentType(experiment))
         ue foreach { ue =>
           userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
           val experiments = userExperimentRepo.getUserExperiments(userId)

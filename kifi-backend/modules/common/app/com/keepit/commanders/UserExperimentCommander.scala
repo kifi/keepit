@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.model.{ ExperimentType, User, ProbabilisticExperimentGenerator, ProbabilisticExperimentGeneratorAllCache, ProbabilisticExperimentGeneratorAllKey }
+import com.keepit.model.{ UserExperimentType, User, ProbabilisticExperimentGenerator, ProbabilisticExperimentGeneratorAllCache, ProbabilisticExperimentGeneratorAllKey }
 import com.keepit.common.db.Id
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.akka.MonitoredAwait
@@ -38,9 +38,9 @@ trait UserExperimentCommander {
 
   })
 
-  def addDynamicExperiments(userId: Id[User], statics: Set[ExperimentType]): Set[ExperimentType] = {
+  def addDynamicExperiments(userId: Id[User], statics: Set[UserExperimentType]): Set[UserExperimentType] = {
     try {
-      val newExperiments = innerGeneratorCache.get("key").flatMap(_(userId, statics)).filter(_ != ExperimentType.ADMIN)
+      val newExperiments = innerGeneratorCache.get("key").flatMap(_(userId, statics)).filter(_ != UserExperimentType.ADMIN)
       statics ++ newExperiments
     } catch {
       case t: Throwable => {

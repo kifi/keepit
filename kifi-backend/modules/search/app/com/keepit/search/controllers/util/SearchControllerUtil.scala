@@ -59,10 +59,10 @@ trait SearchControllerUtil {
     BasicLibrary(Library.publicId(library.id), library.name, path, visibility, library.color)
   }
 
-  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
+  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[UserExperimentType]) = {
     request match {
       case userRequest: UserRequest[_] => (userRequest.userId, userRequest.experiments)
-      case _ => (nonUser, Set.empty[ExperimentType])
+      case _ => (nonUser, Set.empty[UserExperimentType])
     }
   }
 

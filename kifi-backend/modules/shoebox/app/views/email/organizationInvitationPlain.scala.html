@@ -6,7 +6,7 @@ authToken: String
 )
 
 @import com.keepit.common.mail.template.helpers._
-@organizationUrl = @{htmlUrl(baseUrl + organization.name + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
+@organizationUrl = @{htmlUrl(baseUrl + "/" + organization.name + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {
