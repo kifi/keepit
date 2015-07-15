@@ -55,7 +55,18 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def hideNonUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
+  def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
+    abookUserRecommendationCommander.getOrganizationRecommendations(userId, offset, limit).map { recommendedOrgs =>
+      Ok(Json.toJson(recommendedOrgs))
+    }
+  }
+
+  def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = Action { request =>
+    abookUserRecommendationCommander.hideOrganizationRecommendations(userId, irrelevantOrganizationId)
+    Ok
+  }
+
+  def hideEmailRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
     val emailAddress = (request.body \ "irrelevantEmail").as[EmailAddress]
     abookOrganizationRecommendationCommander.hideEmailRecommendation(orgId, memberId, emailAddress)
     Ok

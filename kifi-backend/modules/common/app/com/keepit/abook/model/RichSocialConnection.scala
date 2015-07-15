@@ -3,6 +3,7 @@ package com.keepit.abook.model
 import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.social.{ SocialId, SocialNetworkType }
+import com.kifi.macros.json
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -77,16 +78,10 @@ object UserInviteRecommendation {
   )(UserInviteRecommendation.apply, unlift(UserInviteRecommendation.unapply))
 }
 
+@json
 case class OrganizationUserMayKnow(
   orgId: Id[Organization],
   score: Double)
-
-object OrganizationUserMayKnow {
-  implicit val format = (
-    (__ \ 'id).format(Id.format[Organization]) and
-    (__ \ 'score).format[Double]
-  )(OrganizationUserMayKnow.apply, unlift(OrganizationUserMayKnow.unapply))
-}
 
 case class OrganizationInviteRecommendation(
   identifier: Either[Id[User], EmailAddress],
