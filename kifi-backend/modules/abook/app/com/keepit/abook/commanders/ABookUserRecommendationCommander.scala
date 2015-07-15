@@ -31,7 +31,6 @@ class ABookUserRecommendationCommander @Inject() (
     linkedInInviteRecommendationRepo: LinkedInInviteRecommendationRepo,
     twitterInviteRecommendationRepo: TwitterInviteRecommendationRepo,
     userEmailInviteRecommendationRepo: UserEmailInviteRecommendationRepo,
-    organizationEmailInviteRecommendationRepo: OrganizationEmailInviteRecommendationRepo,
     orgMembershipRecommendationRepo: OrganizationMemberRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,

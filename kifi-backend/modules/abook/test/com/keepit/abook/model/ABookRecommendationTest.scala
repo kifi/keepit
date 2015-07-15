@@ -29,14 +29,14 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       withDb() { implicit injector =>
         val memberRecoRepo = inject[OrganizationMemberRecommendationRepo]
         db.readWrite { implicit session =>
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Id(430))
-          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), Id(430))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Some(Id(420)), None)
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), None, Some(Id(420)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Some(Id(430)), None)
+          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), None, Some(Id(430)))
         }
         db.readOnlyMaster { implicit session =>
-          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(420), Id(430))
-          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(430))
+          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set((Some(Id(420)), None), (None, Some(Id(420))), (Some(Id(430)), None))
+          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set((None, Some(Id(430))))
         }
       }
     }
@@ -90,22 +90,6 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
         db.readOnlyMaster { implicit session =>
           emailInviteRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
           emailInviteRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
-        }
-      }
-    }
-  }
-
-  "OrgEmailInviteRecommendationRepo" should {
-    "track irrelevant recommendations" in {
-      withDb() { implicit injector =>
-        val emailInviteRecoRepo = inject[OrganizationEmailInviteRecommendationRepo]
-        db.readWrite { implicit session =>
-          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(43))
-          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(43))
-          emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Id(420))
-        }
-        db.readOnlyMaster { implicit session =>
-          emailInviteRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(43), Id(420))
         }
       }
     }
