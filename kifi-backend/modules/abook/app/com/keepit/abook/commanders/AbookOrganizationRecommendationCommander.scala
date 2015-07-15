@@ -42,14 +42,14 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
   def hideUserRecommendation(organizationId: Id[Organization], memberId: Id[User], irrelevantMemberId: Id[User]): Unit = {
     db.readWrite { implicit session =>
-      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, Some(irrelevantMemberId), None)
+      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, Left(irrelevantMemberId))
     }
   }
 
   def hideEmailRecommendation(organizationId: Id[Organization], memberId: Id[User], emailAddress: EmailAddress): Unit = {
     db.readWrite { implicit session =>
       val emailAccount = emailAccountRepo.internByAddress(emailAddress)
-      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, None, emailAccount.id)
+      orgMembershipRecommendationRepo.recordIrrelevantRecommendation(organizationId, memberId, Right(emailAccount.id.get))
     }
   }
 
@@ -83,8 +83,8 @@ class AbookOrganizationRecommendationCommander @Inject() (
     val fOrganizationInviteViews = shoebox.getOrganizationInviteViews(organizationId)
     val (irrelevantUsers, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
       val irrelevantRecos = orgMembershipRecommendationRepo.getIrrelevantRecommendations(organizationId)
-      val irrelevantUsers = irrelevantRecos.collect { case (Some(userId), _) => userId }
-      val irrelevantEmailAccounts = irrelevantRecos.collect { case (_, Some(emailAccountId)) => emailAccountId }
+      val irrelevantUsers = irrelevantRecos.collect { case Left(userId) => userId }
+      val irrelevantEmailAccounts = irrelevantRecos.collect { case Right(emailAccountId) => emailAccountId }
       (irrelevantUsers, irrelevantEmailAccounts)
     }
     for {
@@ -130,7 +130,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => orgMembershipRecommendationRepo.getIrrelevantRecommendations(orgId) }.collect {
-          case (_, Some(emailAccountId)) => emailAccountId
+          case Right(emailAccountId) => emailAccountId
         }
         val allContacts = db.readOnlyMaster { implicit session =>
           if (!disclosePrivateEmails) {

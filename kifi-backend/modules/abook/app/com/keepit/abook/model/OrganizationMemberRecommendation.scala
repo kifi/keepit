@@ -23,8 +23,8 @@ case class OrganizationMemberRecommendation(
 
 @ImplementedBy(classOf[OrganizationMemberRecommendationRepoImpl])
 trait OrganizationMemberRecommendationRepo extends Repo[OrganizationMemberRecommendation] {
-  def recordIrrelevantRecommendation(organizationId: Id[Organization], memberId: Id[User], recommendedUserId: Option[Id[User]], recommendedEmailAccountId: Option[Id[EmailAccount]])(implicit session: RWSession): Unit
-  def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[(Option[Id[User]], Option[Id[EmailAccount]])]
+  def recordIrrelevantRecommendation(organizationId: Id[Organization], memberId: Id[User], recommendedId: Either[Id[User], Id[EmailAccount]])(implicit session: RWSession): Unit
+  def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[Either[Id[User], Id[EmailAccount]]]
 }
 
 @Singleton
@@ -57,20 +57,23 @@ class OrganizationMemberRecommendationRepoImpl @Inject() (
   private def internMemberRecommendation(organizationId: Id[Organization], memberId: Id[User], recommendedUserId: Option[Id[User]], recommendedEmailAccountId: Option[Id[EmailAccount]], irrelevant: Boolean)(implicit session: RWSession): OrganizationMemberRecommendation = {
     compiledGetByOrgAndMember(organizationId, memberId, recommendedUserId, recommendedEmailAccountId).firstOption match {
       case None => save(OrganizationMemberRecommendation(organizationId = organizationId, memberId = memberId, recommendedUserId = recommendedUserId, recommendedEmailAccountId = recommendedEmailAccountId, irrelevant = irrelevant))
-      case Some(recommendation) if recommendation.irrelevant == irrelevant => recommendation
+      case Some(recommendation) if recommendation.recommendedUserId == recommendedUserId && recommendation.recommendedEmailAccountId == recommendedEmailAccountId && recommendation.irrelevant == irrelevant => recommendation
       case Some(differentRecommendation) => save(differentRecommendation.copy(irrelevant = irrelevant))
     }
   }
 
-  def recordIrrelevantRecommendation(organizationId: Id[Organization], memberId: Id[User], recommendedUserId: Option[Id[User]], recommendedEmailAccountId: Option[Id[EmailAccount]])(implicit session: RWSession): Unit = {
-    internMemberRecommendation(organizationId, memberId, recommendedUserId, recommendedEmailAccountId, true)
+  def recordIrrelevantRecommendation(organizationId: Id[Organization], memberId: Id[User], recommendedId: Either[Id[User], Id[EmailAccount]])(implicit session: RWSession): Unit = {
+    internMemberRecommendation(organizationId, memberId, recommendedId.left.toOption, recommendedId.right.toOption, true)
   }
 
   private val compiledIrrelevantRecommendations = Compiled { organizationId: Column[Id[Organization]] =>
     for (row <- rows if row.organizationId === organizationId && row.irrelevant === true) yield row
   }
 
-  def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[(Option[Id[User]], Option[Id[EmailAccount]])] = {
-    compiledIrrelevantRecommendations(organizationId).list.map(reco => (reco.recommendedUserId, reco.recommendedEmailAccountId)).toSet
+  def getIrrelevantRecommendations(organizationId: Id[Organization])(implicit session: RSession): Set[Either[Id[User], Id[EmailAccount]]] = {
+    compiledIrrelevantRecommendations(organizationId).list.collect {
+      case reco if reco.recommendedUserId.isDefined => Left(reco.recommendedUserId.get)
+      case reco if reco.recommendedEmailAccountId.isDefined => Right(reco.recommendedEmailAccountId.get)
+    }.toSet
   }
 }

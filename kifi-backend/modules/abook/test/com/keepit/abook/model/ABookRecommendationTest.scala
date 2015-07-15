@@ -29,14 +29,14 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       withDb() { implicit injector =>
         val memberRecoRepo = inject[OrganizationMemberRecommendationRepo]
         db.readWrite { implicit session =>
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Some(Id(420)), None)
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), None, Some(Id(420)))
-          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Some(Id(430)), None)
-          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), None, Some(Id(430)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Left(Id(420)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Right(Id(420)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Left(Id(430)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), Right(Id(430)))
         }
         db.readOnlyMaster { implicit session =>
-          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set((Some(Id(420)), None), (None, Some(Id(420))), (Some(Id(430)), None))
-          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set((None, Some(Id(430))))
+          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Left(Id(420)), Right(Id(420)), Left(Id(430)))
+          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Right(Id(430)))
         }
       }
     }
