@@ -24,8 +24,8 @@ class OrganizationExperimentRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = OrganizationExperimentTable
-  class OrganizationExperimentTable(tag: Tag) extends RepoTable[OrganizationExperiment](db, tag, "org_experiment") {
-    def orgId = column[Id[Organization]]("org_id", O.NotNull)
+  class OrganizationExperimentTable(tag: Tag) extends RepoTable[OrganizationExperiment](db, tag, "organization_experiment") {
+    def orgId = column[Id[Organization]]("organization_id", O.NotNull)
     def experimentType = column[OrganizationExperimentType]("experiment_type", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, orgId, experimentType) <> ((OrganizationExperiment.apply _).tupled, OrganizationExperiment.unapply)
   }
