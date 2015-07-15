@@ -70,7 +70,7 @@ private[integration] class AutogenReaper @Inject() (
       ) {
         val dues = db.readOnlyReplica { implicit rw =>
           // a variant of this could live in UserCommander
-          val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
+          val generated = userExperimentRepo.getByType(UserExperimentType.AUTO_GEN)
           val dues = generated filter (e => e.updatedAt.isBefore(threshold))
           log.info(s"[reap] total=(${generated.length}):[${generated.mkString(",")}]; due=(${dues.length}):[${dues.map(_.id.get).mkString(",")}]")
           dues
@@ -82,7 +82,7 @@ private[integration] class AutogenReaper @Inject() (
           db.readWrite { implicit s =>
             userExperimentRepo.getAllUserExperiments(exp.userId) filter (_.id.isDefined) foreach { exp =>
               exp.experimentType match {
-                case ExperimentType.AUTO_GEN => userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
+                case UserExperimentType.AUTO_GEN => userExperimentRepo.save(exp.withState(UserExperimentStates.INACTIVE))
                 case _ => userExperimentRepo.delete(exp)
               }
             }

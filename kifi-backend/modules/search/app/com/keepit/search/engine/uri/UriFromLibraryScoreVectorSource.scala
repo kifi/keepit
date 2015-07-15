@@ -21,27 +21,23 @@ import scala.concurrent.Future
 class UriFromLibraryScoreVectorSource(
     librarySearcher: Searcher,
     keepSearcher: Searcher,
-    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
-    filter: SearchFilter,
-    config: SearchConfig,
-    monitoredAwait: MonitoredAwait,
-    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption {
+    protected val userId: Long,
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val restrictedUserIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
+    protected val filter: SearchFilter,
+    protected val config: SearchConfig,
+    protected val monitoredAwait: MonitoredAwait,
+    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
 
   private[this] val libraryNameBoost = config.asFloat("libraryNameBoost")
-
-  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
-    val (myLibIds, memberLibIds, trustedLibIds, authorizedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
-
-    require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
-
-    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
-  }
 
   private[this] var myOwnLibraryKeepCount = 0
   private[this] var memberLibraryKeepCount = 0
   private[this] var authorizedLibraryKeepCount = 0
 
-  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryIdsFuture, monitoredAwait, libraryNameBoost)
+  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryNameBoost)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     libraryNameSource.prepare(query, matchWeightNormalizer)
@@ -100,6 +96,7 @@ class UriFromLibraryScoreVectorSource(
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
       val idFilter = filter.idFilter
 
+      val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper
       val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
@@ -109,7 +106,7 @@ class UriFromLibraryScoreVectorSource(
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
 
-          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+          if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
             val keepId = idMapper.getId(docId)
 
             // write to the buffer
@@ -128,6 +125,7 @@ class UriFromLibraryScoreVectorSource(
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
       val idFilter = filter.idFilter
 
+      val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper
       val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
@@ -139,7 +137,7 @@ class UriFromLibraryScoreVectorSource(
           while (docId < NO_MORE_DOCS) {
             val uriId = uriIdDocValues.get(docId)
 
-            if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
               val keepId = idMapper.getId(docId)
 
               // write to the buffer
@@ -176,24 +174,13 @@ class UriFromLibraryScoreVectorSource(
     }
   }
 
-  protected def listLibraries(): Unit = {
-    debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
-  }
-
   private def listLibraryKeepCounts(): Unit = {
     debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
     debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
     debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
   }
 
-  private class LibraryNameSource(
-      protected val searcher: Searcher,
-      protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
-      protected val monitoredAwait: MonitoredAwait,
-      libraryNameBoost: Float) extends ScoreVectorSourceLike {
+  private class LibraryNameSource(protected val searcher: Searcher, libraryNameBoost: Float) extends ScoreVectorSourceLike {
 
     private[this] lazy val libIdFilter = new IdSetFilter(memberLibraryIds)
 

@@ -16,7 +16,7 @@ import scala.concurrent.Future
 
 case class LibrarySearchRequest(
   userId: Id[User],
-  experiments: Set[ExperimentType],
+  experiments: Set[UserExperimentType],
   query: String,
   filter: SearchFilter,
   firstLang: Lang,
@@ -38,7 +38,7 @@ trait LibrarySearchCommander {
   def searchLibraries(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     filterFuture: Future[SearchFilter],
     maxHits: Int,
@@ -58,7 +58,7 @@ class LibrarySearchCommanderImpl @Inject() (
   def searchLibraries(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
     futureFilter: Future[SearchFilter],
     maxHits: Int,

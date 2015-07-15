@@ -192,7 +192,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   private def getByUserIdAndSlug(userId: Id[User], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.slug === slug && b.ownerId === userId && !b.state.inSet(excludeStates)) yield b).firstOption
+    (for (b <- rows if b.slug === slug && b.ownerId === userId && b.orgId.isEmpty && !b.state.inSet(excludeStates)) yield b).firstOption
   }
   private def getByOrgIdAndSlug(orgId: Id[Organization], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
     (for (b <- rows if b.slug === slug && b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).firstOption

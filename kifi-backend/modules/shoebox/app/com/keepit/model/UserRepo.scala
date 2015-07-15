@@ -26,11 +26,11 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageIncluding(includeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countIncluding(includeStates: State[User]*)(implicit session: RSession): Int
-  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(implicit session: RSession): Int
-  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int
+  def countIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(implicit session: RSession): Int
+  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(implicit session: RSession): Int
   def countNewUsers(implicit session: RSession): Int
   def getNoCache(id: Id[User])(implicit session: RSession): User
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
@@ -38,6 +38,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getByExternalId(id: ExternalId[User])(implicit session: RSession): User
   def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
@@ -97,7 +98,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
+  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -105,7 +106,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
+  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -118,7 +119,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(implicit session: RSession): Int = {
+  def countIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -126,7 +127,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int = {
+  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -242,6 +243,10 @@ class UserRepoImpl @Inject() (
       }
       valueMap.map { case (k, v) => (k.id -> v) }
     }
+  }
+
+  def getByExternalId(id: ExternalId[User])(implicit session: RSession): User = {
+    getAllUsersByExternalId(Seq(id)).values.head
   }
 
   def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User] = {

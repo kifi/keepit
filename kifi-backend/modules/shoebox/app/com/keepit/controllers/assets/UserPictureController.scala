@@ -77,7 +77,7 @@ class UserPictureController @Inject() (
   }
 
   def update() = UserAction.async { request =>
-    if (request.experiments.contains(ExperimentType.ADMIN)) {
+    if (request.experiments.contains(UserExperimentType.ADMIN)) {
       Future.sequence(for {
         user <- db.readOnlyReplica { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
       } yield {

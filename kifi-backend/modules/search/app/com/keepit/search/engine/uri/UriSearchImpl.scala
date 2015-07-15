@@ -62,7 +62,7 @@ class UriSearchImpl(
       new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork, explanation)
     }
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
 
@@ -88,7 +88,6 @@ class UriSearchImpl(
     val (myHits, networkHits, othersHits) = executeTextSearch(engine)
 
     val myTotal = myHits.totalHits
-    val networkTotal = networkHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
 
@@ -109,6 +108,7 @@ class UriSearchImpl(
       }
     }
 
+    var networkTotal = networkHits.totalHits
     if (networkHits.size > 0 && filter.includeNetwork) {
       val queue = createQueue(numHitsToReturn - min(minMyKeeps, hits.size))
       hits.discharge(hits.size - minMyKeeps).foreach { h => queue.insert(h) }
@@ -120,6 +120,8 @@ class UriSearchImpl(
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayNetwork)
           queue.insert(hit)
           rank += 1
+        } else {
+          networkTotal -= 1
         }
       }
       queue.foreach { h => hits.insert(h) }

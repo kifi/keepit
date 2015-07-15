@@ -18,6 +18,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import scala.collection.mutable
@@ -102,7 +103,25 @@ class LibraryController @Inject() (
 
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val libModifyRequest = request.body.as[LibraryModifyRequest]
+    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
+
+    val libModifyRequest = db.readOnlyReplica { implicit session =>
+      val space = externalLibraryModifyRequest.externalSpace map {
+        case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+        case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+      }
+      LibraryModifyRequest(
+        name = externalLibraryModifyRequest.name,
+        slug = externalLibraryModifyRequest.slug,
+        visibility = externalLibraryModifyRequest.visibility,
+        description = externalLibraryModifyRequest.description,
+        color = externalLibraryModifyRequest.color,
+        listed = externalLibraryModifyRequest.listed,
+        whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
+        subscriptions = externalLibraryModifyRequest.subscriptions,
+        space = space
+      )
+    }
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {

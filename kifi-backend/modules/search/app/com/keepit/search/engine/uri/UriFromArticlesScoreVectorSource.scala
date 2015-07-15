@@ -29,7 +29,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
       BloomFilter(output) // a bloom filter which test if a uri id is in the buffer
     }
 
-    val articleVisibility = ArticleVisibilityEvaluator(reader)
+    val articleVisibility = ArticleVisibilityEvaluator()
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -58,7 +58,6 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
 
-            // todo(Léo): visibility will actually never be RESTRICTED at this point - if we decide to check for isDiscoverable in ArticleVisibilityEvaluator, it could be.
             directScoreContext.put(uriId, visibility)
             explanation.foreach(_.collectDirectScoreContribution(uriId, -1, visibility, directScoreContext.scoreMax))
 
