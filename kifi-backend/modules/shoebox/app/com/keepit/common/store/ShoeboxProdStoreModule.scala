@@ -15,19 +15,12 @@ trait ShoeboxStoreModule extends StoreModule with Logging
 case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreModule {
   def configure() {
     bind[RoverImageStore].to[S3RoverImageStoreImpl]
-    bind[OrganizationAvatarStore].to[S3OrganizationAvatarStoreImpl]
   }
 
   @Provides @Singleton
   def roverImageStoreInbox: RoverImageStoreInbox = {
     val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "images")
     RoverImageStoreInbox(inboxDir)
-  }
-
-  @Provides @Singleton
-  def organizationAvatarStoreInbox: OrganizationAvatarStoreInbox = {
-    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "organization-avatars")
-    OrganizationAvatarStoreInbox(inboxDir)
   }
 
   @Singleton
@@ -56,7 +49,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) with ShoeboxStoreModule {
   def configure() {
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
-    bind[OrganizationAvatarStore].to[InMemoryOrganizationAvatarStoreImpl]
   }
 
   @Singleton

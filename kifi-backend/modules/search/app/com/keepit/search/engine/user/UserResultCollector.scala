@@ -8,7 +8,7 @@ import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexable
 
-class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, maxHitsPerCategory: Int, myFriendBoost: Float, matchingThreshold: Float, libraryQualityEvaluator: LibraryQualityEvaluator, explanation: Option[UserSearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
+class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, maxHitsPerCategory: Int, myNetworkBoost: Float, matchingThreshold: Float, libraryQualityEvaluator: LibraryQualityEvaluator, explanation: Option[UserSearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -41,7 +41,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
 
         val libId = ctx.secondaryId
 
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) { score = score * myFriendBoost }
+        if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) { score = score * myNetworkBoost }
         else { // todo(Léo): user total keep count instead of best library keep count (=> UserQualityEvaluator)
           if (libId > 0) {
             val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, libId)
@@ -57,7 +57,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
 
       explanation.foreach { builder =>
         builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
-        builder.collectScore(id, score, myFriendBoost)
+        builder.collectScore(id, score, myNetworkBoost)
       }
     }
   }

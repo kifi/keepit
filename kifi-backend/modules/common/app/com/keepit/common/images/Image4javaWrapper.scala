@@ -59,7 +59,7 @@ class Image4javaWrapper @Inject() (
     case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
   }
 
-  private def imageByteSize(img: File, format: ImageFormat): Int = Try {
+  private def imageByteSize(img: File): Int = Try {
     img.length().toInt
   } getOrElse (-1) //this is only for logging, I don't want it to break production
 
@@ -119,9 +119,9 @@ class Image4javaWrapper @Inject() (
 
     val convert = command()
 
-    handleExceptions(convert, operation, None)
+    handleExceptions(convert, operation)
 
-    log.info(s"resize image from ${imageByteSize(image, format)} bytes using file $filePath")
+    log.info(s"resize image from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
@@ -149,9 +149,9 @@ class Image4javaWrapper @Inject() (
     operation.addImage(filePath)
 
     val convert = command()
-    handleExceptions(convert, operation, None)
+    handleExceptions(convert, operation)
 
-    log.info(s"[safeCropImage] from ${imageByteSize(image, format)} bytes using file $filePath")
+    log.info(s"[safeCropImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
@@ -177,15 +177,12 @@ class Image4javaWrapper @Inject() (
                                            |  $ sudo apt-get install imagemagick
                                          """.stripMargin
 
-  private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[File] = None): Unit = {
+  private def handleExceptions(convert: ConvertCmd, operation: IMOperation): Unit = {
     if (playMode == Mode.Test) {
       println(getScript(convert, operation))
     }
     try {
-      image match {
-        case None => convert.run(operation)
-        case Some(img) => convert.run(operation, img)
-      }
+      convert.run(operation)
     } catch {
       case topLevelException: Throwable => rootException(topLevelException) match {
         case e: CommandException =>

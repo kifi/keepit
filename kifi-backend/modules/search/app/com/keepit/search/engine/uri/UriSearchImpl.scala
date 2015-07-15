@@ -9,6 +9,8 @@ import UriResultCollector._
 import com.keepit.search.engine.result._
 import com.keepit.search.engine._
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.article.ArticleIndexable
+import com.keepit.search.index.graph.keep.KeepIndexable
 import com.keepit.search.tracking.{ MultiHashFilter, ClickedURI, ResultClickBoosts }
 
 import scala.concurrent.duration._
@@ -38,10 +40,10 @@ class UriSearchImpl(
 
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
-  private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  private[this] val minMyKeeps = config.asInt("minMyKeeps")
+  private[this] val myKeepBoost = config.asFloat("myKeepBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val percentMatch = config.asFloat("percentMatch")
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
@@ -101,21 +103,24 @@ class UriSearchImpl(
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.score = hit.score * myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.score = hit.score * myKeepBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
           hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
     }
 
     if (networkHits.size > 0 && filter.includeNetwork) {
-      val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
-      hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
+      val queue = createQueue(numHitsToReturn - min(minMyKeeps, hits.size))
+      hits.discharge(hits.size - minMyKeeps).foreach { h => queue.insert(h) }
 
-      networkHits.toRankedIterator.foreach {
-        case (hit, rank) =>
-          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayFriends)
+      var rank = 0 // compute the rank on the fly (there may be unsafe hits from network)
+      networkHits.toSortedList.foreach { hit =>
+        if (((hit.visibility & Visibility.MEMBER) != 0) || ArticleIndexable.isSafe(articleSearcher, hit.id)) {
+          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myKeepBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / highScore) * UriSearch.dampFunc(rank, dampingHalfDecayNetwork)
           queue.insert(hit)
+          rank += 1
+        }
       }
       queue.foreach { h => hits.insert(h) }
     }
@@ -128,7 +133,8 @@ class UriSearchImpl(
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall { hit =>
-        if (isDiscoverable(hit.id)) {
+        if (KeepIndexable.isDiscoverable(keepSearcher, hit.id) && ArticleIndexable.isSafe(articleSearcher, hit.id)) {
+
           if (rank == 0) {
             // this is the first discoverable hit from others. compute the high score.
             othersHighScore = hit.score

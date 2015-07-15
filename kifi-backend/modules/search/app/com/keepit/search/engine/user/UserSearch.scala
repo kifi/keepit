@@ -32,7 +32,7 @@ class UserSearch(
     timeLogs: SearchTimeLogs,
     explain: Option[(Id[User], Lang, Option[Lang])]) extends DebugOption with Logging {
   private[this] val percentMatch = config.asFloat("percentMatch")
-  private[this] val myFriendBoost = config.asFloat("myFriendBoost")
+  private[this] val myNetworkBoost = config.asFloat("myNetworkBoost")
 
   def execute(): UserShardResult = {
 
@@ -63,7 +63,7 @@ class UserSearch(
         new UserSearchExplanationBuilder(libraryId, (firstLang, secondLang), query, labels)
     }
 
-    val collector = new UserResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myFriendBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
+    val collector = new UserResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myNetworkBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
     val userScoreSource = new UserScoreVectorSource(userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
     val keepScoreSource = new UserFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)

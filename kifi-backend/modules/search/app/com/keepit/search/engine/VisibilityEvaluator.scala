@@ -197,29 +197,16 @@ final class UserVisibilityEvaluator(
   }
 }
 
+// todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons. Keeping this structure in case we change that.
 object ArticleVisibilityEvaluator {
   def apply(reader: WrappedSubReader): ArticleVisibilityEvaluator = {
-    val unsafeDocIterator: DocIdSetIterator = {
-      val it = reader.termDocsEnum(new Term(ArticleFields.Safety.field, ArticleFields.Safety.unsafe))
-      if (it == null) QueryUtil.emptyDocsEnum else it
-    }
-    new ArticleVisibilityEvaluator(unsafeDocIterator)
+    new ArticleVisibilityEvaluator()
   }
 }
 
-final class ArticleVisibilityEvaluator(val unsafeDocIterator: DocIdSetIterator) extends AnyVal {
+final class ArticleVisibilityEvaluator() {
 
   @inline
-  private def isSafe(doc: Int): Boolean = {
-    if (unsafeDocIterator.docID < doc) unsafeDocIterator.advance(doc)
-    unsafeDocIterator.docID > doc
-  }
-
-  @inline
-  def apply(doc: Int): Int = {
-    // todo(Léo): we're checking for isDiscoverable further up in UriSearchImpl, for performance reasons.
-    if (isSafe(doc)) (Visibility.OTHERS | Visibility.SAFE)
-    else Visibility.OTHERS
-  }
+  def apply(doc: Int): Int = { Visibility.OTHERS }
 
 }

@@ -55,20 +55,15 @@ class UriResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, 
         if ((visibility & Visibility.OWNER) != 0) {
           queue = myHits
           actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
-        } else if ((visibility & Visibility.MEMBER) != 0 || ((visibility & Visibility.NETWORK) != 0 && (visibility & Visibility.SAFE) != 0)) {
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           queue = networkHits
           actualSharingBoost = 1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat
-        } else if ((visibility & Visibility.SAFE) != 0) {
+        } else {
           queue = othersHits
           actualSharingBoost = 1.0f
-        } else {
-          queue = null
-          actualSharingBoost = 0f
         }
-        if (queue != null) {
-          score = score * actualSharingBoost
-          queue.insert(id, score, visibility, ctx.secondaryId)
-        }
+        score = score * actualSharingBoost
+        queue.insert(id, score, visibility, ctx.secondaryId)
         explanation.foreach { builder =>
           builder.collectRawScore(ctx, matchingThreshold, minMatchingThreshold)
           builder.collectScore(id, score, Some(clickBoost), Some(actualSharingBoost))
@@ -103,9 +98,9 @@ class UriResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: 
         val visibility = ctx.visibility
         if ((visibility & Visibility.OWNER) != 0) {
           myHits.insert(id, score, visibility, ctx.secondaryId)
-        } else if ((visibility & Visibility.MEMBER) != 0 || ((visibility & Visibility.NETWORK) != 0 && (visibility & Visibility.SAFE) != 0)) {
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           networkHits.insert(id, score, visibility, ctx.secondaryId)
-        } else if ((visibility & Visibility.SAFE) != 0) {
+        } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)
         }
         explanation.foreach { builder =>

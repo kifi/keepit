@@ -113,6 +113,22 @@ package object json {
       def reads(json: JsValue) = json.validate[A].map(Left(_)) orElse json.validate[B].map(Right(_))
       def writes(either: Either[A, B]) = either.left.map(Json.toJson(_)).right.map(Json.toJson(_)).merge
     }
+
+    def keyedReads[A, B](strA: String, strB: String)(implicit aReads: Reads[A], bReads: Reads[B]): Reads[Either[A, B]] = Reads[Either[A, B]] {
+      case obj: JsObject if obj.keys.size == 1 && obj.keys.subsetOf(Set(strA, strB)) =>
+        obj.keys.head match {
+          case str if str == strA => aReads.reads(obj \ strA).map(Left(_))
+          case str if str == strB => bReads.reads(obj \ strB).map(Right(_))
+        }
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError(s"Expected a JsObject with a single key"))))
+    }
+    def keyedWrites[A, B](strA: String, strB: String)(implicit aWrites: Writes[A], bWrites: Writes[B]): Writes[Either[A, B]] = Writes[Either[A, B]] {
+      case Left(a) => Json.obj(strA -> aWrites.writes(a))
+      case Right(b) => Json.obj(strB -> bWrites.writes(b))
+    }
+    def keyedFormat[A, B](strA: String, strB: String)(implicit aFormat: Format[A], bFormat: Format[B]): Format[Either[A, B]] = {
+      Format(keyedReads[A, B](strA, strB), keyedWrites[A, B](strA, strB))
+    }
   }
 
   object TraversableFormat {

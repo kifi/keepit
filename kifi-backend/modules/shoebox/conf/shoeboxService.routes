@@ -209,8 +209,8 @@ POST    /m/1/invite                             @com.keepit.controllers.mobile.M
 
 # Profile Page
 GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserProfileController.profile(username)
-GET     /m/2/user/:id/profile                   @com.keepit.controllers.mobile.MobileUserProfileController.profile(id)
-GET     /m/1/user/:username/connections             @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
+GET     /m/2/user/:id/profile                   @com.keepit.controllers.mobile.MobileUserProfileController.profileFromUserId(id: ExternalId[User])
+GET     /m/1/user/:username/connections         @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
@@ -570,9 +570,6 @@ GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDControl
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
-GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
-GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
-
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
@@ -633,6 +630,8 @@ GET     /admin/data/renormalization/:page                                      @
 GET     /admin/data/batchURIMigration                                          @com.keepit.controllers.admin.UrlController.batchURIMigration
 GET     /admin/data/batchURLMigration                                          @com.keepit.controllers.admin.UrlController.batchURLMigration
 POST    /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
+GET     /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.getPatterns
+POST    /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/remigrate                                                  @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST    /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
@@ -696,6 +695,7 @@ GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminU
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
+POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.AdminUserController.setIgnoreForPotentialOrganizations(id: Id[User])
 
 
 GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
@@ -736,11 +736,6 @@ GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocket
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
-
-GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
-POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
-POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
-POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
 GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String])
 GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)

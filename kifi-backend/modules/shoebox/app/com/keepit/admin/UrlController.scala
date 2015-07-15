@@ -205,6 +205,61 @@ class UrlController @Inject() (
     }
   }
 
+  def getPatterns = AdminUserPage { implicit request =>
+    val patterns = db.readOnlyReplica { implicit session =>
+      urlPatternRuleRepo.all.sortBy(_.id.get.id)
+    }
+    Ok(html.admin.urlPatternRules(patterns))
+  }
+
+  def savePatterns = AdminUserPage { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    db.readWrite { implicit session =>
+      for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
+        val id = Id[UrlPatternRule](key.toLong)
+        val oldPat = urlPatternRuleRepo.get(id)
+        val newPat = oldPat.copy(
+          pattern = body("pattern_" + key),
+          example = Some(body("example_" + key)).filter(!_.isEmpty),
+          state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          normalization = body("normalization_" + key) match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty),
+          nonSensitive = body("non_sensitive_" + key) match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
+        )
+
+        if (newPat != oldPat) {
+          urlPatternRuleRepo.save(newPat)
+        }
+      }
+      val newPat = body("new_pattern")
+      if (newPat.nonEmpty) {
+        urlPatternRuleRepo.save(UrlPatternRule(
+          pattern = newPat,
+          example = Some(body("new_example")).filter(!_.isEmpty),
+          state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
+          normalization = body("new_normalization") match {
+            case "None" => None
+            case scheme => Some(Normalization(scheme))
+          },
+          trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty),
+          nonSensitive = body("new_non_sensitive") match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
+        ))
+      }
+    }
+    Redirect(routes.UrlController.getPatterns)
+  }
+
   def pornDomainFlag() = AdminUserPage { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val regex = body.get("regex").get

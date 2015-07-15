@@ -27,19 +27,14 @@ object ArticleFields {
   val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
-
-  object Safety {
-    val field = "safety"
-    val unsafe = "unsafe"
-  }
-
 }
 
 object ArticleIndexable {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](INACTIVE, REDIRECTED)
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state) || !uri.shouldHaveContent
-  def isSafe(searcher: Searcher, uriId: Long): Boolean = {
-    searcher.getLongDocValue(ArticleFields.safeField, uriId).exists(_ > 0)
+  @inline
+  def isSafe(articleSearcher: Searcher, uriId: Long): Boolean = {
+    articleSearcher.getLongDocValue(ArticleFields.safeField, uriId).exists(_ > 0)
   }
 }
 
@@ -55,10 +50,6 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
 
     val doc = super.buildDocument
     val articleContent = ArticleContentExtractor(articles)
-
-    if (uri.restriction.isDefined) {
-      doc.add(buildKeywordField(Safety.field, Safety.unsafe))
-    }
 
     val safe = if (uri.restriction.isDefined) 0L else 1L
     doc.add(buildLongValueField(safeField, safe))

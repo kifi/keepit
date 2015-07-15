@@ -35,8 +35,8 @@ object SearchConfig {
       // UriSearch
       "libraryNameBoost" -> "0.5",
       "maxResultClickBoost" -> "20.0",
-      "minMyBookmarks" -> "2",
-      "myBookmarkBoost" -> "1.5",
+      "minMyKeeps" -> "2",
+      "myKeepBoost" -> "1.5",
       "usefulPageBoost" -> "1.1",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.01",
@@ -51,13 +51,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "100.0",
-      "myFriendBoost" -> "1.5",
+      "myNetworkBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",
       "dampingHalfDecayMine" -> "6.0",
-      "dampingHalfDecayFriends" -> "4.0",
+      "dampingHalfDecayNetwork" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
-      "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24"
@@ -75,16 +74,16 @@ object SearchConfig {
       // Shared Search Parameters (should probably not be shared)
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a result to show up",
       "halfDecayHours" -> "the time the recency boost becomes half",
-      "recencyBoost" -> "importance of the recent bookmarks",
+      "recencyBoost" -> "importance of the recent keeps",
 
       // UriSearch
       "libraryNameBoost" -> "boost value for library name in uri search",
       "maxResultClickBoost" -> "boosting by recent result clicks",
-      "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
-      "myBookmarkBoost" -> "importance of my bookmark",
+      "minMyKeeps" -> "the minimum number of my keeps in a search result",
+      "myKeepBoost" -> "importance of my keep",
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
-      "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
-      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
+      "sharingBoostInNetwork" -> "importance of the number of friends sharing the keep",
+      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the keep",
       "newContentBoost" -> "importance of a new content introduced to the network",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
 
@@ -96,13 +95,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "boost value for user source in user search",
-      "myFriendBoost" -> "boost value for my friends in user search",
+      "myNetworkBoost" -> "boost value for my friends in user search",
 
       "proximityBoost" -> "boosting by proximity",
-      "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
-      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
+      "dampingHalfDecayMine" -> "how many top hits in my keeps are important",
+      "dampingHalfDecayNetwork" -> "how many top hits in network' keeps are important",
+      "dampingHalfDecayOthers" -> "how many top hits in others' keep are important",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search"
@@ -118,7 +116,7 @@ object SearchConfig {
     val map = new mutable.HashMap[UserSegment, SearchConfig]() {
       override def default(key: UserSegment): SearchConfig = SearchConfig.defaultConfig
     }
-    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
+    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayNetwork" -> "2.5", "percentMatch" -> "85"))
   }
   def byUserSegment(seg: UserSegment): SearchConfig = segmentConfigs(seg)
 

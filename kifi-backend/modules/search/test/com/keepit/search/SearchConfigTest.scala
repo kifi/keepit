@@ -171,7 +171,7 @@ class SearchConfigTest extends Specification with CommonTestInjector {
       conf === SearchConfig.defaultConfig
 
       conf = SearchConfig.byUserSegment(new UserSegment(3))
-      conf.asFloat("dampingHalfDecayFriends") === 2.5f
+      conf.asFloat("dampingHalfDecayNetwork") === 2.5f
       conf.asInt("percentMatch") === 85
     }
   }
