@@ -48,10 +48,10 @@
         <th>Id</th><td>@user.id, @user.externalId</td>
       </tr>
       <tr>
-        <th>Total Bookmarks</th><td>@totalBookmarks</td>
+        <th>Total Keeps</th><td>@totalBookmarks</td>
       </tr>
-      <tr><th>Orgs memberships</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
-      <tr><th>Orgs candidacies</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>
@@ -65,10 +65,10 @@
         </td>
       </tr>
     <tr>
-        <th>Ignore for potential organizations?</th>
+        <th>ignore4org</th>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline" id="ignore-potential-orgs-form">
-                <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check">
+                We don't think this user should be associated with an organization now <input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check">
             </form>
         </td>
     </tr>
