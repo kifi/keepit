@@ -853,7 +853,7 @@ GET           /admin/rover/urlRules                                             
 POST          /admin/rover/urlRules                                                  @com.keepit.controllers.admin.AdminRoverController.saveUrlRules()
 POST          /admin/rover/urlRules/create                                           @com.keepit.controllers.admin.AdminRoverController.createUrlRule
 GET           /admin/rover/testRegex                                                 @com.keepit.controllers.admin.AdminRoverController.testRegex
-GET           /admin/rover/testRegex/:regex                                          @com.keepit.controllers.admin.AdminRoverController.testRegexFilled(regex: String, test: Option[String])
+POST          /admin/rover/testRegex                                                 @com.keepit.controllers.admin.AdminRoverController.testRegexFilled
 POST          /admin/rover/performRegexTest                                          @com.keepit.controllers.admin.AdminRoverController.performRegexTest
 
 ##########################################
