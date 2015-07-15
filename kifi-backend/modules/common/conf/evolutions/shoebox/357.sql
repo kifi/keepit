@@ -11,8 +11,8 @@ CREATE TABLE organization_membership_poke (
 	user_id bigint(20) NOT NULL,
 
 	PRIMARY KEY(id),
-	CONSTRAINT `organization_membership_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`),
-	CONSTRAINT `organization_membership_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`)
+	CONSTRAINT `organization_membership_poke_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`),
+	CONSTRAINT `organization_membership_poke_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`)
 );
 
 insert into evolutions(name, description) values('357.sql', 'added organization_membership_poke');
