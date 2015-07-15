@@ -57,7 +57,6 @@ class OrganizationMembershipCandidateRepoImpl @Inject() (val db: DataBaseCompone
   }
 }
 
-@ImplementedBy(classOf[OrganizationMembershipCandidateSequencingPluginImpl])
 trait OrganizationMembershipCandidateSequencingPlugin extends SequencingPlugin
 
 class OrganizationMembershipCandidateSequencingPluginImpl @Inject() (
