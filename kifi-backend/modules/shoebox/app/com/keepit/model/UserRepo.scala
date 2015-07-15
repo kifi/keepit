@@ -41,6 +41,8 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
+  def countUsersWithPotentialOrgs()(implicit session: RSession): Int
+  def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -274,6 +276,60 @@ class UserRepoImpl @Inject() (
   def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
+  }
+
+  def countUsersWithPotentialOrgs()(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select count(distinct cur_user.id) from user as cur_user
+      inner join (
+        select user_2 as related_id, user_1 as cur_id from user_connection
+        union all
+          select user_1 as related_id, user_1 as cur_id from user_connection
+      ) as relation
+      on relation.cur_id = cur_user.id
+      where not exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = cur_user.id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = cur_user.id
+      ) and exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = relation.related_id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
+      ) and not exists (
+        select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
+      );
+      """.as[Int].first
+  }
+
+  def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val ids = sql"""
+      select distinct cur_user.id from user as cur_user
+      inner join (
+        select user_2 as related_id, user_1 as cur_id from user_connection
+        union all
+          select user_1 as related_id, user_1 as cur_id from user_connection
+      ) as relation
+      on relation.cur_id = cur_user.id
+      where not exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = cur_user.id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = cur_user.id
+      ) and exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = relation.related_id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
+      ) and not exists (
+        select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
+      )
+      limit $size offset ${size * page};
+      """.as[Id[User]].list
+
+    val userMaps = getUsers(ids)
+
+    ids.map(id => userMaps(id))
   }
 }
 
