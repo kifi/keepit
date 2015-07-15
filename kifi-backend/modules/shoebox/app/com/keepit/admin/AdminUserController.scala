@@ -964,8 +964,20 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, UserStatisticsPage] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersStatisticsPage(userIds) }.toMap
+    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
+  }
+
+  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+    db.readOnlyReplica { implicit s =>
+      val users = userRepo.getAllUsers(userIds).values.toList
+      val orgs = users map { user =>
+        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(0), Offset(1000)).map(_.orgId).toSet
+        val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(0), Offset(1000)).map(_.organizationId).toSet
+        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+      }
+      orgs.toMap
+    }
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
