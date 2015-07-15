@@ -87,6 +87,7 @@ class UserIpAddressEventLogger @Inject() (
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     implicit val executionContext: ExecutionContext,
+    userCommander: UserCommander,
     clock: Clock) extends Logging {
 
   private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
@@ -106,8 +107,10 @@ class UserIpAddressEventLogger @Inject() (
       val ignoreForPotentialOrgs = userValueRepo.getValue(event.userId, UserValues.ignoreForPotentialOrganizations)
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
 
-      val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
-      userIpAddressRepo.saveIfNew(model)
+      if (!userCommander.getAllFakeUsers()(event.userId)) {
+        val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
+        userIpAddressRepo.saveIfNew(model)
+      }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
     }

@@ -121,6 +121,7 @@ class UserCommander @Inject() (
     allFakeUsersCache: AllFakeUsersCache,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
+    experimentRepo: UserExperimentRepo,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -750,8 +751,8 @@ class UserCommander @Inject() (
   def getAllFakeUsers(): Set[Id[User]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     allFakeUsersCache.getOrElse(AllFakeUsersKey) {
-      db.readOnlyMaster { implicit session =>
-        userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet
+      db.readOnlyReplica { implicit session =>
+        userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet ++ experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN)
       }
     }
   }
