@@ -177,10 +177,10 @@ class UserStatisticsCommander @Inject() (
           OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
       }
     }.filter(orgReco =>
-        orgReco.userOrEmail.isRight ||
+      orgReco.userOrEmail.isRight ||
         (!candidates.map(_.userId).contains(orgReco.userOrEmail.left.get.id.get) &&
-        !db.readOnlyMaster { implicit session => userExperimentRepo.hasExperiment(orgReco.userOrEmail.left.get.id.get, UserExperimentType.ADMIN) })
-      )
+          !db.readOnlyMaster { implicit session => userExperimentRepo.hasExperiment(orgReco.userOrEmail.left.get.id.get, UserExperimentType.ADMIN) })
+    )
     )
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
