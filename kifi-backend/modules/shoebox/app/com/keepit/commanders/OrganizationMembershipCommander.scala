@@ -16,7 +16,7 @@ import play.api.libs.json._
 
 import scala.util.control.NoStackTrace
 
-final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
+final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: OrganizationRole, lastInvitedAt: Option[DateTime])
 
 object MaybeOrganizationMember {
   implicit val writes = Writes[MaybeOrganizationMember] { member =>
@@ -120,24 +120,24 @@ class OrganizationMembershipCommanderImpl @Inject() (
       basicUserRepo.loadAllActive((members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
     }
 
-    val membersNotIncludingOwner = members.flatMap { member =>
+    val membersInfo = members.flatMap { member =>
       usersMap.get(member.userId) map { basicUser =>
-        MaybeOrganizationMember(member = Left(basicUser), role = Some(member.role), lastInvitedAt = Some(member.updatedAt))
+        MaybeOrganizationMember(member = Left(basicUser), role = member.role, lastInvitedAt = None)
       }
     }
 
-    val invitedByUserId = invitedUserIds flatMap { invitedById =>
+    val invitedByUserIdInfo = invitedUserIds flatMap { invitedById =>
       usersMap.get(invitedById.userId.get) map { basicUser =>
-        MaybeOrganizationMember(member = Left(basicUser), role = Some(invitedById.role), lastInvitedAt = Some(invitedById.updatedAt))
+        MaybeOrganizationMember(member = Left(basicUser), role = invitedById.role, lastInvitedAt = Some(invitedById.updatedAt))
       }
     }
 
-    val invitedByEmailAddress = invitedEmailAddresses map { invitedByAddress =>
+    val invitedByEmailAddressInfo = invitedEmailAddresses map { invitedByAddress =>
       val contact = BasicContact(invitedByAddress.emailAddress.get)
-      MaybeOrganizationMember(member = Right(contact), role = Some(invitedByAddress.role), lastInvitedAt = Some(invitedByAddress.updatedAt))
+      MaybeOrganizationMember(member = Right(contact), role = invitedByAddress.role, lastInvitedAt = Some(invitedByAddress.updatedAt))
     }
 
-    membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
+    membersInfo ++ invitedByUserIdInfo ++ invitedByEmailAddressInfo
   }
 
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
