@@ -72,6 +72,7 @@ case class OrganizationStatistics(
 
 case class OrganizationMemberRecommendationInfo(
   userOrEmail: Either[User, EmailAddress],
+  associatedOrgs: Set[Organization],
   score: Double)
 
 class UserStatisticsCommander @Inject() (
@@ -171,10 +172,14 @@ class UserStatisticsCommander @Inject() (
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.map { memberInviteReco =>
       memberInviteReco.identifier match {
-        case Right(email: EmailAddress) => OrganizationMemberRecommendationInfo(Right(email), memberInviteReco.score)
+        case Right(email: EmailAddress) => OrganizationMemberRecommendationInfo(Right(email), Set.empty, memberInviteReco.score)
         case Left(userId: Id[User]) =>
-          val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-          OrganizationMemberRecommendationInfo(Left(user), memberInviteReco.score)
+          val (user, orgs) = db.readOnlyMaster { implicit session =>
+            val user = userRepo.get(userId)
+            val orgs = orgRepo.getByIds((orgMembershipRepo.getAllByUserId(userId).map(_.organizationId) ++ orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId)).toSet)
+            (user, orgs)
+          }
+          OrganizationMemberRecommendationInfo(Left(user), orgs.values.toSet, memberInviteReco.score)
       }
     }.filter(orgReco =>
       orgReco.userOrEmail.isRight ||
