@@ -67,7 +67,6 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val json = Json.parse(contentAsString(result))
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
-          println(json \ "members")
           (json \ "members" \\ "id").length == n
           (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
           (json \ "members" \\ "lastInvitedAt").length === 0 // members do not have open invitations
@@ -131,6 +130,83 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           (json \ "members" \\ "id").length === 0 // no user ids, only emails
           (json \ "members" \\ "email").length === n
           (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n)
+        }
+      }
+    }
+
+    "poke an org to request membership" in {
+      def setup()(implicit injector: Injector) = {
+        db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val invitee = UserFactory.user().saved
+          val rando = UserFactory.user().saved
+
+          val org = OrganizationFactory.organization()
+            .withOwner(owner)
+            .withInvitedUsers(Seq(invitee))
+            .saved
+
+          (org, owner, invitee, rando)
+        }
+      }
+      "let a user poke an org" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, _, _, rando) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          val request = route.poke(publicOrgId)
+          val result = controller.poke(publicOrgId)(request)
+          status(result) === OK
+
+          val orgPoke = Json.parse(contentAsString(result)) \ "result"
+          (orgPoke \ "organizationId").as[String] === publicOrgId.id
+          (orgPoke \ "userId").as[String] === rando.externalId.id
+        }
+      }
+      "whine if a user pokes an org too fast" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, _, _, rando) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          val request1 = route.poke(publicOrgId)
+          val result1 = controller.poke(publicOrgId)(request1)
+          status(result1) === OK
+
+          val orgPoke = Json.parse(contentAsString(result1)) \ "result"
+          (orgPoke \ "organizationId").as[String] === publicOrgId.id
+          (orgPoke \ "userId").as[String] === rando.externalId.id
+
+          val request2 = route.poke(publicOrgId)
+          val result2 = controller.poke(publicOrgId)(request2)
+          status(result2) === FORBIDDEN
+        }
+      }
+      "fail if the user is already a member" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, member, _, _) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          val request = route.poke(publicOrgId)
+          val result = controller.poke(publicOrgId)(request)
+          status(result) === FORBIDDEN
+
+          (Json.parse(contentAsString(result)) \ "error").as[String] === "already_a_member"
+        }
+      }
+      "fail if the user is already invited" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, _, invitee, _) = setup()
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          val request = route.poke(publicOrgId)
+          val result = controller.poke(publicOrgId)(request)
+          status(result) === FORBIDDEN
+
+          (Json.parse(contentAsString(result)) \ "error").as[String] === "already_invited"
         }
       }
     }

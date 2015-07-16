@@ -1,14 +1,16 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ UserCommander, OrganizationCommander, OrganizationMembershipCommander }
+import com.keepit.commanders.{ OrganizationMembershipPokeCommander, UserCommander, OrganizationCommander, OrganizationMembershipCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import play.api.db
 import play.api.libs.json._
 import com.keepit.common.json.KeyFormat
 
@@ -16,8 +18,11 @@ import scala.util.{ Failure, Success }
 
 @Singleton
 class OrganizationMembershipController @Inject() (
+    db: Database,
+    userRepo: UserRepo,
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    orgMembershipPokeCommander: OrganizationMembershipPokeCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
@@ -34,6 +39,21 @@ class OrganizationMembershipController @Inject() (
         val showInvitees = request.permissions.contains(OrganizationPermission.INVITE_MEMBERS)
         val membersAndMaybeInvitees = orgMembershipCommander.getMembersAndInvitees(orgId, Limit(limit), Offset(offset), includeInvitees = showInvitees)
         Ok(Json.obj("members" -> membersAndMaybeInvitees))
+    }
+  }
+
+  def poke(pubId: PublicId[Organization]) = OrganizationUserAction(pubId) { request =>
+    orgMembershipPokeCommander.poke(request.request.userId, request.orgId) match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(orgPoke) =>
+        val externalOrgPoke = db.readOnlyReplica { implicit session =>
+          ExternalOrganizationMembershipPoke(
+            createdAt = orgPoke.updatedAt,
+            userId = userRepo.get(orgPoke.userId).externalId,
+            organizationId = Organization.publicId(orgPoke.organizationId)
+          )
+        }
+        Ok(Json.obj("result" -> externalOrgPoke))
     }
   }
 
