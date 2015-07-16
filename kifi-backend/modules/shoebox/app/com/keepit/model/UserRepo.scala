@@ -305,7 +305,7 @@ class UserRepoImpl @Inject() (
           select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
       ) and not exists (
         select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
-      );
+      ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = cur_user.id) >= 10;
       """.as[Int].first
   }
 
@@ -330,7 +330,7 @@ class UserRepoImpl @Inject() (
           select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
       ) and not exists (
         select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
-      )
+      ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = cur_user.id) >= 10
       limit $size offset ${size * page};
       """.as[Id[User]].list
 
@@ -350,7 +350,7 @@ class UserRepoImpl @Inject() (
         and social_user_info.user_id not in (select user_id from organization_membership)
         and not exists (
           select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
-        )
+        ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = social_user_info.user_id) >= 10;
       """.as[Int].first
   }
 
@@ -366,7 +366,7 @@ class UserRepoImpl @Inject() (
         and social_user_info.user_id not in (select user_id from organization_membership)
         and not exists (
           select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
-        )
+        ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = social_user_info.user_id) >= 10
         limit $size offset ${size * page};
       """.as[Id[User]].list
 
