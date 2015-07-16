@@ -1,10 +1,22 @@
 .kf-organization-member-manage
   width: 50%
   margin: 15px auto
+  background-color: #fff
+  border-radius: 16px
+  padding: 15px
+  border: 1px solid #dadae2
 
   > * + *
     margin-top: 10px
 
-  > .kf-organization-member:not(:first-child)
+  > .kf-organization-member + .kf-organization-member
     border-top: 1px solid lightgray
     padding-top: 10px
+
+.kf-organization-member-invite
+  box-sizing: border-box
+  width: 100%
+  padding: 10px
+  border: 1px dashed lightgray
+  border-radius: 6px
+  background: none

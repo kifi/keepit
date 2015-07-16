@@ -42,6 +42,29 @@ angular.module('kifi')
           return updateMe(res.data);
         });
       };
+
+      scope.onOrgProfileImageClick = function (event) {
+        if (event.which === 1) {
+          angular.element('.kf-oph-pic-file').click();
+          //libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
+        }
+      };
+
+      scope.onOrgProfileImageFileChosen = function (files) {
+        var file = files[0];
+        if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+          coverImageFile = file;
+          console.log('LOADED FILE ', file);
+          //$timeout(readCoverImageFile);
+          //libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
+        } else {
+          modalService.openGenericErrorModal({
+            modalData: {
+              genericErrorMessage: 'Please choose a .jpg, .png or .gif file.'
+            }
+          });
+        }
+      };
     }
   };
 }]);

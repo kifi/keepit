@@ -8,10 +8,10 @@
       <button ng-show="editing" ng-click="save()">Save</button>
     </div>
 
-    <a class="kf-oph-pic-a">
-      <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
-      <button class="kf-oph-pic-edit">Upload Photo</button>
-    </a>
+    <div class="kf-oph-pic-wrapper">
+      <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image" ng-click="onOrgProfileImageClick($event)">
+      <input style="display: none;" class="kf-oph-pic-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onOrgProfileImageFileChosen">
+    </div>
     <div class="kf-oph-about">
       <input class="kf-edit-field kf-oph-name" type=text ng-model="profile.name">
 

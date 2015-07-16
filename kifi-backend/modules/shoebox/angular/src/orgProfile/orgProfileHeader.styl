@@ -36,12 +36,27 @@ ophImageWidth = 200px
   top: 10px
   right: 0
 
-.kf-oph-pic-a
-  width: ophImageWidth
-
 .kf-oph-pic
-  width: 100%
+  width: ophImageWidth
   border-radius: 10px
+
+.kf-oph-pic-wrapper
+  position: relative
+  cursor: pointer
+
+.kf-oph-pic-wrapper:hover:before
+  content: 'Change Photo'
+  position: absolute
+  right: 0
+  bottom: 0
+  left: 0
+  height: 50px
+  line-height: 50px
+  color: #000
+  background-color: rgba(255, 255, 255, .5);
+
+.kf-oph-pic-wrapper:hover:before:hover
+  background-color: rgba(255, 255, 255, 1);
 
 .kf-oph-about
   text-align: left
