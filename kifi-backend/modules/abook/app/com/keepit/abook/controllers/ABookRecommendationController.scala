@@ -17,7 +17,7 @@ class ABookRecommendationController @Inject() (
     abookOrganizationRecommendationCommander: AbookOrganizationRecommendationCommander) extends ABookServiceController {
 
   def getFriendRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookUserRecommendationCommander.getUserRecommendations(userId, offset, limit).map { recommendedUsers =>
+    abookUserRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -42,7 +42,7 @@ class ABookRecommendationController @Inject() (
 
   def getInviteRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
-    abookUserRecommendationCommander.getNonUserRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
+    abookUserRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -55,7 +55,18 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def hideNonUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
+  def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
+    abookUserRecommendationCommander.getOrganizationRecommendations(userId, offset, limit).map { recommendedOrgs =>
+      Ok(Json.toJson(recommendedOrgs))
+    }
+  }
+
+  def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = Action { request =>
+    abookUserRecommendationCommander.hideOrganizationRecommendations(userId, irrelevantOrganizationId)
+    Ok
+  }
+
+  def hideEmailRecommendationForOrg(orgId: Id[Organization], memberId: Id[User]) = Action(parse.json) { request =>
     val emailAddress = (request.body \ "irrelevantEmail").as[EmailAddress]
     abookOrganizationRecommendationCommander.hideEmailRecommendation(orgId, memberId, emailAddress)
     Ok

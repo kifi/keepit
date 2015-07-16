@@ -60,6 +60,8 @@ trait ABookServiceClient extends ServiceClient {
   def getIrrelevantPeopleForUser(userId: Id[User]): Future[IrrelevantPeopleForUser]
   def getIrrelevantPeopleForOrg(orgId: Id[Organization]): Future[IrrelevantPeopleForOrg]
   def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
+  def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationUserMayKnow]]
+  def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -260,5 +262,13 @@ class ABookServiceClientImpl @Inject() (
 
   def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
     call(ABook.internal.getRecommendationsForOrg(orgId, viewerId, disclosePrivateEmails, offset, limit)).map(_.json.as[Seq[OrganizationInviteRecommendation]])
+  }
+
+  def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationUserMayKnow]] = {
+    call(ABook.internal.getOrganizationRecommendationsForUser(userId, offset, limit)).map(_.json.as[Seq[OrganizationUserMayKnow]])
+  }
+
+  def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit] = {
+    call(ABook.internal.hideOrganizationRecommendationForUser(userId, irrelevantOrganizationId)).map(_ => ())
   }
 }
