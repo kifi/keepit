@@ -32,15 +32,14 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
     "serve up organization views" in {
       "fail on bad public id" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (user, org) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(user).saved
-            (user, org)
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withHandle(OrganizationHandle("brewstercorp")).withName("Brewster Corp").withOwner(owner).saved
+            (org, owner)
           }
-
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
 
@@ -49,29 +48,83 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       }
       "give an organization view to a user that has view permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (user, org) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val handle = OrganizationHandle("kifi")
-            val org = OrganizationFactory.organization().withHandle(handle).withOwner(user).withName("Forty Two Kifis").saved
+          val (org, owner, member, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withHandle(OrganizationHandle("brewstercorp")).withName("Brewster Corp").withOwner(owner).withMembers(Seq(member)).saved
+
             LibraryFactory.libraries(10).map(_.published().withOrganization(org.id)).saved
             LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(org.id)).saved
             LibraryFactory.libraries(20).map(_.secret().withOrganization(org.id)).saved
-            (user, org)
+
+            (org, owner, member, rando)
           }
 
           val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
-          val request = route.getOrganization(publicId)
-          val response = controller.getOrganization(publicId)(request)
-          status(response) === OK
 
-          val jsonResponse = Json.parse(contentAsString(response))
-          (jsonResponse \ "organization" \ "name").as[String] === "Forty Two Kifis"
-          (jsonResponse \ "organization" \ "handle").as[String] === "kifi"
-          (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val ownerRequest = route.getOrganization(publicId)
+          val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
+          status(ownerResponse) === OK
+          (Json.parse(contentAsString(ownerResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.OWNER)
+
+          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          val memberRequest = route.getOrganization(publicId)
+          val memberResponse = controller.getOrganization(publicId)(memberRequest)
+          status(memberResponse) === OK
+          (Json.parse(contentAsString(memberResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
+
+          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          val randoRequest = route.getOrganization(publicId)
+          val randoResponse = controller.getOrganization(publicId)(randoRequest)
+          status(randoResponse) === OK
+          (Json.parse(contentAsString(randoResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
+
+          val ownerJson = Json.parse(contentAsString(ownerResponse)) \ "organization"
+          val memberJson = Json.parse(contentAsString(memberResponse)) \ "organization"
+          val randoJson = Json.parse(contentAsString(randoResponse)) \ "organization"
+
+          ownerJson === memberJson
+          memberJson === randoJson
+
+          (randoJson \ "name").as[String] === "Brewster Corp"
+          (randoJson \ "handle").as[String] === "brewstercorp"
+          (randoJson \ "numLibraries").as[Int] === 10
         }
       }
     }
+    "include the viewer's permissions along with the organization view" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (org, owner, member, rando) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val rando = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withHandle(OrganizationHandle("brewstercorp")).withName("Brewster Corp").withOwner(owner).withMembers(Seq(member)).saved
+          (org, owner, member, rando)
+        }
+        val publicId = Organization.publicId(org.id.get)
+
+        inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+        val ownerRequest = route.getOrganization(publicId)
+        val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
+        status(ownerResponse) === OK
+        (Json.parse(contentAsString(ownerResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.OWNER)
+
+        inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+        val memberRequest = route.getOrganization(publicId)
+        val memberResponse = controller.getOrganization(publicId)(memberRequest)
+        status(memberResponse) === OK
+        (Json.parse(contentAsString(memberResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
+
+        inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+        val randoRequest = route.getOrganization(publicId)
+        val randoResponse = controller.getOrganization(publicId)(randoRequest)
+        status(randoResponse) === OK
+        (Json.parse(contentAsString(randoResponse)) \ "viewer_permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
+      }
+    }
+
     "serve up organization cards" in {
       "give a user a list of organizations they belong to" in {
         withDb(controllerTestModules: _*) { implicit injector =>
