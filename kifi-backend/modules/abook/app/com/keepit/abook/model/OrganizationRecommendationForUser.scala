@@ -46,12 +46,12 @@ class OrganizationRecommendationForUserRepoImpl @Inject() (
   override def deleteCache(recommendation: OrganizationRecommendationForUser)(implicit session: RSession): Unit = {}
   override def invalidateCache(recommendation: OrganizationRecommendationForUser)(implicit session: RSession): Unit = {}
 
-  private val compiledGetByUser = Compiled { (userId: Column[Id[User]]) =>
-    for (row <- rows if row.userId === userId) yield row
+  private val compiledGetByUserAndOrg = Compiled { (userId: Column[Id[User]], organizationId: Column[Id[Organization]]) =>
+    for (row <- rows if row.userId === userId && row.organizationId === row.organizationId) yield row
   }
 
   private def internRecommendation(userId: Id[User], organizationId: Id[Organization], irrelevant: Boolean)(implicit session: RWSession): OrganizationRecommendationForUser = {
-    compiledGetByUser(userId).firstOption match {
+    compiledGetByUserAndOrg(userId, organizationId).firstOption match {
       case None => save(OrganizationRecommendationForUser(userId = userId, organizationId = organizationId, irrelevant = irrelevant))
       case Some(recommendation) if recommendation.irrelevant == irrelevant => recommendation
       case Some(differentRecommendation) => save(differentRecommendation.copy(irrelevant = irrelevant))
@@ -59,7 +59,7 @@ class OrganizationRecommendationForUserRepoImpl @Inject() (
   }
 
   def recordIrrelevantRecommendation(userId: Id[User], organizationId: Id[Organization])(implicit session: RWSession): Unit = {
-    internRecommendation(userId, organizationId, true)
+    internRecommendation(userId, organizationId, irrelevant = true)
   }
 
   private val compiledIrrelevantRecommendations = Compiled { userId: Column[Id[User]] =>

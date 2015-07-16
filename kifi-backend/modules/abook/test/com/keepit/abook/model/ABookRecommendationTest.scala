@@ -124,7 +124,7 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
           orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(42), Id(420))
         }
         db.readOnlyMaster { implicit session =>
-          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42))
           orgUserMayKnowRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
         }
       }
