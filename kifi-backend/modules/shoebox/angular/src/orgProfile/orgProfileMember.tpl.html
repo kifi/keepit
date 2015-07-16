@@ -3,7 +3,7 @@
     <div class="kf-organization-member-upper-left">
       <a href="{{member|profileUrl}}" class="kf-organization-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="close()">
         <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-organization-member-pic" ng-if="member.id">
-        <div class="kf-organization-member-email svg-envelope" ng-if="!member.id"></div>
+        <div class="kf-organization-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
       </a>
       <div class="kf-organization-member-info">
         <div class="kf-organization-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</div>
