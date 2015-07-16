@@ -66,7 +66,9 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("organization" -> Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.website)))
+    val orgView = Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.website)
+    val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
+    Ok(Json.obj("organization" -> orgView, "viewer_permissions" -> requesterPermissions))
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>

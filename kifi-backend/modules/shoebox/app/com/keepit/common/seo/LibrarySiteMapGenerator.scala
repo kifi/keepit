@@ -66,7 +66,7 @@ class LibrarySiteMapGenerator @Inject() (
       val libs = ids.map { id =>
         db.readOnlyMaster { implicit s =>
           val lib = libraryRepo.get(id)
-          if (lib.lastKept.isDefined && lib.keepCount >= MinKeepCount && !fakeUsers.contains(lib.ownerId)) Some(lib -> userRepo.load(lib.ownerId))
+          if (lib.lastKept.isDefined && lib.keepCount >= MinKeepCount && !userCommander.getAllFakeUsers().contains(lib.ownerId)) Some(lib -> userRepo.load(lib.ownerId))
           else None
         }
       }.flatten

@@ -116,16 +116,20 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
   "OrganizationRecommendationForUserRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
-        val orgUserMayKnowRepo = inject[OrganizationRecommendationForUserRepo]
+        val organizationRecoForUserRepo = inject[OrganizationRecommendationForUserRepo]
         db.readWrite { implicit session =>
-          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(42))
-          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(42))
-          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(134), Id(420))
-          orgUserMayKnowRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(42), Id(420))
         }
         db.readOnlyMaster { implicit session =>
-          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
-          orgUserMayKnowRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+          println(organizationRecoForUserRepo.getIrrelevantRecommendations(Id(134)))
+          println(organizationRecoForUserRepo.getIrrelevantRecommendations(Id(42)))
+        }
+        db.readOnlyMaster { implicit session =>
+          organizationRecoForUserRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          organizationRecoForUserRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
         }
       }
     }

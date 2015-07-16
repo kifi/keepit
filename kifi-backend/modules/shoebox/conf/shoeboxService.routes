@@ -655,14 +655,10 @@ GET     /admin/users                @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
-GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
-GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.registeredUsersView(page: Int)
 GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
-GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
-GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
@@ -713,6 +709,11 @@ POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.Ad
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
+
+GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
+GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
+GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
+GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
 
 # TEMPORARY ROUTE - remove when activity email is live
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
