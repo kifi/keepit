@@ -108,6 +108,7 @@ class UserIpAddressEventLogger @Inject() (
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
 
       if (!userCommander.getAllFakeUsers()(event.userId)) {
+        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
       }
