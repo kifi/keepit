@@ -347,7 +347,10 @@ class UserRepoImpl @Inject() (
         where social_user_info.network_type = 'linkedin'
         and social_user_info.user_id is not null
         and social_user_info.user_id not in (select user_id from organization_membership_candidate )
-        and social_user_info.user_id not in (select user_id from organization_membership);
+        and social_user_info.user_id not in (select user_id from organization_membership)
+        and not exists (
+          select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
+        )
       """.as[Int].first
   }
 
@@ -361,6 +364,9 @@ class UserRepoImpl @Inject() (
         and social_user_info.user_id is not null
         and social_user_info.user_id not in (select user_id from organization_membership_candidate )
         and social_user_info.user_id not in (select user_id from organization_membership)
+        and not exists (
+          select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
+        )
         limit $size offset ${size * page};
       """.as[Id[User]].list
 
