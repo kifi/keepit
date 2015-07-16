@@ -88,6 +88,9 @@
                               </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-potential-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
                           </span>
                       </form>
+                      <form action="@com.keepit.controllers.admin.routes.AdminUserController.hideOrganizationRecoForUser(user.id.get, org.id.get)" method="POST" class="form-inline hide-org-reco">
+                          <input style="margin : 2 px" type="Submit" value="Hide Org Reco">
+                      </form>
                     </li>
                     }
                 </ul>

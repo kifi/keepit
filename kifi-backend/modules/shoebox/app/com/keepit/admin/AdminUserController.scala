@@ -283,7 +283,7 @@ class AdminUserController @Inject() (
       contacts <- contactsF
       orgRecos <- fOrgRecos
     } yield {
-      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score)) }
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
@@ -1053,4 +1053,8 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(userId))
   }
 
+  def hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization]) = AdminUserPage { request =>
+    abookClient.hideOrganizationRecommendationForUser(userId, orgId)
+    Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
 }
