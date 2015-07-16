@@ -103,20 +103,23 @@ class UserIpAddressEventLogger @Inject() (
       log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + event.userAgent)
     }
 
+    val userIsFake = userCommander.getAllFakeUsers()(event.userId)
+
     val (cluster, ignoreForPotentialOrgs) = db.readWrite { implicit session =>
       val ignoreForPotentialOrgs = userValueRepo.getValue(event.userId, UserValues.ignoreForPotentialOrganizations)
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
 
-      if (!userCommander.getAllFakeUsers()(event.userId)) {
-        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
+      if (!userIsFake) {
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
+      } else {
+         log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
       }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
     }
 
-    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs) {
+    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
