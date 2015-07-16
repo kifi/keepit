@@ -59,6 +59,9 @@ class MobileSearchController @Inject() (
   def searchV2(
     query: String,
     proximityFilter: Option[String],
+    libraryFilter: Option[String],
+    userFilter: Option[String],
+    organizationFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
     lastUUIDStr: Option[String],
@@ -69,6 +72,7 @@ class MobileSearchController @Inject() (
     disablePrefixSearch: Boolean,
     disableFullTextSearch: Boolean,
     orderBy: Option[String],
+    libraryAuth: Option[String],
     idealImageSize: Option[ImageSize],
     debug: Option[String]) = UserAction.async { request =>
 
@@ -76,9 +80,9 @@ class MobileSearchController @Inject() (
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val libraryScopeFuture = Future.successful(None)
-    val userScopeFuture = Future.successful(None)
-    val organizationScopeFuture = Future.successful(None)
+    val libraryScopeFuture = getLibraryScope(libraryFilter, request.userIdOpt, libraryAuth)
+    val userScopeFuture = getUserScope(userFilter)
+    val organizationScopeFuture = getOrganizationScope(organizationFilter, request.userIdOpt)
     val proximityScope = getProximityScope(proximityFilter)
     val searchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture)
 
