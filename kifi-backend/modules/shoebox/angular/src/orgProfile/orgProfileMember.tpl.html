@@ -11,7 +11,7 @@
       </div>
     </div>
     <div class="kf-organization-member-upper-right">
-      <button class="kf-organization-member-action-button" ng-click="toggleControls()">{{ member.role === 'owner' ? 'Owner' : 'Member' }}</button>
+      <button class="kf-organization-member-action-button" ng-click="toggleControls()">{{ (hasAcceptedInvitation() ? '' : 'Pending ') + (member.role === 'owner' ? 'Owner' : 'Member') }}</button>
       {{ isOpen() ? 'V' : '>'}}
     </div>
   </div>
@@ -24,7 +24,7 @@
     </div>
     <div class="kf-organization-member-lower-right">
       <button ng-if="shouldShowInvite()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerInvite(member)">resend invite</button>
-      <button ng-if="shouldShowRemove()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerRemove(member)">{{ member.username === me.username ? 'leave organization' : 'remove member' }}</button>
+      <button ng-if="shouldShowRemove()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerRemove(member)">{{ (member.username === me.username ? 'leave organization' : (hasAcceptedInvitation() ? 'remove member' : 'cancel invite')) }}</button>
     </div>
   </div>
 </li>
