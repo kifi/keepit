@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -35,7 +36,7 @@ class OrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val orgView = orgCommander.getOrganizationView(response.newOrg.id.get)
+              val orgView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
               implicit val writes = OrganizationView.website
               Ok(Json.obj("organization" -> Json.toJson(orgView)))
           }
@@ -50,7 +51,7 @@ class OrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get)
+            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
             implicit val writes = OrganizationView.website
             Ok(Json.obj("organization" -> Json.toJson(orgView)))
         }
@@ -66,9 +67,9 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val orgView = Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.website)
+    val orgView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
     val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
-    Ok(Json.obj("organization" -> orgView, "viewer_permissions" -> requesterPermissions))
+    Ok(Json.obj("organization" -> Json.toJson(orgView)(OrganizationView.website), "viewer_permissions" -> requesterPermissions))
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
@@ -80,8 +81,8 @@ class OrganizationController @Inject() (
     if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       val user = userCommander.getByExternalIds(Seq(extId)).values.head
-      val publicOrgs = orgMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgCards = orgCommander.getOrganizationCards(publicOrgs).values.toSeq
+      val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
+      val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
       implicit val writes = OrganizationCard.website
       Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
