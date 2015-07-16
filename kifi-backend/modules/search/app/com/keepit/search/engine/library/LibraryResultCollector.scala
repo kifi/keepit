@@ -56,7 +56,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
         else {
           //todo(Léo): boost libraries if isUserCreated
-          val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
+          val keepCount = LibraryIndexable.getKeepCount(librarySearcher, id) getOrElse 1L
           val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
           score = score * publishedLibraryBoost
         }

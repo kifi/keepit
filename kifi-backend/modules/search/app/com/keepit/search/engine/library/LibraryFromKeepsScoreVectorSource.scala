@@ -3,11 +3,12 @@ package com.keepit.search.engine.library
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
+import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ Term, AtomicReaderContext }
+import org.apache.lucene.index.{ AtomicReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -22,6 +23,7 @@ class LibraryFromKeepsScoreVectorSource(
     protected val filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
+    librarySearcher: Searcher,
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
@@ -55,7 +57,7 @@ class LibraryFromKeepsScoreVectorSource(
         if (visibility != Visibility.RESTRICTED) {
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
           val inverseLibraryFrequencyBoost = {
-            val keepCount = libraryQualityEvaluator.estimateKeepCount(searcher, libId)
+            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
             libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)
           }
           val boost = recencyBoost * inverseLibraryFrequencyBoost
