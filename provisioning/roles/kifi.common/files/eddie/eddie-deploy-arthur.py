@@ -115,8 +115,6 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in live_instances]
 
 if __name__=="__main__":
-  lock = FileLock("/home/eng/" + args.serviceType + ".lock")
-
   try:
     parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
     parser.add_argument(
@@ -166,6 +164,8 @@ if __name__=="__main__":
       userName = getpass.getuser()
       if userName=="eng":
         print "Yo, dude, set your name! ('--iam' option)"
+
+    lock = FileLock("/home/eng/" + args.serviceType + ".lock")
 
     instances = getAllInstances()
 
@@ -249,6 +249,5 @@ if __name__=="__main__":
       log("Deployment Complete")
   except Exception, e:
     log("FATAL ERROR: " + str(e))
-    lock.unlock()
     raise
 
