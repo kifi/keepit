@@ -10,6 +10,7 @@ import org.apache.commons.io.IOUtils
 import play.api.Play.current
 import play.api.mvc.{ Request, Controller }
 import play.api.{ Mode, Play }
+import com.keepit.common.core._
 
 import scala.util.Try
 import scala.util.matching.Regex
@@ -61,28 +62,20 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   private object Version5 extends LandingVersion { val version = 5 }
   private object Version6 extends LandingVersion { val version = 6 }
 
+  private val versions = Seq(Version1, Version2, Version3, Version4, Version5, Version6)
+  private val defaultVersion = Version5
+
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
     val version: LandingVersion = if (possiblyBot) {
-      Version5
+      defaultVersion
     } else {
       val pickOpt = Try(request.getQueryString("v").map(_.toInt)).toOption.flatten
 
-      pickOpt match {
-        case Some(idx) if idx == 1 => Version1
-        case Some(idx) if idx == 2 => Version2
-        case Some(idx) if idx == 3 => Version3
-        case Some(idx) if idx == 4 => Version4
-        case Some(idx) if idx == 5 => Version5
-        case Some(idx) if idx == 6 => Version6
-        case _ =>
-          //currently we have only one version alive. When we'll restart the a/b testing the next five lines will be relevant again.
-          //          val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
-          //          val hash = (Math.abs(ip.hashCode()) % 100) // rough
-          //          val winner = if (hash < 50) Version3 else Version1
-          //          log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
-          //          winner
-          Version5
+      pickOpt.flatMap(v => versions.find(_.version == v)).getOrElse {
+        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+        val hash = Math.abs(ip.hashCode) % 100
+        (if (hash < 50) Version5 else Version6) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
       }
     }
     s"index.${version.version}"
