@@ -30,7 +30,7 @@ class MobileOrganizationInviteController @Inject() (
 
   def inviteUsers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS).async(parse.tolerantJson) { request =>
     val invites = (request.body \ "invites").as[JsArray].value
-    val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
+    val messageOpt = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
     val userInvites = invites.filter(inv => (inv \ "type").as[String] == "user")
     val emailInvites = invites.filter(inv => (inv \ "type").as[String] == "email")
@@ -41,17 +41,17 @@ class MobileOrganizationInviteController @Inject() (
       val externalId = (userInvite \ "id").as[ExternalId[User]]
       val userId = userMap(externalId).id.get
       val role = (userInvite \ "role").as[OrganizationRole]
-      OrganizationMemberInvitation(Left(userId), role, msg)
+      OrganizationMemberInvitation(Left(userId), role)
     }
 
     val emailInfo = emailInvites.map { emailInvite =>
       val email = (emailInvite \ "email").as[EmailAddress]
       val role = (emailInvite \ "role").as[OrganizationRole]
-      OrganizationMemberInvitation(Right(email), role, msg)
+      OrganizationMemberInvitation(Right(email), role)
     }
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, request.request.userId, userInfo ++ emailInfo)
+    val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, request.request.userId, userInfo ++ emailInfo, messageOpt)
     inviteResult.map {
       case Right(inviteesWithAccess) =>
         val result = inviteesWithAccess.map {
