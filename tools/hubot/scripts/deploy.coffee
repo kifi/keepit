@@ -17,12 +17,12 @@ module.exports = (robot) ->
   robot.respond /deploy ([^ ]*)(?: only ([^ ]*))?$/, (res) ->
 
     service = res.match[1]
-    host = res.match[2] ? 'all'
+    host = res.match[2]
     user = res.message.user.name
 
-    if host is 'all'
+    if host is undefined
       res.reply "Starting deploy for #{service}"
+      exec "deploy #{service} --iam #{user}-via-eddie"
     else
       res.reply "Starting deploy for #{service}, only on host #{host}"
-
-    exec "deploy #{service} --iam #{user}-eddie-auto --host #{host}"
+      exec "deploy #{service} --host #{host} --iam #{user}-via-eddie"
