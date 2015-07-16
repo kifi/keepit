@@ -99,7 +99,7 @@
                 <ul>
                     @for((org, score) <- recommendedOrganizations) {
                     <li>
-                        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate">
+                        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate" style="inline-block">
                           <span style="margin : 2 px">
                               <a data-hover="tooltip" title="@org.description+"
                                  class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
