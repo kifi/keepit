@@ -1,8 +1,28 @@
+# Description:
+#    Utility to automatically deploy a service
+#
+# Commands:
+#    hubot deploy <service> - Starts a deploy for the given service
+#    hubot deploy <service> only <host> - Starts a deploy for the given service, only for the given host
+
+{spawn} = require 'child_process'
+
+exec = (command) ->
+  [command, args...] = command.split(' ')
+
+  spawn command, args, {}
+
 module.exports = (robot) ->
-  robot.respond /deploy ([a-zA-Z0-9_]*)$/, (res) ->
+
+  robot.respond /deploy ([^ ]*)(?: only ([^ ]*))?$/, (res) ->
+
     service = res.match[1]
+    host = res.match[2] ? 'all'
     user = res.message.user.name
-    res.reply "Alright, kicking off deploy for service #{service}."
-    res.reply "You should see the logs in #deploy real soon"
-    @exec = (require 'child_process').exec
-    @exec "deploy #{service} --iam #{user}-via-hubot", () ->
+
+    if host is 'all'
+      res.reply "Starting deploy for #{service}"
+    else
+      res.reply "Starting deploy for #{service}, only on host #{host}"
+
+    exec "deploy #{service} --iam #{user}-eddie-auto --host #{host}"
