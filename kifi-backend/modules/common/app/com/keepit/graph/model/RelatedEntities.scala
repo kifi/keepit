@@ -64,7 +64,7 @@ object SociallyRelatedEntitiesForOrg {
 }
 
 case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntitiesForUser] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_socially_related_entities"
   def toKey(): String = id.id.toString
 }
