@@ -187,8 +187,8 @@ class UserStatisticsCommander @Inject() (
         case Right(email) => false
         case Left(user) => !candidates.map(_.userId).contains(user.id.get) &&
           !db.readOnlyMaster { implicit session =>
-            userExperimentRepo.hasExperiment(user.id.get, UserExperimentType.ADMIN) &&
-              userValueRepo.getUserValue(user.id.get, UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS).isDefined
+            userExperimentRepo.hasExperiment(user.id.get, UserExperimentType.ADMIN) ||
+              userValueRepo.getValue(user.id.get, UserValues.ignoreForPotentialOrganizations)
           }
       }
     })
