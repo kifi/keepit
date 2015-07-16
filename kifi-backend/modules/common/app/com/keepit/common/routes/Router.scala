@@ -181,12 +181,12 @@ object Search extends Service {
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
-    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String]) =
-      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug))
-    def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =
-      ServiceRoute(GET, "/internal/search/search/library/explain", Param("query", query), Param("userId", userId), Param("libraryId", libraryId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch))
-    def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =
-      ServiceRoute(GET, "/internal/search/search/user/explain", Param("query", query), Param("userId", userId), Param("resultUserId", resultUserId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch))
+    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
+    def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/library/explain", Param("query", query), Param("userId", userId), Param("libraryId", libraryId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
+    def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/user/explain", Param("query", query), Param("userId", userId), Param("resultUserId", resultUserId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")

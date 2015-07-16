@@ -237,6 +237,7 @@ class WebsiteSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    disableFullTextSearch: Boolean,
     orderBy: Option[String],
     libraryAuth: Option[String],
     idealImageSize: Option[ImageSize],
@@ -250,16 +251,17 @@ class WebsiteSearchController @Inject() (
     val userScopeFuture = getUserScope(userFilter)
     val organizationScopeFuture = getOrganizationScope(organizationFilter, request.userIdOpt)
     val proximityScope = getProximityScope(proximityFilter)
+    val searchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture)
 
     val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
-      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default
+      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default // todo(Léo): remove this backward compatibility hack, this should be explicitly supplied by client
     }
 
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      val uriSearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, uriContext)
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchFilterFuture, parsedOrderBy, maxUris, lastUUIDStr, None, debugOpt).flatMap { uriSearchResult =>
+      val uriSearchContextFuture = searchFilterFuture.map { filter => SearchContext(uriContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchContextFuture, maxUris, lastUUIDStr, None, debugOpt).flatMap { uriSearchResult =>
         getWebsiteUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
@@ -283,8 +285,8 @@ class WebsiteSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      val librarySearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, libraryContext)
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchFilterFuture, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      val librarySearchContextFuture = searchFilterFuture.map { filter => SearchContext(libraryContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchContextFuture, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val libraryIds = libraryRecordsAndVisibilityById.keySet
@@ -377,8 +379,8 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      val userSearchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture, userContext)
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userSearchFilterFuture, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      val userSearchContextFuture = searchFilterFuture.map { filter => SearchContext(userContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userSearchContextFuture, maxUsers, None, debugOpt, None).flatMap { userSearchResult =>
         val futureFriends = searchFactory.getFriends(userId)
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)

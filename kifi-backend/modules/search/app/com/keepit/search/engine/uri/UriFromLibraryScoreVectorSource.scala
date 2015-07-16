@@ -6,7 +6,7 @@ import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.engine.query.IdSetFilter
-import com.keepit.search.{ SearchConfig, SearchFilter }
+import com.keepit.search.{ SearchConfig, SearchContext }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
@@ -26,7 +26,7 @@ class UriFromLibraryScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    protected val filter: SearchFilter,
+    protected val context: SearchContext,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
     explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
@@ -94,7 +94,7 @@ class UriFromLibraryScoreVectorSource(
 
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = filter.idFilter
+      val idFilter = context.idFilter
 
       val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper
@@ -123,7 +123,7 @@ class UriFromLibraryScoreVectorSource(
   private def loadWithNoScore(libsSeen: LongArraySet, output: DataBuffer, writer: DataBufferWriter): Unit = {
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = filter.idFilter
+      val idFilter = context.idFilter
 
       val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper

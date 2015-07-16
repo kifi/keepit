@@ -100,30 +100,32 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Long], lang: Option[String], debug: Option[String]) = Action.async { request =>
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Long], lang: Option[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = Action.async { request =>
     val libId = libraryId.map(Id[Library](_))
     if (uriSearchCommander.findShard(uriId).isDefined) {
       val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-      uriSearchCommander.explain(userId, uriId, libId, lang, userExperiments, query, debug) map { explanationOpt =>
+      uriSearchCommander.explain(userId, uriId, libId, lang, userExperiments, query, debug, disablePrefixSearch, disableFullTextSearch) map { explanationOpt =>
         Ok(html.admin.explainUriResult(userId, uriId, explanationOpt))
       }
     } else {
-      distributedSearchClient.call(userId, uriId, Search.internal.explainUriResult(query, userId, uriId, libId, lang, debug), JsNull).map(r => Ok(r.body))
+      distributedSearchClient.call(userId, uriId, Search.internal.explainUriResult(query, userId, uriId, libId, lang, debug, disablePrefixSearch, disableFullTextSearch), JsNull).map(r => Ok(r.body))
     }
   }
 
-  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
+  def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, Future.successful(SearchFilter.empty), 1, disablePrefixSearch, None, debug, Some(libraryId)).map { result =>
+    val context = SearchContext(None, SearchRanking.default, SearchFilter.empty, disablePrefixSearch, disableFullTextSearch)
+    librarySearchCommander.searchLibraries(userId, langs, userExperiments, query, Future.successful(context), 1, None, debug, Some(libraryId)).map { result =>
       Ok(html.admin.explainLibraryResult(userId, libraryId, result.explanation))
     }
   }
 
-  def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean) = Action.async { request =>
+  def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val langs = acceptLangs.split(",").filter(_.nonEmpty)
-    userSearchCommander.searchUsers(userId, langs, userExperiments, query, Future.successful(SearchFilter.empty), 1, disablePrefixSearch, None, debug, Some(resultUserId)).map { result =>
+    val context = SearchContext(None, SearchRanking.default, SearchFilter.empty, disablePrefixSearch, disableFullTextSearch)
+    userSearchCommander.searchUsers(userId, langs, userExperiments, query, Future.successful(context), 1, None, debug, Some(resultUserId)).map { result =>
       Ok(html.admin.explainUserResult(userId, resultUserId, result.explanation))
     }
   }

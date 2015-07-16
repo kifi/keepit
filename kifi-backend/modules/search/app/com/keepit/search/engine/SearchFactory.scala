@@ -67,8 +67,7 @@ class SearchFactory @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     numHitsToReturn: Int,
-    filter: SearchFilter,
-    orderBy: SearchRanking,
+    context: SearchContext,
     config: SearchConfig,
     experiments: Set[UserExperimentType]): Seq[UriSearch] = {
 
@@ -77,10 +76,10 @@ class SearchFactory @Inject() (
     val clickBoostsFuture = resultClickTracker.getBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
     val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId, filter.organization)
+    val orgIdsFuture = getOrganizations(userId, context.filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
@@ -98,16 +97,16 @@ class SearchFactory @Inject() (
 
         // set ranking method (default: relevancy)
 
-        engBuilder.setRanking(orderBy)
+        engBuilder.setRanking(context.orderBy)
 
         // if this is a library restricted search, add a library filter query
-        filter.library.foreach(addLibraryFilterToUriSearch(engBuilder, _))
+        context.filter.library.foreach(addLibraryFilterToUriSearch(engBuilder, _))
 
         // if this is a user restricted search, add a user filter query
-        filter.user.foreach(addUserFilterToUriSearch(engBuilder, _))
+        context.filter.user.foreach(addUserFilterToUriSearch(engBuilder, _))
 
         // if this is a organization restricted search, add an organization filter query
-        filter.organization.foreach(addOrganizationFilterToUriSearch(engBuilder, _))
+        context.filter.organization.foreach(addOrganizationFilterToUriSearch(engBuilder, _))
 
         val librarySearcher = libraryIndexer.getSearcher
 
@@ -121,7 +120,7 @@ class SearchFactory @Inject() (
           new UriSearchImpl(
             userId,
             numHitsToReturn,
-            filter,
+            context,
             config,
             engBuilder,
             articleSearcher,
@@ -219,13 +218,12 @@ class SearchFactory @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     numHitsToReturn: Int,
-    filter: SearchFilter,
-    orderBy: SearchRanking,
+    context: SearchContext,
     config: SearchConfig): Seq[UriSearchNonUserImpl] = {
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = filter.library match {
+    val libraryIdsFuture = context.filter.library match {
       case Some(library) if library.authorized => // this non-user is treated as if he/she were a member of the library
         Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(library.id.id))))
       case Some(library) if !library.authorized => // not authorized, but the library may be a published one
@@ -256,10 +254,10 @@ class SearchFactory @Inject() (
 
         // set ranking method (default: relevancy)
 
-        engBuilder.setRanking(orderBy)
+        engBuilder.setRanking(context.orderBy)
 
         // this is a non-user, library restricted search, add a library filter query
-        addLibraryFilterToUriSearch(engBuilder, filter.library.get)
+        addLibraryFilterToUriSearch(engBuilder, context.filter.library.get)
 
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
@@ -270,7 +268,7 @@ class SearchFactory @Inject() (
 
           new UriSearchNonUserImpl(
             numHitsToReturn,
-            filter,
+            context,
             config,
             engBuilder,
             articleSearcher,
@@ -300,25 +298,24 @@ class SearchFactory @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     numHitsToReturn: Int,
-    disablePrefixSearch: Boolean,
-    filter: SearchFilter,
+    context: SearchContext,
     config: SearchConfig,
     experiments: Set[UserExperimentType],
     explain: Option[Id[Library]]): Seq[LibrarySearch] = {
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId, filter.organization)
+    val orgIdsFuture = getOrganizations(userId, context.filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
       DefaultAnalyzer.getAnalyzerWithStemmer(firstLang),
       secondLang.map(DefaultAnalyzer.getAnalyzer),
       secondLang.map(DefaultAnalyzer.getAnalyzerWithStemmer),
-      disablePrefixSearch,
+      context.disablePrefixSearch,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
@@ -329,7 +326,7 @@ class SearchFactory @Inject() (
         val parseDoneAt = System.currentTimeMillis()
 
         // if this is a user restricted search, add a user filter queries
-        filter.user.foreach { user =>
+        context.filter.user.foreach { user =>
           addUserFilterToLibrarySearch(engBuilder, user)
         }
 
@@ -345,7 +342,7 @@ class SearchFactory @Inject() (
           new LibrarySearch(
             userId,
             numHitsToReturn,
-            filter,
+            context,
             config,
             engBuilder,
             librarySearcher,
@@ -375,25 +372,24 @@ class SearchFactory @Inject() (
     firstLang: Lang,
     secondLang: Option[Lang],
     numHitsToReturn: Int,
-    disablePrefixSearch: Boolean,
-    filter: SearchFilter,
+    context: SearchContext,
     config: SearchConfig,
     experiments: Set[UserExperimentType],
     explain: Option[Id[User]]): Seq[UserSearch] = {
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
-    val orgIdsFuture = getOrganizations(userId, filter.organization)
+    val orgIdsFuture = getOrganizations(userId, context.filter.organization)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(firstLang),
       DefaultAnalyzer.getAnalyzerWithStemmer(firstLang),
       secondLang.map(DefaultAnalyzer.getAnalyzer),
       secondLang.map(DefaultAnalyzer.getAnalyzerWithStemmer),
-      disablePrefixSearch,
+      context.disablePrefixSearch,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
@@ -413,7 +409,7 @@ class SearchFactory @Inject() (
           new UserSearch(
             userId,
             numHitsToReturn,
-            filter,
+            context,
             config,
             engBuilder,
             librarySearcher,

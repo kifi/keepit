@@ -3,7 +3,7 @@ package com.keepit.search.engine.user
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig }
+import com.keepit.search.{ SearchContext, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
@@ -19,7 +19,7 @@ class UserFromKeepsScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    protected val filter: SearchFilter,
+    protected val context: SearchContext,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
     libraryQualityEvaluator: LibraryQualityEvaluator,
@@ -29,7 +29,7 @@ class UserFromKeepsScoreVectorSource(
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-    val idFilter = filter.idFilter
+    val idFilter = context.idFilter
 
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer

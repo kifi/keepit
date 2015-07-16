@@ -8,7 +8,7 @@ import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.index.user.{ UserFields, UserIndexer }
-import com.keepit.search.{ SearchConfig, SearchFilter }
+import com.keepit.search.{ SearchConfig, SearchContext }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ AtomicReaderContext, Term }
@@ -25,7 +25,7 @@ class LibraryFromUserScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    protected val filter: SearchFilter,
+    protected val context: SearchContext,
     config: SearchConfig,
     val monitoredAwait: MonitoredAwait,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
@@ -72,7 +72,7 @@ class LibraryFromUserScoreVectorSource(
 
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = filter.idFilter
+      val idFilter = context.idFilter
 
       val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(reader)
 

@@ -4,7 +4,7 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine.{ DirectScoreContext, Visibility, VisibilityEvaluator, ScoreVectorSourceLike }
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
-import com.keepit.search.{ SearchFilter, SearchConfig }
+import com.keepit.search.{ SearchContext, SearchConfig }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.AtomicReaderContext
@@ -19,7 +19,7 @@ class LibraryScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    protected val filter: SearchFilter,
+    protected val context: SearchContext,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSourceLike with VisibilityEvaluator {
@@ -30,7 +30,7 @@ class LibraryScoreVectorSource(
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-    val idFilter = filter.idFilter
+    val idFilter = context.idFilter
 
     // execute the query
     val pq = createScorerQueue(scorers, coreSize)
