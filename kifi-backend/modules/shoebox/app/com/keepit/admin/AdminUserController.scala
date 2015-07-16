@@ -252,6 +252,7 @@ class AdminUserController @Inject() (
     val userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
+    val fOrgRecos = abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
@@ -280,10 +281,12 @@ class AdminUserController @Inject() (
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       contacts <- contactsF
+      orgRecos <- fOrgRecos
     } yield {
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score)) }
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations))
+        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
     }
   }
 
