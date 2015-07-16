@@ -47,7 +47,7 @@ class OrganizationRecommendationForUserRepoImpl @Inject() (
   override def invalidateCache(recommendation: OrganizationRecommendationForUser)(implicit session: RSession): Unit = {}
 
   private val compiledGetByUserAndOrg = Compiled { (userId: Column[Id[User]], organizationId: Column[Id[Organization]]) =>
-    for (row <- rows if row.userId === userId && row.organizationId === row.organizationId) yield row
+    for (row <- rows if row.userId === userId && row.organizationId === organizationId) yield row
   }
 
   private def internRecommendation(userId: Id[User], organizationId: Id[Organization], irrelevant: Boolean)(implicit session: RWSession): OrganizationRecommendationForUser = {
