@@ -12,7 +12,10 @@ import org.apache.lucene.search.{ Query, Scorer }
 
 class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, context: SearchContext, explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSourceLike {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, ArticleFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = ArticleFields.minimalSearchFields ++ ArticleFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else ArticleFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

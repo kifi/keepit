@@ -7,7 +7,7 @@ import com.keepit.search.{ SearchContext, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ Term, AtomicReaderContext }
+import org.apache.lucene.index.{ AtomicReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -25,7 +25,13 @@ class UserFromKeepsScoreVectorSource(
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[UserSearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.strictTextSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = {
+      if (context.disableFullTextSearch) Set.empty[String] // effectively not executing this source
+      else (KeepFields.minimalSearchFields ++ KeepFields.fullTextSearchFields) // no prefix search
+    }
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

@@ -23,9 +23,9 @@ object LibraryFields {
   val recordField = "rec"
   val keepCountValueField = "kc"
 
-  val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
-  val textSearchFields = strictTextSearchFields + namePrefixField
-  val nameSearchFields = Set(nameField, nameStemmedField)
+  val minimalSearchFields = Set(nameField, nameStemmedField)
+  val fullTextSearchFields = Set(descriptionField, descriptionStemmedField)
+  val prefixSearchFields = Set(namePrefixField)
 
   val maxPrefixLength = 8
 

@@ -3,6 +3,7 @@ package com.keepit.search.engine.library
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine.{ DirectScoreContext, Visibility, VisibilityEvaluator, ScoreVectorSourceLike }
 import com.keepit.search.engine.query.core.QueryProjector
+import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.{ SearchContext, SearchConfig }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
@@ -26,7 +27,10 @@ class LibraryScoreVectorSource(
 
   private[this] val librarySourceBoost = config.asFloat("librarySourceBoost")
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = LibraryFields.minimalSearchFields ++ LibraryFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else LibraryFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

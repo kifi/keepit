@@ -26,7 +26,10 @@ class UserScoreVectorSource(
 
   private[this] val userSourceBoost = config.asFloat("userSourceBoost")
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = UserFields.minimalSearchFields ++ UserFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else UserFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

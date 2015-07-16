@@ -15,7 +15,6 @@ import org.apache.lucene.index.{ AtomicReaderContext, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Scorer, Query }
 import scala.collection.JavaConversions._
-import scala.concurrent.duration._
 import scala.concurrent.Future
 
 class UriFromLibraryScoreVectorSource(
@@ -37,7 +36,7 @@ class UriFromLibraryScoreVectorSource(
   private[this] var memberLibraryKeepCount = 0
   private[this] var authorizedLibraryKeepCount = 0
 
-  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryNameBoost)
+  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryNameBoost, context.disableFullTextSearch)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     libraryNameSource.prepare(query, matchWeightNormalizer)
@@ -180,11 +179,17 @@ class UriFromLibraryScoreVectorSource(
     debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
   }
 
-  private class LibraryNameSource(protected val searcher: Searcher, libraryNameBoost: Float) extends ScoreVectorSourceLike {
+  private class LibraryNameSource(protected val searcher: Searcher, libraryNameBoost: Float, disableFullTextSearch: Boolean) extends ScoreVectorSourceLike {
 
     private[this] lazy val libIdFilter = new IdSetFilter(memberLibraryIds)
 
-    override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.nameSearchFields) // trim down to name fields
+    override protected def preprocess(query: Query): Query = {
+      val searchFields = {
+        if (disableFullTextSearch) Set.empty[String] // effectively not executing this source
+        else LibraryFields.minimalSearchFields // no prefix search, trim down to name fields
+      }
+      QueryProjector.project(query, searchFields)
+    }
 
     protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

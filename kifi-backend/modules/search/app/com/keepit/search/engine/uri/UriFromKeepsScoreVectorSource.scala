@@ -28,7 +28,10 @@ class UriFromKeepsScoreVectorSource(
 
   private[this] var discoverableKeepCount = 0
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.strictTextSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = KeepFields.minimalSearchFields ++ KeepFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else KeepFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

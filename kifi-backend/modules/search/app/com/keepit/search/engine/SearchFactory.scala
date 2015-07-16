@@ -86,7 +86,7 @@ class SearchFactory @Inject() (
       DefaultAnalyzer.getAnalyzerWithStemmer(firstLang),
       secondLang.map(DefaultAnalyzer.getAnalyzer),
       secondLang.map(DefaultAnalyzer.getAnalyzerWithStemmer),
-      false,
+      context.disablePrefixSearch,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -241,7 +241,7 @@ class SearchFactory @Inject() (
       DefaultAnalyzer.getAnalyzerWithStemmer(firstLang),
       secondLang.map(DefaultAnalyzer.getAnalyzer),
       secondLang.map(DefaultAnalyzer.getAnalyzerWithStemmer),
-      false,
+      context.disablePrefixSearch,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)

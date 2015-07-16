@@ -7,7 +7,7 @@ import com.keepit.model.User
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
-import com.keepit.search.index.user.{ UserFields, UserIndexer }
+import com.keepit.search.index.user.{ UserFields }
 import com.keepit.search.{ SearchConfig, SearchContext }
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBufferReader, DataBuffer, DataBufferWriter }
@@ -31,7 +31,7 @@ class LibraryFromUserScoreVectorSource(
     explanation: Option[LibrarySearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
 
   private[this] val libraryOwnerBoost = config.asFloat("libraryOwnerBoost")
-  private[this] val userSource: UserSource = new UserSource(userSearcher, libraryOwnerBoost)
+  private[this] val userSource: UserSource = new UserSource(userSearcher, libraryOwnerBoost, context.disablePrefixSearch)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     userSource.prepare(query, matchWeightNormalizer)
@@ -97,9 +97,12 @@ class LibraryFromUserScoreVectorSource(
     }
   }
 
-  private class UserSource(protected val searcher: Searcher, libraryOwnerBoost: Float) extends ScoreVectorSourceLike {
+  private class UserSource(protected val searcher: Searcher, libraryOwnerBoost: Float, disablePrefixSearch: Boolean) extends ScoreVectorSourceLike {
 
-    override protected def preprocess(query: Query): Query = QueryProjector.project(query, UserFields.nameSearchFields) // trim down to name fields
+    override protected def preprocess(query: Query): Query = {
+      val searchFields = UserFields.minimalSearchFields ++ (if (disablePrefixSearch) Set.empty else UserFields.prefixSearchFields) // trim down to name fields
+      QueryProjector.project(query, searchFields)
+    }
 
     protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
