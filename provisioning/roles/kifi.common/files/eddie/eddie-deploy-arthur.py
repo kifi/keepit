@@ -93,7 +93,8 @@ def message_slack(msg):
     "text": msg,
     "channel": "#deploy",
     "username": "eddie",
-    "icon_emoji": ":star2:"
+    "icon_emoji": ":star2:",
+    "link_names": 1
   }
   # webhook url for #deploy channel
   url = 'https://hooks.slack.com/services/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'
@@ -248,6 +249,6 @@ if __name__=="__main__":
       lock.unlock()
       log("Deployment Complete")
   except Exception, e:
-    log("FATAL ERROR: " + str(e))
+    log("@channel: FATAL ERROR: " + str(e))
     raise
 
