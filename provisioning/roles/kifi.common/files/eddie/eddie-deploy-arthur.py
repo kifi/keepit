@@ -115,6 +115,8 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in live_instances]
 
 if __name__=="__main__":
+  lock = FileLock("/home/eng/" + args.serviceType + ".lock")
+
   try:
     parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
     parser.add_argument(
@@ -152,7 +154,7 @@ if __name__=="__main__":
     parser.add_argument(
       '--nolock',
       action = 'store_true',
-      help = "Do *not* try to prevent simultaneous deploys with a local lock",
+      help = "Ignore the local lock, so multiple deploys of the same service can happen at once",
     )
 
 
@@ -165,16 +167,12 @@ if __name__=="__main__":
       if userName=="eng":
         print "Yo, dude, set your name! ('--iam' option)"
 
-    lock = FileLock("/home/eng/" + args.serviceType + ".lock")
-
     instances = getAllInstances()
 
     if args.host:
       instances = [instance for instance in instances if instance.name==args.host]
     else:
       instances = [instance for instance in instances if instance.service==args.serviceType and instance.mode!="canary"]
-
-    assets = S3Assets(args.serviceType, "fortytwo-builds")
 
     command = ["python", "/home/fortytwo/eddie/eddie-self-deploy.py"]
 
@@ -192,6 +190,8 @@ if __name__=="__main__":
       version = assets.latest().hash
       full_version = assets.latest().name + " (latest)"
 
+    slack_version = "<https://github.com/kifi/keepit/commit/" + version + "|" + full_version + ">"
+
     command.append(version)
 
     if args.mode and args.mode=="force":
@@ -201,7 +201,7 @@ if __name__=="__main__":
         print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
         sys.exit(0)
 
-    log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
+    log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))
 
     if args.mode and args.mode=="force":
       try:
@@ -244,10 +244,11 @@ if __name__=="__main__":
           remoteProc.send_signal(2)
           lock.unlock()
           sys.exit(1)
-        time.sleep(15)
+        time.sleep(5)
       lock.unlock()
       log("Deployment Complete")
   except Exception, e:
     log("FATAL ERROR: " + str(e))
+    lock.unlock()
     raise
 

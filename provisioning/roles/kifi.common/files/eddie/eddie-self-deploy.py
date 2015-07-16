@@ -91,6 +91,7 @@ def aquireLock(): #return truthy when lock aquired
     return False
 
 def releaseLock(): #silently fails if there is no lock
+  global lockFile
   if lockFile is not None:
     try:
       portalocker.unlock(lockFile)
@@ -309,17 +310,17 @@ if __name__ == "__main__" and not isVagrantInstance():
     deployId = ''.join(random.choice(string.hexdigits) for i in range(3)).lower()
     logHead = "[%s:%s:%s] " % (name, serviceType, deployId)
     log = logger(logHead)
-    log("Starting Self-Deploy with version: " + version)
     #are we good to deploy?
     if not force and not aquireLock():
       log("Deploy in progress. Aborting this one.")
       releaseLock()
       sys.exit(1)
     #we now have the lock
+    log("Starting self-deploy of " + serviceType + " with version: " + version)
 
     try:
       #step one: make sure we have the requested version on the machine (and fetch it if we don't) -
-      log("Making sure requested version is on the machine.")
+      #log("Making sure requested version is on the machine.")
       fullVersionName = ensureVersion(serviceType, version)
 
       #step two: stop the service + remove the symlink -
@@ -343,16 +344,17 @@ if __name__ == "__main__" and not isVagrantInstance():
       while (waitSoFar < maxWaitTime and not serviceUp):
         serviceUp = checkUp()
         if not serviceUp:
-          if (waitSoFar>0 and int(waitSoFar)%60==0): log("Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
+          if (waitSoFar>0 and int(waitSoFar)%120==0): log("Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
           time.sleep(1)
           waitSoFar = time.time() - waitStart
         else:
           break
+      releaseLock()
+
       if serviceUp:
         log("Service Up. Deploy Finished.")
       else:
-        raise DeployAbortException("Service failed to come up. Deployment Failed! Rollback Advised.")
-      releaseLock()
+        raise DeployAbortException("Service failed to come up. Deployment Failed! Rollback Advised. @channel")
 
 
     except DeployAbortException as e:
