@@ -211,8 +211,8 @@ class UserStatisticsCommander @Inject() (
       experiments = experiments
     )
   }
-  def organizationStatisticsOverview(orgId: Id[Organization])(implicit session: RSession): OrganizationStatisticsOverview = {
-    val org = orgRepo.get(orgId)
+  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): OrganizationStatisticsOverview = {
+    val orgId = org.id.get
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
     val numKeeps = libraries.map(_.keepCount).sum
 

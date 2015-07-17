@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
-import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
+import com.keepit.common.controller.{ PaginationActions, AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
@@ -28,17 +28,21 @@ class AdminOrganizationController @Inject() (
     handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
-    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
+    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   private val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
 
-  def organizationsView = AdminUserPage { implicit request =>
-    val orgsStats = db.readOnlyMaster { implicit session =>
-      val orgIds = orgRepo.all.map(_.id.get)
-      orgIds.map { orgId => orgId -> statsCommander.organizationStatisticsOverview(orgId) }.toMap
+  def organizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
+    val orgsStats = db.readOnlyReplica { implicit session =>
+      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org))
     }
 
-    Ok(html.admin.organizations(orgsStats, fakeOwnerId))
+    val orgsStatsGrouped = orgsStats.grouped(30).toSeq
+
+    PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, orgsStatsGrouped.apply)(page) { implicit paginated =>
+      Ok(html.admin.organizations(orgsStats, fakeOwnerId))
+    }(authenticated)
+
   }
 
   def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>

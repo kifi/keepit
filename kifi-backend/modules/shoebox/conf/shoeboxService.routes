@@ -706,7 +706,8 @@ POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
-GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
+GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(0)
+GET     /admin/organizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int)
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView

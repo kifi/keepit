@@ -116,7 +116,7 @@ class AdminUserController @Inject() (
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander,
-    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginatedActions {
+    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginationActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()

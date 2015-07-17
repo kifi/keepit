@@ -2,7 +2,7 @@
 @import com.keepit.model._
 @import com.keepit.common.db._
 @(
-orgsStats: Map[Id[Organization], OrganizationStatisticsOverview],
+orgsStats: Seq[OrganizationStatisticsOverview],
 fakeOwnerId: Id[User]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 

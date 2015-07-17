@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 case class PaginatedRequest[E, A](request: Request[A], items: Seq[E], page: Int) extends WrappedRequest[A](request)
 
-trait PaginatedActions {
+trait PaginationActions {
 
   object PaginatedPage {
 
