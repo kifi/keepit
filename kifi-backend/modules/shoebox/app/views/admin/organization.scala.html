@@ -86,9 +86,9 @@ orgStats: OrganizationStatistics
     <input type="Submit" value="Add">
 </form>
 
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="POST" class="form-inline refresh-reco-list">
-    # of Recommendations: <input type="number" name="numMemberRecos" value="20">
-    <input type="button" value="Refresh">
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="GET" class="form-inline refresh-reco-list">
+    # of Recommendations: <input type="number" name="numMemberRecos" value="30">
+    <input type="Submit" value="Refresh">
 </form>
 
 
@@ -101,27 +101,11 @@ orgStats: OrganizationStatistics
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td class="block">@if(reco.userOrEmail.isLeft) { @{ adminHelper.userDisplay(reco.userOrEmail.left.get) } }</td>
-            <td class="block">@if(reco.userOrEmail.isLeft) { @{ reco.userOrEmail.left.get.primaryEmail.getOrElse("") } } else { @{reco.userOrEmail.right.get} }</td>
+            <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
+            <td class="block">@{reco.user.primaryEmail}</td>
             <td>@reco.score</td>
-            <td>
-                <ul>
-                    @for( org <- reco.associatedOrgs ) {
-                    <li>
-                        <span style="margin : 2 px">
-                            <a data-hover="tooltip" title="@org.description+"
-                             class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
-                              @org.name
-                            </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a>
-                        </span>
-                    </li>
-                    }
-                </ul>
-            </td>
-            @if(reco.userOrEmail.isLeft) {
-                <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.userOrEmail.left.get.id.get})"></td>
-                <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.userOrEmail.left.get.id.get})"></td>
-            }
+            <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
+            <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
         </tr>
     }
 </table>

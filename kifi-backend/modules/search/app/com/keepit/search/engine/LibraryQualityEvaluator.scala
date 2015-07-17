@@ -2,26 +2,15 @@ package com.keepit.search.engine
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.strings.Profanity
-import com.keepit.search.index.Searcher
-import com.keepit.search.index.graph.keep.KeepFields
-import com.keepit.search.index.graph.library.LibraryFields
-import com.keepit.search.index.sharding.ActiveShards
-import org.apache.lucene.index.Term
 
 @Singleton
-class LibraryQualityEvaluator @Inject() (activeShards: ActiveShards) {
-
-  private val numberOfShards = activeShards.all.size
+class LibraryQualityEvaluator @Inject() () {
 
   // todo(Léo): Use library kind?
 
-  def getInverseLibraryFrequencyBoost(keepCount: Int): Float = logDecreasingScore(1, keepCount).toFloat
+  def getInverseLibraryFrequencyBoost(keepCount: Long): Float = logDecreasingScore(1, keepCount).toFloat
   def getPopularityBoost(memberCount: Long): Float = 1 - logDecreasingScore(1, memberCount).toFloat
-  def getPublishedLibraryBoost(keepCount: Int): Float = (logNormalDensity(mu, sigma, keepCount) / maxProbability).toFloat
-
-  def estimateKeepCount(keepSearcher: Searcher, libId: Long): Int = { // assuming uniform distribution across shards
-    keepSearcher.freq(new Term(KeepFields.libraryField, libId.toString)) * numberOfShards
-  }
+  def getPublishedLibraryBoost(keepCount: Long): Float = (logNormalDensity(mu, sigma, keepCount) / maxProbability).toFloat
 
   private def logDecreasingScore(rate: Double, x: Double): Double = if (x < 0 || rate < 0) 0 else 1.0 / (1 + Math.log(1 + rate * x))
 

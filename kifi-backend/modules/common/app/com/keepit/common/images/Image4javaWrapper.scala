@@ -50,23 +50,6 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  private def addOptions(format: ImageFormat, operation: IMOperation): IMOps = format match {
-    //                -quality 100 -define webp:lossless=true -define webp:method=6
-    // optionally use -quality 80  -define webp:auto-filter=true -define webp:method=6
-    case ImageFormat.PNG => operation.strip().quality(95d).define("webp:auto-filter=true").define("webp:method=6")
-    // -strip -gaussian-blur 0.05 -quality 75% source.jpg result.jpg
-    case ImageFormat.JPG => operation.strip().gaussianBlur(0.05).quality(75d)
-    case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
-  }
-
-  private def imageByteSize(img: File): Int = Try {
-    img.length().toInt
-  } getOrElse (-1) //this is only for logging, I don't want it to break production
-
-  def resizeImage(image: File, format: ImageFormat, boundingBox: Int): Try[File] = {
-    resizeImage(image: File, format: ImageFormat, boundingBox, boundingBox)
-  }
-
   /**
    * using temporary file for resized image reading. for more info see http://www.imagemagick.org/discourse-server/viewtopic.php?t=19621
    */
@@ -179,7 +162,8 @@ class Image4javaWrapper @Inject() (
 
   private def handleExceptions(convert: ConvertCmd, operation: IMOperation): Unit = {
     if (playMode == Mode.Test) {
-      println(getScript(convert, operation))
+      // If you need the script printed in tests, uncomment this:
+      //println(getScript(convert, operation))
     }
     try {
       convert.run(operation)
@@ -206,4 +190,37 @@ class Image4javaWrapper @Inject() (
     val cause = e.getCause
     if (cause == null || cause == e) e else rootException(cause)
   }
+
+  private def addOptions(format: ImageFormat, operation: IMOperation): IMOps = format match {
+    //                -quality 100 -define webp:lossless=true -define webp:method=6
+    // optionally use -quality 80  -define webp:auto-filter=true -define webp:method=6
+    case ImageFormat.PNG =>
+      operation
+        .strip()
+        .quality(95d)
+        .dither("None")
+        .define("png:compression-filter=5")
+        .define("png:compression-level=9")
+        .define("png:compression-filter=5")
+        .define("png:compression-strategy=1")
+        .define("png:exclude-chunk=all")
+        .define("webp:auto-filter=true")
+        .define("webp:method=6")
+        .colorspace("sRGB")
+        .interlace("None")
+    // -strip -gaussian-blur 0.05 -quality 75% source.jpg result.jpg
+    case ImageFormat.JPG =>
+      operation
+        .strip()
+        .gaussianBlur(0.05)
+        .quality(75d)
+        .define("jpeg:fancy-upsampling=off")
+        .colorspace("sRGB")
+        .interlace("None")
+    case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
+  }
+
+  private def imageByteSize(img: File): Int = Try {
+    img.length().toInt
+  } getOrElse (-1) //this is only for logging, I don't want it to break production
 }

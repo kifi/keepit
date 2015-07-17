@@ -37,6 +37,7 @@ class SocialWanderingCommander @Inject() (
           Some(sociallyRelatedPeople)
         }
       } else {
+        log.error(s"userId: $userId not found, cannot get socially related entities")
         Future.successful(None)
       }
     }
@@ -52,6 +53,7 @@ class SocialWanderingCommander @Inject() (
           Some(sociallyRelatedPeople)
         }
       } else {
+        log.error(s"orgId: $orgId not found, cannot get socially related entities")
         Future.successful(None)
       }
     }

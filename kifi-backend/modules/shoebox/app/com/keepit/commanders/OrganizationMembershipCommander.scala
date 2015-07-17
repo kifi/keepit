@@ -31,10 +31,12 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
+  def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership]
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
+  def getPermissionsHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission]
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
 
   def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean]
@@ -65,7 +67,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
+  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = {
+    db.readOnlyReplica { implicit session => getPermissionsHelper(orgId, userIdOpt) }
+  }
+  def getPermissionsHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
     val org = organizationRepo.get(orgId)
     userIdOpt match {
       case None => org.getNonmemberPermissions
@@ -114,6 +119,13 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
+  def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]] = {
+    db.readOnlyReplica { implicit session =>
+      val allOrgIds = organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+      allOrgIds.filter(getPermissionsHelper(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
+    }
+  }
+
   private def buildMaybeMembers(members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
     val (invitedUserIds, invitedEmailAddresses) = invitees.partition(_.userId.nonEmpty)
     val usersMap = db.readOnlyMaster { implicit session =>
@@ -158,9 +170,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
           requesterIsOwner || requesterOutranksTarget
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
+          val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
           val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
           val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
-          requesterRemovingSelf || requesterOutranksTarget
+          requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget
       }
     }
   }

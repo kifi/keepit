@@ -6,7 +6,9 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
@@ -17,9 +19,9 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
-  def getOrganizationView(orgId: Id[Organization]): OrganizationView
-  def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard]
-  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo]
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
+  def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -41,7 +43,10 @@ class OrganizationCommanderImpl @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    basicUserRepo: BasicUserRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
+    airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
@@ -49,12 +54,12 @@ class OrganizationCommanderImpl @Inject() (
   // TODO(ryan): do the smart thing and add a limit/offset
   def getAllOrganizationIds: Seq[Id[Organization]] = db.readOnlyReplica { implicit session => orgRepo.all().map(_.id.get) }
 
-  def getOrganizationView(orgId: Id[Organization]): OrganizationView = {
-    db.readOnlyReplica { implicit session => getOrganizationViewHelper(orgId) }
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
+    db.readOnlyReplica { implicit session => getOrganizationViewHelper(orgId, viewerIdOpt) }
   }
-  def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard] = {
+  def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {
     db.readOnlyReplica { implicit session =>
-      orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId) }.toMap
+      orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId, viewerIdOpt) }.toMap
     }
   }
 
@@ -62,7 +67,11 @@ class OrganizationCommanderImpl @Inject() (
     orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
   }
 
-  private def getOrganizationViewHelper(orgId: Id[Organization])(implicit session: RSession): OrganizationView = {
+  private def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationView = {
+    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
+      airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
+    }
+
     val org = orgRepo.get(orgId)
     val orgHandle = org.getHandle
     val orgName = org.name
@@ -75,8 +84,9 @@ class OrganizationCommanderImpl @Inject() (
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
-    val librariesByVisibility = libraryRepo.countLibrariesForOrgByVisibility(orgId)
-    val numPublicLibraries = librariesByVisibility(LibraryVisibility.PUBLISHED) // TODO: find libraries that are visible to the requester
+
+    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
+
     OrganizationView(
       orgId = Organization.publicId(orgId),
       ownerId = ownerId,
@@ -86,10 +96,13 @@ class OrganizationCommanderImpl @Inject() (
       avatarPath = avatarPath,
       members = membersAsBasicUsers,
       numMembers = memberCount,
-      numLibraries = numPublicLibraries)
+      numLibraries = numLibraries)
   }
 
-  private def getOrganizationCardHelper(orgId: Id[Organization])(implicit session: RSession): OrganizationCard = {
+  private def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
+    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
+      airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
+    }
     val org = orgRepo.get(orgId)
     val orgHandle = org.getHandle
     val orgName = org.name
@@ -100,8 +113,7 @@ class OrganizationCommanderImpl @Inject() (
     val numMembers = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    val librariesByVisibility = libraryRepo.countLibrariesForOrgByVisibility(orgId)
-    val numPublicLibs = librariesByVisibility(LibraryVisibility.PUBLISHED) // TODO: actually find the number of libraries
+    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
     OrganizationCard(
       orgId = Organization.publicId(orgId),
@@ -111,13 +123,27 @@ class OrganizationCommanderImpl @Inject() (
       description = description,
       avatarPath = avatarPath,
       numMembers = numMembers,
-      numLibraries = numPublicLibs)
+      numLibraries = numLibraries)
   }
 
-  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo] = {
-    val allLibraries = db.readOnlyReplica { implicit session => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }
-    val visibleLibraries = allLibraries.filter(lib => libraryCommander.canViewLibrary(userIdOpt, lib))
-    libraryCommander.getLibrarySummaries(visibleLibraries.drop(offset.value.toInt).take(limit.value.toInt).map(_.id.get).toSeq)
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
+    db.readOnlyReplica { implicit session =>
+      val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
+      val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId))
+      val viewerOpt = userIdOpt.map(userRepo.get)
+      libraryCommander.createLibraryCardInfos(visibleLibraries.toSeq, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+    }
+  }
+
+  private def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library] = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
+  }
+  private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.countVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships)
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {

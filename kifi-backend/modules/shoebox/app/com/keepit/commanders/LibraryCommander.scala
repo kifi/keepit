@@ -54,6 +54,7 @@ trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
   def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo]
+  def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo]
   def getLibraryPath(library: Library): String
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembershipInfo])
@@ -70,6 +71,7 @@ trait LibraryCommander {
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
+  def canViewLibraryHelper(userId: Option[Id[User]], library: Library, authToken: Option[String] = None)(implicit session: RSession): Boolean
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
@@ -90,7 +92,7 @@ trait LibraryCommander {
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
-  def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)]
+  def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
@@ -171,14 +173,16 @@ class LibraryCommanderImpl @Inject() (
 
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
     db.readOnlyMaster { implicit session =>
-      val librariesById = libraryRepo.getLibraries(libraryIds.toSet) // cached
-      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet) // cached
-      libraryIds.map { libId =>
-        val library = librariesById(libId)
-        val owner = ownersById(library.ownerId)
-        val org = library.organizationId.map { orgRepo.get(_) }
-        LibraryInfo.fromLibraryAndOwner(library, None, owner, org) // library images are not used, so no need to include
-      }
+      val libraries = libraryRepo.getLibraries(libraryIds.toSet).values.toSeq // cached
+      getLibrarySummariesHelper(libraries)
+    }
+  }
+  def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo] = {
+    val ownersById = basicUserRepo.loadAll(libraries.map(_.ownerId).toSet) // cached
+    libraries.map { lib =>
+      val owner = ownersById(lib.ownerId)
+      val org = lib.organizationId.map(orgRepo.get)
+      LibraryInfo.fromLibraryAndOwner(lib, None, owner, org) // library images are not used, so no need to include
     }
   }
 
@@ -807,28 +811,29 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean = {
+  def canViewLibraryHelper(userIdOpt: Option[Id[User]], library: Library, authToken: Option[String] = None)(implicit session: RSession): Boolean = {
     library.visibility == LibraryVisibility.PUBLISHED || // published library
-      db.readOnlyMaster { implicit s =>
-        userId match {
-          case Some(id) =>
-            val userIsInLibrary = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty
-            val userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
-            val userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
-            val userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
-            val libIsOrgVisible = library.visibility == LibraryVisibility.ORGANIZATION
-            userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (libIsOrgVisible && userIsInOrg)
-          case None =>
-            getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
-        }
-      }
+      (userIdOpt match {
+        case Some(id) =>
+          val userIsInLibrary = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty
+          val userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
+          val userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+          val userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
+          val libIsOrgVisible = library.visibility == LibraryVisibility.ORGANIZATION
+          userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (libIsOrgVisible && userIsInOrg)
+        case None =>
+          getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+      })
+  }
+  def canViewLibrary(userIdOpt: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean = {
+    db.readOnlyReplica { implicit session => canViewLibraryHelper(userIdOpt, library, authToken) }
   }
 
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean = {
-    val library = db.readOnlyReplica { implicit session =>
-      libraryRepo.get(libraryId)
+    db.readOnlyReplica { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      library.state == LibraryStates.ACTIVE && canViewLibraryHelper(userId, library, accessToken)
     }
-    library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
@@ -1444,10 +1449,10 @@ class LibraryCommanderImpl @Inject() (
     libraryAnalytics.viewedLibrary(viewerId, library, context)
   }
 
-  def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
+  def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(ownerId), slug).map((_, false)) orElse
-        libraryAliasRepo.getBySpaceAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
+      libraryRepo.getBySpaceAndSlug(space, slug).map((_, false)) orElse
+        libraryAliasRepo.getBySpaceAndSlug(space, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
   }
 

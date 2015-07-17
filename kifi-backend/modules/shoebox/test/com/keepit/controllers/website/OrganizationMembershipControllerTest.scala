@@ -67,7 +67,6 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val json = Json.parse(contentAsString(result))
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
-          println(json \ "members")
           (json \ "members" \\ "id").length == n
           (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
           (json \ "members" \\ "lastInvitedAt").length === 0 // members do not have open invitations

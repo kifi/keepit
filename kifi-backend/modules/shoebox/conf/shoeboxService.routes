@@ -696,6 +696,7 @@ GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
 POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.AdminUserController.setIgnoreForPotentialOrganizations(id: Id[User])
+POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
 
 
 GET     /admin/organization/:id                 @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization])
@@ -951,6 +952,7 @@ GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.interna
 
 GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
 GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
+GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
@@ -1019,13 +1021,13 @@ GET     /profile                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /:name                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
-GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
 GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:name/:library/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
-GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
-GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
+GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
+GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)

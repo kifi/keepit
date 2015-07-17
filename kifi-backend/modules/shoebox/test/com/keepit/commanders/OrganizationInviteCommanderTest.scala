@@ -12,6 +12,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
@@ -29,7 +30,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
       userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
-      val org = organizationRepo.save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
+      val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
       val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.OWNER))
       (org, owner, membership)
     }
@@ -45,9 +46,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   "organization invite commander" should {
     "invite members" in {
       withDb(modules: _*) { implicit injector =>
-        val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Right(EmailAddress("kiwi-test@kifi.com")), OrganizationRole.MEMBER, Some("join, we have kiwis at kifi")))
+        val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Right(EmailAddress("kiwi-test@kifi.com")), OrganizationRole.MEMBER))
         val (org, owner, _) = setup
-        val result = Await.result(orgInviteCommander.inviteToOrganization(org.id.get, owner.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
+        val result = Await.result(orgInviteCommander.inviteToOrganization(org.id.get, owner.id.get, invitees, Some("Would you kindly join Kifi?")), new FiniteDuration(3, TimeUnit.SECONDS))
 
         result.isRight === true
         val inviteesWithAccess = result.right.get
@@ -72,14 +73,14 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       "do not demote invited members" in {
         withDb(modules: _*) { implicit injector =>
           val (org, owner, _) = setup
-          val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
+          val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Left(owner.id.get), OrganizationRole.MEMBER))
           val inviter = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
             val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
             organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
             bond
           }
-          val result = Await.result(orgInviteCommander.inviteToOrganization(org.id.get, inviter.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteToOrganization(org.id.get, inviter.id.get, invitees, Some("I just demoted you from owner")), new FiniteDuration(3, TimeUnit.SECONDS))
 
           result.isRight === true
           val inviteesWithRole = result.right.get

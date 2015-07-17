@@ -53,7 +53,7 @@ object RichIpAddress {
 
 object UserIpAddressRules {
   val blacklistCompanies = Set("Digital Ocean", "AT&T Wireless", "Verizon Wireless", "Best Buy Co.", "Leaseweb USA", "Nobis Technology Group, LLC",
-    "San Francisco International Airport", "Nomad Digital", "Choopa, LLC", "Linode").map(_.toLowerCase)
+    "San Francisco International Airport", "Nomad Digital", "Choopa, LLC", "Linode", "Voxility S.R.L.", "ServerStack").map(_.toLowerCase)
 }
 
 case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
@@ -103,20 +103,23 @@ class UserIpAddressEventLogger @Inject() (
       log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + event.userAgent)
     }
 
+    val userIsFake = userCommander.getAllFakeUsers()(event.userId)
+
     val (cluster, ignoreForPotentialOrgs) = db.readWrite { implicit session =>
       val ignoreForPotentialOrgs = userValueRepo.getValue(event.userId, UserValues.ignoreForPotentialOrganizations)
       val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(event.ip, now.minus(clusterMemoryTime))
 
-      if (!userCommander.getAllFakeUsers()(event.userId)) {
-        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
+      if (!userIsFake) {
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
+      } else {
+        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
       }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
     }
 
-    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs) {
+    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
@@ -140,11 +143,16 @@ class UserIpAddressEventLogger @Inject() (
       s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
   }
 
+  private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
+
   private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
-      ip.org.map(org => s"I think the company is '$org'").getOrElse("no company found")
+      ip.org.collect {
+        case org if GenericISP.exists(isp => org.toLowerCase.contains(isp)) => "Generic ISP"
+        case maybeCompany => s"ISP name is '$maybeCompany' (may be company name)"
+      }.getOrElse("ISP name not found")
     )
 
     val userDeclarations = users.map {
