@@ -135,7 +135,6 @@ object LibraryInfo {
   }
 }
 
-@json
 case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
@@ -152,14 +151,37 @@ case class LibraryCardInfo(
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
-  listed: Option[Boolean] = None, // @deprecated use membership object instead! (should this library show up on owner's profile?)
   membership: Option[LibraryMembershipInfo],
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None) // currently only for Invited tab on viewer's own user profile
+  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
+  path: String)
 
 object LibraryCardInfo {
+  implicit val format: Format[LibraryCardInfo] = (
+    (__ \ 'id).format[PublicId[Library]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'owner).format[BasicUser] and
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numFollowers).format[Int] and
+    (__ \ 'followers).format[Seq[BasicUser]] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'collaborators).format[Seq[BasicUser]] and
+    (__ \ 'lastKept).format[DateTime] and
+    (__ \ 'following).formatNullable[Boolean] and
+    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
+    (__ \ 'caption).formatNullable[String] and
+    (__ \ 'modifiedAt).format[DateTime] and
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'invite).formatNullable[LibraryInviteInfo] and
+    (__ \ 'path).format[String]
+  )(LibraryCardInfo.apply, unlift(LibraryCardInfo.unapply))
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
   }
@@ -214,7 +236,8 @@ case class FullLibraryInfo(
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
-  modifiedAt: DateTime)
+  modifiedAt: DateTime,
+  path: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
