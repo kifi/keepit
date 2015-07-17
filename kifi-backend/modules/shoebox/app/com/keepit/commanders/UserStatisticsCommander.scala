@@ -168,7 +168,7 @@ class UserStatisticsCommander @Inject() (
       (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
     }
 
-    val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos)
+    val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
       reco.identifier.isLeft &&
