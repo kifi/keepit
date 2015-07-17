@@ -170,9 +170,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
           requesterIsOwner || requesterOutranksTarget
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
+          val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
           val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
           val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
-          requesterRemovingSelf || requesterOutranksTarget
+          requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget
       }
     }
   }
