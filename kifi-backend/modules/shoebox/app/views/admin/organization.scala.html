@@ -101,8 +101,8 @@ orgStats: OrganizationStatistics
     </tr>
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
-            <td class="block">adminHelper.userDisplay(reco.user)</td>
-            <td class="block">reco.user.primaryEmail</td>
+            <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
+            <td class="block">@{reco.user.primaryEmail}</td>
             <td>@reco.score</td>
             <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
             <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
