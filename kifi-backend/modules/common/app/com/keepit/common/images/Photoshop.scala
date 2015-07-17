@@ -11,7 +11,6 @@ import scala.util.Try
 trait Photoshop {
   def checkToolsAvailable(): Unit
   def imageInfo(image: File): Try[RawImageInfo]
-  def resizeImage(image: File, format: ImageFormat, boundingBox: Int): Try[File]
   def resizeImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File]
   def cropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File]
 }
