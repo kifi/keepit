@@ -2,7 +2,10 @@
 
 angular.module('kifi')
 
-.directive('kfOrgProfileHeader', ['$state', '$http', '$analytics', '$location', 'net', function($state, $http, $analytics, $location, net) {
+.directive('kfOrgProfileHeader', [
+  '$state', '$http', '$analytics', '$location', 'net',
+  function ($state, $http, $analytics, $location, net) {
+    
   return {
     restrict: 'A',
     scope: {

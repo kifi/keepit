@@ -25,8 +25,8 @@ angular.module('kifi')
     $scope.$on('removeMember', function (e, member) {
       console.log('remove ', member);
       net.removeOrgMember(organization.id, {
-        "members": [{
-          "userId": member.id
+        members: [{
+          userId: member.id
         }]
       });
     });
