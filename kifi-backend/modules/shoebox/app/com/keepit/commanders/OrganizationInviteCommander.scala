@@ -70,32 +70,29 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     inviterMembershipOpt match {
       case Some(inviterMembership) =>
         if (inviterMembership.hasPermission(OrganizationPermission.INVITE_MEMBERS)) {
-          val inviteesByAddress = invitees.collect { case OrganizationMemberInvitation(Right(emailAddress), _, _) => emailAddress }
-          val inviteesByUserId = invitees.collect { case OrganizationMemberInvitation(Left(userId), _, _) => userId }
+          val inviteeAddresses = invitees.collect { case OrganizationMemberInvitation(Right(emailAddress), _, _) => emailAddress }
+          val inviteeUserIds = invitees.collect { case OrganizationMemberInvitation(Left(userId), _, _) => userId }
 
           // contacts by email address
           val contactsByEmailAddressFut: Future[Map[EmailAddress, RichContact]] = {
-            aBookClient.internKifiContacts(inviterId, inviteesByAddress.map(BasicContact(_)): _*).imap { kifiContacts =>
-              (inviteesByAddress zip kifiContacts).toMap
+            aBookClient.internKifiContacts(inviterId, inviteeAddresses.map(BasicContact(_)): _*).imap { kifiContacts =>
+              (inviteeAddresses zip kifiContacts).toMap
             }
           }
-          // contacts by userId
-          val contactsByUserId = db.readOnlyMaster { implicit s =>
-            basicUserRepo.loadAll(inviteesByUserId.toSet)
-          }
 
-          val organizationMembersMap = db.readOnlyMaster { implicit session =>
-            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, inviteesByUserId.toSet).map { membership =>
-              membership.userId -> membership
-            }.toMap
+          val (contactsByUserId, organizationMembersMap) = db.readOnlyMaster { implicit session =>
+            (basicUserRepo.loadAll(inviteeUserIds.toSet),
+              organizationMembershipRepo.getByOrgIdAndUserIds(orgId, inviteeUserIds.toSet).map { membership =>
+                membership.userId -> membership
+              }.toMap)
           }
 
           val (userInvites, emailInvites) = invitees.partition {
             case OrganizationMemberInvitation(Left(userId), _, _) => true
             case OrganizationMemberInvitation(Right(email), _, _) => false
           }
-          val combined = userInvites.map(userInvite => (userInvite, organizationMembersMap.get(userInvite.invited.left.get)))
-          val possibleUserIdInvites: Seq[OrganizationMembershipRequest] = combined.flatMap {
+          val userInviteAndMembershipOpt = userInvites.map(userInvite => (userInvite, organizationMembersMap.get(userInvite.invited.left.get)))
+          val possibleUserIdInvites: Seq[OrganizationMembershipRequest] = userInviteAndMembershipOpt.flatMap {
             case (userInvite, orgMembershipOpt) =>
               orgMembershipOpt match {
                 case Some(orgMembership) if (orgMembership.role < userInvite.role) => // some modify request (promotion)
