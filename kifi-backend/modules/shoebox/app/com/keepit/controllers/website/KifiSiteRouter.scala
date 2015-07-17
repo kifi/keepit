@@ -93,10 +93,23 @@ class KifiSiteRouter @Inject() (
   def serveWebAppIfHandleFound(handle: Handle) = WebAppPage { implicit request =>
     lookupHandle(handle) map {
       case (handleOwner, redirectStatusOpt) =>
-        redirectStatusOpt map { status =>
-          Redirect(s"/${handle.urlEncoded}${dropPathSegment(request.uri)}", status)
-        } getOrElse {
-          AngularApp.app()
+        // TODO(ryan): once orgs are live, remove everything up to the "else" below
+        val hasOrgExperiment = request match {
+          case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
+          case _ => false
+        }
+        if (handleOwner.isLeft && !hasOrgExperiment) {
+          notFound(request)
+        } else {
+          redirectStatusOpt map { status =>
+            val foundHandle = handleOwner match {
+              case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+              case Right(user) => Handle.fromUsername(user.username)
+            }
+            Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
+          } getOrElse {
+            AngularApp.app()
+          }
         }
     } getOrElse notFound(request)
   }
@@ -119,7 +132,13 @@ class KifiSiteRouter @Inject() (
     lookupHandle(handle) flatMap {
       case (handleOwner, userRedirectStatusOpt) =>
         val libraryOpt = handleOwner match {
-          case Left(org) => libraryCommander.getLibraryBySlugOrAlias(org.id.get, LibrarySlug(slug))
+          case Left(org) => // TODO(ryan): once orgs are live, remove everything here but the libraryCommander call
+            request match {
+              case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) =>
+                libraryCommander.getLibraryBySlugOrAlias(org.id.get, LibrarySlug(slug))
+              case _ =>
+                None
+            }
           case Right(user) => libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug))
         }
         libraryOpt map {
@@ -143,6 +162,7 @@ class KifiSiteRouter @Inject() (
           case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
           case Right(user) => Handle.fromUsername(user.username)
         }
+
         if (foundHandle != handle) { // owner moved or handle normalization
           (handleOwner, Some(if (!isPrimary) 301 else 303))
         } else {

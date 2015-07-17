@@ -21,6 +21,7 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactory
 
 import org.specs2.mutable.Specification
@@ -242,13 +243,12 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
 
         // user-or-orgs
-        implicit val publicIdConfig = inject[PublicIdConfiguration]
-        val orgLibrary = {
-          val libraryRequest = LibraryAddRequest(name = "Kifi Lib", visibility = LibraryVisibility.PUBLISHED, slug = "kifi-lib")
-          val Right(orgLibrary) = libraryCommander.addLibrary(libraryRequest, user1.id.get)
-          val Right(finalLibrary) = libraryCommander.modifyLibrary(orgLibrary.id.get, user1.id.get, LibraryModifyRequest(orgMove = Some(OrganizationMoveRequest(Some(Organization.publicId(org.id.get))))))
-          finalLibrary
+        val orgLibrary = db.readWrite { implicit session =>
+          LibraryFactory.library().withName("Kifi Library").withSlug("kifi-lib").withUser(user1).withOrganization(org.id).saved
         }
+
+        actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
+        route(FakeRequest("GET", "/kifiorghandle")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
 
