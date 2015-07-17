@@ -192,7 +192,7 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def keepId = tagArgs(0).as[Id[Keep]]
       @inline def keep: Keep = input.keeps(keepId)
 
-      tagWrapper.label match {
+      val resultString = tagWrapper.label match {
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
@@ -231,6 +231,7 @@ class EmailTemplateProcessorImpl @Inject() (
             auxiliaryData = emailToSend.auxiliaryData
           ).encode
       }
+      resultString.replace("$", "\\$")
     })
   } catch {
     case ex: IndexOutOfBoundsException => log.error(s"[EmailTemplate] IOOB Exception. Text: $text"); throw ex

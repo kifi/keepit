@@ -181,7 +181,7 @@ class UserStatisticsCommander @Inject() (
     }.map {
       case OrganizationInviteRecommendation(Left(userId), _, score) =>
         val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-        OrganizationMemberRecommendationInfo(user, score)
+        OrganizationMemberRecommendationInfo(user, score * 10000)
     })
 
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
