@@ -143,7 +143,7 @@ class UserIpAddressEventLogger @Inject() (
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
       ip.org.collect {
-        case org if GenericISP.exists(isp => org.contains(isp)) => "Generic ISP"
+        case org if GenericISP.exists(isp => org.toLowerCase.contains(isp)) => "Generic ISP"
         case maybeCompany => s"ISP name is '$maybeCompany' (may be company name)"
       }.getOrElse("ISP name not found")
     )
