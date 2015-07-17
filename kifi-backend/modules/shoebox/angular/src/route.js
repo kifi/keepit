@@ -103,8 +103,8 @@ angular.module('kifi')
       })
       .state('orgProfile.boards', {
         url: '',
-        controller: 'OrgProfileBoardsCtrl',
-        templateUrl: 'orgProfile/orgProfileBoards.tpl.html'
+        controller: 'OrgProfileLibrariesCtrl',
+        templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
       .state('userProfile', {
         url: '/:handle',

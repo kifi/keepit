@@ -14,7 +14,7 @@ angular.module('kifi')
       $scope.members = response.data.members;
       $scope.me = $scope.members.filter(function (m) {
         return m.username === profileService.me.username;
-      }).pop();
+      }).pop() || profileService.me;
     });
 
     // Let the other member lines know to close
@@ -22,16 +22,27 @@ angular.module('kifi')
       $scope.$broadcast('memberOpened', member);
     });
 
-    $scope.$on('removeMember', function () {
-      //console.log('remove ', member);
+    $scope.$on('removeMember', function (e, member) {
+      console.log('remove ', member);
+      net.removeOrgMember(organization.id, {
+        "members": [{
+          "userId": member.id
+        }]
+      });
     });
 
     $scope.$on('inviteMember', function () {
       //console.log('invite ', member);
     });
 
-    $scope.$on('promoteMember', function () {
+    $scope.$on('promoteMember', function (e, member) {
       //console.log('promote', member);
+      net.modifyOrgMember(organization.id, {
+        members: [{
+          userId: member.id,
+          newRole: 'member'
+        }]
+      });
     });
 
     $scope.openInviteModal = function (inviteType) {
