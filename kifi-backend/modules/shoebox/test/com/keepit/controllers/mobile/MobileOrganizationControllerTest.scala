@@ -47,7 +47,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           response === OrganizationFail.INVALID_PUBLIC_ID
         }
       }
-      "give an organization view to a user that has view permissions" in {
+      "give an organization view to a member" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (user, org) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
@@ -68,7 +68,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "organization" \ "name").as[String] === "Forty Two Kifis"
           (jsonResponse \ "organization" \ "handle").as[String] === "kifi"
-          (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10
+          (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10 + 15
         }
       }
     }

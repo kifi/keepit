@@ -44,7 +44,7 @@ class UserResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, max
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER | Visibility.NETWORK)) != 0) { score = score * myNetworkBoost }
         else { // todo(Léo): user total keep count instead of best library keep count (=> UserQualityEvaluator)
           if (libId > 0) {
-            val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, libId)
+            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
             val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
             score = score * publishedLibraryBoost
           }

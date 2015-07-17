@@ -12,7 +12,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -294,7 +294,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |{ "id":  "${not_a_member.externalId.id}", "role": "member"}
                |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
@@ -303,6 +303,28 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           status(response) === OK
           content must contain(not_a_member.externalId.id)
           content must contain("member")
+        }
+      }
+
+      "fail on badly formed inputs" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, inviter, cannot_invite, nonMember) = setupInviters()
+          implicit val config = inject[PublicIdConfiguration]
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+
+          val badInputs = Seq(
+            Json.parse(s"""{ "invites": [{ "id":  "${nonMember.externalId.id}", "role": "member", "email": "ryan@kifi.com"}]}"""), // Both email and id
+            Json.parse(s"""{ "invites": [{ "role": "member" }] }""") // neither email nor id
+          )
+
+          for (badInput <- badInputs) {
+            val request = route.inviteUsers(publicId).withBody(badInput)
+            val result = controller.inviteUsers(publicId)(request)
+            status(result) === BAD_REQUEST
+          }
+          1 === 1
         }
       }
 
@@ -315,7 +337,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "owner"}
+               |{ "id":  "${not_a_member.externalId.id}", "role": "owner"}
                                                          |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
@@ -336,7 +358,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(cannot_invite, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |{ "id":  "${not_a_member.externalId.id}", "role": "member"}
                                                          |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
@@ -355,7 +377,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |{ "id":  "${not_a_member.externalId.id}", "role": "member"}
                                                          |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)

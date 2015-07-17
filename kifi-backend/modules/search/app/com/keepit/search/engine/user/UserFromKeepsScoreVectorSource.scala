@@ -3,6 +3,7 @@ package com.keepit.search.engine.user
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
+import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.{ SearchFilter, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
@@ -22,6 +23,7 @@ class UserFromKeepsScoreVectorSource(
     protected val filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
+    librarySearcher: Searcher,
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[UserSearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
@@ -57,7 +59,7 @@ class UserFromKeepsScoreVectorSource(
           val libId = libraryIdDocValues.get(docId)
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
           val inverseLibraryFrequencyBoost = {
-            val keepCount = libraryQualityEvaluator.estimateKeepCount(searcher, libId)
+            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
             libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)
           }
           val boost = recencyBoost * inverseLibraryFrequencyBoost
