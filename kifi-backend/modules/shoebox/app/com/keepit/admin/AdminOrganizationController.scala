@@ -88,11 +88,27 @@ class AdminOrganizationController @Inject() (
   def createOrganization() = AdminUserPage { request =>
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
-    orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name))) match {
-      case Left(fail) => NotFound
-      case Right(success) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(
-        success.newOrg.id.get
-      ))
+    val existingOrg = db.readOnlyMaster { implicit session => orgRepo.getOrganizationByName(name) }
+    existingOrg match {
+      case Some(org) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get))
+      case None =>
+        orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name))) match {
+          case Left(fail) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
+          case Right(success) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(
+            success.newOrg.id.get
+          ))
+        }
+    }
+  }
+
+  def findOrganizationByName = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val orgName = request.body.get("orgName").flatMap(_.headOption).get
+    val orgOpt = db.readOnlyReplica { implicit session =>
+      orgRepo.getOrganizationByName(orgName)
+    }
+    orgOpt match {
+      case Some(org) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get))
+      case None => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
     }
   }
 

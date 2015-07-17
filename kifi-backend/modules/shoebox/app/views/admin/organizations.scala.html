@@ -10,6 +10,10 @@
 )(implicit request: com.keepit.common.controller.UserRequest[_], pagination: PaginatedRequest[OrganizationStatisticsOverview, _])
 
 @views.html.admin.admin(orgs.length + " " + title, stylesheets = List("admin_user")) {
+    <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.findOrganizationByName()" method="POST" class="form-inline">
+        <input name="orgName" type="text">
+        <button type="submit" class="btn btn-primary">Search all organizations by name</button>
+    </form>
     @views.html.admin.adminHelper.pagination(pagination.page, pagination.count, 30, otherPagesRoute) {
         <table class="orgs-summary table table-bordered">
             <tr><th>Id</th>
