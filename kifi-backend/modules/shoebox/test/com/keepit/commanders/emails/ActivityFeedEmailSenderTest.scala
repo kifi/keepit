@@ -32,6 +32,8 @@ import scala.concurrent.duration.Duration
 
 class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeMailModule(),
