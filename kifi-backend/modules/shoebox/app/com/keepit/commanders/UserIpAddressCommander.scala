@@ -113,7 +113,7 @@ class UserIpAddressEventLogger @Inject() (
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
       } else {
-         log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
+        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
       }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
