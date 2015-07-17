@@ -12,6 +12,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
@@ -29,7 +30,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
       userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
-      val org = organizationRepo.save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
+      val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
       val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.OWNER))
       (org, owner, membership)
     }
