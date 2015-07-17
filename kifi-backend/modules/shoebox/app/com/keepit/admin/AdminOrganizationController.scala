@@ -35,12 +35,13 @@ class AdminOrganizationController @Inject() (
   def organizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
     val orgsStats = db.readOnlyReplica { implicit session =>
       orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org))
-    }
+    }.sortBy(_.org.updatedAt)
 
     val orgsStatsGrouped = orgsStats.grouped(30).toSeq
+    val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
 
-    PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, orgsStatsGrouped.apply)(page) { implicit paginated =>
-      Ok(html.admin.organizations(orgsStats, fakeOwnerId))
+    PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
+      Ok(html.admin.organizations(paginated.items, fakeOwnerId))
     }(authenticated)
 
   }
@@ -56,7 +57,7 @@ class AdminOrganizationController @Inject() (
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
     val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name)))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView)
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>

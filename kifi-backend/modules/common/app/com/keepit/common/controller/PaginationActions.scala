@@ -4,7 +4,7 @@ import play.api.mvc._
 
 import scala.concurrent.Future
 
-case class PaginatedRequest[E, A](request: Request[A], items: Seq[E], page: Int) extends WrappedRequest[A](request)
+case class PaginatedRequest[E, A](request: Request[A], items: Seq[E], page: Int, count: Int) extends WrappedRequest[A](request)
 
 trait PaginationActions {
 
@@ -18,7 +18,7 @@ trait PaginationActions {
         override def invokeBlock[A](request: Request[A], block: (PaginatedRequest[E, A]) => Future[Result]): Future[Result] = {
           val count = countItems
           val items = getItems(page)
-          val paginatedRequest = PaginatedRequest[E, A](request, items, page)
+          val paginatedRequest = PaginatedRequest[E, A](request, items, page, count)
           block(paginatedRequest)
         }
 
