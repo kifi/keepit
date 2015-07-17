@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
@@ -19,7 +20,7 @@ trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
   def getOrganizationView(orgId: Id[Organization]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]]): Map[Id[Organization], OrganizationCard]
-  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo]
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -40,6 +41,7 @@ class OrganizationCommanderImpl @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    basicUserRepo: BasicUserRepo,
     libraryCommander: LibraryCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
@@ -107,10 +109,20 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numPublicLibs)
   }
 
-  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryInfo] = {
+  def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
     val allLibraries = db.readOnlyReplica { implicit session => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }
-    val visibleLibraries = allLibraries.filter(lib => libraryCommander.canViewLibrary(userIdOpt, lib))
-    libraryCommander.getLibrarySummaries(visibleLibraries.drop(offset.value.toInt).take(limit.value.toInt).map(_.id.get).toSeq)
+    val visibleLibraries = allLibraries.filter(lib => libraryCommander.canViewLibrary(userIdOpt, lib)).slice(offset.value.toInt, offset.value.toInt + limit.value.toInt).toSeq
+
+    val (basicOwnersByOwnerId, viewerOpt) = db.readOnlyReplica { implicit session =>
+      val basicOwnersByOwnerId = visibleLibraries.map(lib => lib.ownerId -> basicUserRepo.load(lib.ownerId)).toMap
+      val viewerOpt = userIdOpt.map { userId =>
+        userRepo.get(userId)
+      }
+      (basicOwnersByOwnerId, viewerOpt)
+    }
+    db.readOnlyReplica { implicit session =>
+      libraryCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+    }
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
