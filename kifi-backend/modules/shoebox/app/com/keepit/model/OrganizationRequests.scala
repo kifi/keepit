@@ -1,9 +1,11 @@
 package com.keepit.model
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.mail.EmailAddress
 import play.api.http.Status._
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
 
 sealed abstract class OrganizationRequest
@@ -20,7 +22,15 @@ case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
 case class OrganizationTransferRequest(requesterId: Id[User], orgId: Id[Organization], newOwner: Id[User]) extends OrganizationRequest
 case class OrganizationTransferResponse(request: OrganizationTransferRequest, modifiedOrg: Organization)
 
-case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
+case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole)
+
+case class ExternalOrganizationMemberInvitation(invited: Either[ExternalId[User], EmailAddress], role: OrganizationRole)
+object ExternalOrganizationMemberInvitation {
+  implicit val reads: Reads[ExternalOrganizationMemberInvitation] = (
+    EitherFormat.keyedReads[ExternalId[User], EmailAddress]("id", "email") and // read either "id": ExternalId[User] OR "email": EmailAddress
+    (__ \ 'role).read[OrganizationRole]
+  )(ExternalOrganizationMemberInvitation.apply _)
+}
 
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]

@@ -66,7 +66,7 @@ class UserSearch(
     val collector = new UserResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myNetworkBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
     val userScoreSource = new UserScoreVectorSource(userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new UserFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)
+    val keepScoreSource = new UserFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, librarySearcher, libraryQualityEvaluator, explanation)
     val libraryScoreSource = new UserFromLibrariesScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
 
     if (debugFlags != 0) {
