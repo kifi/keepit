@@ -88,8 +88,12 @@ class AdminOrganizationController @Inject() (
   def createOrganization() = AdminUserPage { request =>
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
-    val response = orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name)))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
+    orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name))) match {
+      case Left(fail) => NotFound
+      case Right(success) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(
+        success.newOrg.id.get
+      ))
+    }
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>
