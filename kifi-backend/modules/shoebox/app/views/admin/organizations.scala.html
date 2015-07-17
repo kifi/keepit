@@ -6,10 +6,10 @@
     orgs: Seq[OrganizationStatisticsOverview],
     title: String,
     fakeOwnerId: Id[User],
-    otherPagesRoute: Int => Call
+    otherPagesRoute: Int => Html
 )(implicit request: com.keepit.common.controller.UserRequest[_], pagination: PaginatedRequest[OrganizationStatisticsOverview, _])
 
-@views.html.admin.admin(orgs + title, stylesheets = List("admin_user")) {
+@views.html.admin.admin(orgs.length + " " + title, stylesheets = List("admin_user")) {
     @views.html.admin.adminHelper.pagination(pagination.page, pagination.count, 30, otherPagesRoute) {
         <table class="orgs-summary table table-bordered">
             <tr><th>Id</th>

@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import play.api.libs.json.Json
-import play.twirl.api.Html
+import play.twirl.api.{ HtmlFormat, Html }
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -35,6 +35,9 @@ class AdminOrganizationController @Inject() (
 
   private val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
 
+  // needed to coerce the passed in Int => Call to Int => Html
+  def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
+
   def organizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
     val orgsStats = db.readOnlyReplica { implicit session =>
       orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org))
@@ -44,7 +47,7 @@ class AdminOrganizationController @Inject() (
     val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
 
     PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
-      Ok(html.admin.organizations(paginated.items, "Organizations overall", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView))
+      Ok(html.admin.organizations(paginated.items, "Organizations overall", fakeOwnerId, (com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView _).andThen(asPlayHtml)))
     }(authenticated)
 
   }
@@ -58,7 +61,7 @@ class AdminOrganizationController @Inject() (
     val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
 
     PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
-      Ok(html.admin.organizations(paginated.items, "Real organizations", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.realOrganizationsView))
+      Ok(html.admin.organizations(paginated.items, "Real organizations", fakeOwnerId, (com.keepit.controllers.admin.routes.AdminOrganizationController.realOrganizationsView _).andThen(asPlayHtml)))
     }(authenticated)
   }
 
@@ -71,7 +74,7 @@ class AdminOrganizationController @Inject() (
     val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
 
     PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
-      Ok(html.admin.organizations(paginated.items, "Fake organizations", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView))
+      Ok(html.admin.organizations(paginated.items, "Fake organizations", fakeOwnerId, (com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView _).andThen(asPlayHtml)))
     }(authenticated)
   }
 

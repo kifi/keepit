@@ -1,4 +1,4 @@
-@(page: Int, elementsCount: Int, pageSize: Int, otherPagesRoute: Int => Call)(content: Html)
+@(page: Int, elementsCount: Int, pageSize: Int, otherPagesRoute: Int => Html)(content: Html)
 
 @pageCount = @{
     Math.ceil(elementsCount.toFloat / pageSize.toFloat).toInt
