@@ -13,7 +13,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -116,7 +116,7 @@ class AdminUserController @Inject() (
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander,
-    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions {
+    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginatedActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
