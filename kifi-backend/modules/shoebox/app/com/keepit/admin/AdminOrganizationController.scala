@@ -96,6 +96,26 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  def addCandidateOrCreateByName(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val orgName = request.body.get("orgName").flatMap(_.headOption).get
+    val orgOpt = db.readOnlyReplica { implicit session =>
+      orgRepo.getOrganizationByName(orgName)
+    }
+    orgOpt match {
+      case Some(org) =>
+        val orgId = org.id.get
+        orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+      case None =>
+        orgCommander.createOrganization(OrganizationCreateRequest(requesterId = userId, initialValues = OrganizationInitialValues(name = orgName))) match {
+          case Left(fail) => NotFound
+          case Right(success) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(
+            success.newOrg.id.get
+          ))
+        }
+    }
+  }
+
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))

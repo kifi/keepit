@@ -713,6 +713,7 @@ GET     /admin/fakeOrganizations/:page                    @com.keepit.controller
 GET     /admin/realOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int = 0)
 GET     /admin/realOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int)
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
+POST    /admin/organizations/addOrCreateByUser/:userId             @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView

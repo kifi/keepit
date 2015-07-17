@@ -93,6 +93,15 @@
             </td>
         </tr>
         }
+        <tr>
+            <th>Add to Org</th>
+            <td>
+                <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidateOrCreateByName(user.id.get)" method="POST" class="form-inline">
+                    <input type="text" name="orgName" placeholder="Organization name">
+                    <button type="submit" class="btn btn-default">Add</button>
+                </form>
+            </td>
+        </tr>
       <tr>
         <th>Created At</th><td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
       </tr>
