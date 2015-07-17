@@ -43,6 +43,7 @@ class OrganizationCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -77,8 +78,7 @@ class OrganizationCommanderImpl @Inject() (
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    // TODO(ryan): this is so bad, surely there is a better way
-    val numLibraries = getLibrariesVisibleToUserHelper(orgId, viewerIdOpt, offset = Offset(0), limit = Limit(Int.MaxValue)).length
+    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
     OrganizationView(
       orgId = Organization.publicId(orgId),
@@ -106,8 +106,7 @@ class OrganizationCommanderImpl @Inject() (
     val numMembers = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    // TODO(ryan): this is bad, surely there is a better way
-    val numLibraries = getLibrariesVisibleToUserHelper(orgId, viewerIdOpt, offset = Offset(0), limit = Limit(Int.MaxValue)).length
+    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
     OrganizationCard(
       orgId = Organization.publicId(orgId),
@@ -121,24 +120,23 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
-    val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
-
-    val (basicOwnersByOwnerId, viewerOpt) = db.readOnlyReplica { implicit session =>
-      val basicOwnersByOwnerId = visibleLibraries.map(lib => lib.ownerId -> basicUserRepo.load(lib.ownerId)).toMap
-      val viewerOpt = userIdOpt.map { userId =>
-        userRepo.get(userId)
-      }
-      (basicOwnersByOwnerId, viewerOpt)
-    }
     db.readOnlyReplica { implicit session =>
-      libraryCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
+      val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId))
+      val viewerOpt = userIdOpt.map(userRepo.get)
+      libraryCommander.createLibraryCardInfos(visibleLibraries.toSeq, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 
-  private def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
-    val allLibraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).toSeq
-    val visibleLibraries = allLibraries.filter(lib => libraryCommander.canViewLibraryHelper(userIdOpt, lib))
-    visibleLibraries.drop(offset.value.toInt).take(limit.value.toInt)
+  private def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library] = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
+  }
+  private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.countVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships)
   }
 
   def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {

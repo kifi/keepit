@@ -122,7 +122,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
       val allOrgIds = organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
-      allOrgIds.filter(getPermissions(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
+      allOrgIds.filter(getPermissionsHelper(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
     }
   }
 
