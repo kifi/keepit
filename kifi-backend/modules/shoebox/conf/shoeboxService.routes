@@ -708,6 +708,10 @@ POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.Ad
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
 GET     /admin/organizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int)
+GET     /admin/fakeOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int = 0)
+GET     /admin/fakeOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int)
+GET     /admin/realOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int = 0)
+GET     /admin/realOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int)
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView

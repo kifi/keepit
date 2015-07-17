@@ -3,15 +3,13 @@
 @import com.keepit.common.db._
 @import com.keepit.common.controller.PaginatedRequest
 @(
-orgs: Seq[OrganizationStatisticsOverview],
-fakeOwnerId: Id[User]
+    orgs: Seq[OrganizationStatisticsOverview],
+    title: String,
+    fakeOwnerId: Id[User],
+    otherPagesRoute: Int => Call
 )(implicit request: com.keepit.common.controller.UserRequest[_], pagination: PaginatedRequest[OrganizationStatisticsOverview, _])
 
-@otherPagesRoute(page: Int) = {
-    @com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(page)
-}
-
-@views.html.admin.admin(orgs.count(_.ownerId != fakeOwnerId) + " real organizations", stylesheets = List("admin_user")) {
+@views.html.admin.admin(orgs + title, stylesheets = List("admin_user")) {
     @views.html.admin.adminHelper.pagination(pagination.page, pagination.count, 30, otherPagesRoute) {
         <table class="orgs-summary table table-bordered">
             <tr><th>Id</th>

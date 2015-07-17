@@ -27,6 +27,7 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
+  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -41,6 +42,7 @@ class OrganizationCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryCommander: LibraryCommander,
+    orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
@@ -55,6 +57,11 @@ class OrganizationCommanderImpl @Inject() (
       orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId) }.toMap
     }
   }
+
+  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean = {
+    orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
+  }
+
   private def getOrganizationViewHelper(orgId: Id[Organization])(implicit session: RSession): OrganizationView = {
     val org = orgRepo.get(orgId)
     val orgHandle = org.getHandle

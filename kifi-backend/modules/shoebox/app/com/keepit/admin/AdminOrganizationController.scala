@@ -3,15 +3,18 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
-import com.keepit.common.controller.{ PaginationActions, AdminUserActions, UserActionsHelper }
+import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import play.api.libs.json.Json
+import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
+import com.keepit.common.time._
 
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -41,9 +44,35 @@ class AdminOrganizationController @Inject() (
     val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
 
     PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
-      Ok(html.admin.organizations(paginated.items, fakeOwnerId))
+      Ok(html.admin.organizations(paginated.items, "Organizations overall", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView))
     }(authenticated)
 
+  }
+
+  def realOrganizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
+    val orgsStats = db.readOnlyReplica { implicit session =>
+      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => !orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.org.updatedAt)
+    }
+
+    val orgsStatsGrouped = orgsStats.grouped(30).toSeq
+    val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
+
+    PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
+      Ok(html.admin.organizations(paginated.items, "Real organizations", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.realOrganizationsView))
+    }(authenticated)
+  }
+
+  def fakeOrganizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
+    val orgsStats = db.readOnlyReplica { implicit session =>
+      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.org.updatedAt)
+    }
+
+    val orgsStatsGrouped = orgsStats.grouped(30).toSeq
+    val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
+
+    PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, paginatedOrgStats.apply)(page) { implicit paginated =>
+      Ok(html.admin.organizations(paginated.items, "Fake organizations", fakeOwnerId, com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView))
+    }(authenticated)
   }
 
   def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
