@@ -92,7 +92,7 @@ trait LibraryCommander {
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
-  def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)]
+  def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
@@ -1449,10 +1449,10 @@ class LibraryCommanderImpl @Inject() (
     libraryAnalytics.viewedLibrary(viewerId, library, context)
   }
 
-  def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
+  def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(ownerId), slug).map((_, false)) orElse
-        libraryAliasRepo.getBySpaceAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
+      libraryRepo.getBySpaceAndSlug(space, slug).map((_, false)) orElse
+        libraryAliasRepo.getBySpaceAndSlug(space, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
   }
 

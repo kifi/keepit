@@ -12,7 +12,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsString, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -192,7 +192,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           }
 
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
-          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
+          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(JsString(""))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
           status(result) === OK
@@ -223,7 +223,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           }
 
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
-          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.OWNER))
+          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(JsString(""))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
           result === OrganizationFail.INSUFFICIENT_PERMISSIONS

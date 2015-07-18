@@ -19,7 +19,7 @@ import com.keepit.common.core._
 
 object ShoeboxArticleIngestionActor {
   val shoeboxArticleInfoSeq = Name[SequenceNumber[ArticleInfo]]("shoebox_article_info")
-  val fetchSize: Int = 500
+  val fetchSize: Int = 100
   val throttle = new ReactiveLock(50)
   sealed trait ShoeboxArticleIngestionActorMessage
   case object StartIngestion extends ShoeboxArticleIngestionActorMessage

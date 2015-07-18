@@ -64,9 +64,8 @@ class MobileOrganizationInviteController @Inject() (
   }
 
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
-    val role = (request.body \ "role").as[OrganizationRole]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, role) match {
+    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, OrganizationRole.MEMBER) match {
       case Right(invite) =>
         Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
       case Left(fail) => fail.asErrorResponse

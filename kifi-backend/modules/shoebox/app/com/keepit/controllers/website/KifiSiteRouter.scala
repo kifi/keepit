@@ -25,6 +25,7 @@ class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
   userCommander: UserCommander,
+  handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
@@ -89,6 +90,30 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
+  def serveWebAppIfHandleFound(handle: Handle) = WebAppPage { implicit request =>
+    lookupHandle(handle) map {
+      case (handleOwner, redirectStatusOpt) =>
+        // TODO(ryan): once orgs are live, remove everything up to the "else" below
+        val hasOrgExperiment = request match {
+          case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
+          case _ => false
+        }
+        if (handleOwner.isLeft && !hasOrgExperiment) {
+          notFound(request)
+        } else {
+          redirectStatusOpt map { status =>
+            val foundHandle = handleOwner match {
+              case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+              case Right(user) => Handle.fromUsername(user.username)
+            }
+            Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
+          } getOrElse {
+            AngularApp.app()
+          }
+        }
+    } getOrElse notFound(request)
+  }
+
   def serveWebAppIfUserIsSelf(username: Username) = WebAppPage { implicit request =>
     request match {
       case r: UserRequest[_] =>
@@ -103,14 +128,24 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def serveWebAppIfLibraryFound(username: Username, slug: String) = WebAppPage { implicit request =>
-    lookupUsername(username) flatMap {
-      case (user, userRedirectStatusOpt) =>
-        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug)) map {
+  def serveWebAppIfLibraryFound(handle: Handle, slug: String) = WebAppPage { implicit request =>
+    lookupHandle(handle) flatMap {
+      case (handleOwner, userRedirectStatusOpt) =>
+        val libraryOpt = handleOwner match {
+          case Left(org) => // TODO(ryan): once orgs are live, remove everything here but the libraryCommander call
+            request match {
+              case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) =>
+                libraryCommander.getLibraryBySlugOrAlias(org.id.get, LibrarySlug(slug))
+              case _ =>
+                None
+            }
+          case Right(user) => libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug))
+        }
+        libraryOpt map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != slug || userRedirectStatusOpt.isDefined) { // library moved
               val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
-              val status = if (!isLibraryAlias || userRedirectStatusOpt.exists(_ == 303)) 303 else 301
+              val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Redirect(uri, status)
             } else {
               AngularApp.app(() => libMetadata(library))
@@ -119,6 +154,22 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
+  private def lookupHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
+    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
+    handleOwnerOpt map {
+      case (handleOwner, isPrimary) =>
+        val foundHandle = handleOwner match {
+          case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+          case Right(user) => Handle.fromUsername(user.username)
+        }
+
+        if (foundHandle != handle) { // owner moved or handle normalization
+          (handleOwner, Some(if (!isPrimary) 301 else 303))
+        } else {
+          (handleOwner, None)
+        }
+    }
+  }
   private def lookupUsername(username: Username): Option[(User, Option[Int])] = {
     userCommander.getUserByUsername(username) map {
       case (user, isPrimary) =>
