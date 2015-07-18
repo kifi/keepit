@@ -4,8 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -24,6 +23,7 @@ class OrganizationInviteController @Inject() (
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
@@ -58,10 +58,8 @@ class OrganizationInviteController @Inject() (
   }
 
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
-    val role = (request.body \ "role").as[OrganizationRole]
-
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, role) match {
+    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, OrganizationRole.MEMBER) match {
       case Right(invite) =>
         Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
       case Left(fail) => fail.asErrorResponse
