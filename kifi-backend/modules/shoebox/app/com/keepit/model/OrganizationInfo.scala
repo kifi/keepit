@@ -8,18 +8,8 @@ import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class OrganizationGetResponse(
-  organization: OrganizationView,
-  viewerRelationship: Option[OrganizationViewerRelationship])
-object OrganizationGetResponse {
-  val defaultWrites: Writes[OrganizationGetResponse] = (
-    (__ \ 'organization).write(OrganizationView.defaultWrites) and
-    (__ \ 'orgViewerRelationship).writeNullable(OrganizationViewerRelationship.defaultWrites)
-  )(unlift(OrganizationGetResponse.unapply))
-}
-
 // OrganizationView should ONLY contain public information. No internal ids.
-case class OrganizationView(
+case class OrganizationInfo(
   orgId: PublicId[Organization],
   ownerId: ExternalId[User],
   handle: OrganizationHandle,
@@ -29,8 +19,8 @@ case class OrganizationView(
   members: Seq[BasicUser],
   numMembers: Int,
   numLibraries: Int)
-object OrganizationView {
-  val defaultWrites: Writes[OrganizationView] = (
+object OrganizationInfo {
+  val defaultWrites: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
@@ -40,25 +30,34 @@ object OrganizationView {
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int]
-  )(unlift(OrganizationView.unapply))
-
-  val website = defaultWrites
-  val mobileV1 = defaultWrites
+  )(unlift(OrganizationInfo.unapply))
 }
 
-case class OrganizationViewerRelationship(
-  isInvited: Boolean = false,
-  role: Option[OrganizationRole],
-  permissions: Set[OrganizationPermission])
-object OrganizationViewerRelationship {
-  val defaultWrites: Writes[OrganizationViewerRelationship] = (
+case class MembershipInfo(
+  isInvited: Boolean,
+  permissions: Set[OrganizationPermission],
+  role: Option[OrganizationRole])
+object MembershipInfo {
+  val defaultWrites: Writes[MembershipInfo] = (
     (__ \ 'isInvited).write[Boolean] and
-    (__ \ 'role).writeNullable[OrganizationRole] and
-    (__ \ 'permissions).write[Seq[OrganizationPermission]]
-  )(unlift(OrganizationViewerRelationship.unapply))
+    (__ \ 'permissions).write[Set[OrganizationPermission]] and
+    (__ \ 'role).writeNullable[OrganizationRole]
+  )(unlift(MembershipInfo.unapply))
+}
 
-  val website = defaultWrites
-  val mobileV1 = defaultWrites
+case class OrganizationView(
+  organizationInfo: OrganizationInfo,
+  membershipInfo: MembershipInfo)
+
+object OrganizationView {
+  val websiteWrites: Writes[OrganizationView] = (
+    (__ \ 'organizationInfo).write(OrganizationInfo.defaultWrites) and
+    (__ \ 'membershipInfo).write(MembershipInfo.defaultWrites)
+  )(unlift(OrganizationView.unapply))
+  val mobileWrites = new Writes[OrganizationView] {
+    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
+  }
+  val defaultWrites = websiteWrites
 }
 
 // OrganizationCard should ONLY contain public information. No internal ids.
