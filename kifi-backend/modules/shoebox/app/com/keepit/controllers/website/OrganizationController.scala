@@ -36,7 +36,7 @@ class OrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val orgView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              val orgView = orgCommander.getOrganizationResponse(response.newOrg.id.get, request.userIdOpt)
               implicit val writes = OrganizationView.website
               Ok(Json.obj("organization" -> Json.toJson(orgView)))
           }
@@ -51,7 +51,7 @@ class OrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            val orgView = orgCommander.getOrganizationResponse(response.modifiedOrg.id.get, request.request.userIdOpt)
             implicit val writes = OrganizationView.website
             Ok(Json.obj("organization" -> Json.toJson(orgView)))
         }
@@ -67,7 +67,7 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val orgView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    val orgView = orgCommander.getOrganizationResponse(request.orgId, request.request.userIdOpt)
     val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
     Ok(Json.obj("organization" -> Json.toJson(orgView)(OrganizationView.website), "viewer_permissions" -> requesterPermissions))
   }
