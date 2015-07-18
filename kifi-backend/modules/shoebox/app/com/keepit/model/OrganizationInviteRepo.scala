@@ -20,7 +20,7 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
-  def deactivate(invite: Id[OrganizationInvite])(implicit session: RWSession): OrganizationInvite
+  def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -159,7 +159,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     getLastSentByOrgIdAndInviterIdAndEmailAddressCompiled(organizationId, inviterId, emailAddress, includeStates).firstOption
   }
 
-  def deactivate(inviteId: Id[OrganizationInvite])(implicit session: RWSession): OrganizationInvite = {
-    save(get(inviteId).copy(state = OrganizationInviteStates.INACTIVE))
+  def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit = {
+    save(model.withState(OrganizationInviteStates.INACTIVE))
   }
 }

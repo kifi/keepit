@@ -18,6 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
@@ -28,6 +29,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait OrganizationInviteCommander {
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation], message: Option[String] = None)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
@@ -54,6 +56,17 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAvatarCommander: OrganizationAvatarCommander,
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
+
+  private def isValidRequest(request: OrganizationInviteRequest)(implicit session: RSession): Boolean = {
+    request match {
+      case OrganizationInviteSendRequest(orgId, requesterId, targetEmails, targetUsers) =>
+        val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, requesterId)
+        requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+      case OrganizationInviteCancelRequest(orgId, requesterId, targetEmails, targetUsers) =>
+        val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, requesterId)
+        requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+    }
+  }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
     organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
@@ -250,6 +263,31 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
   }
 
+  def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse] = {
+    db.readWrite { implicit session => cancelOrganizationInvitesHelper(request) }
+  }
+  private def cancelOrganizationInvitesHelper(request: OrganizationInviteCancelRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationInviteCancelResponse] = {
+    if (!isValidRequest(request)) {
+      Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else {
+      val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
+      val emailInvitesToCancel = existingInvites.filter { inv =>
+        inv.emailAddress.exists { email => request.targetEmails.contains(email) }
+      }
+      val userIdInvitesToCancel = existingInvites.filter { inv =>
+        inv.userId.exists { userId => request.targetUserIds.contains(userId) }
+      }
+      emailInvitesToCancel.foreach(organizationInviteRepo.deactivate)
+      userIdInvitesToCancel.foreach(organizationInviteRepo.deactivate)
+
+      Right(OrganizationInviteCancelResponse(
+        request,
+        cancelledEmails = emailInvitesToCancel.map(_.emailAddress.get),
+        cancelledUserIds = userIdInvitesToCancel.map(_.userId.get))
+      )
+    }
+  }
+
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
@@ -279,7 +317,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         // Notify inviters on organization joined.
         notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
         invitations.foreach { invite =>
-          organizationInviteRepo.save(invite.copy(decision = InvitationDecision.ACCEPTED, state = OrganizationInviteStates.INACTIVE))
+          organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
         }
       }
       success

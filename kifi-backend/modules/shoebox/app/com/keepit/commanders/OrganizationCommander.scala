@@ -255,7 +255,7 @@ class OrganizationCommanderImpl @Inject() (
           memberships.foreach { membership => orgMembershipRepo.deactivate(membership) }
 
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
-          invites.foreach { invite => orgInviteRepo.deactivate(invite.id.get) }
+          invites.foreach(orgInviteRepo.deactivate)
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
