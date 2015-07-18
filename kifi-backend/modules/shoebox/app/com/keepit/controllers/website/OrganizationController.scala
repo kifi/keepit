@@ -36,8 +36,8 @@ class OrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val orgView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
-              Ok(Json.obj("organization" -> Json.toJson(orgView)(OrganizationView.websiteWrites)))
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.websiteWrites)))
           }
       }
     }
@@ -50,8 +50,8 @@ class OrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
-            Ok(Json.obj("organization" -> Json.toJson(orgView)(OrganizationView.websiteWrites)))
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.websiteWrites)))
         }
     }
   }
@@ -65,8 +65,8 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val orgResponse = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
-    Ok(Json.obj("organization" -> Json.toJson(orgResponse)(OrganizationView.websiteWrites)))
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.websiteWrites)))
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>

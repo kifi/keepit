@@ -35,9 +35,9 @@ class MobileOrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val orgResponse = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
               implicit val writes = OrganizationView.mobileWrites
-              Ok(Json.obj("organization" -> Json.toJson(orgResponse)))
+              Ok(Json.obj("organization" -> Json.toJson(organizationView)))
           }
       }
     }
@@ -50,9 +50,9 @@ class MobileOrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val orgResponse = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
             implicit val writes = OrganizationView.mobileWrites
-            Ok(Json.obj("organization" -> Json.toJson(orgResponse)))
+            Ok(Json.obj("organization" -> Json.toJson(organizationView)))
         }
     }
   }
@@ -66,9 +66,9 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val orgResponse = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
     val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
-    Ok(Json.obj("organization" -> Json.toJson(orgResponse)(OrganizationView.mobileWrites), "viewer_permissions" -> requesterPermissions))
+    Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.mobileWrites), "viewer_permissions" -> requesterPermissions))
   }
 
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
