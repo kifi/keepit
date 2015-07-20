@@ -385,10 +385,10 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                     "username": "thirduser"
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
-                "listed": true,
                 "following":true,
                 "membership":{"access":"owner","listed":true,"subscribed":false},
                 "modifiedAt":${lib1Updated.updatedAt.getMillis},
+                "path": "/firstuser/lib1",
                 "subscriptions": []
               }
              ]
@@ -425,6 +425,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "following": true,
                 "membership": {"access":"read_only","listed":true,"subscribed":false},
                 "modifiedAt":${lib3.updatedAt.getMillis},
+                "path": "/seconduser/lib3",
                 "kind":"user_created"
               }
             ]

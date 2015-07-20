@@ -369,7 +369,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "listed":true,
               "subscribed":false
              },
-             "invite": null
+             "invite": null,
+             "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
            },
            "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
@@ -429,7 +430,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               },
               "access":"read_only",
               "lastInvite":${t1.plusMinutes(3).getMillis}
-             }
+             },
+             "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
            },
            "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
@@ -524,7 +526,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null
+               "invite": null,
+               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
              },
              "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
@@ -587,7 +590,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"modifiedAt":${Json.toJson(lib1.updatedAt)(internalTime.DateTimeJsonLongFormat)},
                   |"kind":"user_created",
                   |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)},
-                  |"subscriptions": []
+                  |"subscriptions": [],
+                  |"path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
                 |}
               |]
             |}
