@@ -101,21 +101,21 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def findOrganizationByName = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val orgName = request.body.get("orgName").flatMap(_.headOption).get
+  def findOrganizationByName(orgName: String) = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
       orgRepo.getOrganizationsByName(orgName)
     }
     if (orgs.isEmpty) {
-      Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)).flashing(
+      Future.successful(Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)).flashing(
         "error" -> s"Organization '$orgName' not found"
-      )
+      ))
     } else {
-      val res = Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgs.head.id.get))
-      if (orgs.length > 1) res.flashing(
-        "warning" -> s"Other organizations with this name were found, please be careful that this is the right org"
-      )
-      else res
+      val orgsStats = db.readOnlyReplica { implicit session =>
+        orgs.map(org => statsCommander.organizationStatisticsOverview(org))
+      }
+      PaginatedPage[OrganizationStatisticsOverview](orgsStats.length, (page: Int) => orgsStats)(0) { implicit paginated =>
+        Ok(html.admin.organizations(paginated.items, s"organizations matching '$orgName'", fakeOwnerId, (com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView _).andThen(asPlayHtml)))
+      }(request)
     }
   }
 
