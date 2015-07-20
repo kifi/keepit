@@ -81,7 +81,7 @@ class OrganizationController @Inject() (
       val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
       val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-      implicit val writes = OrganizationCard.website
+      implicit val writes = OrganizationCard.websiteWrites
       Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
     }
   }

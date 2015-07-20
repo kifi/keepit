@@ -57,8 +57,8 @@ class OrganizationCommanderImpl @Inject() (
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
       val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
-      val orgViewerRelationship = getMembershipInfoHelper(orgId, viewerIdOpt)
-      OrganizationView(organizationInfo, orgViewerRelationship)
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt)
+      OrganizationView(organizationInfo, membershipInfo)
     }
   }
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {

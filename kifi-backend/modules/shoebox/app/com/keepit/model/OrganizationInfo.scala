@@ -82,8 +82,8 @@ object OrganizationCard {
     (__ \ 'numLibraries).write[Int]
   )(unlift(OrganizationCard.unapply))
 
-  val website = defaultWrites
-  val mobileV1 = defaultWrites
+  val websiteWrites = defaultWrites
+  val mobileWrites = defaultWrites
 }
 
 // OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
