@@ -21,6 +21,7 @@ class OrganizationController @Inject() (
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
+    airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
@@ -46,7 +47,9 @@ class OrganizationController @Inject() (
 
   def modifyOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
     request.body.validate[OrganizationModifications](OrganizationModifications.website) match {
-      case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate modify request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(modifications, _) =>
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
@@ -54,6 +57,21 @@ class OrganizationController @Inject() (
             val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
             implicit val writes = OrganizationView.website
             Ok(Json.obj("organization" -> Json.toJson(orgView)))
+        }
+    }
+  }
+
+  def transferOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    (request.body \ "newOwner").validate[ExternalId[User]] match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate transfer request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
+      case JsSuccess(newOwnerExtId, _) =>
+        val newOwner = userCommander.getByExternalId(newOwnerExtId)
+        val transferRequest = OrganizationTransferRequest(requesterId = request.request.userId, orgId = request.orgId, newOwner = newOwner.id.get)
+        orgCommander.transferOrganization(transferRequest) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) => NoContent
         }
     }
   }

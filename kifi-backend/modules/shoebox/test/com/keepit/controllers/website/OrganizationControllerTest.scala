@@ -151,7 +151,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val user = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             for (i <- 1 to 10) {
-              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").saved
+              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i)).saved
               LibraryFactory.libraries(i).map(_.published().withUser(user).withOrganization(org.id)).saved
             }
             user
@@ -175,7 +175,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             val user = UserFactory.user().saved
             val rando = UserFactory.user().saved
             for (i <- 1 to 10) {
-              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").saved
+              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i)).saved
               LibraryFactory.libraries(i).map(_.published().withUser(user).withOrganization(org.id)).saved
               if (i <= 5) {
                 inject[OrganizationRepo].save(org.hiddenFromNonmembers)
@@ -404,6 +404,73 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val result = controller.deleteOrganization(publicId)(request)
 
           result === OrganizationFail.INSUFFICIENT_PERMISSIONS
+        }
+      }
+    }
+    "when transferOrganization is called:" in {
+      def setupTransfer(implicit injector: Injector) = db.readWrite { implicit session =>
+        val owner = UserFactory.user().withName("Dr", "Papaya").saved
+        val member = UserFactory.user().withName("Hansel", "Schmidt").saved
+        val rando = UserFactory.user().withName("Rando", "McRanderson").saved
+        val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).withName("Papaya Republic of California").withHandle(OrganizationHandle("papaya_republic")).saved
+        (org, owner, member, rando)
+      }
+
+      "succeed for owner to member" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, member, rando) = setupTransfer
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val body = Json.obj("newOwner" -> member.externalId)
+          val request = route.transferOrganization(publicId).withBody(body)
+          val result = controller.transferOrganization(publicId)(request)
+          status(result) === NO_CONTENT
+          db.readOnlyMaster { implicit session =>
+            inject[OrganizationRepo].get(org.id.get).ownerId === member.id.get
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.OWNER
+          }
+        }
+      }
+      "succeed for owner to non-member" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, member, rando) = setupTransfer
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val body = Json.obj("newOwner" -> rando.externalId)
+          val request = route.transferOrganization(publicId).withBody(body)
+          val result = controller.transferOrganization(publicId)(request)
+          status(result) === NO_CONTENT
+          db.readOnlyMaster { implicit session =>
+            inject[OrganizationRepo].get(org.id.get).ownerId === rando.id.get
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, rando.id.get).get.role === OrganizationRole.OWNER
+          }
+        }
+      }
+      "fail for member to anyone" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, member, rando) = setupTransfer
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          val body1 = Json.obj("newOwner" -> member.externalId)
+          val request1 = route.transferOrganization(publicId).withBody(body1)
+          val result1 = controller.transferOrganization(publicId)(request1)
+          status(result1) === FORBIDDEN
+
+          val body2 = Json.obj("newOwner" -> rando.externalId)
+          val request2 = route.transferOrganization(publicId).withBody(body2)
+          val result2 = controller.transferOrganization(publicId)(request2)
+          status(result2) === FORBIDDEN
+
+          db.readOnlyMaster { implicit session =>
+            inject[OrganizationRepo].get(org.id.get).ownerId === owner.id.get
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.MEMBER
+          }
         }
       }
     }

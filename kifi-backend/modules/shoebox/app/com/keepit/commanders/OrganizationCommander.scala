@@ -271,7 +271,7 @@ class OrganizationCommanderImpl @Inject() (
         case Some(orgFail) => Left(orgFail)
         case None =>
           val org = orgRepo.get(request.orgId)
-          val newOwnerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
+          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
             case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.OWNER))
             case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.OWNER))
           }
