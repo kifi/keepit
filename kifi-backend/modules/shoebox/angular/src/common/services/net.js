@@ -26,7 +26,8 @@ angular.module('kifi')
       getOrgLibraries: get(shoebox, '/organizations/:id/libraries', 30),
       sendOrgMemberInvite: post(shoebox, '/organizations/:id/members/invite'),
       declineOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/decline'),
-
+      acceptOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/accept?authToken=:authToken'),
+      cancelOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/cancel'),
       removeOrgMember: post(shoebox, '/organizations/:id/members/remove'),
       modifyOrgMember: post(shoebox, '/organizations/:id/members/modify'),
 

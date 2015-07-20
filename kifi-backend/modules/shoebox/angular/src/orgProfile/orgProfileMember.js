@@ -14,6 +14,7 @@ angular.module('kifi')
     function _close() {
       var $scope = this;
       $scope._controlsOpen = false;
+      $scope._resentInvite = false;
     }
 
     function _isOpen() {
@@ -35,6 +36,11 @@ angular.module('kifi')
       return $scope.member.id === $scope.me.id;
     }
 
+    function _resentInvite() {
+      var $scope = this;
+      return $scope._resentInvite;
+    }
+
     function _hasAcceptedInvite() {
       var $scope = this;
       return !$scope.member.lastInvitedAt;
@@ -47,7 +53,7 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      return $scope.me.role === 'owner';
+      return $scope.hasAcceptedInvite() && ($scope.me.role === 'owner' || $scope.member.id === $scope.me.id);
     }
 
     function _shouldShowInvite() {
@@ -62,7 +68,17 @@ angular.module('kifi')
 
     function _triggerInvite() {
       var $scope = this;
-      $scope.$emit('inviteMember', $scope.member);
+      $scope.$emit('inviteMember', $scope.member, function (promise) {
+        promise.then(function (response) {
+          // TODO: WHY $scope.$parent??? Is it because ng-if creates a new scope?
+          $scope.$parent._resentInvite = true;
+        });
+      });
+    }
+
+    function _triggerCancelInvite() {
+      var $scope = this;
+      $scope.$emit('cancelInvite', $scope.member);
     }
 
     function _triggerRemove() {
@@ -90,6 +106,7 @@ angular.module('kifi')
           }
         });
 
+        $scope._resentInvite = false;
         $scope._controlsOpen = false;
 
         $scope.open = _open;
@@ -99,12 +116,15 @@ angular.module('kifi')
 
         $scope.isMe = _isMe;
 
+        $scope.resentInvite = _resentInvite;
+
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
         $scope.shouldShowMakeAdmin = _shouldShowMakeAdmin;
         $scope.shouldShowRemove = _shouldShowRemove;
         $scope.shouldShowInvite = _shouldShowInvite;
         $scope.shouldShowAcceptInvite = _shouldShowAcceptInvite;
         $scope.triggerInvite = _triggerInvite;
+        $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;
         $scope.triggerMakeAdmin = _triggerMakeAdmin;
       }

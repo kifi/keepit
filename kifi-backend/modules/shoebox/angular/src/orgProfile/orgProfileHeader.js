@@ -5,7 +5,7 @@ angular.module('kifi')
 .directive('kfOrgProfileHeader', [
   '$state', '$http', '$analytics', '$location', 'net',
   function ($state, $http, $analytics, $location, net) {
-    
+
   return {
     restrict: 'A',
     scope: {
@@ -13,8 +13,12 @@ angular.module('kifi')
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope, element) {
+
       scope.editing = false;
       var lastSavedInfo = {};
+
+      scope.myTextValue = 'Hello';
+      scope.acknowledgedInvite = false;
 
       scope.toggleEditing = function () {
         scope.editing = !scope.editing;
@@ -68,6 +72,30 @@ angular.module('kifi')
           });
         }
       };
+
+      scope.shouldShowInviteBanner = function () {
+        // TODO: Check if this user is a member already
+        return $location.search().authToken && !scope.acknowledgedInvite;
+      }
+
+      scope.bannerButtons = [
+        {
+          label: 'Decline',
+          className: 'kf-decline',
+          click: function () {
+            net.declineOrgMemberInvite(scope.profile.id);
+            scope.acknowledgedInvite = true;
+          }
+        },
+        {
+          label: 'Accept',
+          className: 'kf-accept',
+          click: function () {
+            net.acceptOrgMemberInvite(scope.profile.id, $location.search().authToken);
+            scope.acknowledgedInvite = true;
+          }
+        }
+      ];
     }
   };
 }]);

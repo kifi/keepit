@@ -9,8 +9,6 @@ angular.module('kifi')
 
     $scope.libraries = [];
 
-    $scope.JSON = JSON;
-
     $scope.openCreateLibrary = function () {
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',

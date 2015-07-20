@@ -23,8 +23,10 @@
     </div>
     <div class="kf-organization-member-lower-right">
       <button ng-if="shouldShowAcceptInvite()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerAcceptInvite(member)">accept invite</button>
-      <button ng-if="shouldShowInvite()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerInvite(member)">resend invite</button>
-      <button ng-if="shouldShowRemove()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerRemove(member)">{{ (member.username === me.username ? 'leave organization' : (hasAcceptedInvite() ? 'remove member' : 'cancel invite')) }}</button>
+      <span ng-if="shouldShowInvite() && resentInvite()" class="kf-organization-member-invite-sent">Sent!</span>
+      <button ng-if="shouldShowInvite() && !resentInvite()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerInvite(member)">resend invite</button>
+      <button ng-if="shouldShowInvite()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerCancelInvite(member)">cancel invite</button>
+      <button ng-if="shouldShowRemove()" class="kf-organization-member-action-button kf-organization-membership-action" ng-click="triggerRemove(member)">{{ (member.username === me.username ? 'leave organization' : 'remove member') }}</button>
     </div>
   </div>
 </li>
