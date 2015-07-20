@@ -41,7 +41,7 @@ class AdminOrganizationController @Inject() (
   def organizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
     val orgsStats = db.readOnlyReplica { implicit session =>
       orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org))
-    }.sortBy(_.org.createdAt)
+    }.sortBy(_.orgId)(Ordering[Id[Organization]].reverse)
 
     val orgsStatsGrouped = orgsStats.grouped(30).toSeq
     val paginatedOrgStats = if (orgsStatsGrouped.isEmpty) List(List()) else orgsStatsGrouped
@@ -54,7 +54,7 @@ class AdminOrganizationController @Inject() (
 
   def realOrganizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
     val orgsStats = db.readOnlyReplica { implicit session =>
-      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => !orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.org.updatedAt)
+      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => !orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.orgId)((Ordering[Id[Organization]].reverse))
     }
 
     val orgsStatsGrouped = orgsStats.grouped(30).toSeq
@@ -67,7 +67,7 @@ class AdminOrganizationController @Inject() (
 
   def fakeOrganizationsView(page: Int) = AdminUserPage.async { implicit authenticated =>
     val orgsStats = db.readOnlyReplica { implicit session =>
-      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.org.updatedAt)
+      orgRepo.all.map(org => statsCommander.organizationStatisticsOverview(org)).filter(org => orgCommander.hasFakeExperiment(org.orgId)).sortBy(_.orgId)((Ordering[Id[Organization]].reverse))
     }
 
     val orgsStatsGrouped = orgsStats.grouped(30).toSeq
@@ -103,7 +103,7 @@ class AdminOrganizationController @Inject() (
 
   def findOrganizationByName(orgName: String) = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
-      orgRepo.getOrganizationsByName(orgName)
+      orgRepo.getOrganizationsByName(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
     }
     if (orgs.isEmpty) {
       Future.successful(Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)).flashing(
