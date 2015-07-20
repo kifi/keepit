@@ -23,7 +23,7 @@ case class OrganizationInvite(
     inviterId: Id[User],
     userId: Option[Id[User]] = None,
     emailAddress: Option[EmailAddress] = None,
-    role: OrganizationRole,
+    role: OrganizationRole = OrganizationRole.MEMBER,
     message: Option[String] = None,
     authToken: String = RandomStringUtils.randomAlphanumeric(9)) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
 

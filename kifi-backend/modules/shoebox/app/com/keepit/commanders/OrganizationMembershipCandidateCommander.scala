@@ -17,7 +17,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait OrganizationMembershipCandidateCommander {
   def addCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
   def removeCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
-  def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
 }
 
 @Singleton
@@ -60,16 +60,12 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
     }
   }
 
-  def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+  def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
     val (org, existingCandidates) = db.readOnlyReplica { implicit session =>
       (orgRepo.get(orgId), orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet)
     }
 
-    val inviteRequests = existingCandidates.map { m =>
-      OrganizationMemberInvitation(invited = Left(m.userId), role = OrganizationRole.MEMBER)
-    }
-
     implicit val context = heimdalContextBuilder().build
-    orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = org.ownerId, invitees = inviteRequests.toSeq)
+    orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = org.ownerId, invitees = existingCandidates.map(candidate => Left(candidate.userId)))
   }
 }
