@@ -329,6 +329,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
       }
 
       "fail for member trying to elevate permissions above his own" in {
+        skipped("Invites do not take a role right now")
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
           implicit val config = inject[PublicIdConfiguration]
