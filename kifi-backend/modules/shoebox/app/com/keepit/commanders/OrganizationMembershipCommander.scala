@@ -127,7 +127,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   private def buildMaybeMembers(members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
-    val (invitedUserIds, invitedEmailAddresses) = invitees.partition(_.userId.nonEmpty)
+    val invitedUserIds = invitees.filter(_.userId.isDefined)
+    val invitedEmailAddresses = invitees.filter(_.emailAddress.isDefined)
     val usersMap = db.readOnlyMaster { implicit session =>
       basicUserRepo.loadAllActive((members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
     }
