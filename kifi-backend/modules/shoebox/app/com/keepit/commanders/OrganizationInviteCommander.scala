@@ -57,20 +57,26 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
-  private def isValidRequest(request: OrganizationInviteRequest)(implicit session: RSession): Boolean = {
+  private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationInviteSendRequest(orgId, requesterId, targetEmails, targetUsers) =>
         val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, requesterId)
-        requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+        val canMemberInviteMembers = requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+
+        if (!canMemberInviteMembers) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
+
       case OrganizationInviteCancelRequest(orgId, requesterId, targetEmails, targetUsers) =>
         val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, requesterId)
         val canRequesterCancelInvites = requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
-        val doInvitesExist = {
+        val doInvitesExist: Boolean = {
           val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
           targetEmails.forall(email => existingInvites.exists(_.emailAddress.contains(email))) &&
             targetUsers.forall(userId => existingInvites.exists(_.userId.contains(userId)))
         }
-        canRequesterCancelInvites && doInvitesExist
+        if (!canRequesterCancelInvites) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else if (!doInvitesExist) Some(OrganizationFail.INVITATION_NOT_FOUND)
+        else None
     }
   }
 
@@ -273,24 +279,24 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     db.readWrite { implicit session => cancelOrganizationInvitesHelper(request) }
   }
   private def cancelOrganizationInvitesHelper(request: OrganizationInviteCancelRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationInviteCancelResponse] = {
-    if (!isValidRequest(request)) {
-      Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-    } else {
-      val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
-      val emailInvitesToCancel = existingInvites.filter { inv =>
-        inv.emailAddress.exists { email => request.targetEmails.contains(email) }
-      }
-      val userIdInvitesToCancel = existingInvites.filter { inv =>
-        inv.userId.exists { userId => request.targetUserIds.contains(userId) }
-      }
-      emailInvitesToCancel.foreach(organizationInviteRepo.deactivate)
-      userIdInvitesToCancel.foreach(organizationInviteRepo.deactivate)
+    getValidationError(request) match {
+      case Some(fail) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case None =>
+        val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
+        val emailInvitesToCancel = existingInvites.filter { inv =>
+          inv.emailAddress.exists { email => request.targetEmails.contains(email) }
+        }
+        val userIdInvitesToCancel = existingInvites.filter { inv =>
+          inv.userId.exists { userId => request.targetUserIds.contains(userId) }
+        }
+        emailInvitesToCancel.foreach(organizationInviteRepo.deactivate)
+        userIdInvitesToCancel.foreach(organizationInviteRepo.deactivate)
 
-      Right(OrganizationInviteCancelResponse(
-        request,
-        cancelledEmails = emailInvitesToCancel.map(_.emailAddress.get),
-        cancelledUserIds = userIdInvitesToCancel.map(_.userId.get))
-      )
+        Right(OrganizationInviteCancelResponse(
+          request,
+          cancelledEmails = emailInvitesToCancel.map(_.emailAddress.get),
+          cancelledUserIds = userIdInvitesToCancel.map(_.userId.get))
+        )
     }
   }
 

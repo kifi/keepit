@@ -22,7 +22,6 @@ trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
   def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
-  def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
@@ -146,33 +145,25 @@ class OrganizationCommanderImpl @Inject() (
     libraryRepo.countVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships)
   }
 
-  def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
-    getValidationError(request).isEmpty
-  }
-
-  def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
+  private def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationCreateRequest(createrId, initialValues) =>
-        if (!areAllValidModifications(initialValues.asOrganizationModifications)) {
-          Some(OrganizationFail.BAD_PARAMETERS)
-        } else None
+        if (!areAllValidModifications(initialValues.asOrganizationModifications)) Some(OrganizationFail.BAD_PARAMETERS)
+        else None
+
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
-        val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
-        if (!permissions.exists(_.contains(EDIT_ORGANIZATION))) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else if (!areAllValidModifications(modifications)) {
-          Some(OrganizationFail.BAD_PARAMETERS)
-        } else {
-          None
-        }
+        val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(requesterId))
+        if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else if (!areAllValidModifications(modifications)) Some(OrganizationFail.BAD_PARAMETERS)
+        else None
+
       case OrganizationDeleteRequest(requesterId, orgId) =>
-        if (requesterId != orgRepo.get(orgId).ownerId) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else None
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
+
       case OrganizationTransferRequest(requesterId, orgId, _) =>
-        if (requesterId != orgRepo.get(orgId).ownerId) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else None
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
     }
   }
 
@@ -194,20 +185,21 @@ class OrganizationCommanderImpl @Inject() (
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
     Try {
       db.readWrite { implicit session =>
-        if (!isValidRequest(request)) None
-        else {
-          val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
-          val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
-          val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-            throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
-          }
-          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
-          Some(OrganizationCreateResponse(request, org))
+        getValidationError(request) match {
+          case Some(fail) => Left(fail)
+          case None =>
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
+            val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
+            val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
+              throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
+            }
+            orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
+            Right(OrganizationCreateResponse(request, org))
         }
       }
     } match {
-      case Success(Some(response)) => Right(response)
-      case Success(None) => Left(OrganizationFail.BAD_PARAMETERS)
+      case Success(Left(fail)) => Left(fail)
+      case Success(Right(response)) => Right(response)
       case Failure(ex) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
     }
   }

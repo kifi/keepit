@@ -63,30 +63,34 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgRepo = inject[OrganizationRepo]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-        val org = db.readWrite { implicit session =>
+        val (org, owner, user1, user2, rando) = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
+          val user1 = UserFactory.user().saved
+          val user2 = UserFactory.user().saved
+          val rando = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(owner).withName("Luther Corp.").saved
-          org
+          (org, owner, user1, user2, rando)
         }
-        val orgId = org.id.get
-
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val ownerAddUser = OrganizationMembershipAddRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(ownerAddUser) must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
+        val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER)
+        orgMembershipCommander.addMembership(ownerAddUser).isRight === true
 
         // members cannot invite users by default.
-        val memberAddUser = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](3), OrganizationRole.MEMBER)
+        val memberAddUser = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.addMembership(memberAddUser) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        val memberAddUserAsOwner = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](5), OrganizationRole.OWNER)
+        // they definitely can't add owners
+        val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.OWNER)
         orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        val noneAddUser = OrganizationMembershipAddRequest(orgId, Id[User](42), Id[User](4), OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(noneAddUser) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        // random people can't add members either
+        val randoAddUser = OrganizationMembershipAddRequest(org.id.get, rando.id.get, user2.id.get, OrganizationRole.MEMBER)
+        orgMembershipCommander.addMembership(randoAddUser) === Left(OrganizationFail.NOT_A_MEMBER)
 
-        val memberAddMember = OrganizationMembershipAddRequest(orgId, Id[User](3), Id[User](1), OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(memberAddMember) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS) // TODO: this should fail differently
+        // can't add someone who is already a member
+        val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER)
+        orgMembershipCommander.addMembership(memberAddMember) === Left(OrganizationFail.ALREADY_A_MEMBER)
       }
     }
 
