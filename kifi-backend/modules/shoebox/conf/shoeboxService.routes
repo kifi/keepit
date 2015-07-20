@@ -520,7 +520,7 @@ POST          /site/organizations/:id/transfer                  @com.keepit.cont
 DELETE        /site/organizations/:id/delete                    @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
 GET           /site/organizations/:id/members                   @com.keepit.controllers.website.OrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/members/invite            @com.keepit.controllers.website.OrganizationInviteController.inviteUsers(id: PublicId[Organization])
-DELETE        /site/organizations/:id/members/invites/cancel    @com.keepit.controllers.website.OrganizationInviteController.cancelInvites(id: PublicId[Organization])
+POST          /site/organizations/:id/members/invites/cancel    @com.keepit.controllers.website.OrganizationInviteController.cancelInvites(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/accept    @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
 POST          /site/organizations/:id/members/invites/decline   @com.keepit.controllers.website.OrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
