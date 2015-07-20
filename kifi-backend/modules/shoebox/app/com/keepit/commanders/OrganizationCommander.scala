@@ -19,10 +19,9 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
-  def getOrganizationResponse(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationGetResponse
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
   def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
-  def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
   def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
@@ -54,11 +53,11 @@ class OrganizationCommanderImpl @Inject() (
   // TODO(ryan): do the smart thing and add a limit/offset
   def getAllOrganizationIds: Seq[Id[Organization]] = db.readOnlyReplica { implicit session => orgRepo.all().map(_.id.get) }
 
-  def getOrganizationResponse(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationGetResponse = {
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
-      val organizationView = getOrganizationViewHelper(orgId, viewerIdOpt)
-      val orgViewerRelationship = getOrganizationViewerRelationshipHelper(orgId, viewerIdOpt)
-      OrganizationGetResponse(organizationView, orgViewerRelationship)
+      val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt)
+      OrganizationView(organizationInfo, membershipInfo)
     }
   }
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {
@@ -71,7 +70,7 @@ class OrganizationCommanderImpl @Inject() (
     orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
   }
 
-  private def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationView = {
+  private def getOrganizationInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
@@ -91,7 +90,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
-    OrganizationView(
+    OrganizationInfo(
       orgId = Organization.publicId(orgId),
       ownerId = ownerId,
       handle = orgHandle,
@@ -103,12 +102,12 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numLibraries)
   }
 
-  private def getOrganizationViewerRelationshipHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): Option[OrganizationViewerRelationship] = {
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MembershipInfo = {
     viewerIdOpt.map { userId =>
       val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
       val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
-      OrganizationViewerRelationship(isInvited = invites.nonEmpty, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(Set(OrganizationPermission.VIEW_ORGANIZATION)))
-    }
+      MembershipInfo(isInvited = invites.nonEmpty, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    }.getOrElse(MembershipInfo(isInvited = false, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   private def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
@@ -158,33 +157,25 @@ class OrganizationCommanderImpl @Inject() (
     libraryRepo.countVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships)
   }
 
-  def isValidRequest(request: OrganizationRequest)(implicit session: RSession): Boolean = {
-    getValidationError(request).isEmpty
-  }
-
-  def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
+  private def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
       case OrganizationCreateRequest(createrId, initialValues) =>
-        if (!areAllValidModifications(initialValues.asOrganizationModifications)) {
-          Some(OrganizationFail.BAD_PARAMETERS)
-        } else None
+        if (!areAllValidModifications(initialValues.asOrganizationModifications)) Some(OrganizationFail.BAD_PARAMETERS)
+        else None
+
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
-        val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
-        if (!permissions.exists(_.contains(EDIT_ORGANIZATION))) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else if (!areAllValidModifications(modifications)) {
-          Some(OrganizationFail.BAD_PARAMETERS)
-        } else {
-          None
-        }
+        val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(requesterId))
+        if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else if (!areAllValidModifications(modifications)) Some(OrganizationFail.BAD_PARAMETERS)
+        else None
+
       case OrganizationDeleteRequest(requesterId, orgId) =>
-        if (requesterId != orgRepo.get(orgId).ownerId) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else None
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
+
       case OrganizationTransferRequest(requesterId, orgId, _) =>
-        if (requesterId != orgRepo.get(orgId).ownerId) {
-          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        } else None
+        if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
     }
   }
 
@@ -206,20 +197,21 @@ class OrganizationCommanderImpl @Inject() (
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
     Try {
       db.readWrite { implicit session =>
-        if (!isValidRequest(request)) None
-        else {
-          val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
-          val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
-          val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-            throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
-          }
-          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
-          Some(OrganizationCreateResponse(request, org))
+        getValidationError(request) match {
+          case Some(fail) => Left(fail)
+          case None =>
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
+            val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
+            val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
+              throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
+            }
+            orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
+            Right(OrganizationCreateResponse(request, org))
         }
       }
     } match {
-      case Success(Some(response)) => Right(response)
-      case Success(None) => Left(OrganizationFail.BAD_PARAMETERS)
+      case Success(Left(fail)) => Left(fail)
+      case Success(Right(response)) => Right(response)
       case Failure(ex) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
     }
   }
@@ -283,7 +275,7 @@ class OrganizationCommanderImpl @Inject() (
         case Some(orgFail) => Left(orgFail)
         case None =>
           val org = orgRepo.get(request.orgId)
-          val newOwnerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
+          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
             case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.OWNER))
             case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.OWNER))
           }

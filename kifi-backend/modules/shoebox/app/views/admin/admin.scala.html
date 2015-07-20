@@ -167,6 +167,13 @@
       </div>
     </header>
     <div class="container">
+      @for(warning <- request.flash.get("warning")) {
+        <div class="alert alert-warning"><strong>Warning:</strong> @warning</div>
+      }
+      @for(error<- request.flash.get("error")) {
+        <div class="alert alert-danger"><strong>Error:</strong> @error</div>
+      }
+
       @content
     </div>
     <div class="integrity-reminder" style="background-image:url(//djty7jcqog9qu.cloudfront.net/users/@{request.user.externalId}/pics/100/@{request.user.pictureName}.jpg)">

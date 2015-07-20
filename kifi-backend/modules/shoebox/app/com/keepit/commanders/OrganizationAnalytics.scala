@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
     implicit val executionContext: ExecutionContext) {
 
-  def trackSentOrganizationInvites(inviterId: Id[User], organization: Organization, invitations: Seq[OrganizationInvite])(implicit eventContext: HeimdalContext) = {
+  def trackSentOrganizationInvites(inviterId: Id[User], organization: Organization, invitations: Set[OrganizationInvite])(implicit eventContext: HeimdalContext) = {
     val when = currentDateTime
     val numDays = daysSinceOrganizationCreated(organization)
     SafeFuture {
