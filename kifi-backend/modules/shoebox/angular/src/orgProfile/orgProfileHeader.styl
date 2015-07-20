@@ -38,14 +38,15 @@ ophImageWidth = 200px
 
 .kf-oph-pic
   width: ophImageWidth
-  border-radius: 10px
 
 .kf-oph-pic-wrapper
   position: relative
+  overflow: hidden
+  border-radius: 10px
   cursor: pointer
 
 .kf-oph-pic-wrapper:hover:before
-  content: 'Change Photo'
+  content: 'Upload Logo'
   position: absolute
   right: 0
   bottom: 0
@@ -59,10 +60,9 @@ ophImageWidth = 200px
   background-color: rgba(255, 255, 255, 1);
 
 .kf-oph-about
-  text-align: left
-  width: 100%
-  width: 'calc(100% - %s)' % ophImageWidth
+  flex: 1
   margin-left: 25px
+  text-align: left
 
 .kf-oph-name
   margin-top: 6px

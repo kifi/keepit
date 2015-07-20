@@ -136,7 +136,7 @@ angular.module('kifi')
             className: 'kf-accept',
             label: 'Accept',
             click: function () {
-              scope.acceptFriendRequest()
+              scope.acceptFriendRequest();
             }
           }
         ];

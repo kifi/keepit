@@ -1,4 +1,4 @@
 <div class="kf-click-to-edit" ng-click="click($event)">
-  <span ng-if="!isEditing()" class="kf-cte-text">{{ text }}</span>
-  <input ng-if="isEditing()" ng-value="text" ng-keyup="triggerKeyUp($event)"/>
+  <span ng-show="!isEditing()" class="kf-cte-text">{{ text }}</span>
+  <input ng-show="isEditing()" ng-value="text" ng-keyup="triggerKeyUp($event)"/>
 </div>

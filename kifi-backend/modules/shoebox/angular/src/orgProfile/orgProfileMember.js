@@ -69,7 +69,7 @@ angular.module('kifi')
     function _triggerInvite() {
       var $scope = this;
       $scope.$emit('inviteMember', $scope.member, function (promise) {
-        promise.then(function (response) {
+        promise.then(function () {
           // TODO: WHY $scope.$parent??? Is it because ng-if creates a new scope?
           $scope.$parent._resentInvite = true;
         });

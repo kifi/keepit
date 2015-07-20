@@ -11,8 +11,8 @@
       <button ng-show="editing" ng-click="undo()">Cancel</button>
       <button ng-show="editing" ng-click="save()">Save</button>
     </div>
-    <div class="kf-oph-pic-wrapper">
-      <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image" ng-click="onOrgProfileImageClick($event)">
+    <div class="kf-oph-pic-wrapper" ng-click="onOrgProfileImageClick($event)">
+      <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
       <input style="display: none;" class="kf-oph-pic-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onOrgProfileImageFileChosen">
     </div>
     <div class="kf-oph-about">

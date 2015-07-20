@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'net',
-  function ($state, $http, $analytics, $location, net) {
+  '$state', '$http', '$analytics', '$location', 'net', 'modalService',
+  function ($state, $http, $analytics, $location, net, modalService) {
 
   return {
     restrict: 'A',
@@ -12,7 +12,7 @@ angular.module('kifi')
       profile: '='
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
-    link: function (scope, element) {
+    link: function (scope) {
 
       scope.editing = false;
       var lastSavedInfo = {};
@@ -59,12 +59,13 @@ angular.module('kifi')
 
       scope.onOrgProfileImageFileChosen = function (files) {
         var file = files[0];
-        if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
-          coverImageFile = file;
-          console.log('LOADED FILE ', file);
-          //$timeout(readCoverImageFile);
-          //libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
-        } else {
+        // if (file && /^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+        //   coverImageFile = file;
+        //   console.log('LOADED FILE ', file);
+        //   $timeout(readCoverImageFile);
+        //   libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
+        // } else {
+        if (!(file && /^image\/(?:jpeg|png|gif)$/.test(file.type))) {
           modalService.openGenericErrorModal({
             modalData: {
               genericErrorMessage: 'Please choose a .jpg, .png or .gif file.'
@@ -76,7 +77,7 @@ angular.module('kifi')
       scope.shouldShowInviteBanner = function () {
         // TODO: Check if this user is a member already
         return $location.search().authToken && !scope.acknowledgedInvite;
-      }
+      };
 
       scope.bannerButtons = [
         {

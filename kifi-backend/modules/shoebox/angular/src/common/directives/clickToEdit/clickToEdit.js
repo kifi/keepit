@@ -16,10 +16,18 @@ angular.module('kifi')
 
         $scope.isEditing = function () {
           return $scope.editing;
-        }
+        };
 
         $scope.toggleEditing = function () {
           $scope.editing = !$scope.editing;
+        };
+
+        $scope.enableEdit = function () {
+          $scope.editing = true;
+        };
+
+        $scope.disableEdit = function () {
+          $scope.editing = false;
         };
 
         $scope.triggerKeyUp = function ($event) {
@@ -27,19 +35,23 @@ angular.module('kifi')
         };
 
         function click(e) {
+          // console.log('target is child of $element?', $element.has(e.target).length);
+          // console.log(e.target);
           if ($element.has(e.target).length) {
-            $scope.editing = true;
+            // console.log('editing ', true);
+            $scope.enableEdit();
           } else {
-            $scope.editing = false;
+            // console.log('editing ', false);
+            $scope.disableEdit();
           }
         }
 
-        //$scope.click = click;
+        $scope.click = click;
 
         $document.on('click', click);
 
         $scope.$on('destroy', function () {
-          $document.off('click', click)
+          $document.off('click', click);
         });
 
       }
