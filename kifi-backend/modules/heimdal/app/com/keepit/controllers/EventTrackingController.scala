@@ -31,6 +31,7 @@ class EventTrackingController @Inject() (
     libraryViewTrackingCommander: LibraryViewTrackingCommander,
     shoeboxClient: ShoeboxServiceClient,
     mixpanelClient: MixpanelClient,
+    amplitudeClient: AmplitudeClient,
     airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
 
@@ -40,18 +41,18 @@ class EventTrackingController @Inject() (
   private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
 
   private def trackInternalEvent(event: HeimdalEvent): Unit = {
-    val augmentedEventF = event match {
-      case userEvent: UserEvent =>
-        handleUserEvent(userEvent).map(e => mixpanelClient.track(e))
-      case visitorEvent: VisitorEvent =>
-        handleVisitorEvent(visitorEvent).map(e => mixpanelClient.track(e))
-      case nonUserEvent: NonUserEvent =>
-        handleNonUserEvent(nonUserEvent).map(e => mixpanelClient.track(e))
-      case anonEvent: AnonymousEvent =>
-        mixpanelClient.track(anonEvent)
-      case systemEvent: SystemEvent =>
-        mixpanelClient.track(systemEvent)
+    event match {
+      case userEvent: UserEvent => handleUserEvent(userEvent).map(e => clientTrackEvent(e))
+      case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent).map(e => clientTrackEvent(e))
+      case nonUserEvent: NonUserEvent => handleNonUserEvent(nonUserEvent).map(e => clientTrackEvent(e))
+      case systemEvent: SystemEvent => clientTrackEvent(systemEvent)
+      case anonEvent: AnonymousEvent => clientTrackEvent(anonEvent)
     }
+  }
+
+  private def clientTrackEvent[E <: HeimdalEvent](event: E)(implicit heimdalEventCompanion: HeimdalEventCompanion[E]): Unit = {
+    mixpanelClient.track(event)
+    amplitudeClient.track(event)
   }
 
   private def handleUserEvent(rawUserEvent: UserEvent) = {
