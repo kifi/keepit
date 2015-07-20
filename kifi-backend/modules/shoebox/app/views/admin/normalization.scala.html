@@ -1,4 +1,4 @@
-@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit request: com.keepit.common.controller.UserRequest[_], flash: Flash)
+@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -73,7 +73,7 @@
       </div>
       <button type="submit" class="btn">Submit</button>
       <input type="checkbox" name="verified"> Verified
-      <div class="text-success">@flash.get("result").getOrElse("")</div>
+      <div class="text-success">@request.flash.get("result").getOrElse("")</div>
     </form>
 
     <h2> Showing @applied.size (page @{page + 1}) </h2>
