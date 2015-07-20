@@ -22,7 +22,7 @@ module.exports = (robot) ->
 
     if host is undefined
       res.reply "Starting deploy for #{service}"
-      exec "deploy #{service} --iam #{user}-via-eddie"
+      exec "/home/eng/bin/deploy #{service} --iam #{user}-via-eddie"
     else
       res.reply "Starting deploy for #{service}, only on host #{host}"
-      exec "deploy #{service} --host #{host} --iam #{user}-via-eddie"
+      exec "/home/eng/bin/deploy #{service} --host #{host} --iam #{user}-via-eddie"
