@@ -21,7 +21,8 @@ CREATE TABLE organization_domain_ownership (
 
   PRIMARY KEY (id),
   CONSTRAINT organization_domain_ownership_organization_id FOREIGN KEY (organization_id) REFERENCES organization(id),
-  CONSTRAINT organization_domain_ownership_domain_id FOREIGN KEY (domain_id) REFERENCES domain(id)
+  CONSTRAINT organization_domain_ownership_domain_id FOREIGN KEY (domain_id) REFERENCES domain(id),
+  CONSTRAINT unique_organization_id_and_domain_id UNIQUE (organization_id, domain_id)
 );
 
 CREATE INDEX organization_domain_ownership_seq_index ON organization_domain_ownership(seq);
