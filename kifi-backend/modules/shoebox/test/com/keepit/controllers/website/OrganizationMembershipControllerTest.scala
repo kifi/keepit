@@ -275,6 +275,21 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           status(result) === OK
         }
       }
+      "let a user leave the org" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, members) = setup()
+
+          val member = members.head
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${member.externalId}"}]}""")
+
+          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+          status(result) === OK
+        }
+      }
     }
   }
 
