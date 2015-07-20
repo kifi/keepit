@@ -53,7 +53,8 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      return $scope.hasAcceptedInvite() && ($scope.me.role === 'owner' || $scope.member.id === $scope.me.id);
+
+      return $scope.hasAcceptedInvite() && (($scope.me.role === 'owner' && $scope.member.role !== 'owner') || $scope.member.id === $scope.me.id);
     }
 
     function _shouldShowInvite() {
