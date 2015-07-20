@@ -69,11 +69,12 @@ sealed abstract class OrganizationFail(val status: Int, val message: String) {
 object OrganizationFail {
   case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(FORBIDDEN, "insufficient_permissions")
   case object HANDLE_UNAVAILABLE extends OrganizationFail(CONFLICT, "handle_unavailable")
-  case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
+  case object NOT_A_MEMBER extends OrganizationFail(FORBIDDEN, "not_a_member")
   case object NO_VALID_INVITATIONS extends OrganizationFail(BAD_REQUEST, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
   case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
+  case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -84,6 +85,7 @@ object OrganizationFail {
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
       case BAD_PARAMETERS.message => BAD_PARAMETERS
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
+      case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
     }
   }
 }
