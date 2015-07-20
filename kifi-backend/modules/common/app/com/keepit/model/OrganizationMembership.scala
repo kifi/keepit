@@ -28,9 +28,6 @@ case class OrganizationMembership(
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 
-  def isOwner: Boolean = role == OrganizationRole.OWNER
-  def hasRole(r: OrganizationRole): Boolean = r == role
-
   def toIngestableOrganizationMembership = IngestableOrganizationMembership(id.get, organizationId, userId, createdAt, state, seq)
 }
 

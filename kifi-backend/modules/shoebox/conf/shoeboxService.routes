@@ -516,6 +516,7 @@ GET           /site/organizations/:id                           @com.keepit.cont
 GET           /site/user/:id/organizations                      @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
 POST          /site/organizations/:id/modify                    @com.keepit.controllers.website.OrganizationController.modifyOrganization(id: PublicId[Organization])
+POST          /site/organizations/:id/transfer                  @com.keepit.controllers.website.OrganizationController.transferOrganization(id: PublicId[Organization])
 DELETE        /site/organizations/:id/delete                    @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
 GET           /site/organizations/:id/members                   @com.keepit.controllers.website.OrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/members/invite            @com.keepit.controllers.website.OrganizationInviteController.inviteUsers(id: PublicId[Organization])
