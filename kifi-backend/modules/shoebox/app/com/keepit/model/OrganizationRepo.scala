@@ -75,8 +75,8 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def getOrganizationsByName(name: String)(implicit session: RSession): Seq[Organization] = {
-    val lowerCaseName = name.toLowerCase
-    val q = for (row <- rows if row.name.toLowerCase === lowerCaseName) yield row
+    val lowerCaseNameEx = "%" + name.toLowerCase + "%"
+    val q = for (row <- rows if row.name.toLowerCase.like(lowerCaseNameEx)) yield row
     q.list
   }
 
