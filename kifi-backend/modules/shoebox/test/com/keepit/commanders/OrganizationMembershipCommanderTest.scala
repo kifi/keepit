@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
@@ -144,6 +145,23 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val memberDelNone = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](2))
         orgMembershipCommander.removeMembership(memberDelNone) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+    "let members leave the org" in {
+      withDb() { implicit injector =>
+        val orgMembershipCommander = inject[OrganizationMembershipCommander]
+        val (org, owner, member) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withName("Luther Corp.").withOwner(owner).withMembers(Seq(member)).saved
+          (org, owner, member)
+        }
+
+        val ownerLeave = OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, owner.id.get)
+        orgMembershipCommander.removeMembership(ownerLeave) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val memberLeave = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, member.id.get)
+        orgMembershipCommander.removeMembership(memberLeave) === Right(OrganizationMembershipRemoveResponse(memberLeave))
       }
     }
 
