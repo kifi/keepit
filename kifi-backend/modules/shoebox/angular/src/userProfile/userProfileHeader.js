@@ -125,6 +125,23 @@ angular.module('kifi')
           });
         };
 
+        scope.bannerButtons = [
+          {
+            className: 'kf-decline',
+            label: 'Decline',
+            click: function () {
+              scope.ignoreFriendRequest();
+            }
+          },
+          {
+            className: 'kf-accept',
+            label: 'Accept',
+            click: function () {
+              scope.acceptFriendRequest();
+            }
+          }
+        ];
+
         scope.acceptFriendRequest = function () {
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAcceptFriend'});
 

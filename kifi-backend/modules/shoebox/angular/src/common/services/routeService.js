@@ -215,6 +215,7 @@ angular.module('kifi')
         return route('/users/' + userId + '/connections/mutual');
       },
 
+
       /////////////////////////////
       // User Personas           //
       /////////////////////////////
