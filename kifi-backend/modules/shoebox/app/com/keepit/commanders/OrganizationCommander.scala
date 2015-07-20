@@ -55,7 +55,11 @@ class OrganizationCommanderImpl @Inject() (
   def getAllOrganizationIds: Seq[Id[Organization]] = db.readOnlyReplica { implicit session => orgRepo.all().map(_.id.get) }
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
-    db.readOnlyReplica { implicit session => getOrganizationViewHelper(orgId, viewerIdOpt) }
+    db.readOnlyReplica { implicit session =>
+      val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt)
+      OrganizationView(organizationInfo, membershipInfo)
+    }
   }
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {
     db.readOnlyReplica { implicit session =>
@@ -67,7 +71,7 @@ class OrganizationCommanderImpl @Inject() (
     orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
   }
 
-  private def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationView = {
+  private def getOrganizationInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
@@ -87,7 +91,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
-    OrganizationView(
+    OrganizationInfo(
       orgId = Organization.publicId(orgId),
       ownerId = ownerId,
       handle = orgHandle,
@@ -97,6 +101,14 @@ class OrganizationCommanderImpl @Inject() (
       members = membersAsBasicUsers,
       numMembers = memberCount,
       numLibraries = numLibraries)
+  }
+
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MembershipInfo = {
+    viewerIdOpt.map { userId =>
+      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
+      MembershipInfo(isInvited = invites.nonEmpty, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    }.getOrElse(MembershipInfo(isInvited = false, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   private def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {

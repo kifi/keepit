@@ -9,7 +9,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 // OrganizationView should ONLY contain public information. No internal ids.
-case class OrganizationView(
+case class OrganizationInfo(
   orgId: PublicId[Organization],
   ownerId: ExternalId[User],
   handle: OrganizationHandle,
@@ -19,8 +19,8 @@ case class OrganizationView(
   members: Seq[BasicUser],
   numMembers: Int,
   numLibraries: Int)
-object OrganizationView {
-  private val defaultWrites: Writes[OrganizationView] = (
+object OrganizationInfo {
+  val defaultWrites: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
@@ -30,10 +30,34 @@ object OrganizationView {
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int]
-  )(unlift(OrganizationView.unapply))
+  )(unlift(OrganizationInfo.unapply))
+}
 
-  val website = defaultWrites
-  val mobileV1 = defaultWrites
+case class MembershipInfo(
+  isInvited: Boolean,
+  permissions: Set[OrganizationPermission],
+  role: Option[OrganizationRole])
+object MembershipInfo {
+  val defaultWrites: Writes[MembershipInfo] = (
+    (__ \ 'isInvited).write[Boolean] and
+    (__ \ 'permissions).write[Set[OrganizationPermission]] and
+    (__ \ 'role).writeNullable[OrganizationRole]
+  )(unlift(MembershipInfo.unapply))
+}
+
+case class OrganizationView(
+  organizationInfo: OrganizationInfo,
+  membershipInfo: MembershipInfo)
+
+object OrganizationView {
+  val websiteWrites: Writes[OrganizationView] = (
+    (__ \ 'organizationInfo).write(OrganizationInfo.defaultWrites) and
+    (__ \ 'membershipInfo).write(MembershipInfo.defaultWrites)
+  )(unlift(OrganizationView.unapply))
+  val mobileWrites = new Writes[OrganizationView] {
+    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
+  }
+  val defaultWrites = websiteWrites
 }
 
 // OrganizationCard should ONLY contain public information. No internal ids.
@@ -58,8 +82,8 @@ object OrganizationCard {
     (__ \ 'numLibraries).write[Int]
   )(unlift(OrganizationCard.unapply))
 
-  val website = defaultWrites
-  val mobileV1 = defaultWrites
+  val websiteWrites = defaultWrites
+  val mobileWrites = defaultWrites
 }
 
 // OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
