@@ -29,6 +29,7 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
+  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -46,6 +47,7 @@ class OrganizationCommanderImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
+    orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
@@ -64,6 +66,11 @@ class OrganizationCommanderImpl @Inject() (
       orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId, viewerIdOpt) }.toMap
     }
   }
+
+  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean = {
+    orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
+  }
+
   private def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationView = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
@@ -260,7 +267,7 @@ class OrganizationCommanderImpl @Inject() (
           memberships.foreach { membership => orgMembershipRepo.deactivate(membership) }
 
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
-          invites.foreach { invite => orgInviteRepo.deactivate(invite.id.get) }
+          invites.foreach(orgInviteRepo.deactivate)
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)

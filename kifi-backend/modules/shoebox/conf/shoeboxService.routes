@@ -519,6 +519,7 @@ POST          /site/organizations/:id/modify                    @com.keepit.cont
 DELETE        /site/organizations/:id/delete                    @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
 GET           /site/organizations/:id/members                   @com.keepit.controllers.website.OrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/members/invite            @com.keepit.controllers.website.OrganizationInviteController.inviteUsers(id: PublicId[Organization])
+DELETE        /site/organizations/:id/members/invites/cancel    @com.keepit.controllers.website.OrganizationInviteController.cancelInvites(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/accept    @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
 POST          /site/organizations/:id/members/invites/decline   @com.keepit.controllers.website.OrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
@@ -707,8 +708,15 @@ POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
-GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView
+GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
+GET     /admin/organizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int)
+GET     /admin/fakeOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int = 0)
+GET     /admin/fakeOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int)
+GET     /admin/realOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int = 0)
+GET     /admin/realOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int)
+POST    /admin/organizations/findByName             @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByName()
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
+POST    /admin/organizations/addOrCreateByUser/:userId             @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
@@ -945,6 +953,7 @@ GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.interna
 
 GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
 GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
+GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
@@ -1013,13 +1022,13 @@ GET     /profile                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /:name                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
-GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
 GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:name/:library/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
-GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
-GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
+GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
+GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)

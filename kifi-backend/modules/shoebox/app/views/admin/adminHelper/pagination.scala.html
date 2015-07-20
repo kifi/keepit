@@ -4,47 +4,47 @@
     Math.ceil(elementsCount.toFloat / pageSize.toFloat).toInt
 }
 
+@maxPage = @{
+    pageCount - 1
+}
+
+@pagesDisplayed = @{
+    20
+}
+
 @paginationControl = {
     <div class="pagination pagination-centered pagination-mini">
         <ul>
             <li>
-                @if(page > 0) {
-                <a href="@otherPagesRoute(page - 1)">
-                    } else {
-                    <a href="#">
-                        }
-                        Prev
-                    </a>
+                <a href="@if(page > 0) { @otherPagesRoute(page - 1) } else { # }">
+                    Prev
+                </a>
             </li>
-            @if(page - 20 > 0) {
-            <li class="disabled">
-                <a href="@otherPagesRoute(0)">...</a>
-            </li>
+            @if(page > 20) {
+                <li class="disabled">
+                    <a href="@otherPagesRoute(0)">...</a>
+                </li>
             }
-            @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
-            @if(i == page) {
-            <li class="disabled">
-                <a href="@otherPagesRoute(i)">@{i + 1}</a>
-            </li>
-            } else {
-            <li class="active">
-                <a href="@otherPagesRoute(i)">@{i + 1}</a>
-            </li>
+            @for(i <- 0.max(page - pagesDisplayed) to maxPage.min(page + 20)) {
+                @if(i == page) {
+                    <li class="disabled">
+                        <a href="@otherPagesRoute(i)">@{i + 1}</a>
+                    </li>
+                } else {
+                    <li class="active">
+                        <a href="@otherPagesRoute(i)">@{i + 1}</a>
+                    </li>
+                }
             }
-            }
-            @if(page + 20 < pageCount - 1) {
-            <li class="disabled">
-                <a href="@otherPagesRoute(pageCount - 1)">...</a>
-            </li>
+            @if(page < maxPage - pagesDisplayed) {
+                <li class="disabled">
+                    <a href="@otherPagesRoute(pageCount - 1)">...</a>
+                </li>
             }
             <li>
-                @if(page < pageCount - 1) {
-                <a href="@otherPagesRoute(page + 1)">
-                    } else {
-                    <a href="#">
-                        }
-                        Next
-                    </a>
+                <a href=" @if(page < maxPage) { @otherPagesRoute(page + 1) } else { # }">
+                    Next
+                </a>
             </li>
         </ul>
     </div>

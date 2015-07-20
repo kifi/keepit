@@ -51,8 +51,8 @@
       <tr>
         <th>Total Keeps</th><td>@totalBookmarks</td>
       </tr>
-      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
-      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>
@@ -93,6 +93,7 @@
                 </ul>
             </td>
         </tr>
+      }
         <tr>
             <th>Recommended Organizations</th>
             <td>
@@ -115,7 +116,15 @@
                 </ul>
             </td>
         </tr>
-      }
+        <tr>
+            <th>Add to Org</th>
+            <td>
+                <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidateOrCreateByName(user.id.get)" method="POST" class="form-inline">
+                    <input type="text" name="orgName" placeholder="Organization name">
+                    <button type="submit" class="btn btn-default">Add</button>
+                </form>
+            </td>
+        </tr>
       <tr>
         <th>Created At</th><td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
       </tr>

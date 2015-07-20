@@ -24,14 +24,6 @@ case class OrganizationTransferResponse(request: OrganizationTransferRequest, mo
 
 case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole)
 
-case class ExternalOrganizationMemberInvitation(invited: Either[ExternalId[User], EmailAddress], role: OrganizationRole)
-object ExternalOrganizationMemberInvitation {
-  implicit val reads: Reads[ExternalOrganizationMemberInvitation] = (
-    EitherFormat.keyedReads[ExternalId[User], EmailAddress]("id", "email") and // read either "id": ExternalId[User] OR "email": EmailAddress
-    (__ \ 'role).read[OrganizationRole]
-  )(ExternalOrganizationMemberInvitation.apply _)
-}
-
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]
   def requesterId: Id[User]
@@ -59,6 +51,16 @@ case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddR
 case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
 
+sealed abstract class OrganizationInviteRequest {
+  def orgId: Id[Organization]
+}
+
+case class OrganizationInviteSendRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
+case class OrganizationInviteCancelRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
+
+case class OrganizationInviteSendResponse(request: OrganizationInviteSendRequest)
+case class OrganizationInviteCancelResponse(request: OrganizationInviteCancelRequest, cancelledEmails: Set[EmailAddress], cancelledUserIds: Set[Id[User]])
+
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
@@ -71,6 +73,7 @@ object OrganizationFail {
   case object NO_VALID_INVITATIONS extends OrganizationFail(BAD_REQUEST, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
+  case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -80,6 +83,7 @@ object OrganizationFail {
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
       case BAD_PARAMETERS.message => BAD_PARAMETERS
+      case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
     }
   }
 }
