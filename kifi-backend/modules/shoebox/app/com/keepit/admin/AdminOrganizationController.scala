@@ -123,11 +123,12 @@ class AdminOrganizationController @Inject() (
         orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
       case None =>
-        orgCommander.createOrganization(OrganizationCreateRequest(requesterId = userId, initialValues = OrganizationInitialValues(name = orgName))) match {
+        orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
           case Left(fail) => NotFound
-          case Right(success) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(
-            success.newOrg.id.get
-          ))
+          case Right(success) =>
+            val orgId = success.newOrg.id.get
+            orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+            Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
         }
     }
   }
