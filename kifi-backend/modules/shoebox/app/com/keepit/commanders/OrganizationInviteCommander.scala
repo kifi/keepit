@@ -64,7 +64,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
       case OrganizationInviteCancelRequest(orgId, requesterId, targetEmails, targetUsers) =>
         val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, requesterId)
-        requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+        val canRequesterCancelInvites = requesterOpt.exists { _.permissions.contains(INVITE_MEMBERS) }
+        val doInvitesExist = {
+          val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
+          targetEmails.forall(email => existingInvites.exists(_.emailAddress.contains(email))) &&
+            targetUsers.forall(userId => existingInvites.exists(_.userId.contains(userId)))
+        }
+        canRequesterCancelInvites && doInvitesExist
     }
   }
 

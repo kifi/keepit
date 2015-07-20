@@ -5,6 +5,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactoryHelper._
@@ -384,6 +385,66 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val response = controller.inviteUsers(publicId)(request)
 
           response === OrganizationFail.INVALID_PUBLIC_ID
+        }
+      }
+    }
+
+    "when cancelling invites" in {
+      "be able to cancel an email invite" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val email = EmailAddress("ryan@kifi.com")
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
+            val org = OrganizationFactory.organization.withName("Kifi").withOwner(owner).withInvitedEmails(Seq(email)).saved
+            (org, owner)
+          }
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val body = Json.obj("cancel" -> Json.arr(Json.obj("email" -> email)))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val request = route.cancelInvites(publicOrgId).withBody(body)
+          val result = controller.cancelInvites(publicOrgId)(request)
+
+          status(result) must equalTo(OK)
+          contentAsString(result) must contain("ryan@kifi.com")
+        }
+      }
+      "be able to cancel a user id invite" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization.withName("Kifi").withOwner(owner).withInvitedUsers(Seq(rando)).saved
+            (org, owner, rando)
+          }
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val body = Json.obj("cancel" -> Json.arr(Json.obj("id" -> rando.externalId)))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val request = route.cancelInvites(publicOrgId).withBody(body)
+          val result = controller.cancelInvites(publicOrgId)(request)
+
+          status(result) must equalTo(OK)
+          contentAsString(result) must contain(rando.externalId.id)
+        }
+      }
+      "fail if the invite doesn't exist" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization.withName("Kifi").withOwner(owner).withInvitedUsers(Seq(rando)).saved
+            (org, owner, rando)
+          }
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val email = EmailAddress("ryan@kifi.com") // no invite for this email
+          val body = Json.obj("cancel" -> Json.arr(Json.obj("email" -> email)))
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val request = route.cancelInvites(publicOrgId).withBody(body)
+          val result = controller.cancelInvites(publicOrgId)(request)
+
+          status(result) must equalTo(FORBIDDEN) // TODO(ryan): fix the organization fails, this should give a BAD_REQUEST
         }
       }
     }
