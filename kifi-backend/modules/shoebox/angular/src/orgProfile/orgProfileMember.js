@@ -48,12 +48,12 @@ angular.module('kifi')
 
     function _shouldShowMakeAdmin() {
       var $scope = this;
-      return $scope.me.role === 'owner' && $scope.member.role !== 'owner' && $scope.hasAcceptedInvite();
+      return $scope.me.role === 'admin' && $scope.member.role !== 'admin' && $scope.hasAcceptedInvite();
     }
 
     function _shouldShowRemove() {
       var $scope = this;
-      var hasCorrectPermission = ($scope.me.role === 'owner' && $scope.member.role !== 'owner') || ($scope.me.id === $scope.profile.ownerId);
+      var hasCorrectPermission = ($scope.me.role === 'admin' && $scope.member.role !== 'admin') || ($scope.me.id === $scope.profile.ownerId);
       return $scope.hasAcceptedInvite() && (hasCorrectPermission || $scope.isMe());
     }
 
