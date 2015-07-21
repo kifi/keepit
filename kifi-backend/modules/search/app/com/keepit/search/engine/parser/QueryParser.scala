@@ -13,7 +13,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   val fields: Set[String]
 
-  def parse(queryText: CharSequence): Option[Query]
+  def parse(queryText: CharSequence): Option[Query] = parseSpecs(queryText).flatMap(buildQuery)
 
   protected def getBooleanQuery(clauses: ArrayBuffer[BooleanClause]): Option[Query] = {
     if (clauses.size == 0) {
@@ -62,9 +62,11 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
   }
 
   protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query]
+
+  protected def parseSpecs(queryText: CharSequence): Option[List[QuerySpec]]
 }
 
-case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
+case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean, trailing: Boolean)
 
 class QueryParserException(msg: String) extends Exception(msg)
 
