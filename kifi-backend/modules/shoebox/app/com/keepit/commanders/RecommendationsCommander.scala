@@ -77,11 +77,7 @@ class RecommendationsCommander @Inject() (
     }
     val uriRecosFut = recosFut.flatMap { recos => decorateUriRecos(userId, recos, explain = false) }
 
-    if (userExperimentCommander.userHasExperiment(userId, UserExperimentType.LIBRARIES)) {
-      for (uriRecos <- uriRecosFut; libRecos <- curatedPublicLibraryRecos(userId)) yield libRecos.map(_._2) ++ uriRecos
-    } else {
-      uriRecosFut
-    }
+    for (uriRecos <- uriRecosFut; libRecos <- curatedPublicLibraryRecos(userId)) yield libRecos.map(_._2) ++ uriRecos
 
   }
 
