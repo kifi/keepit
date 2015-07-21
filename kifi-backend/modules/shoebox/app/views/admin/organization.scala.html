@@ -14,7 +14,7 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Created At</td>
-        <td>@adminHelper.displayDateTime(orgStats.org.createdAt)</td></tr>
+        <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
     <tr><td>Handle</td>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
