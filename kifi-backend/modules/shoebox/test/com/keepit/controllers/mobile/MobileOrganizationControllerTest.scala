@@ -180,7 +180,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """ {"none":["view_organization"],"owner":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
+          val json = """ {"none":["view_organization"],"admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           status(response) === OK
@@ -206,7 +206,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """{ "basePermissions": {"owner": [], "none": []} }"""
+          val json = """{ "basePermissions": {"admin": [], "none": []} }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           response === OrganizationFail.BAD_PARAMETERS

@@ -40,7 +40,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             val invitee = UserFactory.user().withName("New", "Guy").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
-            inject[OrganizationMembershipRepo].save(org.newMembership(owner.id.get, OrganizationRole.OWNER))
+            inject[OrganizationMembershipRepo].save(org.newMembership(owner.id.get, OrganizationRole.ADMIN))
 
             val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
             (invitee, invite)
@@ -202,7 +202,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
-          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.OWNER))
+          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.ADMIN))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
           result === OrganizationFail.INSUFFICIENT_PERMISSIONS

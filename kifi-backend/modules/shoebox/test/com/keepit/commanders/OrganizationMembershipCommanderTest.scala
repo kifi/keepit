@@ -81,7 +81,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         orgMembershipCommander.addMembership(memberAddUser) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // they definitely can't add owners
-        val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.OWNER)
+        val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.ADMIN)
         orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // random people can't add members either
@@ -101,7 +101,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val org = db.readWrite { implicit session =>
           val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))
@@ -111,7 +111,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val ownerModMember = OrganizationMembershipModifyRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.OWNER)
+        val ownerModMember = OrganizationMembershipModifyRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.ADMIN)
         orgMembershipCommander.modifyMembership(ownerModMember) must haveClass[Right[OrganizationFail, OrganizationMembershipModifyResponse]]
 
         // 2 is now an OWNER, try to set him back to MEMBER
@@ -131,7 +131,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val org = db.readWrite { implicit session =>
           val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))

@@ -34,7 +34,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         memberships.size === 1
         memberships.head.userId === Id[User](1)
-        memberships.head.role === OrganizationRole.OWNER
+        memberships.head.role === OrganizationRole.ADMIN
       }
     }
 
@@ -152,7 +152,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
         }
 
@@ -196,7 +196,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
         }
 
@@ -226,7 +226,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         }
         modifiedOrg.state === OrganizationStates.ACTIVE
         modifiedOrg.ownerId === Id[User](3)
-        newOwnerMembership.role === OrganizationRole.OWNER
+        newOwnerMembership.role === OrganizationRole.ADMIN
       }
     }
   }

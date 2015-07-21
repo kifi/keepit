@@ -78,7 +78,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     BasePermissions(Map(
       None -> Set(OrganizationPermission.VIEW_ORGANIZATION),
 
-      Some(OrganizationRole.OWNER) -> OrganizationPermission.all,
+      Some(OrganizationRole.ADMIN) -> OrganizationPermission.all,
 
       Some(OrganizationRole.MEMBER) -> Set(
         OrganizationPermission.VIEW_ORGANIZATION,

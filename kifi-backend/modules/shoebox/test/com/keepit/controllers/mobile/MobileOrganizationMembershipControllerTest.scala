@@ -181,7 +181,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val m1 = members(0)
           val m2 = members(1)
 
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}", "newRole": "owner"}]}""")
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}", "newRole": "admin"}]}""")
 
           inject[FakeUserActionsHelper].setUser(m1, Set(UserExperimentType.ORGANIZATION))
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
