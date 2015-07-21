@@ -25,7 +25,7 @@
 </ul>
 }
 
-@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
     <button class="btn" id="library_push" onclick="libraryPush()">Lib Push</button>
     <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
@@ -120,7 +120,7 @@
             <th>Add to Org</th>
             <td>
                 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidateOrCreateByName(user.id.get)" method="POST" class="form-inline">
-                    <input type="text" name="orgName" placeholder="Organization name">
+                    <input id="org-name-typeahead" class="form-control" type="text" name="orgName" placeholder="Organization name">
                     <button type="submit" class="btn btn-default">Add</button>
                 </form>
             </td>
@@ -425,6 +425,58 @@
           $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
         }
       });
+
+      $('#org-name-typeahead').typeahead(null, {
+        name: 'orgs',
+        display: 'name',
+        source: function (query, syncResults, asyncResults) {
+          $.getJSON('/admin/findOrganizationByNameJson?orgName=' + query, function (data) {
+            asyncResults(data)
+          });
+        }
+      })
     });
 </script>
+<style>
+/* Stolen from http://stackoverflow.com/a/26934329/1952271 */
+.tt-query {
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+     -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+}
+
+.tt-hint {
+  color: #999
+}
+
+.tt-menu {
+  width: 422px;
+  margin-top: 4px;
+  padding: 4px 0;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  -webkit-border-radius: 4px;
+     -moz-border-radius: 4px;
+          border-radius: 4px;
+  -webkit-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+     -moz-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+          box-shadow: 0 5px 10px rgba(0,0,0,.2);
+}
+
+.tt-suggestion {
+  padding: 3px 20px;
+  line-height: 24px;
+}
+
+.tt-suggestion.tt-cursor {
+  color: #fff;
+  background-color: #0097cf;
+
+}
+
+.tt-suggestion p {
+  margin: 0;
+}
+</style>
 }
