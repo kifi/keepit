@@ -91,11 +91,11 @@ angular.module('kifi')
       net.modifyOrgMember(organization.id, {
         members: [{
           userId: member.id,
-          newRole: 'owner'
+          newRole: 'admin'
         }]
       })
       .then(function success() {
-        member.role = 'owner';
+        member.role = 'admin';
       })
       ['catch'](handleErrorResponse);
     });
