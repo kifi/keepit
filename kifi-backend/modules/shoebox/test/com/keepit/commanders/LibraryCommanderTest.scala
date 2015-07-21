@@ -270,7 +270,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryRepo.get(libShield.id.get).organizationId === None
           }
 
-          db.readWrite { implicit s => orgMemberRepo.save(org.newMembership(userAgent.id.get, OrganizationRole.OWNER)) }
+          db.readWrite { implicit s => orgMemberRepo.save(org.newMembership(userAgent.id.get, OrganizationRole.ADMIN)) }
 
           // move from personal space to org space
           val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
@@ -288,7 +288,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // move from one org to another where you have invite/remove privs.
           db.readWrite { implicit session =>
-            orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.OWNER)) // how did he pull that off.
+            orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.ADMIN)) // how did he pull that off.
           }
           val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
@@ -600,7 +600,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
           val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None))
           val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None))
-          orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.OWNER))
+          orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.ADMIN))
           (user, newLibrary, organization, otherOrg)
         }
 

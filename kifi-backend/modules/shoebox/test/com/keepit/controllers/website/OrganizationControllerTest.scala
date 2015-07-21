@@ -101,7 +101,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
-        (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "membershipInfo" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.OWNER)
+        (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "membershipInfo" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
 
         inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
         val memberRequest = route.getOrganization(publicId)
@@ -339,7 +339,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """ {"none":["view_organization"],"owner":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
+          val json = """ {"none":["view_organization"],"admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           status(response) === OK
@@ -365,7 +365,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """{ "basePermissions": {"owner": [], "none": []} }"""
+          val json = """{ "basePermissions": {"admin": [], "none": []} }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           response === OrganizationFail.BAD_PARAMETERS
@@ -428,8 +428,8 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           status(result) === NO_CONTENT
           db.readOnlyMaster { implicit session =>
             inject[OrganizationRepo].get(org.id.get).ownerId === member.id.get
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.ADMIN
           }
         }
       }
@@ -445,8 +445,8 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           status(result) === NO_CONTENT
           db.readOnlyMaster { implicit session =>
             inject[OrganizationRepo].get(org.id.get).ownerId === rando.id.get
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, rando.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, rando.id.get).get.role === OrganizationRole.ADMIN
           }
         }
       }
@@ -468,7 +468,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           db.readOnlyMaster { implicit session =>
             inject[OrganizationRepo].get(org.id.get).ownerId === owner.id.get
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.OWNER
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
             inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.MEMBER
           }
         }

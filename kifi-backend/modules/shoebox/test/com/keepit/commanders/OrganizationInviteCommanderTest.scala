@@ -31,7 +31,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
       userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
       val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
-      val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.OWNER))
+      val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
       (org, owner, membership)
     }
   }
@@ -156,7 +156,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             UserFactory.user().withId(inviterId).saved
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
-            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.ADMIN))
             val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
             (org, invite)
           }
@@ -174,7 +174,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             UserFactory.user().withId(inviterId).saved
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
-            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.ADMIN))
             org
           }
           inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
@@ -193,7 +193,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.MEMBER))
-            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.ADMIN))
             (org, invite)
           }
           inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) === Left(OrganizationFail.NO_VALID_INVITATIONS)
