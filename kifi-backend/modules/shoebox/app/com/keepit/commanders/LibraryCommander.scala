@@ -555,7 +555,11 @@ class LibraryCommanderImpl @Inject() (
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
-        val targetSpace = LibrarySpace(ownerId, libAddReq.orgIdOpt)
+        val targetSpace = libAddReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
+        val orgIdOpt = targetSpace match {
+          case OrganizationSpace(orgId) => Some(orgId)
+          case _ => None
+        }
         db.readOnlyReplica { implicit s =>
           val userHasPermissionToCreateInSpace = targetSpace match {
             case OrganizationSpace(orgId) =>
@@ -584,7 +588,7 @@ class LibraryCommanderImpl @Inject() (
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind,
-                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = libAddReq.orgIdOpt))
+                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   libAddReq.subscriptions match {
                     case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)

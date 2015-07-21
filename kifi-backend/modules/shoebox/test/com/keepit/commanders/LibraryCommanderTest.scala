@@ -257,7 +257,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", orgIdOpt = Some(org.id.get))
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, owner.id.get)
           addResponse.isRight === true
         }
@@ -276,7 +276,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", orgIdOpt = Some(org.id.get))
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, member.id.get)
           addResponse.isLeft === true
         }
@@ -291,7 +291,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", orgIdOpt = Some(org.id.get))
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, rando.id.get)
           addResponse.isLeft === true
         }
