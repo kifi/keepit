@@ -192,10 +192,14 @@ class OrganizationMembershipCommanderImpl @Inject() (
       case Some(fail) => Left(fail)
       case None =>
         val org = organizationRepo.get(request.orgId)
-        val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
+        val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
         val newMembership = targetOpt match {
-          case None => organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
-          case Some(membership) => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+          case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+          case inactiveMembershipOpt => {
+            val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
+            val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
+            organizationMembershipRepo.save(newMembership)
+          }
         }
         Right(OrganizationMembershipAddResponse(request, newMembership))
     }

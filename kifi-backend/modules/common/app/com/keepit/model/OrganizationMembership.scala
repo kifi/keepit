@@ -26,6 +26,8 @@ case class OrganizationMembership(
     state = OrganizationMembershipStates.INACTIVE
   )
 
+  def isActive = state == OrganizationMembershipStates.ACTIVE
+
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 
   def toIngestableOrganizationMembership = IngestableOrganizationMembership(id.get, organizationId, userId, createdAt, state, seq)
