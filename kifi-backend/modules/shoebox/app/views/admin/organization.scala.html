@@ -79,6 +79,10 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId">
+                <button type="submit" class="btn btn-default">Remove</button>
+            </form></td>
         </tr>
     }
 </table>
