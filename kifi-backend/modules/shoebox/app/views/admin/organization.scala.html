@@ -13,6 +13,8 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
+    <tr><td>Created At</td>
+        <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
     <tr><td>Handle</td>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
@@ -77,6 +79,10 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId">
+                <button type="submit" class="btn btn-default">Remove</button>
+            </form></td>
         </tr>
     }
 </table>
@@ -114,7 +120,7 @@ orgStats: OrganizationStatistics
     <script type="text/javascript">
 
     $("#experiments").on("click", "input", function() {
-        var $td = $(this).closest("#experiments");
+        var $td = $(this)'.closest("#experiments");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
         if (this.checked) {
             console.log($(this).data("exp"));
@@ -142,5 +148,7 @@ orgStats: OrganizationStatistics
     function done() {
       location.reload();
     };
+
+
 </script>
 }

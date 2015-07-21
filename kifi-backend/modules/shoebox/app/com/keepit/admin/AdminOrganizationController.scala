@@ -119,6 +119,13 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  def findOrganizationByNameJson(orgName: String) = AdminUserPage { implicit request =>
+    val orgs = db.readOnlyReplica { implicit session =>
+      orgRepo.getOrganizationsByName(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
+    }
+    Ok(Json.toJson(orgs))
+  }
+
   def addCandidateOrCreateByName(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val orgName = request.body.get("orgName").flatMap(_.headOption).get
     val orgsByName = db.readOnlyReplica { implicit session =>
@@ -149,6 +156,12 @@ class AdminOrganizationController @Inject() (
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
+    orgMembershipCandidateCommander.removeCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
