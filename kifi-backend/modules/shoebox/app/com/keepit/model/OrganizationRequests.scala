@@ -22,8 +22,6 @@ case class OrganizationDeleteResponse(request: OrganizationDeleteRequest)
 case class OrganizationTransferRequest(requesterId: Id[User], orgId: Id[Organization], newOwner: Id[User]) extends OrganizationRequest
 case class OrganizationTransferResponse(request: OrganizationTransferRequest, modifiedOrg: Organization)
 
-case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole)
-
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]
   def requesterId: Id[User]
@@ -34,7 +32,7 @@ case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
-  newRole: OrganizationRole) extends OrganizationMembershipRequest
+  newRole: OrganizationRole = OrganizationRole.MEMBER) extends OrganizationMembershipRequest
 
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],
@@ -53,9 +51,10 @@ case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipR
 
 sealed abstract class OrganizationInviteRequest {
   def orgId: Id[Organization]
+  def requesterId: Id[User]
 }
 
-case class OrganizationInviteSendRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
+case class OrganizationInviteSendRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]], message: Option[String] = None) extends OrganizationInviteRequest
 case class OrganizationInviteCancelRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
 
 case class OrganizationInviteSendResponse(request: OrganizationInviteSendRequest)

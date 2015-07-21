@@ -294,7 +294,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |{ "id":  "${not_a_member.externalId.id}"}
                |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
@@ -302,28 +302,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val content = contentAsString(response)
           status(response) === OK
           content must contain(not_a_member.externalId.id)
-          content must contain("member")
-        }
-      }
-
-      "fail for member trying to elevate permissions above his own" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
-          implicit val config = inject[PublicIdConfiguration]
-          val publicId = Organization.publicId(org.id.get)
-
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
-          val jsonInput = Json.parse(
-            s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "owner"}
-                                                         |]}""".stripMargin)
-          val request = route.inviteUsers(publicId).withBody(jsonInput)
-          val response = controller.inviteUsers(publicId)(request)
-
-          response === OrganizationFail.INSUFFICIENT_PERMISSIONS
-          db.readOnlyMaster { implicit s =>
-            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).map(_.role) !== Some(OrganizationRole.OWNER)
-          }
+          content must contain("id")
         }
       }
 
@@ -355,7 +334,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |{ "id":  "${not_a_member.externalId.id}"}
                                                          |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
