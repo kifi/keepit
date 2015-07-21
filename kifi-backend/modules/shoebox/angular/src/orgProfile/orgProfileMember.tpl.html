@@ -12,7 +12,7 @@
     <div class="kf-organization-member-upper-right">
       <button class="kf-organization-member-action-button" ng-click="toggleControls()">
         {{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}
-        {{ isOpen() ? 'V' : '>'}}
+        <svg kf-symbol-sprite icon="dropdown-arrow" class="{{ 'kf-dropdown-arrow-icon' + (isOpen() ? ' kf-dropdown-arrow-icon-inverted' : '') }}"></svg>
       </button>
     </div>
   </div>
