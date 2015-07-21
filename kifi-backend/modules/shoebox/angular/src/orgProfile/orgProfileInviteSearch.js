@@ -37,9 +37,6 @@ angular.module('kifi')
         scope.organization = scope.modalData.organization;
         scope.inviteType = scope.modalData.inviteType || 'join';
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        scope.canInviteCollabs = true; /*(function (access) {
-          return access === 'admin' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
-        }((scope.library.membership || {}).access));*/
 
         function shareLibrary(opts) {
           if (scope.share.message) {
