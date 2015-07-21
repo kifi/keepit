@@ -46,7 +46,10 @@ class MobileOrganizationInviteController @Inject() (
         }.toSet
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, request.request.userId, invitees, message = messageOpt)
+        val inviteeEmails = invitees.collect { case Right(email) => email }
+        val inviteeUserIds = invitees.collect { case Left(userId) => userId }
+        val orgInvite = OrganizationInviteSendRequest(request.orgId, request.request.userId, inviteeEmails, inviteeUserIds, messageOpt)
+        val inviteResult = orgInviteCommander.inviteToOrganization(orgInvite)
         inviteResult.map {
           case Left(organizationFail) => organizationFail.asErrorResponse
           case Right(inviteesWithAccess) =>

@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
-  def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Set[Either[Id[User], EmailAddress]], message: Option[String] = None)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
+  def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
@@ -60,19 +60,17 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
 
-    def validateRequester(requesterOpt: Option[OrganizationMembership]): Option[OrganizationFail] = {
-      requesterOpt match {
-        case None => Some(OrganizationFail.NOT_A_MEMBER)
-        case Some(membership) if !membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) => Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        case _ => None
-      }
+    val validateRequester = requesterOpt match {
+      case None => Some(OrganizationFail.NOT_A_MEMBER)
+      case Some(membership) if !membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) => Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case _ => None
     }
 
-    validateRequester(requesterOpt) match {
+    validateRequester match {
       case Some(invalidRequester) => Some(invalidRequester)
       case None =>
         request match {
-          case OrganizationInviteSendRequest(orgId, requesterId, targetEmails, targetUsers) => {
+          case OrganizationInviteSendRequest(orgId, requesterId, targetEmails, targetUsers, _) => {
             val existingMembers = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, targetUsers)
 
             if (existingMembers.nonEmpty) Some(OrganizationFail.ALREADY_A_MEMBER)
@@ -96,14 +94,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Set[Either[Id[User], EmailAddress]], message: Option[String] = None)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
+  def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
+    val OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds, message) = orgInvite
+
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
-    val inviteeAddresses = invitees.collect { case Right(emailAddress) => emailAddress }
-    val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-
-    val orgInvite = OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds)
 
     val failOpt = db.readOnlyReplica { implicit session => getValidationError(orgInvite) }
 

@@ -66,6 +66,7 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
     }
 
     implicit val context = heimdalContextBuilder().build
-    orgInviteCommander.inviteToOrganization(orgId = org.id.get, inviterId = org.ownerId, invitees = existingCandidates.map(candidate => Left(candidate.userId)))
+    val orgInvite = OrganizationInviteSendRequest(orgId = org.id.get, requesterId = org.ownerId, targetEmails = Set.empty, targetUserIds = existingCandidates.map(_.userId))
+    orgInviteCommander.inviteToOrganization(orgInvite)
   }
 }

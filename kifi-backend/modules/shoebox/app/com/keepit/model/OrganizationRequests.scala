@@ -54,7 +54,7 @@ sealed abstract class OrganizationInviteRequest {
   def requesterId: Id[User]
 }
 
-case class OrganizationInviteSendRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
+case class OrganizationInviteSendRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]], message: Option[String] = None) extends OrganizationInviteRequest
 case class OrganizationInviteCancelRequest(orgId: Id[Organization], requesterId: Id[User], targetEmails: Set[EmailAddress], targetUserIds: Set[Id[User]]) extends OrganizationInviteRequest
 
 case class OrganizationInviteSendResponse(request: OrganizationInviteSendRequest)
