@@ -2,11 +2,14 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.classify.Domain
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
 
 import scala.concurrent.duration.Duration
@@ -81,3 +84,15 @@ case class OrganizationDomainOwnershipAllKey() extends Key[Seq[OrganizationDomai
 
 class OrganizationDomainOwnershipAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrganizationDomainOwnershipAllKey, Seq[OrganizationDomainOwnership]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+trait OrganizationDomainOwnershipSequencingPlugin extends SequencingPlugin
+
+class OrganizationDomainOwnershipSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[OrganizationDomainOwnershipSequencingActor],
+  override val scheduling: SchedulingProperties) extends OrganizationDomainOwnershipSequencingPlugin
+
+@Singleton
+class OrganizationDomainOwnershipSequenceNumberAssigner @Inject() (db: Database, repo: OrganizationDomainOwnershipRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[OrganizationDomainOwnership](db, repo, airbrake)
+class OrganizationDomainOwnershipSequencingActor @Inject() (
+  assigner: OrganizationDomainOwnershipSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

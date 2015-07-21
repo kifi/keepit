@@ -211,3 +211,14 @@ case object UserIpAddressGraphUpdate extends GraphUpdateKind[UserIpAddressGraphU
   val code = "user_ip_addr_update"
   def apply(userIpAddress: IngestableUserIpAddress): UserIpAddressGraphUpdate = UserIpAddressGraphUpdate(userIpAddress.userId, userIpAddress.ipAddress, userIpAddress.updatedAt, userIpAddress.seqNum)
 }
+
+case class OrganizationDomainOwnershipGraphUpdate(orgId: Id[Organization], domainId: Id[Domain], state: State[OrganizationDomainOwnership], orgDomainOwnSeq: SequenceNumber[OrganizationDomainOwnership]) extends GraphUpdate {
+  type U = OrganizationDomainOwnershipGraphUpdate
+  def kind: GraphUpdateKind[U] = OrganizationDomainOwnershipGraphUpdate
+  def seq: SequenceNumber[U] = kind.seq(orgDomainOwnSeq.value)
+}
+
+case object OrganizationDomainOwnershipGraphUpdate extends GraphUpdateKind[OrganizationDomainOwnershipGraphUpdate] {
+  val code = "organization_domain_ownership_update"
+  def apply(orgDomainOwn: IngestableOrganizationDomainOwnership): OrganizationDomainOwnershipGraphUpdate = OrganizationDomainOwnershipGraphUpdate(orgDomainOwn.organizationId, orgDomainOwn.domainId, orgDomainOwn.state, orgDomainOwn.seq)
+}

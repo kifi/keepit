@@ -71,5 +71,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[OrganizationSequencingPlugin] != null)
     require(injector.instance[OrganizationMembershipSequencingPlugin] != null)
     require(injector.instance[OrganizationMembershipCandidateSequencingPlugin] != null)
+    require(injector.instance[OrganizationDomainOwnershipSequencingPlugin] != null)
   }
 }
