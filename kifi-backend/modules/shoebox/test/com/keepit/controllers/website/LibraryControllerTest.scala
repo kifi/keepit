@@ -79,73 +79,132 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
   "LibraryController" should {
 
-    "create library" in {
-      withDb(modules: _*) { implicit injector =>
-        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val libraryController = inject[LibraryController]
-        val testPath = com.keepit.controllers.website.routes.LibraryController.addLibrary().url
-        val user = db.readWrite { implicit s =>
-          UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").saved
+    "create libraries" in {
+      "successfully create library" in {
+        withDb(modules: _*) { implicit injector =>
+          val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          val libraryController = inject[LibraryController]
+          val testPath = com.keepit.controllers.website.routes.LibraryController.addLibrary().url
+          val user = db.readWrite { implicit s =>
+            UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").saved
+          }
+          val inputJson1 = Json.obj(
+            "name" -> "Library1",
+            "slug" -> "lib1",
+            "visibility" -> "secret"
+          )
+          inject[FakeUserActionsHelper].setUser(user)
+          val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
+          val result1 = libraryController.addLibrary()(request1)
+          status(result1) must equalTo(OK)
+          contentType(result1) must beSome("application/json")
+
+          val parseLibrary = (contentAsJson(result1) \ "library")
+          (parseLibrary \ "name").as[String] === "Library1"
+          (parseLibrary \ "slug").as[LibrarySlug].value === "lib1"
+          (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
+          (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
+          (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
+          (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
+
+          val inputJson2 = Json.obj(
+            "name" -> "Invalid Library - Slug",
+            "slug" -> "lib2 abcd",
+            "visibility" -> "secret"
+          )
+          val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
+          val result2 = libraryController.addLibrary()(request2)
+          status(result2) must equalTo(BAD_REQUEST)
+          contentType(result2) must beSome("application/json")
+
+          // Re-add Library 1 (same name)
+          val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(Json.obj(
+            "name" -> "Library1",
+            "slug" -> "libA",
+            "visibility" -> "secret"
+          ))
+          val result3 = libraryController.addLibrary()(request3)
+          status(result3) must equalTo(BAD_REQUEST)
+          Json.parse(contentAsString(result3)) === Json.parse(s"""{"error":"library_name_exists"}""")
+
+          // Re-add Library 1 (same slug)
+          val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(Json.obj(
+            "name" -> "LibraryA",
+            "slug" -> "lib1",
+            "visibility" -> "secret"
+          ))
+          val result4 = libraryController.addLibrary()(request4)
+          status(result4) must equalTo(BAD_REQUEST)
+          Json.parse(contentAsString(result4)) === Json.parse(s"""{"error":"library_slug_exists"}""")
+
+          // Add Library with invalid name
+          val inputJson5 = Json.obj(
+            "name" -> "Invalid Name - \"",
+            "slug" -> "lib5",
+            "visibility" -> "secret"
+          )
+          val request5 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(inputJson5)
+          val result5 = libraryController.addLibrary()(request5)
+          status(result5) must equalTo(BAD_REQUEST)
+          contentType(result5) must beSome("application/json")
         }
-        val inputJson1 = Json.obj(
-          "name" -> "Library1",
-          "slug" -> "lib1",
-          "visibility" -> "secret"
-        )
-        inject[FakeUserActionsHelper].setUser(user)
-        val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
-        val result1 = libraryController.addLibrary()(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
+      }
+      "create a library inside of an organization" in {
+        withDb(modules: _*) { implicit injector =>
+          val libraryController = inject[LibraryController]
+          val testPath = com.keepit.controllers.website.routes.LibraryController.addLibrary().url
+          val (org, owner) = db.readWrite { implicit s =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val pubId = Organization.publicId(org.id.get)
+          val inputJson1 = Json.obj(
+            "name" -> "Kifi Library",
+            "slug" -> "kifilib",
+            "visibility" -> "secret",
+            "space" -> Json.obj("org" -> pubId)
+          )
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
+          val result1 = libraryController.addLibrary()(request1)
+          status(result1) === OK
+          contentType(result1) must beSome("application/json")
 
-        val parseLibrary = (contentAsJson(result1) \ "library")
-        (parseLibrary \ "name").as[String] === "Library1"
-        (parseLibrary \ "slug").as[LibrarySlug].value === "lib1"
-        (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
-        (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
-        (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
-        (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(owner.id.get, LibrarySlug("kifilib")).isEmpty === true
+            inject[LibraryRepo].getBySpaceAndSlug(org.id.get, LibrarySlug("kifilib")).isDefined === true
+          }
+        }
+      }
+      "fail when a user tries to create a library inside of an organization and they don't have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val libraryController = inject[LibraryController]
+          val testPath = com.keepit.controllers.website.routes.LibraryController.addLibrary().url
+          val (org, owner, rando) = db.readWrite { implicit s =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner, rando)
+          }
+          val pubId = Organization.publicId(org.id.get)
+          val inputJson1 = Json.obj(
+            "name" -> "Kifi Library",
+            "slug" -> "kifilib",
+            "visibility" -> "secret",
+            "space" -> Json.obj("org" -> pubId)
+          )
+          inject[FakeUserActionsHelper].setUser(rando)
+          val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
+          val result1 = libraryController.addLibrary()(request1)
+          status(result1) === FORBIDDEN
+          contentType(result1) must beSome("application/json")
 
-        val inputJson2 = Json.obj(
-          "name" -> "Invalid Library - Slug",
-          "slug" -> "lib2 abcd",
-          "visibility" -> "secret"
-        )
-        val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
-        val result2 = libraryController.addLibrary()(request2)
-        status(result2) must equalTo(BAD_REQUEST)
-        contentType(result2) must beSome("application/json")
-
-        // Re-add Library 1 (same name)
-        val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(Json.obj(
-          "name" -> "Library1",
-          "slug" -> "libA",
-          "visibility" -> "secret"
-        ))
-        val result3 = libraryController.addLibrary()(request3)
-        status(result3) must equalTo(BAD_REQUEST)
-        Json.parse(contentAsString(result3)) === Json.parse(s"""{"error":"library_name_exists"}""")
-
-        // Re-add Library 1 (same slug)
-        val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(Json.obj(
-          "name" -> "LibraryA",
-          "slug" -> "lib1",
-          "visibility" -> "secret"
-        ))
-        val result4 = libraryController.addLibrary()(request4)
-        status(result4) must equalTo(BAD_REQUEST)
-        Json.parse(contentAsString(result4)) === Json.parse(s"""{"error":"library_slug_exists"}""")
-
-        // Add Library with invalid name
-        val inputJson5 = Json.obj(
-          "name" -> "Invalid Name - \"",
-          "slug" -> "lib5",
-          "visibility" -> "secret"
-        )
-        val request5 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(inputJson5)
-        val result5 = libraryController.addLibrary()(request5)
-        status(result5) must equalTo(BAD_REQUEST)
-        contentType(result5) must beSome("application/json")
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(rando.id.get, LibrarySlug("kifilib")).isEmpty === true
+            inject[LibraryRepo].getBySpaceAndSlug(org.id.get, LibrarySlug("kifilib")).isEmpty === true
+          }
+        }
       }
     }
 

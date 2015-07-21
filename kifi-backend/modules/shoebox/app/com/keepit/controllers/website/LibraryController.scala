@@ -8,6 +8,7 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
@@ -54,6 +55,7 @@ class LibraryController @Inject() (
   clock: Clock,
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
+  airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -67,18 +69,44 @@ class LibraryController @Inject() (
   }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
-    val addRequest = request.body.as[LibraryAddRequest]
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) =>
-        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
-      case Right(newLibrary) =>
-        val membership = db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+    externalAddRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
+      case JsSuccess(externalAddRequest, _) =>
+        val libAddRequest = db.readOnlyReplica { implicit session =>
+          val space = externalAddRequest.externalSpace map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryAddRequest(
+            name = externalAddRequest.name,
+            slug = externalAddRequest.slug,
+            visibility = externalAddRequest.visibility,
+            description = externalAddRequest.description,
+            color = externalAddRequest.color,
+            listed = externalAddRequest.listed,
+            whoCanInvite = externalAddRequest.whoCanInvite,
+            subscriptions = externalAddRequest.subscriptions,
+            space = space
+          )
         }
-        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary, LibraryController.defaultLibraryImageSize).map { lib =>
-          Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+          case Left(fail) =>
+            Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
+          case Right(newLibrary) =>
+            val membership = db.readOnlyMaster {
+              implicit s =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+            }
+            libraryCommander.createFullLibraryInfo(Some(request.userId), showPublishedLibraries = false, newLibrary, LibraryController.defaultLibraryImageSize).map {
+              lib =>
+                Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+            }
         }
     }
   }

@@ -192,61 +192,110 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   }
 
   "LibraryCommander" should {
-    "create libraries, memberships & invites" in {
-      withDb(modules: _*) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
+    "create libraries correctly" in {
+      "create libraries, memberships & invites" in {
+        withDb(modules: _*) { implicit injector =>
+          val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
-        db.readOnlyMaster { implicit s =>
-          libraryRepo.count === 0
-        }
+          db.readOnlyMaster { implicit s =>
+            libraryRepo.count === 0
+          }
 
-        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
+          val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
+          val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
+          val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
 
-        val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+          val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
-        val libraryCommander = inject[LibraryCommander]
-        val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
-        add1.isRight === true
-        add1.right.get.name === "Avengers Missions"
-        val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
-        add2.isRight === true
-        add2.right.get.name === "MURICA"
-        val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
-        add3.isRight === true
-        add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
+          val libraryCommander = inject[LibraryCommander]
+          val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
+          add1.isRight === true
+          add1.right.get.name === "Avengers Missions"
+          val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
+          add2.isRight === true
+          add2.right.get.name === "MURICA"
+          val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
+          add3.isRight === true
+          add3.right.get.name === "Science and Stuff"
+          libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
 
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.length === 3
-          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
+          db.readOnlyMaster { implicit s =>
+            val allLibs = libraryRepo.all
+            allLibs.length === 3
+            allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+            allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
 
-          val allMemberships = libraryMembershipRepo.all
-          allMemberships.length === 3
-          allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
-          allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-          allMemberships.map(_.lastJoinedAt).flatten.size === 3
-        }
+            val allMemberships = libraryMembershipRepo.all
+            allMemberships.length === 3
+            allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
+            allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
+            allMemberships.map(_.lastJoinedAt).flatten.size === 3
+          }
 
-        // test re-activating inactive library
-        val libScience = add3.right.get
-        db.readWrite { implicit s =>
-          libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
-        }
-        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.length === 3
-          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.color.nonEmpty === true)
+          // test re-activating inactive library
+          val libScience = add3.right.get
+          db.readWrite { implicit s =>
+            libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
+          }
+          libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+          db.readOnlyMaster { implicit s =>
+            val allLibs = libraryRepo.all
+            allLibs.length === 3
+            allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+            allLibs.map(_.color.nonEmpty === true)
+          }
         }
       }
+      "let an org member create a library in that org if they have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).saved
+            (org, owner)
+          }
+          val libraryCommander = inject[LibraryCommander]
 
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, owner.id.get)
+          addResponse.isRight === true
+        }
+      }
+      "fail if an org member tries to create a library in their org but does not have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, member) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+
+            // This org is super crappy, members can't do anything
+            val crappyBPs = BasePermissions(Map(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION)))
+
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
+            (org, owner, member)
+          }
+          val libraryCommander = inject[LibraryCommander]
+
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, member.id.get)
+          addResponse.isLeft === true
+        }
+      }
+      "fail if a non-member tries to add a library to an organization" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).saved
+            (org, owner, rando)
+          }
+          val libraryCommander = inject[LibraryCommander]
+
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, rando.id.get)
+          addResponse.isLeft === true
+        }
+      }
     }
     "when modify library is called:" in {
       "allow changing organizationId of library" in {
@@ -387,7 +436,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // Move it into starkOrg
           val response1 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
-          println(response1)
           response1.isRight === true
 
           // Now the library should live in starkOrg, but there is still an alias from ironMan
