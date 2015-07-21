@@ -26,6 +26,6 @@ CREATE TABLE organization_domain_ownership (
 );
 
 CREATE INDEX organization_domain_ownership_seq_index ON organization_domain_ownership(seq);
-insert into evolutions (name, description) values('358.sql', 'add organization_domain_ownership and organization_domain_ownership_sequence');
+insert into evolutions (name, description) values('359.sql', 'add organization_domain_ownership and organization_domain_ownership_sequence');
 
 # --- !Downs
