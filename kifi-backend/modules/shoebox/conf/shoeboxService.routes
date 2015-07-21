@@ -706,6 +706,7 @@ POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
+POST    /admin/organization/:id/removeMember       @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/ownDomain       @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
 GET    /admin/organization/:id/disownDomain/:domainId @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainId: Id[com.keepit.classify.Domain])
@@ -718,6 +719,7 @@ GET     /admin/fakeOrganizations/:page                    @com.keepit.controller
 GET     /admin/realOrganizations                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int = 0)
 GET     /admin/realOrganizations/:page                    @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int)
 GET     /admin/findOrganizationByName             @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByName(orgName: String)
+GET     /admin/findOrganizationByNameJson             @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByNameJson(orgName: String)
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId             @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 

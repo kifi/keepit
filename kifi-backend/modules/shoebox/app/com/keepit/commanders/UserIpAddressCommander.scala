@@ -119,7 +119,8 @@ class UserIpAddressEventLogger @Inject() (
       (currentCluster.toSet, ignoreForPotentialOrgs)
     }
 
-    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake) {
+    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
+      && !Set("108.60.110.146").contains(event.ip.ip)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
