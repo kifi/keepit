@@ -26,7 +26,6 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import play.api.Play
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
@@ -390,7 +389,7 @@ class UserCommander @Inject() (
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) } && Play.isProd) {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       val emailF = emailSender.welcome(newUser.id.get, targetEmailOpt, isPlainEmail)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
