@@ -108,6 +108,8 @@ class OrganizationRepoImpl @Inject() (
           select organization_id from organization_membership where user_id = $userId
           union
             select organization_id from organization_membership_candidate where user_id = $userId
+        ) and not exists (
+          select organization_id from organization_experiment where organization_id = organization.id and experiment_type = 'fake' and state = 'active'
         );""".as[Id[Organization]].list.toSet
 
     getByIds(orgIds).values.toSeq
