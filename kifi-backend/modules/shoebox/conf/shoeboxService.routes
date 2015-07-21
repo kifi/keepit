@@ -706,6 +706,7 @@ POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
+POST    /admin/organization/:id/removeMember       @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
