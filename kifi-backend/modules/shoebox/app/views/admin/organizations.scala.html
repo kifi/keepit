@@ -23,6 +23,7 @@
                 <th># of membership candidates</th>
                 <th># of org libraries</th>
                 <th># of org keeps</th>
+                <th>Creation date</th>
             </tr>
             @for(orgStats <- orgs) {
                 <tr>
@@ -32,6 +33,7 @@
                     <td>@orgStats.candidates.size</td>
                     <td>@orgStats.numLibraries</td>
                     <td>@orgStats.numKeeps</td>
+                    <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
                 </tr>
             }
         </table>
