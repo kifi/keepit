@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
@@ -11,9 +12,12 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import com.keepit.typeahead.KifiUserTypeahead
 import org.joda.time.DateTime
 import play.api.libs.json._
+import com.keepit.common.core._
 
+import scala.concurrent.Future
 import scala.util.control.NoStackTrace
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: OrganizationRole, lastInvitedAt: Option[DateTime])
@@ -58,7 +62,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
-    basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
+    basicUserRepo: BasicUserRepo,
+    kifiUserTypeahead: KifiUserTypeahead) extends OrganizationMembershipCommander with Logging {
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
     db.readWrite { implicit session =>
@@ -196,6 +201,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
         val newMembership = targetOpt match {
           case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
           case inactiveMembershipOpt => {
+            session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
             val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
             val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
             organizationMembershipRepo.save(newMembership)
@@ -218,14 +224,21 @@ class OrganizationMembershipCommanderImpl @Inject() (
     getValidationError(request) match {
       case Some(fail) => Left(fail)
       case None =>
+        session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         organizationMembershipRepo.deactivate(membership)
         Right(OrganizationMembershipRemoveResponse(request))
     }
   }
 
-  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] =
+  private def refreshOrganizationMembersTypeahead(orgId: Id[Organization]): Future[Unit] = {
+    val orgMembers = getMemberIds(orgId)
+    kifiUserTypeahead.refreshByIds(orgMembers.toSeq)
+  }
+
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
     db.readWrite { implicit session => addMembershipHelper(request) }
+  }
 
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] =
     db.readWrite { implicit session => modifyMembershipHelper(request) }

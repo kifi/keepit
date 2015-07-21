@@ -22,6 +22,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
+  def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
 }
 
 @Singleton
@@ -147,6 +148,17 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
 
   def deactivate(membership: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
     save(membership.sanitizeForDelete)
+  }
+
+  private val getTeammatesCompiled = Compiled { (userId: Column[Id[User]]) =>
+    for {
+      userMembership <- rows if userMembership.userId === userId && userMembership.state === OrganizationMembershipStates.ACTIVE
+      orgMembership <- rows if orgMembership.organizationId === userMembership.organizationId && orgMembership.userId =!= userId && orgMembership.state === OrganizationMembershipStates.ACTIVE
+    } yield orgMembership.userId
+  }
+
+  def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
+    getTeammatesCompiled(userId).run.toSet
   }
 }
 
