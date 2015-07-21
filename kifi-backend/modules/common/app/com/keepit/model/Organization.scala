@@ -38,6 +38,9 @@ case class Organization(
   def withBasePermissions(newBasePermissions: BasePermissions): Organization = {
     this.copy(basePermissions = new BasePermissions(basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
   }
+  def hiddenFromNonmembers: Organization = {
+    this.withBasePermissions(BasePermissions(Map(None -> Set())))
+  }
 
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)

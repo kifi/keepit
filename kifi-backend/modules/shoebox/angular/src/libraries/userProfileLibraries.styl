@@ -1,0 +1,548 @@
+uphSmallMaxDim = 736px // for @media max-height and max-width
+cardWidth = 210px
+cardSideSpace = 18px
+cardBorderRadius = 16px
+
+.kf-upl-nav-container
+  padding: 14px 0
+  background: #e8e8e8
+  text-align: center
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding: 10px 0
+
+.kf-upl-card-list
+  max-width: 3 * (cardWidth + cardSideSpace)
+  margin: 0 auto 50px
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    margin: -8px auto 40px
+
+  &:empty
+    // maintains page height and thus window scroll position while the list
+    // is temporarily empty during sub-tab navigations
+    min-height: 100vh
+
+.kf-upl-nav
+  display: table
+  width: 75%
+  max-width: 600px
+  margin: 0 auto
+  border-radius: 6px
+  background: #cbcbcb
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    border-radius: 4px
+
+.kf-upl-nav-link
+  display: table-cell
+  border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
+  width: 33%
+  height: 38px
+  line-height: 38px
+  font-size: 13px
+  color: #333539
+  font-weight: bold
+  text-transform: uppercase
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    height: 24px
+    line-height: 24px
+    font-size: 10px
+
+  &.kf-selected
+    background: #fff
+    color: #000
+    outline: none
+
+  &:not(.kf-selected):hover
+    background: #d0d0d0
+
+  &.kf-my::before
+    content: 'My '
+
+.kf-upl-empty
+  padding: 30px
+  font-size: 16px
+  color: #777
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    font-size: 12px
+
+.kf-upl-card
+  display: inline-block
+  width: cardWidth
+  height: 280px
+  margin: 23px (cardSideSpace / 2) 0
+  background: libraryGray
+  background-size: cover
+  border-radius: cardBorderRadius
+  vertical-align: top
+  position: relative
+  text-align: center
+
+.kf-upl-create-card
+  box-sizing: border-box
+  border: 2px #979797 dashed
+  background: #e7e7e7
+  cursor: pointer
+
+  &:last-child
+    visibility: hidden
+
+.kf-upl-create-card-add-icon
+  position: absolute
+  top: 75px
+  left: 65px
+  width: 70px
+  height: 66px
+
+.kf-upl-create-card-text
+  position: absolute
+  top: 150px
+  left: 62px
+  width: 85px
+  font-size: 14px
+  color: #333539
+  line-height: 23px
+
+  .kf-upl-create-card:hover &
+    text-decoration: underline
+
+.kf-upl-lib-card
+  box-shadow: 0 3px #f5f5f5, 0 4px #c9ccc0, 0 6px #e5e5e5, 0 7px #c4c6cb, 0 8px #d4d4d4, 0 9px #bec1c5
+  transition: transform 0.8s
+
+  &.justAddedBelow
+    transform: scale(0.4) translate(0, -765px)
+
+  &.justAddedBelowAcross
+    transform: scale(0.4) translate(-573px, -765px)
+
+.kf-upl-card-link
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  user-select: none
+
+.kf-upl-card-icon
+  position: absolute
+  top: 25px
+  left: 50%
+  width: 20px
+  height: 21px
+  margin-left: -10px
+  opacity: .5
+  background-position: center
+  background-size: auto 21px
+  background-repeat: no-repeat
+
+.kf-upl-card-setting
+  position: absolute
+  top: 5px
+  right: 5px
+  width: 20px
+  height: 20px
+  z-index: 2
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+
+  :not(:hover)>&
+    display: none
+
+  &:not(:hover):not(:focus)
+  &:active
+    opacity: .7
+
+name-line-height = 22px
+
+.kf-upl-card-name-align
+  display: table
+  position: absolute
+  top: 18px
+  left: 0
+  width: 100%
+  height: 3 * name-line-height
+
+  .kf-upl-card-icon~&
+    height: name-line-height
+    top: 52px
+
+.kf-upl-card-name
+  display: table-cell
+  padding: 0 16px
+  color: #fff
+  font-weight: bold
+  font-size: 18px
+  line-height: name-line-height
+  word-wrap: break-word
+  vertical-align: middle
+
+.kf-upl-card-name-clip
+  max-height: 3 * name-line-height
+  overflow: hidden
+  max-width: 180px
+
+owner-pic-diam = 32px
+
+.kf-upl-card-owner
+.kf-upl-collabs
+  position: absolute
+  top: 98px
+  left: 0
+  right: 0
+  height = 42px
+  height: height
+  background-color: alpha(#fff, .1)
+  white-space: nowrap
+  font-size: 0
+  line-height: height
+  color: #fff
+
+.kf-upl-card-owner-pic
+.kf-upl-collab-pic
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+  box-shadow: 0 0 3px alpha(#000, .3) inset
+
+.kf-upl-card-owner-pic
+  margin-right: 6px
+  vertical-align: middle
+
+.kf-upl-collab-pic-a
+  display: inline-block
+  vertical-align: middle
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+  position: relative // for .kf-utt
+
+  &>.kf-utt
+    margin-left: (owner-pic-diam / 2) + 2px
+
+.kf-upl-collab-pic-a
+.kf-upl-more-collab
+  margin: 0 3px
+
+  &>:last-child
+    margin-right: 0
+
+.kf-upl-collab-pic
+  vertical-align: top
+
+.kf-upl-card-by
+  vertical-align: middle
+  font-size: 11px
+  font-style: italic
+  font-smoothing: antialiased
+  margin-right: 5px
+
+.kf-upl-card-by-name
+  display: inline-block
+  vertical-align: middle
+  text-align: left
+  max-width: 140px
+  font-size: 11px
+  font-weight: bold
+  text-transform: uppercase
+  letter-spacing: .2px
+  overflow: hidden
+  text-overflow: ellipsis
+
+  [href]:hover>&
+    text-decoration: underline
+
+.kf-upl-more-collab
+  box-sizing: border-box
+  height: owner-pic-diam
+  width: owner-pic-diam
+  vertical-align: middle
+  borderWidth = 1px
+  border: borderWidth solid alpha(#fff, .3)
+  border-radius: 50%
+  padding: 0
+  background-color: transparent
+  font-size: 11px
+  line-height: owner-pic-diam - 2 * (borderWidth)
+  color: alpha(#fff, .7)
+
+  &:hover
+    background-color: alpha(#fff, .04)
+
+    &:active
+      background-color: alpha(#000, .01)
+
+  &::before
+    content: '+'
+    padding-right: 1px
+
+lockRadius = 14px
+
+.kf-upl-count-line
+  position: absolute
+  top: 154px
+  left: 50%
+  transform: translate(-50%)
+  line-height: 2 * lockRadius
+  font-size: 0
+  color: #fff
+  white-space: nowrap
+  text-shadow: 0 0 3px alpha(#000, .6)
+
+  &.kf-can-write
+    top: 179px
+
+.kf-upl-card-collab
+  display: inline-block
+  vertical-align: middle
+  height: 12px
+  width: 24px
+  background-size: auto 12px
+  background-repeat: no-repeat
+  background-position: center
+  opacity: .8
+
+.kf-upl-card-private
+  display: inline-block
+  vertical-align: middle
+  width: 2 * lockRadius
+  height: 2 * lockRadius
+  border-radius: lockRadius
+  background-color: libraryRed
+  background-position: center 6px
+  background-size: auto 14px
+  background-repeat: no-repeat
+
+  &:not(:first-child)
+    margin-left: 8px
+
+.kf-upl-count
+  vertical-align: middle
+  font-size: 13px
+  font-weight: bold
+  color: inherit
+
+  &:not(:first-child)
+    margin-left: 8px
+
+  &:hover
+    text-decoration: underline
+
+followHeight = 30px
+subsWidth = 32px
+subsDur = .3s
+
+.kf-upl-follow-wrap
+  position: absolute
+  top: 192px
+  left: 50%
+  transform: translate(-50%)
+  box-sizing: border-box
+  height: followHeight
+  width: 91px
+  padding: 0
+  border-radius: (followHeight / 2)
+  transition: width (subsDur * .8)
+
+  &.kf-following
+    width: 100px
+
+    &.kf-no-unfollow
+      transition-duration: .1s
+
+    &:not(.kf-no-unfollow):hover
+        width: 100px + subsWidth
+
+  &:not(.kf-overflowing)
+    overflow: hidden
+
+.kf-upl-follow-btn
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  background-color: inherit
+
+  &:hover
+    background-color: alpha(#fff, .1)
+
+    &:active
+      background-color: alpha(#000, .02)
+
+  &::before
+    content: 'Follow'
+
+  .kf-following>&::before
+    content: 'Following'
+    transition: transform subsDur
+
+  .kf-following:not(.kf-no-unfollow):hover>&::before
+    content: 'Unfollow'
+    display: inline-block
+    transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
+
+.kf-upl-follow-btn
+.kf-upl-collab-btn
+  height: followHeight
+  border: 0
+  border-radius: (followHeight / 2)
+  padding: 0
+  color: #fff
+  font-weight: 500
+  font-size: 11px
+  line-height: followHeight
+  text-transform: uppercase
+  text-shadow: 0 0 1px alpha(#000, .4)
+  letter-spacing: .4px
+  text-align: center
+  box-shadow: 0 0 8px alpha(#000, .2)
+
+.kf-upl-subs-btn
+  position: absolute
+  top: 0
+  right: 0
+  bottom: 0
+  width: subsWidth
+  border: 0
+  border-radius: 0 (followHeight / 2) (followHeight / 2) 0
+  background-color: inherit
+  background-position: right 0.64em center
+  background-size: 1.1em 1.01em
+  background-repeat: no-repeat
+  padding: 0
+  font-size: 13px // same as .kf-button
+  transition: transform subsDur, opacity linear subsDur
+  transform: translate(subsWidth)
+  opacity: 0
+
+  .kf-following:not(.kf-no-unfollow):hover>&
+    transform: none
+    opacity: 1
+
+    &:hover
+      background-color: alpha(#fff, .1)
+
+      &:active
+        background-color: alpha(#000, .02)
+
+  &.svg-notification-off-white
+    background-position: right 0.62em center
+
+.kf-upl-subs-msg
+  position: absolute
+  bottom: 120%
+  left: 50%
+  transform: translate(-50%)
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  color: #3e4955
+  font-size: 13px
+  white-space: nowrap
+  box-shadow: 0 1px 3px alpha(#000, .2)
+  transition: opacity linear .1s, visibility .1s
+
+  :not(:hover)+&
+    opacity: 0
+    visibility: hidden
+
+.kf-upl-collab-btn
+  position: absolute
+  top: 192px
+  left: 50%
+  transform: translate(-50%)
+  padding: 0 16px
+
+  &:hover::before
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: '%s' % inherit
+    background-color: alpha(#fff, .1)
+
+  &:hover:active::before
+    background-color: alpha(#000, .02)
+
+
+.kf-upl-card-cover
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 0
+  height: 50%
+  border-radius: 0 0 cardBorderRadius cardBorderRadius
+  overflow: hidden
+
+  &::after
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background-color: alpha(#000, .2)
+    content: ''
+
+.kf-upl-card-cover-image
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background-color: #eee
+  background-size: cover
+
+.kf-upl-card-foot
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 0
+  height: 35px
+  border-top: 1px solid alpha(#fff, .3)
+  line-height: 33px
+  font-size: 12px
+  font-smoothing: antialiased
+  color: alpha(#fff, .6)
+  text-shadow: 0 0 6px alpha(#000, .2)
+
+follower-pic-diameter = 23px
+
+.kf-upl-followers
+  padding: 5px 16px 0
+  text-align: left
+  line-height: follower-pic-diameter
+  font-size: 11px
+  vertical-align: middle
+  color: alpha(#fff,.8)
+  text-shadow: 0 0 6px alpha(#000, .3)
+
+.kf-upl-followers-number
+  color: inherit
+
+  &[href]:hover
+    text-decoration: underline
+
+.kf-upl-followers-n
+  color: alpha(#fff,.9)
+
+.kf-upl-follower
+  display: inline-block
+  vertical-align: top
+  width: follower-pic-diameter
+  height: follower-pic-diameter
+  background-size: cover
+  background-position: center
+  border-radius: 100%
+  margin-right: 4px
+
+  &:last-of-type
+    margin-right: 3px
+
+.kf-upl-all-followers
+  margin-left: 1px

@@ -26,7 +26,7 @@ object IndexerVersionProviders {
   case object SearchFriend extends IndexerVersionProvider(0, 0)
   case object Message extends IndexerVersionProvider(0, 0)
   case object Phrase extends IndexerVersionProvider(0, 0)
-  case object Library extends IndexerVersionProvider(10, 11)
+  case object Library extends IndexerVersionProvider(11, 11)
   case object LibraryMembership extends IndexerVersionProvider(3, 3)
   case object Keep extends IndexerVersionProvider(5, 5)
   case object Organization extends IndexerVersionProvider(1, 1)

@@ -43,7 +43,7 @@ class OrganizationMembershipController @Inject() (
 
     modifyParamsValidated match {
       case JsError(errs) =>
-        airbrake.notify(s"Could not json-validate modifyRequests from ${request.request.userId}", new JsResultException(errs))
+        airbrake.notify(s"Could not json-validate modifyRequests from ${request.request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(modifyParams, _) =>
         val (externalIds, roles) = modifyParams.unzip
@@ -63,13 +63,13 @@ class OrganizationMembershipController @Inject() (
     }
   }
 
-  def removeMembers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REMOVE_MEMBERS)(parse.tolerantJson) { request =>
+  def removeMembers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId)(parse.tolerantJson) { request =>
     implicit val format = KeyFormat.key1Format[ExternalId[User]]("userId")
     val removeParamsValidated = (request.body \ "members").validate[Seq[ExternalId[User]]]
 
     removeParamsValidated match {
       case JsError(errs) =>
-        airbrake.notify(s"Could not json-validate removeRequests from ${request.request.userId}", new JsResultException(errs))
+        airbrake.notify(s"Could not json-validate removeRequests from ${request.request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(removeParams, _) =>
         val externalIds = removeParams

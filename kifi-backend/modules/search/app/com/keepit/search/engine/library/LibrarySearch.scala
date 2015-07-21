@@ -67,7 +67,7 @@ class LibrarySearch(
     val collector = new LibraryResultCollector(librarySearcher, libraryMembershipSearcher, keepSearcher, numHitsToReturn * 5, myLibraryBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
     val userScoreSource = new LibraryFromUserScoreVectorSource(librarySearcher, userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
-    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, libraryQualityEvaluator, explanation)
+    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, librarySearcher, libraryQualityEvaluator, explanation)
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
 
     if (debugFlags != 0) {

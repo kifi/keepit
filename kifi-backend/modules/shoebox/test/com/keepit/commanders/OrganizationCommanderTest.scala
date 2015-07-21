@@ -49,9 +49,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           (org, owner, nonMember, publicLibs, orgLibs)
         }
 
-        println(owner)
-        println(nonMember)
-
         val orgCommander = inject[OrganizationCommander]
         val ownerVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(owner.id.get), offset = Offset(0), limit = Limit(100))
         val randoVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))

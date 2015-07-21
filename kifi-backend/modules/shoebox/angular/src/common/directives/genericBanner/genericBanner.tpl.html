@@ -1,0 +1,14 @@
+<div class="kf-generic-banner">
+  <span class="kf-generic-banner-text">
+    {{ text }}
+  </span>
+  <span class="kf-generic-banner-btns">
+    <button
+      class="kf-generic-banner-btn"
+      ng-repeat="action in actions"
+      ng-class="action.className"
+      ng-click="action.click()">
+      {{ action.label }}
+    </button>
+  </span>
+</div>

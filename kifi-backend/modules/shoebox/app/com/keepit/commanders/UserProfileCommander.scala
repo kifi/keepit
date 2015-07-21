@@ -60,7 +60,7 @@ class UserProfileCommander @Inject() (
     }
     libraryInfos map {
       case (info, lib) =>
-        LibraryCardInfo(
+        LibraryCardInfo( // why does this reconstruct the object? seems like libraryCommander.createLibraryCardInfo fills out everything
           id = info.id,
           name = info.name,
           description = info.description,
@@ -76,10 +76,11 @@ class UserProfileCommander @Inject() (
           numCollaborators = info.numCollaborators,
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
-          listed = memberships(lib.id.get).map(_.listed).orElse(Some(false)),
           following = Some(true),
           membership = (memberships(lib.id.get)) map (LibraryMembershipInfo.fromMembership(_)),
-          modifiedAt = lib.updatedAt)
+          modifiedAt = lib.updatedAt,
+          path = info.path
+        )
     }
   }
 

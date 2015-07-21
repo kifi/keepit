@@ -63,14 +63,16 @@
               <li><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.ripestFruitView(0,0)">Ripest Fruit</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.peopleLikeYou(20)">People Like You</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminPersonaController.getAllPersonas()">All Personas</a>
-              <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(0)">Users with Potential Organizations</a>
-              <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(0)">LinkedIn Users Without Organizations</a>
             </ul>
 
           <li class="dropdown">
               <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Organizations</a>
               <ul class="dropdown-menu" role="menu">
-                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView">All Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">All Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.realOrganizationsView(0)">Real Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView(0)">Fake Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(0)">Users with Potential Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(0)">LinkedIn Users Without Organizations</a>
               </ul>
 
           <li class="dropdown">
@@ -165,6 +167,13 @@
       </div>
     </header>
     <div class="container">
+      @for(warning <- request.flash.get("warning")) {
+        <div class="alert alert-warning"><strong>Warning:</strong> @warning</div>
+      }
+      @for(error<- request.flash.get("error")) {
+        <div class="alert alert-danger"><strong>Error:</strong> @error</div>
+      }
+
       @content
     </div>
     <div class="integrity-reminder" style="background-image:url(//djty7jcqog9qu.cloudfront.net/users/@{request.user.externalId}/pics/100/@{request.user.pictureName}.jpg)">

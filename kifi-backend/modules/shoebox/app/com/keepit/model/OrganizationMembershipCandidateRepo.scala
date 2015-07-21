@@ -38,6 +38,10 @@ class OrganizationMembershipCandidateRepoImpl @Inject() (val db: DataBaseCompone
   def table(tag: Tag) = new OrganizationMembershipCandidateTable(tag)
   initTable()
 
+  override def save(model: OrganizationMembershipCandidate)(implicit session: RWSession): OrganizationMembershipCandidate = {
+    super.save(model.copy(seq = deferredSeqNum()))
+  }
+
   def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
     (for { row <- rows if row.orgId === orgId && row.state.inSet(states) } yield row).drop(offset.value).take(limit.value).list
   }

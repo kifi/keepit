@@ -67,7 +67,6 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val json = Json.parse(contentAsString(result))
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
-          println(json \ "members")
           (json \ "members" \\ "id").length == n
           (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
           (json \ "members" \\ "lastInvitedAt").length === 0 // members do not have open invitations
@@ -271,6 +270,21 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}"}]}""")
 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMembers(publicOrgId)(request)
+          status(result) === OK
+        }
+      }
+      "let a user leave the org" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, members) = setup()
+
+          val member = members.head
+          val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
+
+          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${member.externalId}"}]}""")
+
+          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === OK

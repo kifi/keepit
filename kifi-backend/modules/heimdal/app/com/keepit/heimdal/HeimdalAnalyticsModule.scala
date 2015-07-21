@@ -16,20 +16,26 @@ import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.Future
 
-trait MongoModule extends ScalaModule
+trait AnalyticsModule extends ScalaModule
 
-case class ProdMongoModule() extends MongoModule {
+case class ProdAnalyticsModule() extends AnalyticsModule {
 
   def configure() = {}
 
   @Provides @Singleton
-  def mixpanel(shoebox: ShoeboxServiceClient): MixpanelClient = {
+  def mixpanel(): MixpanelClient = {
     val projectToken: String = current.configuration.getString("mixpanel.token").get
-    new MixpanelClientImpl(projectToken, shoebox)
+    new MixpanelClientImpl(projectToken)
+  }
+
+  @Provides @Singleton
+  def amplitude(): AmplitudeClient = {
+    val apiKey: String = current.configuration.getString("amplitude.api_key").get
+    new AmplitudeClientImpl(apiKey)
   }
 }
 
-case class DevMongoModule() extends MongoModule {
+case class DevAnalyticsModule() extends AnalyticsModule {
 
   def configure() = {}
 
@@ -44,4 +50,9 @@ case class DevMongoModule() extends MongoModule {
     }
   }
 
+  @Provides @Singleton
+  def amplitude(): AmplitudeClient = {
+    val apiKey: String = current.configuration.getString("amplitude.api_key").get
+    new AmplitudeClientImpl(apiKey)
+  }
 }

@@ -367,10 +367,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators":0,
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
                   "membership":{"access":"owner","listed":true,"subscribed":false},
-                  "modifiedAt":${lib2.updatedAt.getMillis}
+                  "modifiedAt":${lib2.updatedAt.getMillis},
+                  "path": "/spongebob/catching-jellyfish"
                 },
                 {
                   "id":"${pubId1.id}",
@@ -394,10 +394,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators": 0,
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
                   "membership":{"access":"owner","listed":true,"subscribed":false},
-                  "modifiedAt":${lib1.updatedAt.getMillis}
+                  "modifiedAt":${lib1.updatedAt.getMillis},
+                  "path": "/spongebob/krabby-patty"
                 }
               ]
             }

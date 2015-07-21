@@ -20,6 +20,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult }
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
+  def getOrganizationsByName(name: String)(implicit session: RSession): Seq[Organization]
   def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
 }
 
@@ -71,6 +72,12 @@ class OrganizationRepoImpl @Inject() (
 
   def deactivate(model: Organization)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
+  }
+
+  def getOrganizationsByName(name: String)(implicit session: RSession): Seq[Organization] = {
+    val lowerCaseNameEx = "%" + name.toLowerCase + "%"
+    val q = for (row <- rows if row.name.toLowerCase.like(lowerCaseNameEx)) yield row
+    q.list
   }
 
   def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization] = {

@@ -19,7 +19,7 @@ abstract class HeimdalModule(
     // Common Functional Modules
     val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
-    val mongoModule: MongoModule,
+    val analyticsModule: AnalyticsModule,
     val heimdalQueueModule: HeimdalQueueModule,
     val rekeepStatsUpdaterModule: ReKeepStatsUpdaterModule,
     val delightedModule: DelightedModule) extends ConfigurationModule with CommonServiceModule {

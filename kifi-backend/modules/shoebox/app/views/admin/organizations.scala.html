@@ -1,34 +1,44 @@
-@import com.keepit.commanders._
 @import com.keepit.model._
 @import com.keepit.common.db._
-@(
-orgsStats: Map[Id[Organization], OrganizationStatisticsOverview],
-fakeOwnerId: Id[User]
-)(implicit request: com.keepit.common.controller.UserRequest[_])
+@import com.keepit.common.controller.PaginatedRequest
+@import com.keepit.commanders._
 
-@admin(orgsStats.values.count(_.ownerId != fakeOwnerId) + " real organizations", stylesheets = List("admin_user")) {
-<table class="orgs-summary table table-bordered">
-    <tr><th>Id</th>
-        <th>Name</th>
-        <th># of members</th>
-        <th># of membership candidates</th>
-        <th># of org libraries</th>
-        <th># of org keeps</th>
-    </tr>
-    @for(orgId <- orgsStats.keys.toSeq.sorted) {
-        <tr>
-            <td>@orgId</td>
-            <td>@adminHelper.orgDisplay(orgsStats(orgId).org)</td>
-            <td>@orgsStats(orgId).members.size</td>
-            <td>@orgsStats(orgId).candidates.size</td>
-            <td>@orgsStats(orgId).numLibraries</td>
-            <td>@orgsStats(orgId).numKeeps</td>
-        </tr>
+@(
+    orgs: Seq[OrganizationStatisticsOverview],
+    title: String,
+    fakeOwnerId: Id[User],
+    otherPagesRoute: Int => Html
+)(implicit request: com.keepit.common.controller.UserRequest[_], pagination: PaginatedRequest[OrganizationStatisticsOverview, _])
+
+@views.html.admin.admin(pagination.count + " " + title, stylesheets = List("admin_user")) {
+    <form action="/admin/findOrganizationByName" method="GET" class="form-inline">
+        <input name="orgName" type="text">
+        <button type="submit" class="btn btn-primary">Search all organizations by name</button>
+    </form>
+    @views.html.admin.adminHelper.pagination(pagination.page, pagination.count, 30, otherPagesRoute) {
+        <table class="orgs-summary table table-bordered">
+            <tr><th>Id</th>
+                <th>Name</th>
+                <th># of members</th>
+                <th># of membership candidates</th>
+                <th># of org libraries</th>
+                <th># of org keeps</th>
+            </tr>
+            @for(orgStats <- orgs) {
+                <tr>
+                    <td>@orgStats.orgId</td>
+                    <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
+                    <td>@orgStats.members.size</td>
+                    <td>@orgStats.candidates.size</td>
+                    <td>@orgStats.numLibraries</td>
+                    <td>@orgStats.numKeeps</td>
+                </tr>
+            }
+        </table>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()" method="POST" class="form-inline create-org">
+            <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
+            <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
+            <input type="Submit" value="Add">
+        </form>
     }
-</table>
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()" method="POST" class="form-inline create-org">
-    <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
-    <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
-    <input type="Submit" value="Add">
-</form>
 }

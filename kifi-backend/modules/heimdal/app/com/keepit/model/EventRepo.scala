@@ -35,26 +35,3 @@ object EventAugmentor extends Logging {
     }
   }
 }
-
-abstract class MongoEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends EventRepo[E] with Logging {
-  val getEventCompanion = implicitly[HeimdalEventCompanion[E]]
-  val mixpanel: MixpanelClient
-  def persist(event: E): Future[Unit] = {
-    if (descriptors.contains(event.eventType)) {
-      mixpanel.track(event)
-    } else {
-      log.info(s"[EventRepo] Event discarded: $event")
-      Future.successful((): Unit)
-    }
-  }
-}
-
-abstract class DevEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends EventRepo[E] {
-  val getEventCompanion = implicitly[HeimdalEventCompanion[E]]
-  def persist(event: E): Future[Unit] = Future.successful(())
-}
-
-object EventRepo {
-  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventCompanion == HeimdalEventCompanion.byTypeCode(code))
-}
-

@@ -13,7 +13,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -116,7 +116,7 @@ class AdminUserController @Inject() (
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander,
-    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions {
+    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginationActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
@@ -252,6 +252,7 @@ class AdminUserController @Inject() (
     val userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
+    val fOrgRecos = abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
@@ -280,10 +281,12 @@ class AdminUserController @Inject() (
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       contacts <- contactsF
+      orgRecos <- fOrgRecos
     } yield {
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations))
+        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
     }
   }
 
@@ -1050,4 +1053,8 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(userId))
   }
 
+  def hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization]) = AdminUserPage { request =>
+    abookClient.hideOrganizationRecommendationForUser(userId, orgId)
+    Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
 }

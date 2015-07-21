@@ -17,9 +17,9 @@ angular.module('kifi')
 .filter('pic', [
   'routeService',
   function (routeService) {
-    return function (user, width) {
-      return user ?
-        routeService.formatPicUrl(user.id, user.pictureName, width > 100 ? 200 : 100) :
+    return function (entity, width) { // entity is a catchall for users and orgs
+      return entity && entity.pictureName ?
+        routeService.formatPicUrl(entity.id, entity.pictureName, width > 100 ? 200 : 100) :
         '//www.kifi.com/assets/img/ghost.200.png';
     };
   }

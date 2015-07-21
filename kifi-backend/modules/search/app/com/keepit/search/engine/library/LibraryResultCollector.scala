@@ -5,9 +5,7 @@ import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ LibraryQualityEvaluator, Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
-import com.keepit.search.index.IndexerVersionProviders.LibraryMembership
 import com.keepit.search.index.Searcher
-import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexable
 
@@ -56,7 +54,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
         else {
           //todo(Léo): boost libraries if isUserCreated
-          val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
+          val keepCount = LibraryIndexable.getKeepCount(librarySearcher, id) getOrElse 1L
           val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
           score = score * publishedLibraryBoost
         }
