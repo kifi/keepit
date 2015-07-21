@@ -76,7 +76,7 @@ trait LibraryCommander {
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])]
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
@@ -870,16 +870,14 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])] = { //ZZZ
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = { //ZZZ
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
       val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
-      val contributors: Map[Id[Library], Seq[Id[User]]] = libraryMembershipRepo.getUsersWithWriteAccessForLibraries(libIds, userId)
+      val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
       libsWithMembership.map {
         case (lib, membership) =>
-          val collabs: Seq[Id[User]] = if (lib.ownerId == userId) contributors.getOrElse(lib.id.get, Seq.empty) else lib.ownerId +: contributors.getOrElse(lib.id.get, Seq.empty)
-          val bus = basicUserRepo.loadAll(collabs.toSet)
-          (lib, membership, collabs.map(bus(_)))
+          (lib, membership, collaborators(lib.id.get))
       }
     }
   }
