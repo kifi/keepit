@@ -37,8 +37,9 @@ object KeepFields {
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
-  val strictTextSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
-  val textSearchFields = strictTextSearchFields + titlePrefixField
+  val minimalSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val fullTextSearchFields = Set(contentField, contentStemmedField)
+  val prefixSearchFields = Set(titlePrefixField)
 
   val maxPrefixLength = 8
 

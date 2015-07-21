@@ -68,12 +68,12 @@ trait SearchControllerUtil {
 
   def getAcceptLangs(requestHeader: RequestHeader): Seq[String] = requestHeader.acceptLanguages.map(_.code)
 
-  def makeSearchFilter(proximity: Option[ProximityScope], libraryScope: Future[Option[LibraryScope]], userScope: Future[Option[UserScope]], organizationScope: Future[Option[OrganizationScope]], context: Option[String])(implicit ec: ExecutionContext): Future[SearchFilter] = {
+  def makeSearchFilter(proximity: Option[ProximityScope], libraryScope: Future[Option[LibraryScope]], userScope: Future[Option[UserScope]], organizationScope: Future[Option[OrganizationScope]])(implicit ec: ExecutionContext): Future[SearchFilter] = {
     for {
       library <- libraryScope
       user <- userScope
       organization <- organizationScope
-    } yield SearchFilter(proximity, user, library, organization, context)
+    } yield SearchFilter(proximity, user, library, organization)
   }
 
   def getProximityScope(proximityStr: Option[String]): Option[ProximityScope] = proximityStr.flatMap(ProximityScope.parse)

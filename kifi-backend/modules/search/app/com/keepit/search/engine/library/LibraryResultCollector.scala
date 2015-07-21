@@ -5,9 +5,7 @@ import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ LibraryQualityEvaluator, Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
-import com.keepit.search.index.IndexerVersionProviders.LibraryMembership
 import com.keepit.search.index.Searcher
-import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexable
 

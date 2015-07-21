@@ -20,7 +20,7 @@ import scala.math._
 class UriSearchImpl(
     userId: Id[User],
     numHitsToReturn: Int,
-    filter: SearchFilter,
+    context: SearchContext,
     config: SearchConfig,
     engineBuilder: QueryEngineBuilder,
     articleSearcher: Searcher,
@@ -36,7 +36,7 @@ class UriSearchImpl(
     timeLogs: SearchTimeLogs,
     lang: (Lang, Option[Lang])) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
-  private[this] val isInitialSearch = filter.idFilter.isEmpty
+  private[this] val isInitialSearch = context.idFilter.isEmpty
 
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
@@ -62,9 +62,9 @@ class UriSearchImpl(
       new UriResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork, explanation)
     }
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
-    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, engine.recencyOnly, config, monitoredAwait, explanation)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, context, explanation)
 
     if (debugFlags != 0) {
       engine.debug(this)
@@ -99,7 +99,7 @@ class UriSearchImpl(
 
     val usefulPages = if (clickHistoryFuture.isCompleted) Await.result(clickHistoryFuture, 0 millisecond) else MultiHashFilter.emptyFilter[ClickedURI]
 
-    if (myHits.size > 0 && filter.includeMine) {
+    if (myHits.size > 0 && context.filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           hit.score = hit.score * myKeepBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
@@ -109,7 +109,7 @@ class UriSearchImpl(
     }
 
     var networkTotal = networkHits.totalHits
-    if (networkHits.size > 0 && filter.includeNetwork) {
+    if (networkHits.size > 0 && context.filter.includeNetwork) {
       val queue = createQueue(numHitsToReturn - min(minMyKeeps, hits.size))
       hits.discharge(hits.size - minMyKeeps).foreach { h => queue.insert(h) }
 
@@ -131,7 +131,7 @@ class UriSearchImpl(
 
     var othersHighScore = -1.0f
     var othersTotal = othersHits.totalHits
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && context.filter.includeOthers) {
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall { hit =>
@@ -155,7 +155,7 @@ class UriSearchImpl(
       }
     }
 
-    val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
+    val show = if (context.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
 
     timeLogs.processHits()
     timeLogs.done()

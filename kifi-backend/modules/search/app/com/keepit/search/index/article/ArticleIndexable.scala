@@ -24,7 +24,9 @@ object ArticleFields {
   val recordField = "rec"
   val safeField = "safe"
 
-  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
+  val minimalSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, mediaField)
+  val fullTextSearchFields = Set(contentField, contentStemmedField)
+  val prefixSearchFields = Set()
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
