@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.core._
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NoStackTrace
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: OrganizationRole, lastInvitedAt: Option[DateTime])
@@ -63,7 +63,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
-    kifiUserTypeahead: KifiUserTypeahead) extends OrganizationMembershipCommander with Logging {
+    kifiUserTypeahead: KifiUserTypeahead,
+    implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
     db.readWrite { implicit session =>

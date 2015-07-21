@@ -25,6 +25,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.typeahead.KifiUserTypeahead
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -124,6 +125,7 @@ class LibraryCommanderImpl @Inject() (
     keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
+    kifiUserTypeahead: KifiUserTypeahead,
     collectionRepo: CollectionRepo,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
@@ -1135,16 +1137,19 @@ class LibraryCommanderImpl @Inject() (
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         (updatedLib, updatedMem)
       }
-      updateLibraryJoin(userId, lib, eventContext)
+      updateLibraryJoin(userId, lib, updatedMem, eventContext)
       Right((updatedLib, updatedMem))
     }
   }
 
-  private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
+  private def updateLibraryJoin(userId: Id[User], library: Library, membership: LibraryMembership, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
     val libraryId = library.id.get
     libraryAnalytics.acceptLibraryInvite(userId, library, eventContext)
     libraryAnalytics.followLibrary(userId, library, eventContext)
     searchClient.updateLibraryIndex()
+    if (LibraryAccess.collaborativePermissions.contains(membership.access)) {
+      refreshLibraryCollaboratorsTypeahead(libraryId)
+    }
   }
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
@@ -1164,6 +1169,9 @@ class LibraryCommanderImpl @Inject() (
           convertKeepOwnershipToLibraryOwner(userId, lib)
           libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
+          if (LibraryAccess.collaborativePermissions.contains(mem.access)) {
+            refreshLibraryCollaboratorsTypeahead(libraryId)
+          }
         }
         Right((): Unit)
     }
@@ -1694,6 +1702,12 @@ class LibraryCommanderImpl @Inject() (
 
                   Right(updatedTargetMembership)
               }
+            } tap {
+              // Unless we're just kicking out a follower, the set of collaborators has changed.
+              case Right(updatedMembership) if !(updatedMembership.isFollower && updatedMembership.state == LibraryMembershipStates.INACTIVE) => {
+                SafeFuture { refreshLibraryCollaboratorsTypeahead(library.id.get) }
+              }
+              case _ => //
             }
           } else { // invalid permissions
             log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess}")
@@ -1703,4 +1717,10 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  private def refreshLibraryCollaboratorsTypeahead(libraryId: Id[Library]): Future[Unit] = {
+    val collaboratorIds = db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
+    }
+    kifiUserTypeahead.refreshByIds(collaboratorIds.toSeq)
+  }
 }

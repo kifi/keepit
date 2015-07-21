@@ -29,6 +29,7 @@ class KifiUserTypeahead @Inject() (
     store: KifiUserTypeaheadStore,
     userRepo: UserRepo,
     userConnectionRepo: UserConnectionRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     UserCache: UserIdCache) extends Typeahead[User, User, User, UserUserTypeahead] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
@@ -65,7 +66,7 @@ class KifiUserTypeahead @Inject() (
 
   private def getAllInfos(id: Id[User]): Future[Seq[(Id[User], User)]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      userConnectionRepo.getConnectedUsers(id) ++ organizationMembershipRepo.getTeammates(id)
+      userConnectionRepo.getConnectedUsers(id) ++ organizationMembershipRepo.getTeammates(id) ++ libraryMembershipRepo.getCollaborators(id)
     } flatMap { ids =>
       log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
       getInfos(ids.toSeq).map(_.map(user => user.id.get -> user))
