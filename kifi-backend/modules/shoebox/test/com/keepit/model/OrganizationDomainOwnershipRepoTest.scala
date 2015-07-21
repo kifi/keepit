@@ -56,7 +56,7 @@ class OrganizationDomainOwnershipRepoTest extends Specification with ShoeboxTest
         }
 
         db.readOnlyMaster { implicit s =>
-          orgDomainOwnershipRepo.getDomainsForOrganization(org1Id) must containTheSameElementsAs(orgDomainOwnerships.filter(_.organizationId == org1Id))
+          orgDomainOwnershipRepo.getOwnershipsForOrganization(org1Id) must containTheSameElementsAs(orgDomainOwnerships.filter(_.organizationId == org1Id))
         }
       }
     }

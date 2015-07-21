@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.classify.Domain
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -28,6 +29,8 @@ class AdminOrganizationController @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
@@ -211,4 +214,24 @@ class AdminOrganizationController @Inject() (
     }
     Right(expType)
   }
+
+  def addDomainOwnership(orgId: Id[Organization]) = AdminUserAction(parse.tolerantFormUrlEncoded) { implicit request =>
+    val body = request.body
+    val domainName = body.get("domainName").flatMap(_.headOption).get
+    val orgView = com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId)
+    orgDomainOwnershipCommander.addDomainOwnership(orgId, domainName) match {
+      case Left(failure) =>
+        Redirect(orgView).flashing(
+          "error" -> failure.humanString
+        )
+      case Right(success) =>
+        Redirect(orgView)
+    }
+  }
+
+  def removeDomainOwnership(orgId: Id[Organization], domainId: Id[Domain]) = AdminUserAction { implicit request =>
+    orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainId)
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
 }

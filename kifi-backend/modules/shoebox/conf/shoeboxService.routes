@@ -707,6 +707,8 @@ POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
+POST    /admin/organization/:id/ownDomain       @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
+GET    /admin/organization/:id/disownDomain/:domainId @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainId: Id[com.keepit.classify.Domain])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
