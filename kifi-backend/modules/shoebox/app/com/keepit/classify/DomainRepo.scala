@@ -69,14 +69,12 @@ class DomainRepoImpl @Inject() (
   }
 
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
-    val foundDomains = (for (d <- rows if d.hostname.inSet(domainNames))
-      yield (d.hostname -> d)).toMap
-
-    val domainsToSave = domainNames.diff(foundDomains.keys.toSet)
-    val savedDomains = domainsToSave.map { domainName =>
-      (domainName -> save(Domain(hostname = domainName)))
+    domainNames.map { domainName =>
+      get(domainName, None) match {
+        case Some(domain) if domain.state == DomainStates.INACTIVE => domainName -> domain.copy(state = DomainStates.ACTIVE)
+        case Some(domain) => domainName -> domain
+        case _ => domainName -> save(Domain(hostname = domainName))
+      }
     }.toMap
-
-    foundDomains ++ savedDomains
   }
 }

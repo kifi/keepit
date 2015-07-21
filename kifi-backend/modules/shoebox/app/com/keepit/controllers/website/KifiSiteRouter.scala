@@ -130,22 +130,32 @@ class KifiSiteRouter @Inject() (
 
   def serveWebAppIfLibraryFound(handle: Handle, slug: String) = WebAppPage { implicit request =>
     lookupHandle(handle) flatMap {
-      case (handleOwner, userRedirectStatusOpt) =>
+      case (handleOwner, spaceRedirectStatusOpt) =>
+        val handleSpace: LibrarySpace = handleOwner match {
+          case Left(org) => org.id.get
+          case Right(user) => user.id.get
+        }
         val libraryOpt = handleOwner match {
-          case Left(org) => // TODO(ryan): once orgs are live, remove everything here but the libraryCommander call
+          case Left(org) => // TODO(ryan): once orgs are live, get rid of the experiment validation
             request match {
               case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) =>
-                libraryCommander.getLibraryBySlugOrAlias(org.id.get, LibrarySlug(slug))
+                libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
               case _ =>
                 None
             }
-          case Right(user) => libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug))
+          case Right(user) =>
+            libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
         }
         libraryOpt map {
           case (library, isLibraryAlias) =>
-            if (library.slug.value != slug || userRedirectStatusOpt.isDefined) { // library moved
+            val hasUserMovedThisLibrary = isLibraryAlias
+            val wasLibrarySlugNormalized = library.slug.value != slug
+            val hasUserChangedTheirUsername = spaceRedirectStatusOpt.isDefined
+            if (hasUserMovedThisLibrary || wasLibrarySlugNormalized || hasUserChangedTheirUsername) {
               val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
-              val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
+
+              val status = if (spaceRedirectStatusOpt.contains(301) || hasUserMovedThisLibrary) MOVED_PERMANENTLY
+              else SEE_OTHER
               Redirect(uri, status)
             } else {
               AngularApp.app(() => libMetadata(library))

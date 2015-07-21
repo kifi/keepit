@@ -20,7 +20,7 @@ angular.module('kifi')
         var inviteAccess = {
           // collaborate: 'read_write',
           // follow: 'read_only'
-          own: 'owner',
+          own: 'admin',
           join: 'member'
         };
 
@@ -38,7 +38,7 @@ angular.module('kifi')
         scope.inviteType = scope.modalData.inviteType || 'join';
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
         scope.canInviteCollabs = true; /*(function (access) {
-          return access === 'owner' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
+          return access === 'admin' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
         }((scope.library.membership || {}).access));*/
 
         function shareLibrary(opts) {
@@ -120,7 +120,7 @@ angular.module('kifi')
                 if (result.id) {
                   result.isInvited = !!result.lastInvitedAt;
                   result.isFollowing = (result.membership === 'read_only') && !result.isInvited;
-                  result.isCollaborating = (result.membership === 'read_write' || result.membership === 'owner') && !result.isInvited;
+                  result.isCollaborating = (result.membership === 'read_write' || result.membership === 'admin') && !result.isInvited;
                   result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
