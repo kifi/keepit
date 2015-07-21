@@ -345,7 +345,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def sociallyRelatedEntitiesForOrgCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEntitiesForOrgCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+    new SociallyRelatedEntitiesForOrgCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 hours))
 
   @Provides @Singleton
   def userHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
