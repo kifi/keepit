@@ -22,19 +22,19 @@ class AdminSearchController @Inject() (
     searchClient: SearchServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with Logging {
 
-  def explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
+  def explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = AdminUserPage.async { request =>
     val libId = libraryId.map(Id[Library](_))
-    searchClient.explainUriResult(query, request.userId, uriId, libId, lang, debug).map(Ok(_))
+    searchClient.explainUriResult(query, request.userId, uriId, libId, lang, debug, disablePrefixSearch, disableFullTextSearch).map(Ok(_))
   }
 
-  def explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean) = AdminUserPage.async { request =>
+  def explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = AdminUserPage.async { request =>
     val acceptLangs = request.acceptLanguages.map(_.code)
-    searchClient.explainLibraryResult(query, request.userId, Library.decodePublicId(libraryId).get, acceptLangs, debug, disablePrefixSearch).map(Ok(_))
+    searchClient.explainLibraryResult(query, request.userId, Library.decodePublicId(libraryId).get, acceptLangs, debug, disablePrefixSearch, disableFullTextSearch).map(Ok(_))
   }
 
-  def explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean) = AdminUserPage.async { request =>
+  def explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) = AdminUserPage.async { request =>
     val acceptLangs = request.acceptLanguages.map(_.code)
-    searchClient.explainUserResult(query, request.userId, userId, acceptLangs, debug, disablePrefixSearch).map(Ok(_))
+    searchClient.explainUserResult(query, request.userId, userId, acceptLangs, debug, disablePrefixSearch, disableFullTextSearch).map(Ok(_))
   }
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>

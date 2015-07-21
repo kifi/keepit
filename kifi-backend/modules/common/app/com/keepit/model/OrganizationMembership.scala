@@ -84,7 +84,7 @@ sealed abstract class OrganizationRole(val value: String, val priority: Int) ext
 }
 
 object OrganizationRole {
-  case object OWNER extends OrganizationRole("owner", 0)
+  case object ADMIN extends OrganizationRole("admin", 0)
   case object MEMBER extends OrganizationRole("member", 1)
 
   implicit val format: Format[OrganizationRole] =
@@ -94,12 +94,12 @@ object OrganizationRole {
 
   def apply(str: String): OrganizationRole = {
     str match {
-      case OWNER.value => OWNER
+      case ADMIN.value => ADMIN
       case MEMBER.value => MEMBER
     }
   }
 
-  def all: Seq[OrganizationRole] = Seq(OWNER, MEMBER)
+  def all: Seq[OrganizationRole] = Seq(ADMIN, MEMBER)
 }
 
 case class IngestableOrganizationMembership(

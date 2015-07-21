@@ -3,7 +3,7 @@ package com.keepit.search.engine.uri
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig }
+import com.keepit.search.{ SearchContext, SearchConfig }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
@@ -20,7 +20,7 @@ class UriFromKeepsScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    protected val filter: SearchFilter,
+    protected val context: SearchContext,
     recencyOnly: Boolean,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
@@ -28,11 +28,14 @@ class UriFromKeepsScoreVectorSource(
 
   private[this] var discoverableKeepCount = 0
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.strictTextSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = KeepFields.minimalSearchFields ++ KeepFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else KeepFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-    val idFilter = filter.idFilter
+    val idFilter = context.idFilter
 
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
     val idMapper = reader.getIdMapper

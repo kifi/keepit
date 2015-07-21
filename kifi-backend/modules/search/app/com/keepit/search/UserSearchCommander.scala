@@ -21,11 +21,10 @@ case class UserSearchRequest(
   userId: Id[User],
   experiments: Set[UserExperimentType],
   query: String,
-  filter: SearchFilter,
+  context: SearchContext,
   firstLang: Lang,
   secondLang: Option[Lang],
   maxHits: Int,
-  disablePrefixSearch: Boolean = false,
   predefinedConfig: Option[SearchConfig],
   debug: Option[String],
   explain: Option[Id[User]])
@@ -48,9 +47,8 @@ trait UserSearchCommander {
     acceptLangs: Seq[String],
     experiments: Set[UserExperimentType],
     query: String,
-    futureFilter: Future[SearchFilter],
+    contextFuture: Future[SearchContext],
     maxHits: Int,
-    disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[User]]): Future[UserSearchResult]
@@ -113,17 +111,16 @@ class UserSearchCommanderImpl @Inject() (
     acceptLangs: Seq[String],
     experiments: Set[UserExperimentType],
     query: String,
-    futureFilter: Future[SearchFilter],
+    contextFuture: Future[SearchContext],
     maxHits: Int,
-    disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[User]]): Future[UserSearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
-    futureFilter.flatMap { filter =>
-      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, filter.library).flatMap {
+    contextFuture.flatMap { context =>
+      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, context.filter.library).flatMap {
         case (lang1, lang2) =>
-          val request = UserSearchRequest(userId, experiments, query, filter, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
+          val request = UserSearchRequest(userId, experiments, query, context, lang1, lang2, maxHits, predefinedConfig, debug, explain)
           val futureRemoteUserShardResults = searchClient.distSearchUsers(remotePlan, request)
           val futureLocalUserShardResult = distSearchUsers(localShards, request)
           val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
@@ -131,17 +128,17 @@ class UserSearchCommanderImpl @Inject() (
           for {
             results <- futureResults
             (config, searchExperimentId) <- configFuture
-          } yield toUserSearchResult(results.flatten, maxHits, filter, config, searchExperimentId)
+          } yield toUserSearchResult(results.flatten, maxHits, context, config, searchExperimentId)
       }
     }
   }
 
-  private def toUserSearchResult(userShardResults: Seq[UserShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): UserSearchResult = {
+  private def toUserSearchResult(userShardResults: Seq[UserShardResult], maxHits: Int, context: SearchContext, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): UserSearchResult = {
     val uniqueHits = userShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
     val bestExplanation = userShardResults.flatMap(_.explanation).sortBy(_.score).lastOption
     val (myHits, othersHits) = UserSearch.partition(uniqueHits)
-    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, filter, config, bestExplanation)
-    val idFilter = filter.idFilter.toSet ++ hits.map(_.id.id)
+    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, context.filter, config, bestExplanation)
+    val idFilter = context.idFilter.toSet ++ hits.map(_.id.id)
     UserSearchResult(hits, idFilter, searchExperimentId, explanation)
   }
 
@@ -152,7 +149,7 @@ class UserSearchCommanderImpl @Inject() (
         val debug = request.debug
         if (debug.isDefined) debugOption.debug(debug.get)
 
-        val searches = searchFactory.getUserSearches(shards, request.userId, request.query, request.firstLang, request.secondLang, request.maxHits, request.disablePrefixSearch, request.filter, searchConfig, request.experiments, request.explain)
+        val searches = searchFactory.getUserSearches(shards, request.userId, request.query, request.firstLang, request.secondLang, request.maxHits, request.context, searchConfig, request.experiments, request.explain)
         val futureResults: Seq[Future[UserShardResult]] = searches.map { userSearch =>
           if (debug.isDefined) userSearch.debug(debugOption)
           SafeFuture { userSearch.execute() }

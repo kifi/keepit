@@ -29,12 +29,9 @@ case class SearchFilter(
     proximity: Option[ProximityScope],
     user: Option[UserScope],
     library: Option[LibraryScope],
-    organization: Option[OrganizationScope],
-    context: Option[String]) {
+    organization: Option[OrganizationScope]) {
 
   import ProximityScope._
-
-  lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
   val isDefault: Boolean = proximity.isEmpty && user.isEmpty && library.isEmpty && organization.isEmpty
 
@@ -48,5 +45,11 @@ case class SearchFilter(
 }
 
 object SearchFilter {
-  val empty = SearchFilter(None, None, None, None, None)
+  val empty = SearchFilter(None, None, None, None)
+}
+
+@json
+case class SearchContext(context: Option[String], orderBy: SearchRanking, filter: SearchFilter, disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) {
+  lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+  val isDefault = filter.isDefault
 }

@@ -13,7 +13,7 @@ import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.util.IdFilterCompressor
-import com.keepit.search.{ SearchRanking, UriSearchCommander }
+import com.keepit.search.{ SearchContext, SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -53,13 +53,13 @@ class ExtSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
 
-    val uriSearchFilterFuture = makeSearchFilter(getProximityScope(proximityFilter), Future.successful(None), Future.successful(None), Future.successful(None), context)
-
-    val orderBy = SearchRanking.default
+    val searchContextFuture = makeSearchFilter(getProximityScope(proximityFilter), Future.successful(None), Future.successful(None), Future.successful(None)).imap {
+      filter => SearchContext(context, SearchRanking.default, filter, disablePrefixSearch = false, disableFullTextSearch = false)
+    }
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchFilterFuture, orderBy, maxHits, lastUUIDStr, None, debugOpt)
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, searchContextFuture, maxHits, lastUUIDStr, None, debugOpt)
     val jsonResultFuture = plainResultFuture.imap { result =>
       val textMatchesByHit = UriShardHit.getMatches(result.query, result.firstLang, result.hits)
       val experimentIdJson = result.searchExperimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)

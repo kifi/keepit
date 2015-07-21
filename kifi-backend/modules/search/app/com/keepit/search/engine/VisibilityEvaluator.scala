@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.SearchFilter
+import com.keepit.search.SearchContext
 import com.keepit.search.index.{ WrappedSubReader }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
@@ -18,7 +18,7 @@ trait VisibilityEvaluator { self: DebugOption =>
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
   protected val orgIdsFuture: Future[Set[Long]]
   protected val monitoredAwait: MonitoredAwait
-  protected val filter: SearchFilter
+  protected val context: SearchContext
 
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
@@ -50,7 +50,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       trustedLibraryIds,
       authorizedLibraryIds,
       orgIds,
-      filter,
+      context,
       userIdDocValues,
       libraryIdDocValues,
       orgIdDocValues,
@@ -67,7 +67,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       myFriendIds,
       restrictedUserIds,
       orgIds,
-      filter,
+      context,
       ownerIdDocValues,
       orgIdDocValues,
       visibilityDocValues)
@@ -98,18 +98,18 @@ final class KeepVisibilityEvaluator(
     trustedLibraryIds: LongArraySet,
     authorizedLibraryIds: LongArraySet,
     orgIds: LongArraySet,
-    filter: SearchFilter,
+    context: SearchContext,
     val userIdDocValues: NumericDocValues,
     val libraryIdDocValues: NumericDocValues,
     val orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
-  private val noFilter = (filter.libraryId < 0) && (filter.userId < 0) && (filter.orgId < 0) // optimization
+  private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
   private def isRelevant(libId: Long, keeperId: Long, orgId: Long) = {
-    (filter.libraryId < 0 || filter.libraryId == libId) && (filter.userId < 0 || filter.userId == keeperId) && (filter.orgId < 0 || filter.orgId == orgId)
+    (context.filter.libraryId < 0 || context.filter.libraryId == libId) && (context.filter.userId < 0 || context.filter.userId == keeperId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
   }
 
   def isRelevant(docId: Int): Boolean = noFilter || {
@@ -162,17 +162,17 @@ final class LibraryVisibilityEvaluator(
     myFriendIds: LongArraySet,
     restrictedUserIds: LongArraySet,
     orgIds: LongArraySet,
-    filter: SearchFilter,
+    context: SearchContext,
     ownerIdDocValues: NumericDocValues,
     orgIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
-  private val noFilter = (filter.libraryId < 0) && (filter.userId < 0) && (filter.orgId < 0) // optimization
+  private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
   private def isRelevant(libId: Long, ownerId: Long, orgId: Long) = {
-    (filter.libraryId < 0 || filter.libraryId == libId) && (filter.userId < 0 || filter.userId == ownerId) && (filter.orgId < 0 || filter.orgId == orgId)
+    (context.filter.libraryId < 0 || context.filter.libraryId == libId) && (context.filter.userId < 0 || context.filter.userId == ownerId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
   }
 
   def isRelevant(docId: Int, libId: Long): Boolean = noFilter || {

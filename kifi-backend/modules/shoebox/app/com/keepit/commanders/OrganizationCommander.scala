@@ -205,7 +205,7 @@ class OrganizationCommanderImpl @Inject() (
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
-            orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.OWNER))
+            orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             Right(OrganizationCreateResponse(request, org))
         }
       }
@@ -276,8 +276,8 @@ class OrganizationCommanderImpl @Inject() (
         case None =>
           val org = orgRepo.get(request.orgId)
           orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
-            case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.OWNER))
-            case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.OWNER))
+            case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN))
+            case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
           Right(OrganizationTransferResponse(request, modifiedOrg))
