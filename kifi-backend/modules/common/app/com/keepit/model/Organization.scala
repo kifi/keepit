@@ -184,7 +184,7 @@ object BasePermissions {
 }
 
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
-  override val version = 1
+  override val version = 2
   val namespace = "organization_by_id"
   def toKey(): String = id.id.toString
 }
