@@ -46,7 +46,8 @@ case class LibraryAddRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  orgIdOpt: Option[Id[Organization]] = None)
 
 case class ExternalLibraryModifyRequest(
   name: Option[String] = None,

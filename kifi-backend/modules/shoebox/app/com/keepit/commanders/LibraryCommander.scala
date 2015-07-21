@@ -555,26 +555,36 @@ class LibraryCommanderImpl @Inject() (
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
         val validSlug = LibrarySlug(libAddReq.slug)
+        val targetSpace = LibrarySpace(ownerId, libAddReq.orgIdOpt)
         db.readOnlyReplica { implicit s =>
-          val sameNameOpt = libraryRepo.getBySpaceAndName(ownerId, libAddReq.name)
-          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(ownerId, validSlug)
-          (sameNameOpt, sameSlugOpt)
+          val userHasPermissionToCreateInSpace = targetSpace match {
+            case OrganizationSpace(orgId) =>
+              organizationMembershipCommander.getPermissionsHelper(orgId, Some(ownerId)).contains(OrganizationPermission.ADD_LIBRARIES)
+            case UserSpace(userId) =>
+              userId == ownerId // Right now this is guaranteed to be correct, could replace with true
+          }
+          val sameNameOpt = libraryRepo.getBySpaceAndName(targetSpace, libAddReq.name)
+          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
+          (userHasPermissionToCreateInSpace, sameNameOpt, sameSlugOpt)
         } match {
-          case (Some(sameName), _) =>
+          case (false, _, _) =>
+            Left(LibraryFail(FORBIDDEN, "cannot_add_library_to_space"))
+          case (_, Some(sameName), _) =>
             Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
-          case (_, Some(sameSlug)) =>
+          case (_, _, Some(sameSlug)) =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-          case (None, None) =>
-            val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
+          case (_, None, None) =>
+            val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor()))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
             val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
             val library = db.readWrite { implicit s =>
-              libraryAliasRepo.reclaim(ownerId, validSlug)
-              libraryRepo.getOpt(ownerId, validSlug) match {
+              libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
+              libraryRepo.getBySpaceAndSlug(ownerId, validSlug, excludeStates = Set.empty) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind,
+                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = libAddReq.orgIdOpt))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   libAddReq.subscriptions match {
                     case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
