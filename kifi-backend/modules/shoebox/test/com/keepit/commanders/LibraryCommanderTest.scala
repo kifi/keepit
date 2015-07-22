@@ -865,118 +865,160 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
-    "let users join or decline library invites" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
+    "let users join libraries" in {
+      "let users join or decline library invites" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
 
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
-        val libraryCommander = inject[LibraryCommander]
-        val libraryInviteCommander = inject[LibraryInviteCommander]
+          val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
+          val libraryCommander = inject[LibraryCommander]
+          val libraryInviteCommander = inject[LibraryInviteCommander]
 
-        val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-        }
-
-        db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 6
-        }
-
-        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
-        eliza.inbox.size === 0
-
-        libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Ironman accepts invite to 'Murica'
-
-        //this for some reason only fails on Jenkins (and fails consitently now). Taking it out to uncreak the build.
-        // eliza.inbox.size === 1
-        // eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/ironman", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
-
-        libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Agent accepts invite to 'Murica'
-        libraryInviteCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
-        libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
-
-        db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 6
-          val res = for (inv <- libraryInviteRepo.all) yield {
-            (inv.libraryId, inv.userId.get, inv.access, inv.state)
+          val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          db.readWrite { implicit s =>
+            libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
+            libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
           }
-          res === Seq(
-            (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
-            (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
-            (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
-            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED),
-            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
-            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
-          )
-          libraryMembershipRepo.count === 6
-          libraryRepo.get(libMurica.id.get).memberCount === 3 //owner + Ironman + Agent
-          libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
-          libraryRepo.get(libShield.id.get).memberCount === 1 //owner
 
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userIron.id.get).get.lastJoinedAt must beSome
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userAgent.id.get).get.lastJoinedAt must beSome
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userHulk.id.get) must beNone
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userHulk.id.get).get.lastJoinedAt must beSome
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.count === 6
+          }
+
+          val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
+          eliza.inbox.size === 0
+
+          libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Ironman accepts invite to 'Murica'
+
+          //this for some reason only fails on Jenkins (and fails consitently now). Taking it out to uncreak the build.
+          // eliza.inbox.size === 1
+          // eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/ironman", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
+
+          libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Agent accepts invite to 'Murica'
+          libraryInviteCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
+          libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.count === 6
+            val res = for (inv <- libraryInviteRepo.all) yield {
+              (inv.libraryId, inv.userId.get, inv.access, inv.state)
+            }
+            res === Seq(
+              (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
+              (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
+              (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
+              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED),
+              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
+              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
+            )
+            libraryMembershipRepo.count === 6
+            libraryRepo.get(libMurica.id.get).memberCount === 3 //owner + Ironman + Agent
+            libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
+            libraryRepo.get(libShield.id.get).memberCount === 1 //owner
+
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userIron.id.get).get.lastJoinedAt must beSome
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userAgent.id.get).get.lastJoinedAt must beSome
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userHulk.id.get) must beNone
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userHulk.id.get).get.lastJoinedAt must beSome
+          }
+
+          // Proving that accepting a lesser invite doesn't destroy current access
+          db.readWrite { implicit s =>
+            libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+          }
+          libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
+          libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
+
+          // Joining a private library from an email invite (library invite has a null userId field)!
+          db.readWrite { implicit s =>
+            libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf"))
+            libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+          }
+
+          // no authtoken - should Fail
+          libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None).isRight === false
+
+          // incorrect authtoken - should Fail
+          libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf-wrong")).isRight === false
+
+          // correct authtoken (invite by email)
+          val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
+          successJoin.isRight === true
+          val includeInviteSet = Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED, LibraryInviteStates.ACTIVE)
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+          }
+
+          // Joining a private library from a kifi invite (library invite with a userId)
+          db.readWrite { implicit s =>
+            libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
+            libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+          }
+          libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+          }
+
         }
-
-        // Proving that accepting a lesser invite doesn't destroy current access
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-        }
-        libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
-        libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
-
-        // Joining a private library from an email invite (library invite has a null userId field)!
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf"))
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
-        }
-
-        // no authtoken - should Fail
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None).isRight === false
-
-        // incorrect authtoken - should Fail
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf-wrong")).isRight === false
-
-        // correct authtoken (invite by email)
-        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
-        successJoin.isRight === true
-        val includeInviteSet = Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED, LibraryInviteStates.ACTIVE)
-        db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
-        }
-
-        // Joining a private library from a kifi invite (library invite with a userId)
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
-        }
-        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
-        db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
-        }
-
       }
-    }
 
-    "let users leave library" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
-        val libraryCommander = inject[LibraryCommander]
+      "let org members join an org-visible library" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, member, lib) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            val lib = LibraryFactory.library().withUser(owner).withOrganization(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
+            (org, owner, member, lib)
+          }
 
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
-          libraryRepo.get(libMurica.id.get).memberCount === 3
+          val libraryCommander = inject[LibraryCommander]
+          val response = libraryCommander.joinLibrary(member.id.get, lib.id.get)
+          response.isRight ==== true
+
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryMembershipRepo].getWithLibraryId(lib.id.get).map(_.userId).toSet === Set(owner.id.get, member.id.get)
+          }
         }
+      }
 
-        libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
+      "prevent non-members from joining an org-visible library" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, rando, lib) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            val lib = LibraryFactory.library().withUser(owner).withOrganization(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
+            (org, owner, rando, lib)
+          }
 
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.count === 6
-          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
-          libraryRepo.get(libMurica.id.get).memberCount === 2
+          val libraryCommander = inject[LibraryCommander]
+          val response = libraryCommander.joinLibrary(rando.id.get, lib.id.get)
+          response.isLeft ==== true
+
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryMembershipRepo].getWithLibraryId(lib.id.get).map(_.userId).toSet === Set(owner.id.get)
+          }
+        }
+      }
+
+      "let users leave library" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+          val libraryCommander = inject[LibraryCommander]
+
+          db.readOnlyMaster { implicit s =>
+            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+            libraryRepo.get(libMurica.id.get).memberCount === 3
+          }
+
+          libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
+
+          db.readOnlyMaster { implicit s =>
+            libraryMembershipRepo.count === 6
+            libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+            libraryRepo.get(libMurica.id.get).memberCount === 2
+          }
         }
       }
     }
