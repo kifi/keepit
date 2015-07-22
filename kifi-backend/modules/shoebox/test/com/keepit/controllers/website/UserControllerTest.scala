@@ -61,7 +61,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "username":"test",
               "emails":[],
               "notAuthed":[],
-              "experiments":["admin", "libraries"],
+              "experiments":["admin"],
               "numLibraries":0,
               "numConnections":0,
               "numFollowers":0,
