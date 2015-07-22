@@ -657,4 +657,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = Future.successful(false)
 
   def getOrganizationMembers(orgId: Id[Organization]) = Future.successful(Set.empty)
+
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]] = Future.successful(Seq.empty)
 }

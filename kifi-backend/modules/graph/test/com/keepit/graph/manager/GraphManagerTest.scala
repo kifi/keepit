@@ -94,6 +94,16 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[DomainReader](1))
           nbs = getNeighbors(v, (DomainReader, EmailAccountReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[EmailAccountReader].id } === Set(1, 2)
+
+          // org to domain
+          v.moveTo(VertexDataId[OrganizationReader](1))
+          nbs = getNeighbors(v, (OrganizationReader, DomainReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[DomainReader].id } === Set(1)
+
+          // domain to org
+          v.moveTo(VertexDataId[DomainReader](1))
+          nbs = getNeighbors(v, (DomainReader, OrganizationReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
         }
 
         val libUpdate = LibraryGraphUpdate(libId = Id[Library](1), state = LibraryStates.INACTIVE, libSeq = SequenceNumber[Library](10))
