@@ -148,14 +148,20 @@ class KifiSiteRouter @Inject() (
         }
         libraryOpt map {
           case (library, isLibraryAlias) =>
-            val hasUserMovedThisLibrary = isLibraryAlias
-            val wasLibrarySlugNormalized = library.slug.value != slug
-            val hasUserChangedTheirUsername = spaceRedirectStatusOpt.isDefined
-            if (hasUserMovedThisLibrary || wasLibrarySlugNormalized || hasUserChangedTheirUsername) {
+            val libraryHasBeenMoved = isLibraryAlias
+            val handleOwnerChangedTheirHandle = spaceRedirectStatusOpt.contains(MOVED_PERMANENTLY)
+            val wasLibrarySlugNormalized = !libraryHasBeenMoved && library.slug.value != slug
+            val wasHandleNormalized = spaceRedirectStatusOpt.contains(SEE_OTHER)
+
+            if (libraryHasBeenMoved || handleOwnerChangedTheirHandle || wasLibrarySlugNormalized || wasHandleNormalized) {
               val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
 
-              val status = if (spaceRedirectStatusOpt.contains(301) || hasUserMovedThisLibrary) MOVED_PERMANENTLY
-              else SEE_OTHER
+              val status = if (handleOwnerChangedTheirHandle || libraryHasBeenMoved) {
+                MOVED_PERMANENTLY
+              } else {
+                SEE_OTHER
+              }
+
               Redirect(uri, status)
             } else {
               AngularApp.app(() => libMetadata(library))
