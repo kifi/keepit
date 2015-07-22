@@ -113,7 +113,7 @@ trait DefaultSyntax extends QueryParser {
 
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
     val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
-      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
+      val query = getFieldQuery(spec.field, spec.term, spec.quoted, spec.trailing)
       query.foreach { query => clauses += new BooleanClause(query, spec.occur) }
       clauses
     }

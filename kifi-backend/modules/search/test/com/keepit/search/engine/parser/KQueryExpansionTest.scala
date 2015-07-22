@@ -27,39 +27,55 @@ class KQueryExpansionTest extends Specification {
   private[this] def b(implicit queryExpansion: KQueryExpansion) = if (queryExpansion.titleBoost == 1.0f) "" else s"^${queryExpansion.titleBoost}"
 
   "KQueryExpansion" should {
-    "expand queries (with no concat)" in new QueryParserScope(concatBoostValue = 0.0f, prefixBoostValue = 1.0f) {
+    "expand queries (with no concat, with prefix search on trailing term)" in new QueryParserScope(concatBoostValue = 0.0f, prefixBoostValue = 1.0f) {
       var query = parser.parse("super conductivity").get
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
-        s"KTextQuery((t:super$b | c:super | h:super | ts:super$b | cs:super | hs:super | KPrefixQuery(tp-tv: super))~$tb) " +
+        s"KTextQuery((t:super$b | c:super | h:super | ts:super$b | cs:super | hs:super)~$tb) " +
         s"KTextQuery((t:conductivity$b | c:conductivity | h:conductivity | ts:conductivity$b | cs:conductivity | hs:conductivity | KPrefixQuery(tp-tv: conductivity))~$tb)"
 
       query = parser.parse("Electromagnetically induced transparency").get
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
-        s"KTextQuery((t:electromagnetically$b | c:electromagnetically | h:electromagnetically | ts:electromagnet$b | cs:electromagnet | hs:electromagnet | KPrefixQuery(tp-tv: electromagnetically))~$tb) " +
-        s"KTextQuery((t:induced$b | c:induced | h:induced | ts:induce$b | cs:induce | hs:induce | KPrefixQuery(tp-tv: induced))~$tb) " +
+        s"KTextQuery((t:electromagnetically$b | c:electromagnetically | h:electromagnetically | ts:electromagnet$b | cs:electromagnet | hs:electromagnet)~$tb) " +
+        s"KTextQuery((t:induced$b | c:induced | h:induced | ts:induce$b | cs:induce | hs:induce)~$tb) " +
         s"KTextQuery((t:transparency$b | c:transparency | h:transparency | ts:transparency$b | cs:transparency | hs:transparency | KPrefixQuery(tp-tv: transparency))~$tb)"
 
       query = parser.parse("bose-einstein condensate").get
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
-        s"""KTextQuery((t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein" | KPrefixQuery(tp-tv: bose-einstein))~$tb) """ +
+        s"""KTextQuery((t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein")~$tb) """ +
         s"""KTextQuery((t:condensate$b | c:condensate | h:condensate | ts:condensate$b | cs:condensate | hs:condensate | KPrefixQuery(tp-tv: condensate))~$tb)"""
+
+      query = parser.parse("bose-einstein condensate ").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
+        s"""KTextQuery((t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein")~$tb) """ +
+        s"""KTextQuery((t:condensate$b | c:condensate | h:condensate | ts:condensate$b | cs:condensate | hs:condensate)~$tb)"""
+
+      query = parser.parse("bose-einstein").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
+        s"""KTextQuery((t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein" | KPrefixQuery(tp-tv: bose-einstein))~$tb)"""
 
       query = parser.parse("\"Spin-statistics\" theorem").get
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
         s"""KTextQuery((t:"spin statistics"$b | c:"spin statistics" | h:"spin statistics")~$tb) """ +
         s"""KTextQuery((t:theorem$b | c:theorem | h:theorem | ts:theorem$b | cs:theorem | hs:theorem | KPrefixQuery(tp-tv: theorem))~$tb)"""
+
+      query = parser.parse("\"Spin-statistics\"").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
+        s"""KTextQuery((t:"spin statistics"$b | c:"spin statistics" | h:"spin statistics")~$tb)"""
     }
 
-    "expand queries (with concat)" in new QueryParserScope(concatBoostValue = 0.5f, prefixBoostValue = 1.0f) {
+    "expand queries (with concat, with prefix search)" in new QueryParserScope(concatBoostValue = 0.5f, prefixBoostValue = 1.0f) {
       var query = parser.parse("super conductivity").get
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
         "KTextQuery(" +
-        s"(t:super$b | c:super | h:super | ts:super$b | cs:super | hs:super | KPrefixQuery(tp-tv: super) |" +
+        s"(t:super$b | c:super | h:super | ts:super$b | cs:super | hs:super |" +
         s" t:superconductivity^0.5 | c:superconductivity^0.5 | h:superconductivity^0.5 | ts:superconductivity^0.5 | cs:superconductivity^0.5 | hs:superconductivity^0.5)~$tb) " +
         "KTextQuery(" +
         s"(t:conductivity$b | c:conductivity | h:conductivity | ts:conductivity$b | cs:conductivity | hs:conductivity | KPrefixQuery(tp-tv: conductivity) |" +
@@ -69,11 +85,11 @@ class KQueryExpansionTest extends Specification {
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
         "KTextQuery(" +
-        s"(t:electromagnetically$b | c:electromagnetically | h:electromagnetically | ts:electromagnet$b | cs:electromagnet | hs:electromagnet | KPrefixQuery(tp-tv: electromagnetically) |" +
+        s"(t:electromagnetically$b | c:electromagnetically | h:electromagnetically | ts:electromagnet$b | cs:electromagnet | hs:electromagnet |" +
         s" t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | h:electromagneticallyinduced^0.5 |" +
         s" ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5 | hs:electromagneticallyinduce^0.5)~$tb) " +
         "KTextQuery(" +
-        s"(t:induced$b | c:induced | h:induced | ts:induce$b | cs:induce | hs:induce | KPrefixQuery(tp-tv: induced) |" +
+        s"(t:induced$b | c:induced | h:induced | ts:induce$b | cs:induce | hs:induce |" +
         s" t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 | h:electromagneticallyinduced^0.5 | ts:electromagneticallyinduce^0.5 | cs:electromagneticallyinduce^0.5 | hs:electromagneticallyinduce^0.5 |" +
         s" t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | h:inducedtransparency^0.5 | ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5 | hs:inducedtransparency^0.5)~$tb) " +
         "KTextQuery(" +
@@ -84,7 +100,7 @@ class KQueryExpansionTest extends Specification {
       query must beAnInstanceOf[KBooleanQuery]
       query.toString ===
         "KTextQuery(" +
-        s"""(t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein" | KPrefixQuery(tp-tv: bose-einstein) |""" +
+        s"""(t:"bose einstein"$b | c:"bose einstein" | h:"bose einstein" | ts:"bose einstein"$b | cs:"bose einstein" | hs:"bose einstein" |""" +
         s""" t:boseeinstein^0.5 | c:boseeinstein^0.5 | h:boseeinstein^0.5 | ts:boseeinstein^0.5 | cs:boseeinstein^0.5 | hs:boseeinstein^0.5 |""" +
         s""" t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | h:boseeinsteincondensate^0.5 | ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5 | hs:boseeinsteincondensate^0.5)~$tb) """ +
         "KTextQuery(" +

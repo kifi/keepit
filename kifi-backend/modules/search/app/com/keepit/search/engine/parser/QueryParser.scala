@@ -25,15 +25,15 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
     }
   }
 
-  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
-    getFieldQuery(field, queryText, quoted, defaultAnalyzer)
+  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, trailing: Boolean): Option[Query] = {
+    getFieldQuery(field, queryText, quoted, trailing, defaultAnalyzer)
   }
 
-  protected def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
-    getFieldQuery(field, queryText, false, defaultStemmingAnalyzer)
+  protected def getStemmedFieldQuery(field: String, queryText: String, trailing: Boolean): Option[Query] = {
+    getFieldQuery(field, queryText, false, trailing, defaultStemmingAnalyzer)
   }
 
-  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, analyzer: Analyzer): Option[Query] = {
+  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, trailing: Boolean, analyzer: Analyzer): Option[Query] = {
     val it = new TermIterator(field, queryText, analyzer) with Position
     try {
       if (it.hasNext) {
