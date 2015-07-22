@@ -25,6 +25,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.typeahead.KifiUserTypeahead
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -76,7 +77,7 @@ trait LibraryCommander {
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])]
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
@@ -124,6 +125,7 @@ class LibraryCommanderImpl @Inject() (
     keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
+    kifiUserTypeahead: KifiUserTypeahead,
     collectionRepo: CollectionRepo,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
@@ -884,16 +886,14 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])] = { //ZZZ
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = { //ZZZ
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
       val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
-      val contributors: Map[Id[Library], Seq[Id[User]]] = libraryMembershipRepo.getUsersWithWriteAccessForLibraries(libIds, userId)
+      val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
       libsWithMembership.map {
         case (lib, membership) =>
-          val collabs: Seq[Id[User]] = if (lib.ownerId == userId) contributors.getOrElse(lib.id.get, Seq.empty) else lib.ownerId +: contributors.getOrElse(lib.id.get, Seq.empty)
-          val bus = basicUserRepo.loadAll(collabs.toSet)
-          (lib, membership, collabs.map(bus(_)))
+          (lib, membership, collaborators(lib.id.get))
       }
     }
   }
@@ -1151,16 +1151,19 @@ class LibraryCommanderImpl @Inject() (
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         (updatedLib, updatedMem)
       }
-      updateLibraryJoin(userId, lib, eventContext)
+      updateLibraryJoin(userId, lib, updatedMem, eventContext)
       Right((updatedLib, updatedMem))
     }
   }
 
-  private def updateLibraryJoin(userId: Id[User], library: Library, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
+  private def updateLibraryJoin(userId: Id[User], library: Library, membership: LibraryMembership, eventContext: HeimdalContext): Future[Unit] = SafeFuture {
     val libraryId = library.id.get
     libraryAnalytics.acceptLibraryInvite(userId, library, eventContext)
     libraryAnalytics.followLibrary(userId, library, eventContext)
     searchClient.updateLibraryIndex()
+    if (LibraryAccess.collaborativePermissions.contains(membership.access)) {
+      refreshLibraryCollaboratorsTypeahead(libraryId)
+    }
   }
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit] = {
@@ -1180,6 +1183,9 @@ class LibraryCommanderImpl @Inject() (
           convertKeepOwnershipToLibraryOwner(userId, lib)
           libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
+          if (LibraryAccess.collaborativePermissions.contains(mem.access)) {
+            refreshLibraryCollaboratorsTypeahead(libraryId)
+          }
         }
         Right((): Unit)
     }
@@ -1710,6 +1716,12 @@ class LibraryCommanderImpl @Inject() (
 
                   Right(updatedTargetMembership)
               }
+            } tap {
+              // Unless we're just kicking out a follower, the set of collaborators has changed.
+              case Right(updatedMembership) if !(updatedMembership.isFollower && updatedMembership.state == LibraryMembershipStates.INACTIVE) => {
+                SafeFuture { refreshLibraryCollaboratorsTypeahead(library.id.get) }
+              }
+              case _ => //
             }
           } else { // invalid permissions
             log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess}")
@@ -1719,4 +1731,10 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  private def refreshLibraryCollaboratorsTypeahead(libraryId: Id[Library]): Future[Unit] = {
+    val collaboratorIds = db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
+    }
+    kifiUserTypeahead.refreshByIds(collaboratorIds.toSeq)
+  }
 }
