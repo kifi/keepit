@@ -1,6 +1,6 @@
 package com.keepit.shoebox.cron
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.emails.{ GratificationCommander, GratificationEmailSender }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
@@ -20,6 +20,7 @@ import scala.util.{ Failure, Success }
 
 trait GratificationEmailCronPlugin extends SchedulerPlugin
 
+@Singleton
 class GratificationEmailCronPluginImpl @Inject() (
     actor: ActorInstance[GratificationEmailActor],
     quartz: ActorInstance[QuartzActor],
@@ -27,20 +28,19 @@ class GratificationEmailCronPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val nowET = currentDateTime(zones.ET)
-    val offsetMillisToUtc = zones.ET.getOffset(nowET)
+    val nowET = currentDateTime(zones.PT)
+    val offsetMillisToUtc = zones.PT.getOffset(nowET)
     val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
-    val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
-    val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
+    val utcHourFor9amPacificTime = 9 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 30 ${utcHourFor8pmEasternTime} ? * *" // scheduled to send to QA
-    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
+    //val cronTimeEveryday = s"0 0/30 ${utcHourFor5pmPacificTime + 1}-${utcHourFor5pmPacificTime + 3} ? * MON" // scheduled to send to QA
+    //cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
-    val cronTimeTues = s"0 0 $utcHourForNoonEasternTime ? * TUE"
-    cronTaskOnLeader(quartz, actor.ref, cronTimeTues, GratificationEmailMessage.SendOddEmails)
+    val cronTimeFriday = s"0 0 $utcHourFor9amPacificTime ? * FRI"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeFriday, GratificationEmailMessage.SendEvenEmails)
 
-    val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * MON"
-    cronTaskOnLeader(quartz, actor.ref, cronTimeMonday, GratificationEmailMessage.SendEvenEmails)
+    val cronTimeMonday = s"0 0 $utcHourFor9amPacificTime ? * MON"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeMonday, GratificationEmailMessage.SendOddEmails)
   }
 }
 
@@ -58,11 +58,8 @@ class GratificationEmailActor @Inject() (
   val testDestinationEmail = EmailAddress("cam@kifi.com") // while in QA, send all emails to Cam
 
   def receive = {
-    case SendEmails =>
-      emailCommander.batchSendEmails(_ => true, sendTo = Some(testDestinationEmail))
-    case SendOddEmails =>
-      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 1 }, sendTo = Some(testDestinationEmail))
-    case SendEvenEmails =>
-      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 0 }, sendTo = Some(testDestinationEmail))
+    case SendEmails => emailCommander.batchSendEmails(filter = Function.const(true))
+    case SendOddEmails => emailCommander.batchSendEmails(filter = { id => id.id % 2 == 1 })
+    case SendEvenEmails => emailCommander.batchSendEmails(filter = { id => id.id % 2 == 0 })
   }
 }

@@ -27,7 +27,7 @@ angular.module('kifi')
       return !$scope.users || !remainingUserIds || remainingUserIds.length;
     };
 
-    userProfileActionService.getConnections($stateParams.username, fetchPageSize).then(function (data) {
+    userProfileActionService.getConnections($stateParams.handle, fetchPageSize).then(function (data) {
       $scope.users = data.invitations ? data.invitations.concat(data.users) : data.users;
       remainingUserIds = data.ids;
       loading = false;

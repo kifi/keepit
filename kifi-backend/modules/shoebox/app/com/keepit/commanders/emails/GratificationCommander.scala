@@ -50,19 +50,21 @@ class GratificationCommander @Inject() (
   }
 
   def batchSendEmails(filter: Id[User] => Boolean, sendTo: Option[EmailAddress] = None): Unit = {
+    log.info("[GratData] Starting grat data pipeline...")
     val userCount = db.readOnlyReplica { implicit s => userRepo.count }
     val numBatches = userCount / BATCH_SIZE
 
     def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
       val userIds = generateUserBatch(batch)
+      log.info(s"[GratData] Generated user batch ${userIds.head}-${userIds.last}, getting data")
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
-      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
+      fGratDatas.map { gratDatas => log.info(s"[GratData] Batched data received, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
 
     if (!UNDER_EXPERIMENT) {
       FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
     } else {
-      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(ExperimentType.GRATIFICATION_EMAIL) }
+      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(UserExperimentType.GRATIFICATION_EMAIL) }
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
       fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
@@ -74,16 +76,16 @@ class GratificationCommander @Inject() (
     val libraryFilter = { library: Library => library.state != LibraryStates.INACTIVE && library.visibility != LibraryVisibility.SECRET }
     val keepFilter = { keep: Keep => keep.state != KeepStates.INACTIVE && keep.visibility != LibraryVisibility.SECRET }
     gratData.copy(
-      libraryViews = filterEntities[Library](gratData.libraryViews, libraryRepo, libraryFilter),
-      libraryFollows = filterEntities[Library](rawFollows, libraryRepo, libraryFilter),
-      keepViews = filterEntities[Keep](gratData.keepViews, keepRepo, keepFilter),
-      rekeeps = filterEntities[Keep](gratData.rekeeps, keepRepo, keepFilter)
+      libraryViews = applyCountDataFilter[Library](gratData.libraryViews, libraryRepo, libraryFilter),
+      libraryFollows = applyCountDataFilter[Library](rawFollows, libraryRepo, libraryFilter),
+      keepViews = applyCountDataFilter[Keep](gratData.keepViews, keepRepo, keepFilter),
+      rekeeps = applyCountDataFilter[Keep](gratData.rekeeps, keepRepo, keepFilter)
     )
   }
 
-  private def filterEntities[E <: Model[E]](countData: CountData[E], repo: Repo[E], entityFilter: E => Boolean): CountData[E] = {
+  private def applyCountDataFilter[E <: Model[E]](countData: CountData[E], repo: Repo[E], filter: E => Boolean): CountData[E] = {
     val filteredCountById = db.readOnlyReplica { implicit session =>
-      countData.countById.filter { case (id: Id[E], _) => entityFilter(repo.get(id)) }
+      countData.countById.filter { case (id: Id[E], _) => filter(repo.get(id)) }
     }
     val publicCountTotal = filteredCountById.values.sum
     CountData[E](publicCountTotal, filteredCountById)

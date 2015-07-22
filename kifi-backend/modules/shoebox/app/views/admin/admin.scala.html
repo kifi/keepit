@@ -66,19 +66,25 @@
             </ul>
 
           <li class="dropdown">
+              <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Organizations</a>
+              <ul class="dropdown-menu" role="menu">
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">All Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.realOrganizationsView(0)">Real Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.fakeOrganizationsView(0)">Fake Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(0)">Users with Potential Organizations</a>
+                  <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(0)">LinkedIn Users Without Organizations</a>
+              </ul>
+
+          <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Keeper</a>
             <ul class="dropdown-menu" role="menu">
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getVersionForm">Keeper Versions</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getPatterns">Automatic Engagement</a>
-              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getDomainTags">Domain Tags</a>
-              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getDomainOverrides">Domain Overrides</a>
-              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.searchDomain">Find Domain</a>
             </ul>
 
                <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Search</a>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments">Search Experiments</a>
                     <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
                 </ul>
                </li>
@@ -91,7 +97,6 @@
                     <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.persona">LDA Persona</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.userBookmarkKeywords">User Keywords</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.index">Porn Detector</a>
-                    <li><a href="@com.keepit.controllers.admin.routes.AdminWord2VecController.index">Word2Vec</a>
                 </ul>
                </li>
 
@@ -127,8 +132,10 @@
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">URL Normalization</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.urlRenormalizeConsole">URL Renormalization Console</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalizationView(0)">Renormalization</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">URL Pattern Rules</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getProxies">Proxies</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.searchDomain">Find Domain</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getDomainTags">Domain Tags</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getDomainOverrides">Domain Overrides</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns">URL Pattern Rules</a></li>
                     </ul>
                 </li>
 
@@ -142,6 +149,15 @@
                     </ul>
                 </li>
 
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" >Rover</a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.searchUrl()">Search for URL</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.testRegex()">Test Regex</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.getAllProxies()">Proxies</a></li>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminRoverController.getAllUrlRules()">URL Rules</a></li>
+                </ul>
+            </li>
         </ul>
       </div>
     </div>
@@ -151,6 +167,13 @@
       </div>
     </header>
     <div class="container">
+      @for(warning <- request.flash.get("warning")) {
+        <div class="alert alert-warning"><strong>Warning:</strong> @warning</div>
+      }
+      @for(error<- request.flash.get("error")) {
+        <div class="alert alert-danger"><strong>Error:</strong> @error</div>
+      }
+
       @content
     </div>
     <div class="integrity-reminder" style="background-image:url(//djty7jcqog9qu.cloudfront.net/users/@{request.user.externalId}/pics/100/@{request.user.pictureName}.jpg)">

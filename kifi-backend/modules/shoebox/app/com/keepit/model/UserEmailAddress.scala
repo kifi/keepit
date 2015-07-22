@@ -6,7 +6,7 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.model.ExperimentType.{ AUTO_GEN, FAKE }
+import com.keepit.model.UserExperimentType.{ AUTO_GEN, FAKE }
 
 import org.joda.time.DateTime
 
@@ -38,7 +38,7 @@ object UserEmailAddress {
   private val testDomains = Set("tfbnw.net", "mailinator.com") // tfbnw.net is for fake facebook accounts
   private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
 
-  def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
+  def getExperiments(email: UserEmailAddress): Set[UserExperimentType] = {
     val Array(local, host) = email.address.address.split('@')
     val tags = tagRe.findAllIn(local).toSet
     if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {

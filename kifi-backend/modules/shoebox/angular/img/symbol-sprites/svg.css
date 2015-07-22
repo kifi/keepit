@@ -1,0 +1,17 @@
+/*
+  Setting these SVG properties to "inherit" lets us override them in the
+  <use> tag using CSS
+
+  "For user agents that support Styling with CSS, the generated ‘g’ element
+  carries along with it the "cascaded" property values on the ‘use’ element
+  which result from the CSS cascade"
+
+  http://www.w3.org/TR/SVG/struct.html#UseElement
+*/
+rect, path, circle, g { fill: inherit; stroke: inherit; stroke-width: inherit; }
+
+.wow {
+  fill: red;
+  stroke-width: 10px;
+  stroke: blue;
+}

@@ -60,7 +60,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val user1 = user().saved
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10)
+          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10, None, None)
           1 === 1
         }
       }
@@ -80,19 +80,16 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(library.id.get, 0, 50) }.length === 50
 
-        val keepsWithOrgId1 = db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibraryWithoutOrgId(library.id.get, None, Offset(0), Limit(50))
+        val keepsWithOrgIdSet = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, None, Limit(50))
         }
 
-        keepsWithOrgId1.foreach(_.organizationId !== None)
-        keepsWithOrgId1.length === 40
+        keepsWithOrgIdSet.size === 40
 
-        val keepsWithoutOrgId = db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibraryWithoutOrgId(library.id.get, orgId1, Offset(0), Limit(50))
+        val keepsWithoutOrgId1 = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, orgId1, Limit(50))
         }
-
-        keepsWithoutOrgId.foreach(_.organizationId !== orgId1)
-        keepsWithoutOrgId.length === 30
+        keepsWithoutOrgId1.size === 30
       }
     }
 

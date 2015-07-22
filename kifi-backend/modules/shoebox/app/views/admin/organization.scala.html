@@ -1,85 +1,154 @@
-@import com.keepit.model.OrganizationMembershipInfo
+@import com.keepit.commanders.OrganizationStatistics
 @(
-orgAnalyticsView: AnalyticsOrganizationView,
-orgId: Id[Organization],
-ownerId: Id[User],
-candidatesInfo: Map[Id[User], OrganizationMembershipInfo]
+orgStats: OrganizationStatistics
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@admin("Organization: " + orgAnalyticsView.orgView.name, stylesheets = List("admin_user")) {
+@admin("Organization: " + orgStats.name, stylesheets = List("admin_user")) {
 <table class="org-summary table table-bordered" style="width:600px">
-    <tr><td>Id</td><td>@orgId</td></tr>
+    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
     <tr><td>Name</td>
         <td>
-        <form action="#" method="POST" class="form-inline update-name">
-            <input id="update-name-input" type="text" name="name" value="@orgAnalyticsView.orgView.name">
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
+            <input id="set-name-input" type="text" name="name" value="@orgStats.name">
             <input type="Submit" value="Change">
         </form>
+        </td></tr>
+    <tr><td>Created At</td>
+        <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Handle</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+                <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
+                <input type="Submit" value="Change">
+            </form>
         </td></tr>
     <tr><td>Description</td>
         <td>
-        <form action="#" method="POST" class="form-inline update-description">
-            <input id="update-description-input" type="text" name="description" value="@orgAnalyticsView.orgView.description">
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+            <input id="set-description-input" type="text" name="description" value="@orgStats.description">
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(ownerId)">@ownerId</a></td></tr>
+    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+    <tr>
+    <th>Experiments</th>
+    <td id="experiments" class="form-inline">
+    @for(exp <- OrganizationExperimentType._ALL) {
+        <label class="checkbox">
+            <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
+        </label>
+    }
+    </td>
+    </tr>
 
 </table>
 
-<table class="org-members table table-bordered" style="width:300px; float:left">
-    <tr><th>Org Members</th></tr>
-    @for(uid <- orgAnalyticsView.analyticsExtras.membersInfo.keySet.toSeq.sorted) {
-        <tr><td>
-        <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
-        </td></tr>
+<table class="org-members table table-bordered" style="width:600px">
+    <tr>
+        <th>Member Id</th>
+        <th>Member Name</th>
+        <th>Role</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+        <tr>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+            <td>@membership.role</td>
+            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+        </tr>
     }
 </table>
 
-<table class="org-candidates table table-bordered" style="width:300px; float:left">
-    <tr><th>Org Candidates</th></tr>
-    @for(uid <- candidatesInfo.keySet.toSeq.sorted) {
-        <tr><td>
-        <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">@uid</a>
-        </td></tr>
+<table class="org-candidates table table-bordered" style="width:600px">
+    <tr>
+        <th>Candidate Id</th>
+        <th>Candidate Name</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(candidate <- orgStats.candidates.toSeq) {
+        <tr>
+            <td>@candidate.userId</td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId">
+                <button type="submit" class="btn btn-default">Remove</button>
+            </form></td>
+        </tr>
     }
-    <tr><td>
-    <form action="#" method="POST" class="form-inline add-candidate">
-        <input id="add-candidate-input" type="text" name="candidate-id" placeholder="Candidate Id goes here">
-        <input type="Submit" value="Add">
-    </form>
-    </td></tr>
-
 </table>
-<script type="text/javascript">
-    $(function() {
-      $('.update-name').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgId)", $('.update-name').serialize())
-        .done(function(data) {
-          alert("Updated Organization Name");
-        }).fail(function(data) {
-          alert("Bad Request: " + data.responseText);
-        });
-        return false;
-      });
-      $('.update-description').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgId)", $('.update-description').serialize())
-        .done(function(data) {
-          alert("Updated Organization Description");
-        }).fail(function(data) {
-          alert("Bad Request: " + data.responseText);
-        });
-        return false;
-      });
-      $('.add-candidate').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgId)", $('.add-candidate').serialize())
-        .done(function(data) {
-          alert("Added a candidate member: " + data);
-        }).fail(function(data) {
-          alert("Bad Request: " + data.responseText);
-        });
-        return false;
-      });
+<br/>
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+    <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
+    <input type="Submit" value="Add">
+</form>
+
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="GET" class="form-inline refresh-reco-list">
+    # of Recommendations: <input type="number" name="numMemberRecos" value="30">
+    <input type="Submit" value="Refresh">
+</form>
+
+
+<table class="org-member-recos table table-bordered" style="width:800px">
+    <tr>
+        <th>Recommended User</th>
+        <th>Recommended Email</th>
+        <th>Recommendation Score</th>
+        <th>Associated Orgs</th>
+    </tr>
+    @for(reco <- orgStats.memberRecommendations) {
+        <tr>
+            <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
+            <td class="block">@{reco.user.primaryEmail}</td>
+            <td>@reco.score</td>
+            <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
+            <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
+        </tr>
+    }
+</table>
+
+
+    <script type="text/javascript">
+
+    $("#experiments").on("click", "input", function() {
+        var $td = $(this)'.closest("#experiments");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
     });
+    function addCandidate(orgId, candidateId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId }).done(done);
+    };
+
+    function addMember(orgId, memberId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
+    };
+
+    function done() {
+      location.reload();
+    };
+
+
 </script>
 }

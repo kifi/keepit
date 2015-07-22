@@ -37,6 +37,7 @@ class SocialWanderingCommander @Inject() (
           Some(sociallyRelatedPeople)
         }
       } else {
+        log.error(s"userId: $userId not found, cannot get socially related entities")
         Future.successful(None)
       }
     }
@@ -52,6 +53,7 @@ class SocialWanderingCommander @Inject() (
           Some(sociallyRelatedPeople)
         }
       } else {
+        log.error(s"orgId: $orgId not found, cannot get socially related entities")
         Future.successful(None)
       }
     }
@@ -66,6 +68,7 @@ class SocialWanderingCommander @Inject() (
     val relatedFacebookAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
     val relatedLinkedInAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
     val relatedEmailAccounts = ListBuffer[(Id[EmailAccountInfo], Double)]()
+    val relatedOrganizations = ListBuffer[(Id[Organization], Double)]()
 
     @inline def normalizedScore(score: Int) = score.toDouble / journal.getCompletedSteps()
 
@@ -82,6 +85,9 @@ class SocialWanderingCommander @Inject() (
       case (id, score) if id.kind == EmailAccountReader =>
         val emailAccountId = VertexDataId.toEmailAccountId(id.asId[EmailAccountReader])
         relatedEmailAccounts += emailAccountId -> normalizedScore(score)
+      case (id, score) if id.kind == OrganizationReader =>
+        val organizationId = VertexDataId.toOrganizationId(id.asId[OrganizationReader])
+        relatedOrganizations += organizationId -> normalizedScore(score)
       case _ => // ignore
     }
 
@@ -89,7 +95,8 @@ class SocialWanderingCommander @Inject() (
       users = RelatedEntities.top(userId, relatedUsers, limit),
       facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
       linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
-      emailAccounts = RelatedEntities.top(userId, relatedEmailAccounts, limit)
+      emailAccounts = RelatedEntities.top(userId, relatedEmailAccounts, limit),
+      organizations = RelatedEntities.top(userId, relatedOrganizations, limit)
     )
   }
 
@@ -130,7 +137,7 @@ class SocialWanderingCommander @Inject() (
     val teleporter = UniformTeleporter(Set(vertexId)) { Function.const(SocialWanderlust.restartProbability) }
     val resolver = {
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
-        case (source, destination, edge) => !(irrelevantVertices.contains(destination.id))
+        case (source, destination, edge) => !irrelevantVertices.contains(destination.id)
       }
       RestrictedDestinationResolver(Some(SocialWanderlust.subgraph), mayTraverse, Function.const(1))
     }
@@ -204,6 +211,7 @@ object SocialWanderlust {
     10015, // Kifi Editorial
     11784, // Kifi Product
     11785, // Kifi Eng
-    16707 // Kifi Twitter
+    16707, // Kifi Twitter
+    97543 // Fake Org Owner
   ).map(id => VertexId(Id[User](id)))
 }

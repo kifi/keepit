@@ -1,49 +1,46 @@
+@import com.keepit.model._
+@import com.keepit.common.db._
+@import com.keepit.common.controller.PaginatedRequest
+@import com.keepit.commanders._
+
 @(
-orgAnalyticsCards: Map[Id[Organization], AnalyticsOrganizationCard],
-fakeOwnerId: Id[User],
-candidatesInfos: Map[Id[Organization], Map[Id[User], OrganizationMembershipInfo]]
-)(implicit request: com.keepit.common.controller.UserRequest[_])
+    orgs: Seq[OrganizationStatisticsOverview],
+    title: String,
+    fakeOwnerId: Id[User],
+    otherPagesRoute: Int => Html
+)(implicit request: com.keepit.common.controller.UserRequest[_], pagination: PaginatedRequest[OrganizationStatisticsOverview, _])
 
-@orgDisplay(orgId: Id[Organization]) = {
-    <a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId)">@orgId</a>
-}
-
-@admin(orgAnalyticsCards.size + " organizations", stylesheets = List("admin_user")) {
-<table class="orgs-summary table table-bordered">
-    <tr><th>Id</th>
-        <th>Public Id</th>
-        <th>Name</th>
-        <th>Number of Members</th>
-        <th>Number of Membership Candidates</th>
-        <th>Number of Libraries</th>
-    </tr>
-    @for(orgId <- orgAnalyticsCards.keys.toSeq.sorted) {
-        <tr>
-            <td>@orgDisplay(orgId)</td>
-            <td>@orgAnalyticsCards(orgId).orgCard.orgId.id</td>
-            <td>@orgAnalyticsCards(orgId).orgCard.name</td>
-            <td>@orgAnalyticsCards(orgId).orgCard.numMembers</td>
-            <td>@candidatesInfos(orgId).size</td>
-            <td>@orgAnalyticsCards(orgId).orgCard.numLibraries</td>
-        </tr>
+@views.html.admin.admin(pagination.count + " " + title, stylesheets = List("admin_user")) {
+    <form action="/admin/findOrganizationByName" method="GET" class="form-inline">
+        <input name="orgName" type="text">
+        <button type="submit" class="btn btn-primary">Search all organizations by name</button>
+    </form>
+    @views.html.admin.adminHelper.pagination(pagination.page, pagination.count, 30, otherPagesRoute) {
+        <table class="orgs-summary table table-bordered">
+            <tr><th>Id</th>
+                <th>Name</th>
+                <th># of members</th>
+                <th># of membership candidates</th>
+                <th># of org libraries</th>
+                <th># of org keeps</th>
+                <th>Creation date</th>
+            </tr>
+            @for(orgStats <- orgs) {
+                <tr>
+                    <td>@orgStats.orgId</td>
+                    <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
+                    <td>@orgStats.members.size</td>
+                    <td>@orgStats.candidates.size</td>
+                    <td>@orgStats.numLibraries</td>
+                    <td>@orgStats.numKeeps</td>
+                    <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
+                </tr>
+            }
+        </table>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()" method="POST" class="form-inline create-org">
+            <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
+            <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
+            <input type="Submit" value="Add">
+        </form>
     }
-</table>
-<form action="#" method="POST" class="form-inline create-org">
-    <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
-    <input id="create-org-input" type="text" name="name" placeholder="Organization Name">
-    <input type="Submit" value="Create">
-</form>
-<script type="text/javascript">
-    $(function() {
-      $('.create-org').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()", $('.create-org').serialize())
-        .done(function(data) {
-          alert("Added an organization: " + data);
-        }).fail(function(data) {
-          alert("Bad Request: " + data.responseText);
-        });
-        return false;
-      });
-    });
-</script>
 }

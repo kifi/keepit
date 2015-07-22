@@ -85,7 +85,7 @@ class EContactTypeahead @Inject() (
 
   protected def getAllInfos(id: Id[User]): Future[Seq[(Id[EContact], EContact)]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email)).map(contact => contact.id.get -> contact)
+      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email)).map(contact => contact.id.get -> contact).toSeq
     }
   }
 

@@ -8,6 +8,7 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
@@ -18,6 +19,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import scala.collection.mutable
@@ -53,6 +55,7 @@ class LibraryController @Inject() (
   clock: Clock,
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
+  airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -61,48 +64,74 @@ class LibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
-    def similar(s1: String, s2: String): Boolean = {
-      val ts1 = s1.split(" ").flatMap(_.sliding(2)).toSet
-      val ts2 = s2.split(" ").flatMap(_.sliding(2)).toSet
-      ts1.intersect(ts2).size * 1.0 / ts1.union(ts2).size > 0.6
-    }
-
-    val LIMIT = 10
-    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = LIMIT * 2, kind = SuggestedSearchTermKind.AUTO)
-    val (terms, weights): (Array[String], Array[Float]) = if (top.terms.size < LIMIT) (Array[String](), Array[Float]()) else {
-      val (tms, ws) = top.terms.toArray.sortBy(-_._2).unzip
-      val taken = mutable.Set[String]()
-      tms.foreach { tm =>
-        val dup = taken.find(x => similar(tm, x))
-        if (dup.isEmpty) taken.add(tm)
-      }
-
-      val (tms2, ws2) = (tms zip ws).filter { case (word, weight) => taken.contains(word) }.take(LIMIT).unzip
-      (tms2.toArray, ws2.toArray)
-    }
+    val (terms, weights) = suggestedSearchCommander.getTopTermsForLibrary(libId, limit = 10)
     Json.obj("terms" -> terms, "weights" -> weights)
   }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
-    val addRequest = request.body.as[LibraryAddRequest]
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) =>
-        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
-      case Right(newLibrary) =>
-        val membership = db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+    externalAddRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
+      case JsSuccess(externalAddRequest, _) =>
+        val libAddRequest = db.readOnlyReplica { implicit session =>
+          val space = externalAddRequest.externalSpace map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryAddRequest(
+            name = externalAddRequest.name,
+            slug = externalAddRequest.slug,
+            visibility = externalAddRequest.visibility,
+            description = externalAddRequest.description,
+            color = externalAddRequest.color,
+            listed = externalAddRequest.listed,
+            whoCanInvite = externalAddRequest.whoCanInvite,
+            subscriptions = externalAddRequest.subscriptions,
+            space = space
+          )
         }
-        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary, LibraryController.defaultLibraryImageSize).map { lib =>
-          Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+          case Left(fail) =>
+            Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
+          case Right(newLibrary) =>
+            val membership = db.readOnlyMaster {
+              implicit s =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+            }
+            libraryCommander.createFullLibraryInfo(Some(request.userId), showPublishedLibraries = false, newLibrary, LibraryController.defaultLibraryImageSize).map {
+              lib =>
+                Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+            }
         }
     }
   }
 
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val libModifyRequest = request.body.as[LibraryModifyRequest]
+    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
+
+    val libModifyRequest = db.readOnlyReplica { implicit session =>
+      val space = externalLibraryModifyRequest.externalSpace map {
+        case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+        case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+      }
+      LibraryModifyRequest(
+        name = externalLibraryModifyRequest.name,
+        slug = externalLibraryModifyRequest.slug,
+        visibility = externalLibraryModifyRequest.visibility,
+        description = externalLibraryModifyRequest.description,
+        color = externalLibraryModifyRequest.color,
+        listed = externalLibraryModifyRequest.listed,
+        whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
+        subscriptions = externalLibraryModifyRequest.subscriptions,
+        space = space
+      )
+    }
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
@@ -640,7 +669,9 @@ class LibraryController @Inject() (
               following = None,
               membership = None,
               modifiedAt = info.modifiedAt,
-              kind = info.kind)
+              kind = info.kind,
+              path = info.path
+            )
           }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)

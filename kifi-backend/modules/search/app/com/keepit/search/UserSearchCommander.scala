@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, ExperimentType, User }
+import com.keepit.model.{ NormalizedURI, UserExperimentType, User }
 import com.keepit.search.engine.{ SearchFactory, DebugOption }
 import com.keepit.search.engine.user.{ UserSearch, UserShardResult, UserShardHit, UserSearchExplanation }
 import com.keepit.search.index.sharding.{ ActiveShards, Sharding, Shard }
@@ -19,14 +19,12 @@ import scala.concurrent.Future
 
 case class UserSearchRequest(
   userId: Id[User],
-  experiments: Set[ExperimentType],
-  queryString: String,
-  filter: Option[String],
-  context: Option[String],
-  lang1: Lang,
-  lang2: Option[Lang],
+  experiments: Set[UserExperimentType],
+  query: String,
+  context: SearchContext,
+  firstLang: Lang,
+  secondLang: Option[Lang],
   maxHits: Int,
-  disablePrefixSearch: Boolean = false,
   predefinedConfig: Option[SearchConfig],
   debug: Option[String],
   explain: Option[Id[User]])
@@ -47,12 +45,10 @@ trait UserSearchCommander {
   def searchUsers(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
-    filter: Option[String],
-    context: Option[String],
+    contextFuture: Future[SearchContext],
     maxHits: Int,
-    disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[User]]): Future[UserSearchResult]
@@ -113,37 +109,36 @@ class UserSearchCommanderImpl @Inject() (
   def searchUsers(
     userId: Id[User],
     acceptLangs: Seq[String],
-    experiments: Set[ExperimentType],
+    experiments: Set[UserExperimentType],
     query: String,
-    filter: Option[String],
-    context: Option[String],
+    contextFuture: Future[SearchContext],
     maxHits: Int,
-    disablePrefixSearch: Boolean,
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
     explain: Option[Id[User]]): Future[UserSearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
-    languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, LibraryContext.None).flatMap {
-      case (lang1, lang2) =>
-        val request = UserSearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, disablePrefixSearch, predefinedConfig, debug, explain)
-        val futureRemoteUserShardResults = searchClient.distSearchUsers(remotePlan, request)
-        val futureLocalUserShardResult = distSearchUsers(localShards, request)
-        val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
-        val futureResults = Future.sequence(futureRemoteUserShardResults :+ futureLocalUserShardResult)
-        val searchFilter = SearchFilter(filter.map(Right(_)), LibraryContext.None, context)
-        for {
-          results <- futureResults
-          (config, searchExperimentId) <- configFuture
-        } yield toUserSearchResult(results.flatten, maxHits, searchFilter, config, searchExperimentId)
+    contextFuture.flatMap { context =>
+      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, context.filter.library).flatMap {
+        case (lang1, lang2) =>
+          val request = UserSearchRequest(userId, experiments, query, context, lang1, lang2, maxHits, predefinedConfig, debug, explain)
+          val futureRemoteUserShardResults = searchClient.distSearchUsers(remotePlan, request)
+          val futureLocalUserShardResult = distSearchUsers(localShards, request)
+          val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
+          val futureResults = Future.sequence(futureRemoteUserShardResults :+ futureLocalUserShardResult)
+          for {
+            results <- futureResults
+            (config, searchExperimentId) <- configFuture
+          } yield toUserSearchResult(results.flatten, maxHits, context, config, searchExperimentId)
+      }
     }
   }
 
-  private def toUserSearchResult(userShardResults: Seq[UserShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): UserSearchResult = {
+  private def toUserSearchResult(userShardResults: Seq[UserShardResult], maxHits: Int, context: SearchContext, config: SearchConfig, searchExperimentId: Option[Id[SearchConfigExperiment]]): UserSearchResult = {
     val uniqueHits = userShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
     val bestExplanation = userShardResults.flatMap(_.explanation).sortBy(_.score).lastOption
     val (myHits, othersHits) = UserSearch.partition(uniqueHits)
-    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, filter, config, bestExplanation)
-    val idFilter = filter.idFilter.toSet ++ hits.map(_.id.id)
+    val UserShardResult(hits, explanation) = UserSearch.merge(myHits, othersHits, maxHits, context.filter, config, bestExplanation)
+    val idFilter = context.idFilter.toSet ++ hits.map(_.id.id)
     UserSearchResult(hits, idFilter, searchExperimentId, explanation)
   }
 
@@ -154,8 +149,7 @@ class UserSearchCommanderImpl @Inject() (
         val debug = request.debug
         if (debug.isDefined) debugOption.debug(debug.get)
 
-        val searchFilter = SearchFilter(request.filter.map(Right(_)), LibraryContext.None, request.context)
-        val searches = searchFactory.getUserSearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, request.disablePrefixSearch, searchFilter, searchConfig, request.experiments, request.explain)
+        val searches = searchFactory.getUserSearches(shards, request.userId, request.query, request.firstLang, request.secondLang, request.maxHits, request.context, searchConfig, request.experiments, request.explain)
         val futureResults: Seq[Future[UserShardResult]] = searches.map { userSearch =>
           if (debug.isDefined) userSearch.debug(debugOption)
           SafeFuture { userSearch.execute() }

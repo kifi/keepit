@@ -23,10 +23,12 @@ object OrganizationFactory {
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress]) {
 
     def withName(newName: String) = this.copy(org = org.withName(newName))
-    def withOwner(newOwner: User) = this.copy(org = org.copy(ownerId = newOwner.id.get))
+    def withOwner(newOwner: User) = this.copy(org = org.withOwner(newOwner.id.get))
     def withMembers(newMembers: Seq[User]) = this.copy(members = members ++ newMembers)
     def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = invitedUsers ++ newInvitedUsers)
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = invitedEmails ++ newInvitedEmails)
-    def withHandle(newHandle: PrimaryOrganizationHandle) = this.copy(org = org.copy(handle = Some(newHandle)))
+    def withHandle(newHandle: OrganizationHandle) = this.copy(org = org.copy(handle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
+    def withBasePermissions(newBasePermissions: BasePermissions) = this.copy(org = org.withBasePermissions(newBasePermissions))
+    def secret() = this.copy(org = org.hiddenFromNonmembers)
   }
 }

@@ -30,6 +30,7 @@ case class SociallyRelatedEntitiesForUser(
   facebookAccounts: RelatedEntities[User, SocialUserInfo],
   linkedInAccounts: RelatedEntities[User, SocialUserInfo],
   emailAccounts: RelatedEntities[User, EmailAccountInfo],
+  organizations: RelatedEntities[User, Organization],
   createdAt: DateTime = currentDateTime)
 
 object SociallyRelatedEntitiesForUser {
@@ -39,10 +40,11 @@ object SociallyRelatedEntitiesForUser {
     (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]] and
+    (__ \ 'organizations).format[RelatedEntities[User, Organization]] and
     (__ \ 'createdAt).format[DateTime]
   )(SociallyRelatedEntitiesForUser.apply _, unlift(SociallyRelatedEntitiesForUser.unapply))
 
-  def empty(userId: Id[User]): SociallyRelatedEntitiesForUser = SociallyRelatedEntitiesForUser(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+  def empty(userId: Id[User]): SociallyRelatedEntitiesForUser = SociallyRelatedEntitiesForUser(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
 case class SociallyRelatedEntitiesForOrg(
@@ -62,7 +64,7 @@ object SociallyRelatedEntitiesForOrg {
 }
 
 case class SociallyRelatedEntitiesForUserCacheKey(id: Id[User]) extends Key[SociallyRelatedEntitiesForUser] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_socially_related_entities"
   def toKey(): String = id.id.toString
 }
@@ -71,7 +73,7 @@ class SociallyRelatedEntitiesForUserCache(stats: CacheStatistics, accessLog: Acc
   extends JsonCacheImpl[SociallyRelatedEntitiesForUserCacheKey, SociallyRelatedEntitiesForUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SociallyRelatedEntitiesForOrgCacheKey(id: Id[Organization]) extends Key[SociallyRelatedEntitiesForOrg] {
-  override val version = 1
+  override val version = 2
   val namespace = "org_socially_related_entities"
   def toKey(): String = id.id.toString
 }

@@ -12,9 +12,9 @@ object OrganizationFactoryHelper {
       val org = if (orgTemplate.handle.isEmpty) {
         injector.getInstance(classOf[HandleCommander]).autoSetOrganizationHandle(orgTemplate).get
       } else {
-        orgTemplate
+        injector.getInstance(classOf[HandleCommander]).setOrganizationHandle(orgTemplate, orgTemplate.getHandle, overrideValidityCheck = true).get
       }
-      injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.OWNER))
+      injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
       for (member <- partialOrganization.members) {
         injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
       }

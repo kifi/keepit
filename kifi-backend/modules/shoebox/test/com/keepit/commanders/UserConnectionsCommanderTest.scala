@@ -38,7 +38,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
 
           val relatedEntities = {
             val relatedUsers = RelatedEntities[User, User](userId, Seq(users(2).id.get -> 10d, users(1).id.get -> 5d))
-            SociallyRelatedEntitiesForUser(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+            SociallyRelatedEntitiesForUser(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
           }
           inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(userId, relatedEntities)
 

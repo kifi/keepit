@@ -2,7 +2,7 @@ package com.keepit.search.engine.uri
 
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.SearchFilter
+import com.keepit.search.SearchContext
 import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ BloomFilter, DataBuffer, DataBufferWriter }
@@ -10,13 +10,16 @@ import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 
-class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter, explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSourceLike {
+class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, context: SearchContext, explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSourceLike {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, ArticleFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = ArticleFields.minimalSearchFields ++ ArticleFields.prefixSearchFields ++ (if (context.disableFullTextSearch) Set.empty else ArticleFields.fullTextSearchFields)
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-    val idFilter = filter.idFilter
+    val idFilter = context.idFilter
 
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
@@ -29,7 +32,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
       BloomFilter(output) // a bloom filter which test if a uri id is in the buffer
     }
 
-    val articleVisibility = ArticleVisibilityEvaluator(reader)
+    val articleVisibility = ArticleVisibilityEvaluator()
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -58,7 +61,6 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
 
-            // todo(Léo): visibility will actually never be RESTRICTED at this point - if we decide to check for isDiscoverable in ArticleVisibilityEvaluator, it could be.
             directScoreContext.put(uriId, visibility)
             explanation.foreach(_.collectDirectScoreContribution(uriId, -1, visibility, directScoreContext.scoreMax))
 

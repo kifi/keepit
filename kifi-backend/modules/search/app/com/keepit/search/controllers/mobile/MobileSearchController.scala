@@ -1,7 +1,6 @@
 package com.keepit.search.controllers.mobile
 
 import com.keepit.commanders.ProcessedImageSize
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.json
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
@@ -19,7 +18,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search._
-import com.keepit.model.ExperimentType._
+import com.keepit.model.UserExperimentType._
 import play.api.libs.json.JsArray
 import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import com.keepit.search.controllers.util.SearchControllerUtil
@@ -59,7 +58,10 @@ class MobileSearchController @Inject() (
 
   def searchV2(
     query: String,
-    filter: Option[String],
+    proximityFilter: Option[String],
+    libraryFilter: Option[String],
+    userFilter: Option[String],
+    organizationFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
     lastUUIDStr: Option[String],
@@ -68,23 +70,31 @@ class MobileSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    disableFullTextSearch: Boolean,
     orderBy: Option[String],
+    libraryAuth: Option[String],
     idealImageSize: Option[ImageSize],
     debug: Option[String]) = UserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-    val filterFuture = getUserFilterFuture(filter)
+
+    val libraryScopeFuture = getLibraryScope(libraryFilter, request.userIdOpt, libraryAuth)
+    val userScopeFuture = getUserScope(userFilter)
+    val organizationScopeFuture = getOrganizationScope(organizationFilter, request.userIdOpt)
+    val proximityScope = getProximityScope(proximityFilter)
+    val searchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture)
 
     val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
-      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default
+      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default // todo(Léo): remove this backward compatibility hack, this should be explicitly supplied by client
     }
 
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), parsedOrderBy, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      val uriSearchContextFuture = searchFilterFuture.map { filter => SearchContext(uriContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchContextFuture, maxUris, lastUUIDStr, None, debugOpt).flatMap { uriSearchResult =>
         getMobileUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (jsHits, users) =>
             Json.obj(
@@ -104,7 +114,8 @@ class MobileSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      val librarySearchContextFuture = searchFilterFuture.map { filter => SearchContext(libraryContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchContextFuture, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
@@ -151,7 +162,8 @@ class MobileSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      val userSearchContextFuture = searchFilterFuture.map { filter => SearchContext(userContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userSearchContextFuture, maxUsers, None, debugOpt, None).flatMap { userSearchResult =>
         val futureFriends = searchFactory.getFriends(userId)
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)

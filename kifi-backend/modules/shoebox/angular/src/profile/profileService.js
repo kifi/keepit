@@ -298,7 +298,6 @@ angular.module('kifi')
       setSettings: setSettings,
       fetchMe: fetchMe,
       getMe: getMe,
-      postMe: postMe,
       prefs: prefs,
       fetchPrefs: fetchPrefs,
       savePrefs: savePrefs,

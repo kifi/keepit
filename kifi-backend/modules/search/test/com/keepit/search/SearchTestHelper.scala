@@ -84,7 +84,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val libraryMembershipIndexer = new LibraryMembershipIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val orgMembershipIndexer = new OrganizationMembershipIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val phraseDetector = new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier]))
-    val libraryQualityEvaluator = new LibraryQualityEvaluator(activeShards)
+    val libraryQualityEvaluator = new LibraryQualityEvaluator()
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -150,7 +150,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   val source = KeepSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(
-    "myBookmarkBoost" -> "1",
+    "myKeepBoost" -> "1",
     "sharingBoostInNetwork" -> "0",
     "sharingBoostOutOfNetwork" -> "0",
     "recencyBoost" -> "0",

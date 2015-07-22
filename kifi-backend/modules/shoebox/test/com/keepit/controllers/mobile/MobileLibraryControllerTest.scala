@@ -197,6 +197,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                 "numFollowers" : 0,
                 "whoCanInvite": "collaborator",
                 "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+                "path": "/spongebob/krabby-patty",
                 "membership":{
                   "access" : "owner",
                   "listed" : true,
@@ -260,7 +261,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                    "listed" : true,
                    "subscribed" : false
                  },
-                 "invite" : null
+                 "invite" : null,
+                 "path": "/spongebob/krabby-patty"
                },
                "membership" : "owner"
              }

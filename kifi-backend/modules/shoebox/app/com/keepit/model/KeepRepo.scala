@@ -51,7 +51,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
-  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
@@ -60,8 +60,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: String)(implicit session: RSession): Seq[Keep]
+  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
@@ -462,12 +461,11 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.keptAt desc, r.id desc)).drop(offset).take(limit).list
   }
 
-  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    (orgIdOpt match {
-      case None => sql"select * from bookmark where library_id = $libraryId and organization_id is not null limit ${limit.value} offset ${offset.value}"
-      case _ => sql"select * from bookmark where library_id = $libraryId and (organization_id != ${orgIdOpt.get} or organization_id is null) limit ${limit.value} offset ${offset.value}"
-    }).as[Keep].list
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]] = {
+    expectedOrgId match {
+      case None => (for (b <- rows if b.libraryId === libraryId && b.organizationId.isDefined) yield b.id).take(limit.value).list.toSet
+      case Some(orgId) => (for (b <- rows if b.libraryId === libraryId && (b.organizationId.isEmpty || b.organizationId =!= orgId)) yield b.id).take(limit.value).list.toSet
+    }
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
@@ -524,15 +522,21 @@ class KeepRepoImpl @Inject() (
     keeps.list.toSet
   }
 
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep] = {
+  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
-  }
+    import scala.collection.JavaConversions._
 
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: String)(implicit session: RSession): Seq[Keep] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-
-    sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at<$beforeTime ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+    (beforeIdOpt.flatMap(getOpt), afterIdOpt.flatMap(getOpt)) match {
+      case (Some(before), _) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at <= ${before.keptAt} AND id < ${before.id.get} ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+      case (None, Some(after)) =>
+        // This case is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
+        // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
+        // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated kept_at fields.
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at > ${after.keptAt} ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+      case (None, None) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+    }
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {

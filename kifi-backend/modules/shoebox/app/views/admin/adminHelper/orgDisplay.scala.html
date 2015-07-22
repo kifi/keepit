@@ -1,0 +1,8 @@
+@(org: Organization)
+
+<span style="margin:2px">
+<a data-hover="tooltip" title="@org.description+"
+    class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+  @org.name
+</a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family:'Segoe UI Symbol';color:black;font-size:10px;">♡</span></a>
+</span>

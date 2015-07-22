@@ -40,6 +40,12 @@ trait RoverServiceClient extends ServiceClient {
   def getPornDetectorModel(): Future[Map[String, Float]]
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
+
+  def getAllProxies(): Future[Seq[HttpProxy]]
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy]
+
+  def getAllUrlRules(): Future[Seq[UrlRule]]
+  def saveUrlRule(proxy: UrlRule): Future[UrlRule]
 }
 
 class RoverServiceClientImpl(
@@ -217,6 +223,33 @@ class RoverServiceClientImpl(
       Json.fromJson[String](r.json).get
     }
   }
+
+  def getAllProxies(): Future[Seq[HttpProxy]] = {
+    call(Rover.internal.getAllProxies()).map { r =>
+      Json.fromJson[Seq[HttpProxy]](r.json).get
+    }
+  }
+
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy] = {
+    val payload = Json.toJson(proxy)
+    call(Rover.internal.saveProxy(), payload).map { r =>
+      Json.fromJson[HttpProxy](r.json).get
+    }
+  }
+
+  def getAllUrlRules(): Future[Seq[UrlRule]] = {
+    call(Rover.internal.getAllUrlRules()).map { r =>
+      Json.fromJson[Seq[UrlRule]](r.json).get
+    }
+  }
+
+  def saveUrlRule(urlRule: UrlRule): Future[UrlRule] = {
+    val payload = Json.toJson(urlRule)
+    call(Rover.internal.saveUrlRule(), payload).map { r =>
+      Json.fromJson[UrlRule](r.json).get
+    }
+  }
+
 }
 
 case class RoverCacheProvider @Inject() (

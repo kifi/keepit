@@ -385,10 +385,10 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                     "username": "thirduser"
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
-                "listed": true,
                 "following":true,
                 "membership":{"access":"owner","listed":true,"subscribed":false},
                 "modifiedAt":${lib1Updated.updatedAt.getMillis},
+                "path": "/firstuser/lib1",
                 "subscriptions": []
               }
              ]
@@ -421,10 +421,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "followers":[],
                 "numCollaborators":0,
                 "collaborators":[],
-                "lastKept":${lib3.createdAt.getMillis},
+                "lastKept":${lib3.updatedAt.getMillis},
                 "following": true,
                 "membership": {"access":"read_only","listed":true,"subscribed":false},
                 "modifiedAt":${lib3.updatedAt.getMillis},
+                "path": "/seconduser/lib3",
                 "kind":"user_created"
               }
             ]
@@ -476,7 +477,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
         inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
         // view as owner
@@ -544,7 +546,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
         inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
 

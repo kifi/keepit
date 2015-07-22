@@ -75,6 +75,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeRoverServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),

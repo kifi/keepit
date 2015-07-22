@@ -36,7 +36,33 @@ case class LibraryFail(status: Int, message: String)
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
-@json
+case class ExternalLibraryAddRequest(
+  name: String,
+  visibility: LibraryVisibility,
+  slug: String,
+  kind: Option[LibraryKind] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  externalSpace: Option[ExternalLibrarySpace] = None)
+
+object ExternalLibraryAddRequest {
+  implicit val reads: Reads[ExternalLibraryAddRequest] = (
+    (__ \ 'name).read[String] and
+    (__ \ 'visibility).read[LibraryVisibility] and
+    (__ \ 'slug).read[String] and
+    (__ \ 'kind).readNullable[LibraryKind] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
+  )(ExternalLibraryAddRequest.apply _)
+}
+
 case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
@@ -46,12 +72,34 @@ case class LibraryAddRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  space: Option[LibrarySpace] = None)
 
-@json
-case class OrganizationMoveRequest(destination: Option[Id[Organization]] = None)
+case class ExternalLibraryModifyRequest(
+  name: Option[String] = None,
+  slug: Option[String] = None,
+  visibility: Option[LibraryVisibility] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  externalSpace: Option[ExternalLibrarySpace] = None)
 
-@json
+object ExternalLibraryModifyRequest {
+  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
+  )(ExternalLibraryModifyRequest.apply _)
+}
+
 case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
@@ -61,10 +109,7 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  // We can move the library from org to user space.
-  // If the move request's orgId is None, the move is treated as going to the
-  // owner's personal LibrarySpace
-  orgId: Option[OrganizationMoveRequest] = None)
+  space: Option[LibrarySpace] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -117,7 +162,6 @@ object LibraryInfo {
   }
 }
 
-@json
 case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
@@ -134,14 +178,37 @@ case class LibraryCardInfo(
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
-  listed: Option[Boolean] = None, // @deprecated use membership object instead! (should this library show up on owner's profile?)
   membership: Option[LibraryMembershipInfo],
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None) // currently only for Invited tab on viewer's own user profile
+  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
+  path: String)
 
 object LibraryCardInfo {
+  implicit val format: Format[LibraryCardInfo] = (
+    (__ \ 'id).format[PublicId[Library]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'owner).format[BasicUser] and
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numFollowers).format[Int] and
+    (__ \ 'followers).format[Seq[BasicUser]] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'collaborators).format[Seq[BasicUser]] and
+    (__ \ 'lastKept).format[DateTime] and
+    (__ \ 'following).formatNullable[Boolean] and
+    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
+    (__ \ 'caption).formatNullable[String] and
+    (__ \ 'modifiedAt).format[DateTime] and
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'invite).formatNullable[LibraryInviteInfo] and
+    (__ \ 'path).format[String]
+  )(LibraryCardInfo.apply, unlift(LibraryCardInfo.unapply))
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
   }
@@ -196,7 +263,8 @@ case class FullLibraryInfo(
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
-  modifiedAt: DateTime)
+  modifiedAt: DateTime,
+  path: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

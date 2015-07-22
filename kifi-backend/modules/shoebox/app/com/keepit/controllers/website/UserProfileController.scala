@@ -6,8 +6,8 @@ import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
@@ -16,9 +16,8 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
-import scala.collection.parallel.ParSeq
 import scala.concurrent.Future
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Success, Try }
 
 case class ProfileStats(libs: Int, followers: Int, connections: Int)
 
@@ -46,31 +45,36 @@ class UserProfileController @Inject() (
 
   def getProfile(username: Username) = MaybeUserAction { request =>
     val viewer = request.userOpt
-    userCommander.profile(username, viewer) match {
+    getProfileHelper(username, viewer) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
         NotFound(s"username ${username.value}")
-      case Some(profile) =>
-        val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
-          val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
-          val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-          (numConnections, userBio)
-        }
+      case Some(profilePayload) =>
+        Ok(profilePayload)
+    }
+  }
+  def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
+    userCommander.profile(username, viewer) map { profile =>
+      val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+      val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+        val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+        val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+        (numConnections, userBio)
+      }
 
-        val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
-        val jsonProfileInfo = Json.toJson(UserProfileStats(
-          numLibraries = numLibraries,
-          numFollowedLibraries = numFollowedLibraries,
-          numCollabLibraries = numCollabLibraries,
-          numKeeps = profile.numKeeps,
-          numConnections = numConnections,
-          numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
-          numTags = collectionCommander.getCount(profile.userId),
-          numInvitedLibraries = numInvitedLibs,
-          biography = userBiography
-        )).as[JsObject]
-        Ok(jsonFriendInfo ++ jsonProfileInfo)
+      val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+      val jsonProfileInfo = Json.toJson(UserProfileStats(
+        numLibraries = numLibraries,
+        numFollowedLibraries = numFollowedLibraries,
+        numCollabLibraries = numCollabLibraries,
+        numKeeps = profile.numKeeps,
+        numConnections = numConnections,
+        numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+        numTags = collectionCommander.getCount(profile.userId),
+        numInvitedLibraries = numInvitedLibs,
+        biography = userBiography
+      )).as[JsObject]
+      jsonFriendInfo ++ jsonProfileInfo
     }
   }
 
@@ -272,7 +276,7 @@ class UserProfileController @Inject() (
    * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
    */
   def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
+    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds) map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recommendedUserIds) => {
         val head = recommendedUserIds.take(fullInfoLimit)

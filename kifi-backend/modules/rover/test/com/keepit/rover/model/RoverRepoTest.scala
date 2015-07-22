@@ -25,7 +25,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // HttpProxyRepo
         val httpProxyRepo = inject[RoverHttpProxyRepo]
         db.readWrite { implicit session =>
-          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = "http", username = None, password = None))
+          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = ProxyScheme.Http, username = None, password = None))
           httpProxyRepo.get(saved.id.get).alias === "marvin"
         }
 
@@ -68,6 +68,13 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
           ))
           articleImageRepo.get(saved.id.get).articleKind === EmbedlyArticle
           articleImageRepo.get(saved.id.get).uriId.id === 14
+        }
+
+        // UrlRuleRepo
+        val urlRuleRepo = inject[RoverUrlRuleRepo]
+        db.readWrite { implicit session =>
+          val saved = urlRuleRepo.save(RoverUrlRule(pattern = "^.*$", example = "", proxy = None))
+          urlRuleRepo.get(saved.id.get).pattern === "^.*$"
         }
       }
     }

@@ -15,8 +15,6 @@ case class CortexProdModule()
     userActionsModule = ProdRemoteUserActionsHelperModule(),
     cacheModule = CortexCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
     commonStoreModule = CortexCommonProdStoreModule(),
-    commitInfoModule = CommitInfoProdStoreModule(),
-    featureStoreModule = FeatureProdStoreModule(),
     statModelStoreModule = StatModelProdStoreModule(),
     modelModule = CortexProdModelModule(),
     ldaInfoModule = LDAInfoStoreProdModule(),

@@ -72,10 +72,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
-  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
-  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
+  def getUserExperiments(userId: Id[User]): Future[Seq[UserExperimentType]]
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[UserExperimentType]]]
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
-  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
+  def getUsersByExperiment(experimentType: UserExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -123,9 +123,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
+  def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int): Future[Seq[IngestableOrganizationMembershipCandidate]]
   def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
-  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]]
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]]
+  def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]]
+  def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -411,21 +413,21 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]] = {
+  def getUserExperiments(userId: Id[User]): Future[Seq[UserExperimentType]] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
       case Some(states) => Future.successful(states)
       case None => call(Shoebox.internal.getUserExperiments(userId)).map { r =>
-        r.json.as[Seq[ExperimentType]]
+        r.json.as[Seq[UserExperimentType]]
       }
     }
   }
 
-  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
+  def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[UserExperimentType]]] = {
     redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map { x => Json.toJson(x) })
     call(Shoebox.internal.getExperimentsByUserIds(), payload).map { res =>
-      res.json.as[Map[String, Set[ExperimentType]]]
+      res.json.as[Map[String, Set[UserExperimentType]]]
         .map { case (id, exps) => Id[User](id.toLong) -> exps }.toMap
     }
   }
@@ -436,7 +438,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+  def getUsersByExperiment(experimentType: UserExperimentType): Future[Set[User]] = {
     call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
   }
 
@@ -757,6 +759,10 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationMembership]] }
   }
 
+  def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int): Future[Seq[IngestableOrganizationMembershipCandidate]] = {
+    call(Shoebox.internal.getIngestableOrganizationMembershipCandidates(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationMembershipCandidate]] }
+  }
+
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
     call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
@@ -766,12 +772,15 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
   }
 
-  def getMembersByOrganizationId(orgId: Id[Organization]): Future[Set[Id[User]]] = {
-    call(Shoebox.internal.getMembersByOrganizationId(orgId)).map(_.json.as[Set[Id[User]]])
+  def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
+    call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
   }
 
-  def getInviteEndpointsByOrganizationId(orgId: Id[Organization]): Future[Set[Either[Id[User], EmailAddress]]] = {
-    implicit val endpointFormat = EitherFormat[Id[User], EmailAddress]
-    call(Shoebox.internal.getInviteEndpointsByOrganizationId(orgId)).map(_.json.as[Set[Either[Id[User], EmailAddress]]])
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = {
+    call(Shoebox.internal.hasOrganizationMembership(orgId, userId)).map(_.json.as[Boolean])
+  }
+
+  def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]] = {
+    call(Shoebox.internal.getOrganizationInviteViews(orgId)).map(_.json.as[Set[OrganizationInviteView]])
   }
 }

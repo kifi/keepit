@@ -28,12 +28,12 @@ class LocalUserExperimentCommander @Inject() (
     db.readOnlyReplica { implicit session => generatorRepo.allActive() }
   }
 
-  def getExperimentsByUser(userId: Id[User]): Set[ExperimentType] = {
+  def getExperimentsByUser(userId: Id[User]): Set[UserExperimentType] = {
     val staticExperiments = db.readOnlyMaster { implicit session => userExperimentRepo.getUserExperiments(userId) }
     addDynamicExperiments(userId, staticExperiments)
   }
 
-  def addExperimentForUser(userId: Id[User], experiment: ExperimentType): UserExperiment = {
+  def addExperimentForUser(userId: Id[User], experiment: UserExperimentType): UserExperiment = {
     db.readWrite(attempts = 3) { implicit session =>
       userExperimentRepo.get(userId, experiment, excludeState = None) match {
         case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment))
@@ -44,17 +44,17 @@ class LocalUserExperimentCommander @Inject() (
     }
   }
 
-  def userHasExperiment(userId: Id[User], experiment: ExperimentType) = {
+  def userHasExperiment(userId: Id[User], experiment: UserExperimentType) = {
     getExperimentsByUser(userId).contains(experiment)
   }
 
-  def getUserIdsByExperiment(experimentType: ExperimentType): Set[Id[User]] = {
+  def getUserIdsByExperiment(experimentType: UserExperimentType): Set[Id[User]] = {
     db.readOnlyReplica { implicit s => userExperimentRepo.getUserIdsByExperiment(experimentType) }.toSet
   }
 
   def internProbabilisticExperimentGenerator(
     name: Name[ProbabilisticExperimentGenerator],
-    density: ProbabilityDensity[ExperimentType],
+    density: ProbabilityDensity[UserExperimentType],
     salt: Option[String] = None,
-    condition: Option[ExperimentType] = None): ProbabilisticExperimentGenerator = db.readWrite { implicit session => generatorRepo.internByName(name, density, salt, condition) }
+    condition: Option[UserExperimentType] = None): ProbabilisticExperimentGenerator = db.readWrite { implicit session => generatorRepo.internByName(name, density, salt, condition) }
 }

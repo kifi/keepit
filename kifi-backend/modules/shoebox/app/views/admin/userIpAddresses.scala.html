@@ -1,30 +1,50 @@
 @import com.keepit.common.service.IpAddress
 @(user: User,
 logs: Seq[UserIpAddress],
-sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
+sharedIpAddresses: Map[IpAddress, Map[User, Set[Organization]]]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@formatListOfUsers(userIds: Seq[Id[User]]) = {
-    <ul>
-    @for(uid <- userIds) {
-        <li>
-        <a href=@com.keepit.controllers.admin.routes.AdminUserController.userView(uid)>@uid</a>
-        </li>
+@networkLogoLink(sui: SocialUserInfo) = {
+  <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
+    @sui.networkType.name.take(2)
+}
+
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+  <ul>
+    @for(installation <- kifiInstallations) {
+      <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
     }
-    </ul>
+  </ul>
+}
+
+
+
+@formatListOfUsers(userData: Map[User, Set[Organization]]) = {
+    @for((user, orgs) <- userData) {
+    <tr>
+        <td><span class="badge">@user.id.get.id</span></td>
+        <td>@adminHelper.userDisplay(user)</td>
+        <td>@adminHelper.orgsDisplay(orgs)</td>
+        <td>@user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+        <td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
+    </tr>
+    }
 }
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <table class="table table-bordered">
         <tr>
-            <th>Ip Address</th>
-            <th>Kifi Users Sharing that IP</th>
+            <th>Id</th>
+            <th>User</th>
+            <th>Orgs</th>
+            <th>mail</th>
+            <th>Date Joined</th>
         </tr>
-        @for((ipAddress, otherIds) <- sharedIpAddresses) {
-        <tr>
-            <td><a href="http://ip-api.com/#@ipAddress">@ipAddress</a></td>
-            <td>@formatListOfUsers(otherIds)</td>
-        </tr>
+        @for((ipAddress, userData) <- sharedIpAddresses) {
+            <tr>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.size}</td>
+            </tr>
+            @formatListOfUsers(userData)
         }
     </table>
 
@@ -40,7 +60,7 @@ sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
         <tr>
             <td>@{i+1}</td>
             <td>@log.createdAt</td>
-            <td><a href="http://ip-api.com/#@{log.ipAddress}">@log.ipAddress</a></td>
+            <td><a href="http://ip-api.com/#@{log.ipAddress}">@{log.ipAddress}</a></td>
             <td>@log.agentType</td>
         </tr>
         }

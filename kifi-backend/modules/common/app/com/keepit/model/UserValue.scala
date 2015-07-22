@@ -90,6 +90,8 @@ object UserValueName {
   val UPDATED_LIBRARIES_LAST_SEEN = UserValueName("updated_libraries_last_seen")
   val COMPANY_NAME = UserValueName("company_name")
 
+  val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -174,6 +176,8 @@ object UserValues {
   val twitterSyncAcceptSent = UserValueBooleanHandler(UserValueName.TWITTER_SYNC_ACCEPT_SENT, false)
 
   val libraryUpdatesLastSeen = UserValueDateTimeHandler(UserValueName.UPDATED_LIBRARIES_LAST_SEEN, START_OF_TIME)
+
+  val ignoreForPotentialOrganizations = UserValueBooleanHandler(UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, default = false)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)

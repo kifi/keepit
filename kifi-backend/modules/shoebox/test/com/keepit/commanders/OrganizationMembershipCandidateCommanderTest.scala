@@ -114,7 +114,6 @@ class OrganizationMembershipCandidateCommanderTest extends Specification with Sh
         }
 
         val result = Await.result(commander.inviteCandidates(org.id.get), Duration(5, SECONDS))
-        println(result)
 
         result.isRight === true
       }

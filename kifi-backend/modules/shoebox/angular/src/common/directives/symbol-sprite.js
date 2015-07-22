@@ -10,9 +10,15 @@ angular.module('kifi')
     restrict :'A',
     compile: function () {
       return function (scope, element, attrs) {
-        var path = '/img/symbol-sprites/dist/symbol-sprite.svg';
-        element[0].innerHTML = '<use xlink:href="' + path + '#' + attrs.icon + '" />';
-        element[0].classList.add('symbol-sprite');
+        var svgElement = element[0];
+
+        // It's /very/ important to use createElementNS, setAttributeNS, etc. for SVGs.
+        var useElement = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        useElement.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + attrs.icon);
+
+        var className = svgElement.getAttribute('class') || '';
+        svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
+        svgElement.appendChild(useElement);
       };
     }
   };

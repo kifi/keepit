@@ -27,11 +27,12 @@ def createSVG()
     f.truncate 0
     f.puts "<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display: none\">\n"
     @svg_names.each do |svg_name|
-      f.puts "  <symbol id=\"#{svg_name}\" viewBox=\"0 0 512 512\">"
+      f.puts "  <symbol id=\"#{svg_name}\" preserveAspectRatio=\"none\" viewBox=\"0 0 512 512\">"
       addPathsToFile(f, nil, svg_name, false)
       f.puts "  </symbol>"
 
       symbol_links += "<svg class=\"icon\"><use xlink:href=\"##{svg_name}\" /></svg>"
+      symbol_links += "<svg class=\"icon-thin\"><use xlink:href=\"##{svg_name}\" /></svg>"
     end
     f.puts "</svg>\n"
   end
@@ -40,7 +41,8 @@ def createSVG()
   File.open("#{@base_dir}/test.html", "w+") do |test|
     test.puts "<h1>SVG Icon Test</h1>"
     test.puts symbol_svg
-    test.puts "<style>.icon { width: 25px; height: 25px; fill: black; }</style>"
+    test.puts "<style>.icon { width: 25px; height: 25px; fill: black; stroke: none }</style>"
+    test.puts "<style>.icon-thin { width: 25px; height: 25px; stroke: red; stroke-width: 10; fill: none; margin-right: 10px; }</style>"
     test.puts symbol_links
   end
 end
@@ -55,6 +57,10 @@ def addPathsToFile(f, dir = nil, className = nil, responsive = false)
       line = line.gsub '</svg>', ''
       line = line.gsub /fill=\"#.{6}\"/, ""
       line = line.gsub "fill=\"none\"", ""
+      line = line.gsub /stroke=\"#.{6}\"/, ""
+      line = line.gsub "stroke=\"none\"", ""
+      line = line.gsub /stroke\-width=\".{1,3}\"/, ""
+      line = line.gsub /\n/, ""
       if responsive
         line = line.gsub '<path ', "<path class=\"#{dir}\" "
         line = line.gsub '<g ', "<g class=\"#{dir}\" "

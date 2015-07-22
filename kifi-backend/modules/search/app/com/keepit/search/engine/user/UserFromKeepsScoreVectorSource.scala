@@ -3,11 +3,12 @@ package com.keepit.search.engine.user
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
-import com.keepit.search.{ SearchFilter, SearchConfig }
+import com.keepit.search.{ SearchContext, SearchConfig }
+import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ Term, AtomicReaderContext }
+import org.apache.lucene.index.{ AtomicReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -19,17 +20,24 @@ class UserFromKeepsScoreVectorSource(
     protected val restrictedUserIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     protected val orgIdsFuture: Future[Set[Long]],
-    filter: SearchFilter,
+    protected val context: SearchContext,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait,
+    librarySearcher: Searcher,
     libraryQualityEvaluator: LibraryQualityEvaluator,
     explanation: Option[UserSearchExplanationBuilder]) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
-  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
+  override protected def preprocess(query: Query): Query = {
+    val searchFields = {
+      if (context.disableFullTextSearch) Set.empty[String] // effectively not executing this source
+      else (KeepFields.minimalSearchFields ++ KeepFields.fullTextSearchFields) // no prefix search
+    }
+    QueryProjector.project(query, searchFields)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-    val idFilter = filter.idFilter
+    val idFilter = context.idFilter
 
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
@@ -57,7 +65,7 @@ class UserFromKeepsScoreVectorSource(
           val libId = libraryIdDocValues.get(docId)
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
           val inverseLibraryFrequencyBoost = {
-            val keepCount = libraryQualityEvaluator.estimateKeepCount(searcher, libId)
+            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
             libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)
           }
           val boost = recencyBoost * inverseLibraryFrequencyBoost
