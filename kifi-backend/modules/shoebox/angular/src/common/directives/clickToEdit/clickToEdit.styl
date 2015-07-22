@@ -1,0 +1,26 @@
+editButtonWidth = 40px
+
+.kf-click-to-edit:hover
+  position: relative
+
+.kf-click-to-edit:hover:before
+  content: 'edit'
+  position: absolute
+  right: 0
+  width: editButtonWidth
+  text-align: center
+  font-weight: normal
+  text-decoration: underline
+  pointer-events: none
+
+.kf-click-to-edit-editing:hover:before
+  content: 'save'
+
+.kf-click-to-edit input
+  width: 'calc(100% - %s)' % editButtonWidth
+  box-sizing: border-box
+  padding: 2px
+  background: none
+  border: 1px dashed #fff
+  border-radius: 2px
+  color: inherit

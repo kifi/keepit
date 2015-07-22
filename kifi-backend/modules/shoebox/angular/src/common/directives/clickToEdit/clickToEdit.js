@@ -3,57 +3,53 @@
 angular.module('kifi')
 
 .directive('kfClickToEdit', [
-  '$document',
-  function ($document) {
+  '$document', '$timeout',
+  function ($document, $timeout) {
     return {
       templateUrl: 'common/directives/clickToEdit/clickToEdit.tpl.html',
       scope: {
-        text: '='
+        value: '=',
+        onSave: '='
       },
       replace: true,
       link: function ($scope, $element) {
-        $scope.editing = false;
-
-        $scope.isEditing = function () {
-          return $scope.editing;
+        $scope.view = {
+          editableValue: $scope.value,
+          editorEnabled: false
         };
 
-        $scope.toggleEditing = function () {
-          $scope.editing = !$scope.editing;
+        $scope.enableEditor = function() {
+          $scope.view.editorEnabled = true;
+          $scope.view.editableValue = $scope.value;
+          $timeout(function () {
+            $element.find('input').focus();
+          });
         };
 
-        $scope.enableEdit = function () {
-          $scope.editing = true;
+        $scope.disableEditor = function() {
+          $scope.view.editorEnabled = false;
         };
 
-        $scope.disableEdit = function () {
-          $scope.editing = false;
-        };
-
-        $scope.triggerKeyUp = function ($event) {
-          $scope.text = $event.target.value;
-        };
-
-        function click(e) {
-          // console.log('target is child of $element?', $element.has(e.target).length);
-          // console.log(e.target);
-          if ($element.has(e.target).length) {
-            // console.log('editing ', true);
-            $scope.enableEdit();
-          } else {
-            // console.log('editing ', false);
-            $scope.disableEdit();
+        $scope.save = function () {
+          $scope.value = $scope.view.editableValue;
+          if ($scope.onSave) {
+            $scope.onSave($scope.value);
           }
-        }
+          $scope.disableEditor();
+        };
 
-        $scope.click = click;
+        $scope.cancel = function () {
+          $scope.view.editableValue = $scope.value;
+          $scope.disableEditor();
+        };
 
-        $document.on('click', click);
-
-        $scope.$on('destroy', function () {
-          $document.off('click', click);
-        });
-
+        $scope.onBlur = function (e) {
+          // if ($element.has($document.targetElement).length === 0) {
+          //   $scope.cancel();
+          // } else {
+            $scope.save();
+          // }
+        };
       }
     };
   }

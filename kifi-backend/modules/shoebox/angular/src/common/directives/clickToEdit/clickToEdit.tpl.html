@@ -1,4 +1,6 @@
-<div class="kf-click-to-edit" ng-click="click($event)">
-  <span ng-show="!isEditing()" class="kf-cte-text">{{ text }}</span>
-  <input ng-show="isEditing()" ng-value="text" ng-keyup="triggerKeyUp($event)"/>
+<div class="{{ 'kf-click-to-edit' + (view.editorEnabled ? ' kf-click-to-edit-editing' : '') }}">
+  <div ng-hide="view.editorEnabled" class="kf-cte-text" ng-click="enableEditor()">{{ value }}</div>
+  <div ng-show="view.editorEnabled">
+    <input ng-model="view.editableValue" ng-keydown="($event.which === 27 && cancel()) || ($event.which === 13 && save())" ng-blur="onBlur($event)"/>
+  </div>
 </div>
