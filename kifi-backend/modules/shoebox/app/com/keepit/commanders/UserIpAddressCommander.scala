@@ -112,6 +112,7 @@ class UserIpAddressEventLogger @Inject() (
       if (!userIsFake) {
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
+        log.info(s"[IPTRACK NOTIFY] Cluster ${event.ip.ip} now should have $currentCluster and $model")
       } else {
         log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
       }
@@ -123,6 +124,8 @@ class UserIpAddressEventLogger @Inject() (
       && !Set("108.60.110.146").contains(event.ip.ip)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
+    } else {
+      log.info(s"""[IPTRACK NOTIFY] Decided not to report cluster, conditions ${event.reportNewClusters} ${!cluster.contains(event.userId)} ${cluster.nonEmpty} ${!ignoreForPotentialOrgs} ${!userIsFake} ${!Set("108.60.110.146").contains(event.ip.ip)}""")
     }
   }
 
@@ -195,6 +198,7 @@ class UserIpAddressEventLogger @Inject() (
           if (allHaveOrg(usersFromCluster)) {
             log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or candidates of the same organization")
           } else {
+            log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about $clusterIp")
             val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
             httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
           }
