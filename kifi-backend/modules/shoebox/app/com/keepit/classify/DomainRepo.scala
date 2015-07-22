@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
+  def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
@@ -48,6 +49,11 @@ class DomainRepoImpl @Inject() (
     domainCache.getOrElseOpt(DomainKey(domain)) {
       (for (d <- rows if d.hostname === domain) yield d).firstOption
     } filter { d => excludeState.map(s => d.state != s).getOrElse(true) }
+  }
+
+  def getByIds(domainIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain] = {
+    val q = { for { row <- rows if row.id.inSet(domainIds) && row.state === DomainStates.ACTIVE } yield row }
+    q.list.map { domain => domain.id.get -> domain }.toMap
   }
 
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =

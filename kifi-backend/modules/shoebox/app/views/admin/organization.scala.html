@@ -116,6 +116,23 @@ orgStats: OrganizationStatistics
     }
 </table>
 
+<table class="org-domains table table-bordered" style="width:800px">
+    <tr>
+        <th>Owned Domain</th>
+    </tr>
+    @for(domain <- orgStats.domains) {
+        <tr>
+            <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.id.get)">@domain.hostname</a><td>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.id.get)"
+                class="btn btn-small">Remove </a></td>
+        </tr>
+    }
+</table>
+
+    <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
+        <input type="text" name="domainName" placeholder="Domain name">
+        <button type="submit" class="btn btn-default">Add Ownership</button>
+    </form>
 
     <script type="text/javascript">
 
