@@ -62,7 +62,6 @@ object UserExperimentType {
   val GRAPH_BASED_PEOPLE_TO_INVITE = UserExperimentType("graph_based_people_to_invite")
   val CORTEX_NEW_MODEL = UserExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = UserExperimentType("curator_diverse_topic_recos")
-  val NEW_PUBLIC_FEED = UserExperimentType("new_public_feed")
   val PLAIN_EMAIL = UserExperimentType("plain_email")
   val GRATIFICATION_EMAIL = UserExperimentType("gratification_email")
 
@@ -81,7 +80,7 @@ object UserExperimentType {
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
-    NEW_PUBLIC_FEED :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
+    ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: GRATIFICATION_EMAIL :: ORGANIZATION :: SEARCH_LAB :: Nil
 
   private val _ALL_MAP: Map[String, UserExperimentType] = _ALL.map(e => e.value -> e).toMap
