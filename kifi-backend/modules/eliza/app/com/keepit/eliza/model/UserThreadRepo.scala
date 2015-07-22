@@ -104,6 +104,10 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
 
   def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification]
+
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[(Int, Int)]
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[(Int, Int)]
 }
 
 /**
@@ -454,4 +458,38 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification =!= JsNull.asInstanceOf[JsValue]
     ) yield (row.lastNotification, row.unread, row.uriId)).firstOption
   }
+
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[(Int, Int)] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select wk, sum(c) from (
+        select thread_id, count(*) as c, week(created_at) as wk from user_thread
+          where user_id in $users
+          and replyable = 1
+          and created_at >= "2015-1-1"
+          group by thread_id
+          having count(*) > 1
+          order by week(created_at)
+          desc
+        ) as T
+        group by wk;
+    """.as[(Int, Int)].list
+  }
+
+   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[(Int, Int)] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select wk, sum(c) from (
+        select thread_id, count(*) as c, week(created_at) as wk from user_thread
+          where user_id in $users
+          and replyable = 1
+          and created_at >= "2015-1-1"
+          group by thread_id
+          order by week(created_at)
+          desc
+        ) as T
+        group by wk;
+    """.as[(Int, Int)].list
+  }
+
 }

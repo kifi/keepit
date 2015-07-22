@@ -40,7 +40,9 @@ case class OrganizationStatisticsOverview(
   numLibraries: Int,
   numKeeps: Int,
   members: Set[OrganizationMembership],
-  candidates: Set[OrganizationMembershipCandidate])
+  candidates: Set[OrganizationMembershipCandidate],
+  internalMemberChatStats: Int,
+  allMemberChatStats: Int)
 
 case class MemberStatistics(
   user: User,
@@ -68,7 +70,9 @@ case class OrganizationStatistics(
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
-  experiments: Set[OrganizationExperimentType])
+  experiments: Set[OrganizationExperimentType],
+  internalMemberChatStats: Seq[(Int, Int)],
+  allMemberChatStats: Seq[(Int, Int)])
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -93,6 +97,7 @@ class UserStatisticsCommander @Inject() (
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgExperimentsRepo: OrganizationExperimentRepo,
     userValueRepo: UserValueRepo,
+    orgChatStatsCommander: OrganizationChatStatisticsCommander,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -184,11 +189,17 @@ class UserStatisticsCommander @Inject() (
         OrganizationMemberRecommendationInfo(user, score * 10000)
     })
 
+    val allUsers = members.map(_.userId) | candidates.map(_.userId)
+
+    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.detailed(allUsers), orgChatStatsCommander.allChats.detailed(allUsers))
+
     val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
 
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
+      internalMemberChatStats <- internalMemberChatStatsF
+      allMemberChatStats <- allMemberChatStatsF
     } yield OrganizationStatistics(
       org = org,
       orgId = orgId,
@@ -204,10 +215,12 @@ class UserStatisticsCommander @Inject() (
       candidates = candidates,
       membersStatistics = membersStats,
       memberRecommendations = memberRecos,
-      experiments = experiments
+      experiments = experiments,
+      internalMemberChatStats = internalMemberChatStats,
+      allMemberChatStats = allMemberChatStats
     )
   }
-  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): OrganizationStatisticsOverview = {
+  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
     val numKeeps = libraries.map(_.keepCount).sum
@@ -216,7 +229,14 @@ class UserStatisticsCommander @Inject() (
     val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
 
-    OrganizationStatisticsOverview(
+    val allUsers = members.map(_.userId) | candidates.map(_.userId)
+
+    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
+
+    for {
+      internalMemberChatStats <- internalMemberChatStatsF
+      allMemberChatStats <- allMemberChatStatsF
+    } yield OrganizationStatisticsOverview(
       org = org,
       orgId = orgId,
       pubId = Organization.publicId(orgId),
@@ -227,7 +247,9 @@ class UserStatisticsCommander @Inject() (
       numLibraries = libraries.size,
       numKeeps = numKeeps,
       members = members,
-      candidates = candidates
+      candidates = candidates,
+      internalMemberChatStats = internalMemberChatStats,
+      allMemberChatStats = allMemberChatStats
     )
   }
 

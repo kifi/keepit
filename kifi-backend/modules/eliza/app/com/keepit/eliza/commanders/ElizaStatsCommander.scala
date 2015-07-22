@@ -20,4 +20,16 @@ class ElizaStatsCommander @Inject() (
 
   def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyReplica { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[(Int, Int)] = {
+    db.readOnlyReplica { implicit s =>
+      userThreadRepo.getSharedThreadsForGroupByWeek(users)
+    }
+  }
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[(Int, Int)] = {
+    db.readOnlyReplica { implicit s =>
+      userThreadRepo.getAllThreadsForGroupByWeek(users)
+    }
+  }
+
 }

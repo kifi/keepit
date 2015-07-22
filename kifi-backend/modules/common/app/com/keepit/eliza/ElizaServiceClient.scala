@@ -91,6 +91,10 @@ trait ElizaServiceClient extends ServiceClient {
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
 
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
+
+  def getSharedThreadsForGroupByWeek(users: Set[Id[User]]): Future[Seq[(Int, Int)]]
+
+  def getAllThreadsForGroupByWeek(users: Set[Id[User]]): Future[Seq[(Int, Int)]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -224,6 +228,18 @@ class ElizaServiceClientImpl @Inject() (
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
     call(Eliza.internal.getUnreadNotifications(userId, howMany)).map { response =>
       Json.parse(response.body).as[Seq[UserThreadView]]
+    }
+  }
+
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[(Int, Int)]] = {
+    call(Eliza.internal.getSharedThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
+      response.json.as[Seq[(Int, Int)]]
+    }
+  }
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[(Int, Int)]] = {
+    call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
+      response.json.as[Seq[(Int, Int)]]
     }
   }
 }
