@@ -37,7 +37,7 @@ angular.module('kifi')
       scope.save = function () {
         var data = {
           name: scope.profile.name,
-          link: scope.profile.link,
+          url: scope.profile.url,
           description: scope.profile.description
         };
 
@@ -48,6 +48,7 @@ angular.module('kifi')
           });
           return updateMe(res.data);
         });
+      
       };
 
       scope.onOrgProfileImageClick = function (event) {

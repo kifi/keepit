@@ -44,10 +44,16 @@ angular.module('kifi')
 
         $scope.save = function () {
           $scope.value = $scope.view.editableValue;
+
           if ($scope.onSave) {
-            $scope.onSave($scope.value);
+            $timeout(function() {
+              $scope.onSave();
+            });
           }
           $scope.disableEditor();
+          // TODO (Adam): Should validate.
+          // Success: sets last value to current one, shows success.
+          // Error: Sets current value to last one, shows error.
         };
 
         $scope.onBlur = function () {
