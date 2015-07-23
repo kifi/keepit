@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfOrganizationMember', [
+.directive('kfOrgMember', [
   function () {
 
     function _open() {

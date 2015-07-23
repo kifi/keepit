@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfOrganizationInviteSearch', [
+.directive('kfOrgInviteSearch', [
   'libraryService', 'profileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
   function (libraryService, profileService, socialService, $timeout, util, KEY, net) {
     return {
