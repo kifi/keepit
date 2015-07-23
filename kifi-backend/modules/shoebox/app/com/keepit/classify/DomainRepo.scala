@@ -73,7 +73,7 @@ class DomainRepoImpl @Inject() (
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
-        case DomainStates.INACTIVE => domain.hostname -> domain.copy(state = DomainStates.ACTIVE)
+        case DomainStates.INACTIVE => domain.hostname -> save(domain.copy(state = DomainStates.ACTIVE))
         case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap
