@@ -9,9 +9,11 @@ editButtonWidth = 40px
   right: 0
   width: editButtonWidth
   text-align: center
+  font-size: 0.85rem
   font-weight: normal
   text-decoration: underline
   pointer-events: none
+  color: white
 
 .kf-click-to-edit-editing:hover:before
   content: 'save'
@@ -21,6 +23,10 @@ editButtonWidth = 40px
   box-sizing: border-box
   padding: 2px
   background: none
-  border: 1px dashed #fff
   border-radius: 2px
   color: inherit
+  border: 1px dashed transparent
+
+  &:focus,
+  &:hover 
+    border-color: #fff

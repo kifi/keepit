@@ -9,25 +9,37 @@ angular.module('kifi')
       templateUrl: 'common/directives/clickToEdit/clickToEdit.tpl.html',
       scope: {
         value: '=',
+        inputPlaceholder: '=',
         onSave: '='
       },
       replace: true,
       link: function ($scope, $element) {
         $scope.view = {
           editableValue: $scope.value,
-          editorEnabled: false
+          inputPlaceholder: $scope.inputPlaceholder
         };
+        $scope.saveable = true;
+
+        $scope.editEvent = function($event) {
+          ($event.which === 27 && $scope.cancel()) || ($event.which === 13 && $scope.save());
+        }
 
         $scope.enableEditor = function() {
-          $scope.view.editorEnabled = true;
           $scope.view.editableValue = $scope.value;
           $timeout(function () {
             $element.find('input').focus();
           });
         };
 
+        $scope.cancel = function () {
+          $scope.view.editableValue = $scope.value;
+          $scope.disableEditor();
+        };
+
+        // Called only when blurring without save
         $scope.disableEditor = function() {
-          $scope.view.editorEnabled = false;
+          $scope.saveable = false;
+          $element.find('input')[0].blur();
         };
 
         $scope.save = function () {
@@ -38,17 +50,11 @@ angular.module('kifi')
           $scope.disableEditor();
         };
 
-        $scope.cancel = function () {
-          $scope.view.editableValue = $scope.value;
-          $scope.disableEditor();
-        };
-
-        $scope.onBlur = function (e) {
-          // if ($element.has($document.targetElement).length === 0) {
-          //   $scope.cancel();
-          // } else {
+        $scope.onBlur = function () {
+          if ($scope.saveable) {
             $scope.save();
-          // }
+            $scope.saveable = true;
+          }
         };
       }
     };
