@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
+import com.keepit.eliza.model._
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
@@ -92,9 +92,9 @@ trait ElizaServiceClient extends ServiceClient {
 
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
 
-  def getSharedThreadsForGroupByWeek(users: Set[Id[User]]): Future[Seq[(Int, Int)]]
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 
-  def getAllThreadsForGroupByWeek(users: Set[Id[User]]): Future[Seq[(Int, Int)]]
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -231,15 +231,15 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[(Int, Int)]] = {
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getSharedThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
-      response.json.as[Seq[(Int, Int)]]
+      response.json.as[Seq[GroupThreadStats]]
     }
   }
 
-  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[(Int, Int)]] = {
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
-      response.json.as[Seq[(Int, Int)]]
+      response.json.as[Seq[GroupThreadStats]]
     }
   }
 }

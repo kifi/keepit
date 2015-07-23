@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
-import com.keepit.eliza.model.{ UriRenormalizationTrackingRepo, UserThreadStats, UserThreadRepo }
+import com.keepit.eliza.model.{ GroupThreadStats, UriRenormalizationTrackingRepo, UserThreadStats, UserThreadRepo }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ SequenceNumber, Id }
@@ -20,13 +20,13 @@ class ElizaStatsCommander @Inject() (
 
   def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyReplica { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
-  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[(Int, Int)] = {
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[GroupThreadStats] = {
     db.readOnlyReplica { implicit s =>
       userThreadRepo.getSharedThreadsForGroupByWeek(users)
     }
   }
 
-  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[(Int, Int)] = {
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Seq[GroupThreadStats] = {
     db.readOnlyReplica { implicit s =>
       userThreadRepo.getAllThreadsForGroupByWeek(users)
     }

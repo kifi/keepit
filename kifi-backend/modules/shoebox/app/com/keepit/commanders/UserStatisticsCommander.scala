@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
+import com.keepit.commanders.OrganizationChatStatisticsCommander.{ SummaryByYearWeek }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -10,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -65,14 +67,13 @@ case class OrganizationStatistics(
   description: Option[String],
   numLibraries: Int,
   numKeeps: Int,
-  numChats: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
   experiments: Set[OrganizationExperimentType],
-  internalMemberChatStats: Seq[(Int, Int)],
-  allMemberChatStats: Seq[(Int, Int)])
+  internalMemberChatStats: Seq[SummaryByYearWeek],
+  allMemberChatStats: Seq[SummaryByYearWeek])
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -191,9 +192,16 @@ class UserStatisticsCommander @Inject() (
 
     val allUsers = members.map(_.userId) | candidates.map(_.userId)
 
-    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.detailed(allUsers), orgChatStatsCommander.allChats.detailed(allUsers))
+    def summaryByWeek(stat: orgChatStatsCommander.EngagementStat): Future[Seq[SummaryByYearWeek]] =
+      stat.summaryBy {
+        case GroupThreadStats(_, date, _) => (date.getWeekyear, date.getWeekOfWeekyear)
+      }(allUsers).map { stats =>
+        stats.map {
+          case ((year, week), numUsers) => SummaryByYearWeek(year, week, numUsers)
+        }.toSeq.sorted
+      }
 
-    val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
+    val (internalMemberChatStatsF, allMemberChatStatsF) = (summaryByWeek(orgChatStatsCommander.internalChats), summaryByWeek(orgChatStatsCommander.allChats))
 
     for {
       membersStats <- membersStatsFut
@@ -210,7 +218,6 @@ class UserStatisticsCommander @Inject() (
       description = org.description,
       numLibraries = libraries.size,
       numKeeps = numKeeps,
-      numChats = numChats,
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,

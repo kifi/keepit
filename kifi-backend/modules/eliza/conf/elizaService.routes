@@ -74,8 +74,8 @@ GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.in
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
 POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.internal.MessagingController.checkUrisDiscussed(userId: Id[User])
 
-POST  /internal/eliza/sharedThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.MessagingController.getSharedThreadsForGroupByWeek
-POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.MessagingController.getAllThreadsForGroupByWeek
+POST  /internal/eliza/sharedThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getSharedThreadsForGroupByWeek
+POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getAllThreadsForGroupByWeek
 
 GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
 
