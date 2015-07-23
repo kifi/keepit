@@ -115,4 +115,17 @@ class ElizaController @Inject() (
     val seqNumber = elizaStatsCommander.getCurrentRenormalizationSequenceNumber
     Ok(Json.toJson(seqNumber))
   }
+
+  def getSharedThreadsForGroupByWeek = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Seq[Id[User]]]
+    val threadStats = elizaStatsCommander.getSharedThreadsForGroupByWeek(userIds)
+    Ok(Json.toJson(threadStats))
+  }
+
+  def getAllThreadsForGroupByWeek = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Seq[Id[User]]]
+    val threadStats = elizaStatsCommander.getAllThreadsForGroupByWeek(userIds)
+    Ok(Json.toJson(threadStats))
+  }
+
 }

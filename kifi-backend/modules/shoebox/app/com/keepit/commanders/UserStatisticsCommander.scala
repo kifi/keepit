@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -42,7 +43,9 @@ case class OrganizationStatisticsOverview(
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
-  domains: Set[Domain])
+  domains: Set[Domain],
+  internalMemberChatStats: Int,
+  allMemberChatStats: Int)
 
 case class MemberStatistics(
   user: User,
@@ -65,13 +68,14 @@ case class OrganizationStatistics(
   description: Option[String],
   numLibraries: Int,
   numKeeps: Int,
-  numChats: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
   experiments: Set[OrganizationExperimentType],
-  domains: Set[Domain])
+  domains: Set[Domain],
+  internalMemberChatStats: Seq[SummaryByYearWeek],
+  allMemberChatStats: Seq[SummaryByYearWeek])
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -97,6 +101,7 @@ class UserStatisticsCommander @Inject() (
     orgExperimentsRepo: OrganizationExperimentRepo,
     orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
     userValueRepo: UserValueRepo,
+    orgChatStatsCommander: OrganizationChatStatisticsCommander,
     domainRepo: DomainRepo,
     abook: ABookServiceClient) {
 
@@ -190,11 +195,38 @@ class UserStatisticsCommander @Inject() (
         OrganizationMemberRecommendationInfo(user, score * 10000)
     })
 
-    val numChats = 42 // TODO(ryan): find the actual number of chats from Eliza
+    val allUsers = members.map(_.userId) | candidates.map(_.userId)
+
+    def summaryByWeek(stat: orgChatStatsCommander.EngagementStat): Future[Seq[SummaryByYearWeek]] =
+      stat.summaryBy {
+        case GroupThreadStats(_, date, _) => (date.getWeekyear, date.getWeekOfWeekyear)
+      }(allUsers).map { stats =>
+        stats.map {
+          case ((year, week), numUsers) => SummaryByYearWeek(year, week, numUsers)
+        }.toSeq.sorted
+      }
+
+    val (internalMemberChatStatsF, allMemberChatStatsF) = (summaryByWeek(orgChatStatsCommander.internalChats), summaryByWeek(orgChatStatsCommander.allChats))
+
+    val statsF = for {
+      internalMemberChatStats <- internalMemberChatStatsF
+      allMemberChatStats <- allMemberChatStatsF
+    } yield {
+      if (allMemberChatStats.isEmpty) {
+        (internalMemberChatStats, allMemberChatStats)
+      } else {
+        val allStatWeeks = allMemberChatStats ++ internalMemberChatStats
+        val min = allStatWeeks.min
+        val max = allStatWeeks.max
+        val fillInMissing = SummaryByYearWeek.fillInMissing(min, max) _
+        (fillInMissing(internalMemberChatStats), fillInMissing(allMemberChatStats))
+      }
+    }
 
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
+      (internalMemberChatStats, allMemberChatStats) <- statsF
     } yield OrganizationStatistics(
       org = org,
       orgId = orgId,
@@ -205,16 +237,17 @@ class UserStatisticsCommander @Inject() (
       description = org.description,
       numLibraries = libraries.size,
       numKeeps = numKeeps,
-      numChats = numChats,
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,
       memberRecommendations = memberRecos,
       experiments = experiments,
-      domains = domains
+      domains = domains,
+      internalMemberChatStats = internalMemberChatStats,
+      allMemberChatStats = allMemberChatStats
     )
   }
-  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): OrganizationStatisticsOverview = {
+  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
     val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
     val numKeeps = libraries.map(_.keepCount).sum
@@ -224,7 +257,14 @@ class UserStatisticsCommander @Inject() (
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
     val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
 
-    OrganizationStatisticsOverview(
+    val allUsers = members.map(_.userId) | candidates.map(_.userId)
+
+    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
+
+    for {
+      internalMemberChatStats <- internalMemberChatStatsF
+      allMemberChatStats <- allMemberChatStatsF
+    } yield OrganizationStatisticsOverview(
       org = org,
       orgId = orgId,
       pubId = Organization.publicId(orgId),
@@ -236,7 +276,9 @@ class UserStatisticsCommander @Inject() (
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,
-      domains = domains
+      domains = domains,
+      internalMemberChatStats = internalMemberChatStats,
+      allMemberChatStats = allMemberChatStats
     )
   }
 

@@ -192,6 +192,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val setLocalTimeParameter = setParameterFromMapper[LocalTime]
   implicit val setSeqLocalTimeParameter = setSeqParameter[LocalTime]
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
+  implicit def setSeqIdsParameter[M <: Model[M]] = setSeqParameter[Id[M]]
   implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
   implicit val setEmailAddressParameter = setParameterFromMapper[EmailAddress]
