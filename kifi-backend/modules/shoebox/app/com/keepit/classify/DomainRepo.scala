@@ -63,7 +63,8 @@ class DomainRepoImpl @Inject() (
   }
 
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
-    val existingDomains = getAllByName(domainNames.toSeq, None).toSet
+    val lowerCasedDomainNames = domainNames.map(_.toLowerCase)
+    val existingDomains = getAllByName(lowerCasedDomainNames.toSeq, None).toSet
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
@@ -72,7 +73,7 @@ class DomainRepoImpl @Inject() (
       }
     }.toMap
 
-    val newDomainByName = domainNames.diff(existingDomainByName.keys.toSet).map { domainName =>
+    val newDomainByName = lowerCasedDomainNames.diff(existingDomainByName.keys.toSet).map { domainName =>
       domainName -> save(Domain(hostname = domainName))
     }.toMap
 
