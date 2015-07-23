@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
+import com.keepit.classify.{ DomainRepo, Domain }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -40,7 +41,8 @@ case class OrganizationStatisticsOverview(
   numLibraries: Int,
   numKeeps: Int,
   members: Set[OrganizationMembership],
-  candidates: Set[OrganizationMembershipCandidate])
+  candidates: Set[OrganizationMembershipCandidate],
+  domains: Set[Domain])
 
 case class MemberStatistics(
   user: User,
@@ -68,7 +70,8 @@ case class OrganizationStatistics(
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
-  experiments: Set[OrganizationExperimentType])
+  experiments: Set[OrganizationExperimentType],
+  domains: Set[Domain])
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -92,7 +95,9 @@ class UserStatisticsCommander @Inject() (
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgExperimentsRepo: OrganizationExperimentRepo,
+    orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
     userValueRepo: UserValueRepo,
+    domainRepo: DomainRepo,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -156,7 +161,7 @@ class UserStatisticsCommander @Inject() (
   }
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 30): Future[OrganizationStatistics] = {
-    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val numKeeps = libraries.map(_.keepCount).sum
@@ -165,7 +170,8 @@ class UserStatisticsCommander @Inject() (
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
-      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains)
     }
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
@@ -204,7 +210,8 @@ class UserStatisticsCommander @Inject() (
       candidates = candidates,
       membersStatistics = membersStats,
       memberRecommendations = memberRecos,
-      experiments = experiments
+      experiments = experiments,
+      domains = domains
     )
   }
   def organizationStatisticsOverview(org: Organization)(implicit session: RSession): OrganizationStatisticsOverview = {
@@ -215,6 +222,7 @@ class UserStatisticsCommander @Inject() (
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+    val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
 
     OrganizationStatisticsOverview(
       org = org,
@@ -227,7 +235,8 @@ class UserStatisticsCommander @Inject() (
       numLibraries = libraries.size,
       numKeeps = numKeeps,
       members = members,
-      candidates = candidates
+      candidates = candidates,
+      domains = domains
     )
   }
 

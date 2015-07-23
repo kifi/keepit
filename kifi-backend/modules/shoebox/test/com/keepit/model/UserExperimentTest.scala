@@ -54,12 +54,12 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
         inject[Database].readWrite { implicit session =>
           val shanees = expRepo.getUserExperiments(shanee.id.get)
-          shanees.size === 2
+          shanees.size === 1
           shanees.head === UserExperimentType.ADMIN
           val santas = expRepo.getUserExperiments(santa.id.get)
-          santas.size === 3
+          santas.size === 2
           val shachafs = expRepo.getUserExperiments(shachaf.id.get)
-          shachafs.size === 1
+          shachafs.size === 0
           val admins = expRepo.getByType(UserExperimentType.ADMIN)
           admins.size === 2
           val fakes = expRepo.getByType(UserExperimentType.FAKE)

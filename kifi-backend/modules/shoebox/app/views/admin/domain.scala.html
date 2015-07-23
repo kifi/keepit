@@ -1,4 +1,5 @@
-@(domain: com.keepit.classify.Domain)(implicit request: com.keepit.common.controller.UserRequest[_])
+@import com.keepit.model.Organization
+@(domain: com.keepit.classify.Domain, orgs: Set[Organization])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("View Domain", stylesheets = List("admin_slider")) {
     <table class="table table-bordered">
@@ -35,6 +36,12 @@
         </tr>
         <tr>
             <th>Updated At</th><td>@adminHelper.dateTimeDisplay(domain.updatedAt)</td>
+        </tr>
+        <tr>
+            <th>Owned by</th>
+            <td>
+                @adminHelper.orgsDisplay(orgs)
+            </td>
         </tr>
     </table>
 

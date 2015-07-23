@@ -24,5 +24,6 @@ case class ShoeboxDbSequencingModule() extends ScalaModule {
     bind[OrganizationSequencingPlugin].to[OrganizationSequencingPluginImpl].in[AppScoped]
     bind[OrganizationMembershipSequencingPlugin].to[OrganizationMembershipSequencingPluginImpl].in[AppScoped]
     bind[OrganizationMembershipCandidateSequencingPlugin].to[OrganizationMembershipCandidateSequencingPluginImpl].in[AppScoped]
+    bind[OrganizationDomainOwnershipSequencingPlugin].to[OrganizationDomainOwnershipSequencingPluginImpl].in[AppScoped]
   }
 }

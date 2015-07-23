@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -45,7 +46,8 @@ class UrlController @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    roverServiceClient: RoverServiceClient) extends AdminUserActions {
+    roverServiceClient: RoverServiceClient,
+    orgDomainOwnCommander: OrganizationDomainOwnershipCommander) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -392,7 +394,8 @@ class UrlController @Inject() (
     val domain = db.readOnlyReplica { implicit s =>
       domainRepo.get(id)
     }
-    Ok(html.admin.domain(domain))
+    val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(id)
+    Ok(html.admin.domain(domain, owningOrgs))
   }
 
   def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
