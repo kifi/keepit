@@ -471,7 +471,6 @@ class UserThreadRepoImpl @Inject() (
         having count(*) > 1
         order by week(created_at)
         desc
-      ) as T
     """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
   }
 
@@ -485,7 +484,6 @@ class UserThreadRepoImpl @Inject() (
         group by thread_id
         order by week(created_at)
         desc
-      ) as T
     """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
   }
 
