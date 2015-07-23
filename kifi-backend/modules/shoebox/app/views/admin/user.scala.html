@@ -49,6 +49,9 @@
         <th>Id</th><td>@user.id, @user.externalId</td>
       </tr>
       <tr>
+        <th>Mixpanel</th><td><a href="https://mixpanel.com/report/311211/explore/#user?distinct_id=@{user.externalId.id}">Profile</a>, <a href="https://mixpanel.com/report/311211/live/#chosen_columns:!('$browser','$city',mp_country_code,distinct_id,'$referring_domain'),column_widths:!(200,100,122,84,118,141,170),query:(distinct_ids:!(),is_or_query:!f,on:'properties%5B%22userId%22%5D%20%3D%3D%201',property_selectors:!((defaults:(filter_state:(),human_readable_params:!(),query:''),distinct_id_operator:and,distinct_ids:!(),human_readable_params:!((type:property,val:userId),(type:operator,val:equals),(type:operand,val:@{user.id.get.id})),query:'properties%5B%22userId%22%5D%20%3D%3D%201',valid_segfilter:(filters:!((filter:(operand:'@{user.id.get.id}',operator:%3D%3D),property:userId,selected_property_type:number,type:number)),op:and))))">Live View</a></td>
+      </tr>
+      <tr>
         <th>Total Keeps</th><td>@totalBookmarks</td>
       </tr>
       <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
