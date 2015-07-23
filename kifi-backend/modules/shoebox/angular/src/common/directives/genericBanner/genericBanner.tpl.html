@@ -1,8 +1,9 @@
-<div class="kf-generic-banner">
+<div class="kf-generic-banner" ng-class="variation">
+  <svg ng-if="icon" class="kf-generic-banner-icon" kf-symbol-sprite icon="{{icon}}"></svg>
   <span class="kf-generic-banner-text">
     {{ text }}
   </span>
-  <span class="kf-generic-banner-btns">
+  <span class="kf-generic-banner-btns" ng-if="actions">
     <button
       class="kf-generic-banner-btn"
       ng-repeat="action in actions"

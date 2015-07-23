@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'net', 'modalService',
-  function ($state, $http, $analytics, $location, net, modalService) {
+  '$state', '$http', '$analytics', '$location', 'net', 'modalService', '$timeout', 
+  function ($state, $http, $analytics, $location, net, modalService, $timeout) {
 
   return {
     restrict: 'A',
@@ -15,6 +15,7 @@ angular.module('kifi')
     link: function (scope) {
 
       scope.editing = false;
+      scope.notification = null;
       var lastSavedInfo = {};
 
       scope.myTextValue = 'Hello';
@@ -46,6 +47,10 @@ angular.module('kifi')
             'action': 'updateOrgProfile',
             'path': $location.path()
           });
+          scope.notification = "save";
+          $timeout(function() {
+            scope.notification = null;
+          }, 1500);
           return updateMe(res.data);
         });
       

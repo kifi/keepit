@@ -21,7 +21,12 @@ angular.module('kifi')
         $scope.saveable = true;
 
         $scope.editEvent = function($event) {
-          ($event.which === 27 && $scope.cancel()) || ($event.which === 13 && $scope.save());
+          if ($event.which === 27) {
+            $scope.cancel();
+          }
+          else if ($event.which === 13) {
+            $scope.save();
+          }
         }
 
         $scope.enableEditor = function() {

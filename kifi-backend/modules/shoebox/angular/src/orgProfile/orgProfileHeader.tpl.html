@@ -5,6 +5,19 @@
     text="You've been invited to join {{profile.name}}'s organization."
     actions="bannerButtons"
   ></div>
+  <div
+    ng-if="notification == 'save'"
+    kf-generic-banner
+    text="Saved successfully"
+    icon="'save'"
+  ></div>
+  <div
+    ng-if="notification == 'error'"
+    kf-generic-banner
+    text="We're sorry, there was a problem saving your information. Please try again"
+    icon="'error'"
+    variation="'kf-generic-banner-error'"
+  ></div>
   <div class="kf-oph-top" ng-class="editing ? 'kf-editing' : ''">
     <div class="kf-oph-pic-wrapper" ng-click="onOrgProfileImageClick($event)">
       <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">

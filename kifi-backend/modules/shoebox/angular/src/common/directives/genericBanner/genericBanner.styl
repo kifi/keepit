@@ -8,6 +8,11 @@
   line-height: 16px
   font-size: 13px
   color: white
+  padding-left: 15px
+  padding-right: 15px
+
+  &.kf-generic-banner-error
+    background-color: errorRed
 
   &.ng-leave
     transition: margin-top .2s, opacity .2s
@@ -16,13 +21,25 @@
     margin-top: -28px  // TODO: should be actual offsetHeight on small screens too
     opacity: 0
 
-.kf-generic-banner-text
+.kf-generic-banner-text,
+.kf-generic-banner-icon.symbol-sprite,
+.kf-generic-banner-btns
+  margin: 6px 0
   display: inline-block
-  margin: 6px 10px 0
+  vertical-align: middle
+
+  + *
+    margin-left: 10px
+
+.kf-generic-banner-icon.symbol-sprite
+  fill: white
+  margin-left: -5px // Optical alignment
+
+  + .kf-generic-banner-text
+    margin-left: 3px
 
 .kf-generic-banner-btns
   display: inline-block
-  margin: 6px 10px
   white-space: nowrap
 
 .kf-generic-banner-btn + .kf-generic-banner-btn
