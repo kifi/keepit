@@ -43,9 +43,10 @@ class OrganizationRepoImpl @Inject() (
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def organizationHandle = column[Option[OrganizationHandle]]("handle", O.Nullable)
     def normalizedOrganizationHandle = column[Option[OrganizationHandle]]("normalized_handle", O.Nullable)
+    def url = column[Option[String]]("url", O.Nullable)
     def basePermissions = column[BasePermissions]("base_permissions", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, organizationHandle, normalizedOrganizationHandle, basePermissions) <> ((Organization.applyFromDbRow _).tupled, Organization.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, organizationHandle, normalizedOrganizationHandle, url, basePermissions) <> ((Organization.applyFromDbRow _).tupled, Organization.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
