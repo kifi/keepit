@@ -128,6 +128,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]]
   def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -782,5 +783,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]] = {
     call(Shoebox.internal.getOrganizationInviteViews(orgId)).map(_.json.as[Set[OrganizationInviteView]])
+  }
+
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]] = {
+    call(Shoebox.internal.getIngestableOrganizationDomainOwnerships(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationDomainOwnership]] }
   }
 }

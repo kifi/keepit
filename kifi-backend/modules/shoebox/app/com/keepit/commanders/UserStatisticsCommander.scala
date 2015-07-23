@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
+import com.keepit.classify.{ DomainRepo, Domain }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -14,7 +15,6 @@ import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Random
 
 case class UserStatistics(
   user: User,
@@ -43,6 +43,7 @@ case class OrganizationStatisticsOverview(
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
+  domains: Set[Domain],
   internalMemberChatStats: Int,
   allMemberChatStats: Int)
 
@@ -72,6 +73,7 @@ case class OrganizationStatistics(
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
   experiments: Set[OrganizationExperimentType],
+  domains: Set[Domain],
   internalMemberChatStats: Seq[SummaryByYearWeek],
   allMemberChatStats: Seq[SummaryByYearWeek])
 
@@ -97,8 +99,10 @@ class UserStatisticsCommander @Inject() (
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgExperimentsRepo: OrganizationExperimentRepo,
+    orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
     userValueRepo: UserValueRepo,
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
+    domainRepo: DomainRepo,
     abook: ABookServiceClient) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -162,7 +166,7 @@ class UserStatisticsCommander @Inject() (
   }
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 30): Future[OrganizationStatistics] = {
-    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val numKeeps = libraries.map(_.keepCount).sum
@@ -171,7 +175,8 @@ class UserStatisticsCommander @Inject() (
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
-      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains)
     }
 
     val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
@@ -237,6 +242,7 @@ class UserStatisticsCommander @Inject() (
       membersStatistics = membersStats,
       memberRecommendations = memberRecos,
       experiments = experiments,
+      domains = domains,
       internalMemberChatStats = internalMemberChatStats,
       allMemberChatStats = allMemberChatStats
     )
@@ -249,6 +255,7 @@ class UserStatisticsCommander @Inject() (
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
     val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+    val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
 
     val allUsers = members.map(_.userId) | candidates.map(_.userId)
 
@@ -269,6 +276,7 @@ class UserStatisticsCommander @Inject() (
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,
+      domains = domains,
       internalMemberChatStats = internalMemberChatStats,
       allMemberChatStats = allMemberChatStats
     )

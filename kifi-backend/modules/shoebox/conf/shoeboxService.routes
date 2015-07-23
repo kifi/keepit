@@ -708,6 +708,8 @@ POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 POST    /admin/organization/:id/removeMember       @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
+POST    /admin/organization/:id/ownDomain       @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
+GET    /admin/organization/:id/disownDomain/:domainId @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainId: Id[com.keepit.classify.Domain])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
@@ -940,6 +942,7 @@ GET     /internal/shoebox/database/getIngestableOrganizationMemberships         
 GET     /internal/shoebox/database/getIngestableOrganizationMembershipCandidates        @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
 POST     /internal/shoebox/database/internDomainsByDomainNames               @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
+GET     /internal/shoebox/database/getIngestableOrganizationDomainOwnerships                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()

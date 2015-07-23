@@ -37,6 +37,7 @@ class ShoeboxDataPipeController @Inject() (
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     userIpAddressRepo: UserIpAddressRepo,
     domainRepo: DomainRepo,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -279,6 +280,17 @@ class ShoeboxDataPipeController @Inject() (
         domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
       }
       Ok(Json.toJson(domainInfoByName))
+    }
+  }
+
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgDomainOwnerships = db.readOnlyReplica { implicit s =>
+        orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize)
+      }.map {
+        _.toIngestableOrganizationDomainOwnership
+      }
+      Ok(Json.toJson(orgDomainOwnerships))
     }
   }
 }

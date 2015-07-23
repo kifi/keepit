@@ -92,6 +92,10 @@ trait GraphTestHelper {
   val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
   val uriUpdates = List(normalizedUriUpdate1)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++ orgMemCandidateUpdates ++ emailAccountUpdates ++ uriUpdates
+  val orgDomainOwnershipUpdate1 = OrganizationDomainOwnershipGraphUpdate(orgId1, domainId1, OrganizationDomainOwnershipStates.ACTIVE, SequenceNumber(1))
+  val orgDomainOwnershipUpdates = List(orgDomainOwnershipUpdate1)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++
+    orgMemCandidateUpdates ++ emailAccountUpdates ++ uriUpdates ++ orgDomainOwnershipUpdates
 
 }

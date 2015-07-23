@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.classify.Domain
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -28,6 +29,8 @@ class AdminOrganizationController @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
@@ -92,7 +95,7 @@ class AdminOrganizationController @Inject() (
   def createOrganization() = AdminUserPage { implicit request =>
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
-    val existingOrg = db.readOnlyMaster { implicit session => orgRepo.getOrganizationsByName(name) }
+    val existingOrg = db.readOnlyMaster { implicit session => orgRepo.getOrgByName(name) }
     if (existingOrg.isEmpty) {
       orgCommander.createOrganization(OrganizationCreateRequest(requesterId = ownerId, initialValues = OrganizationInitialValues(name = name))) match {
         case Left(fail) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
@@ -101,13 +104,13 @@ class AdminOrganizationController @Inject() (
         ))
       }
     } else {
-      Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(existingOrg.head.id.get))
+      Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(existingOrg.get.id.get))
     }
   }
 
   def findOrganizationByName(orgName: String) = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
-      orgRepo.getOrganizationsByName(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
+      orgRepo.searchOrgsByNameFuzzy(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
     }
     if (orgs.isEmpty) {
       Future.successful(Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)).flashing(
@@ -126,18 +129,22 @@ class AdminOrganizationController @Inject() (
 
   def findOrganizationByNameJson(orgName: String) = AdminUserPage { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
-      orgRepo.getOrganizationsByName(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
+      orgRepo.searchOrgsByNameFuzzy(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
     }
     Ok(Json.toJson(orgs))
   }
 
   def addCandidateOrCreateByName(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val orgName = request.body.get("orgName").flatMap(_.headOption).get
-    val orgsByName = db.readOnlyReplica { implicit session =>
-      orgRepo.getOrganizationsByName(orgName)
+    val orgOpt = db.readOnlyReplica { implicit session =>
+      orgRepo.getOrgByName(orgName)
     }
-    orgsByName match {
-      case Seq() =>
+    orgOpt match {
+      case Some(org) =>
+        val orgId = org.id.get
+        orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+      case None =>
         orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
           case Left(fail) => NotFound
           case Right(success) =>
@@ -145,16 +152,6 @@ class AdminOrganizationController @Inject() (
             orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
             Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
         }
-      case Seq(org) =>
-        val orgId = org.id.get
-        orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
-        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
-      case orgs =>
-        val orgId = orgs.head.id.get
-        orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
-        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId)).flashing(
-          "warning" -> s"Other organizations with this name were found, please be careful that this is the right org"
-        )
     }
   }
 
@@ -229,4 +226,24 @@ class AdminOrganizationController @Inject() (
     }
     Right(expType)
   }
+
+  def addDomainOwnership(orgId: Id[Organization]) = AdminUserAction(parse.tolerantFormUrlEncoded) { implicit request =>
+    val body = request.body
+    val domainName = body.get("domainName").flatMap(_.headOption).get
+    val orgView = com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId)
+    orgDomainOwnershipCommander.addDomainOwnership(orgId, domainName) match {
+      case Left(failure) =>
+        Redirect(orgView).flashing(
+          "error" -> failure.humanString
+        )
+      case Right(success) =>
+        Redirect(orgView)
+    }
+  }
+
+  def removeDomainOwnership(orgId: Id[Organization], domainId: Id[Domain]) = AdminUserAction { implicit request =>
+    orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainId)
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
 }
