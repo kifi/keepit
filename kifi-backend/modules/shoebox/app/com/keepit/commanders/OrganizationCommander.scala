@@ -79,7 +79,7 @@ class OrganizationCommanderImpl @Inject() (
     val orgHandle = org.getHandle
     val orgName = org.name
     val description = org.description
-    val url = org.url
+    val site = org.site
 
     val ownerId = userRepo.get(org.ownerId).externalId
 
@@ -97,7 +97,7 @@ class OrganizationCommanderImpl @Inject() (
       handle = orgHandle,
       name = orgName,
       description = description,
-      url = url,
+      site = site,
       avatarPath = avatarPath,
       members = membersAsBasicUsers,
       numMembers = memberCount,

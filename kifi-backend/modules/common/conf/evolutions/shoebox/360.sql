@@ -3,9 +3,8 @@
 
 # --- !Ups
 
-ALTER TABLE organization ADD url VARCHAR(2048) DEFAULT NULL;
+ALTER TABLE organization ADD site VARCHAR(2048) DEFAULT NULL;
 
-insert into evolutions (name, description) values('360.sql', 'add url to organization');
-
+insert into evolutions (name, description) values('360.sql', 'add site to organization');
 
 # --- !Downs

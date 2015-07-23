@@ -15,7 +15,7 @@ case class OrganizationInfo(
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
-  url: Option[String],
+  site: Option[String],
   avatarPath: Option[ImagePath],
   members: Seq[BasicUser],
   numMembers: Int,
@@ -27,7 +27,7 @@ object OrganizationInfo {
     (__ \ 'handle).write[OrganizationHandle] and
     (__ \ 'name).write[String] and
     (__ \ 'description).writeNullable[String] and
-    (__ \ 'url).writeNullable[String] and
+    (__ \ 'site).writeNullable[String] and
     (__ \ 'avatarPath).writeNullable[ImagePath] and
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
