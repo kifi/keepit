@@ -464,9 +464,9 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
       select thread_id, created_at, count(*) as c from user_thread
-        where user_id in $users
+        where user_id in ($users)
         and replyable = 1
-        and created_at >= "2015-1-1"
+        and created_at >= '2015-1-1'
         group by thread_id
         having count(*) > 1
         order by week(created_at)
@@ -478,9 +478,9 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
       select thread_id, created_at, count(*) as c from user_thread
-        where user_id in $users
+        where user_id in ($users)
         and replyable = 1
-        and created_at >= "2015-1-1"
+        and created_at >= '2015-1-1'
         group by thread_id
         order by week(created_at)
         desc

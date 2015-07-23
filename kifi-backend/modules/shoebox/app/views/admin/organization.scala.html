@@ -1,9 +1,11 @@
 @import com.keepit.commanders.OrganizationStatistics
+@import play.api.libs.json.Json
+@import com.keepit.commanders.SummaryByYearWeek._
 @(
 orgStats: OrganizationStatistics
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@admin("Organization: " + orgStats.name, stylesheets = List("admin_user")) {
+@admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
 <table class="org-summary table table-bordered" style="width:600px">
     <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
     <tr><td>Name</td>
@@ -116,11 +118,53 @@ orgStats: OrganizationStatistics
     }
 </table>
 
+<h3>Chat Engagement</h3>
+
+<canvas id="org-engagement-chart" style="width: 100%; height: 400px;"></canvas>
+
+    <style type="text/css">
+    .line-legend span {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+    }
+    </style>
 
     <script type="text/javascript">
 
+    var orgEngagementChartElem = $("#org-engagement-chart");
+    var orgEngagementChart = new Chart(orgEngagementChartElem.get(0).getContext("2d")).Line({
+        labels: @Html(Json.toJson(orgStats.allMemberChatStats)(summaryByYearHumanSeqWrites).toString),
+        datasets: [
+            {
+                label: "All chat threads by members of this org",
+                fillColor: "rgba(151,187,205,0.2)",
+                strokeColor: "rgba(151,187,205,1)",
+                pointColor: "rgba(151,187,205,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(151,187,205,1)",
+                data: @Html(Json.toJson(orgStats.allMemberChatStats)(summaryByYearWeekDataSeqWrites).toString)
+            },
+            {
+                label: "All internal chat threads between members of this org",
+                fillColor: "rgba(129,205,145,0.2)",
+                strokeColor: "rgba(129,205,145,1)",
+                pointColor: "rgba(129,205,145,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(129,205,145,1)",
+                data: @Html(Json.toJson(orgStats.internalMemberChatStats)(summaryByYearWeekDataSeqWrites).toString)
+            }
+        ]
+    }, {
+        responsive: true
+    });
+
+    orgEngagementChartElem.before($(orgEngagementChart.generateLegend()));
+
     $("#experiments").on("click", "input", function() {
-        var $td = $(this)'.closest("#experiments");
+        var $td = $(this).closest("#experiments");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
         if (this.checked) {
             console.log($(this).data("exp"));

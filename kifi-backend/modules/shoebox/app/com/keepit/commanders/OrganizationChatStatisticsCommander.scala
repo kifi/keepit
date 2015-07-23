@@ -7,6 +7,8 @@ import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model.{ User, Organization, OrganizationRepo }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 @Singleton
 class OrganizationChatStatisticsCommander @Inject() (
@@ -51,12 +53,42 @@ class OrganizationChatStatisticsCommander @Inject() (
 
 }
 
-object OrganizationChatStatisticsCommander {
+case class SummaryByYearWeek(year: Int, week: Int, numUsers: Int = 0)
 
-  case class SummaryByYearWeek(year: Int, week: Int, numUsers: Int)
+object SummaryByYearWeek {
 
-  implicit val summaryByYearWeekOrdering: Ordering[SummaryByYearWeek] = Ordering.by {
+  val extractYearWeek: SummaryByYearWeek => (Int, Int) = {
     case SummaryByYearWeek(year, week, _) => (year, week)
   }
 
+  implicit val summaryByYearWeekOrdering: Ordering[SummaryByYearWeek] = Ordering.by(extractYearWeek)
+
+  implicit val summaryByYearWeekDataWrites: Writes[SummaryByYearWeek] = Writes {
+    case SummaryByYearWeek(_, _, numUsers) => Json.toJson(numUsers)
+  }
+
+  implicit val summaryByYearWeekDataSeqWrites = Writes.seq(summaryByYearWeekDataWrites)
+
+  implicit val summaryByYearWeekHumanWrites: Writes[SummaryByYearWeek] = Writes {
+    case SummaryByYearWeek(year, week, _) => Json.toJson(s"$year week $week")
+  }
+
+  implicit val summaryByYearHumanSeqWrites = Writes.seq(summaryByYearWeekHumanWrites)
+
+  def fillInMissing(min: SummaryByYearWeek, max: SummaryByYearWeek)(stats: Seq[SummaryByYearWeek]): Seq[SummaryByYearWeek] = {
+    val statsByYearWeekPair = stats.map(stat => extractYearWeek(stat) -> stat).toMap
+    val allEmptyStats = (min.year to max.year).flatMap { year =>
+      (if (year == min.year) min.week else 1) to (if (year == max.year) max.week else 52) map { week =>
+        SummaryByYearWeek(year, week)
+      }
+    }
+    allEmptyStats.map { emptyStat =>
+      statsByYearWeekPair.get(extractYearWeek(emptyStat)) match {
+        case Some(filledStat) => filledStat
+        case None => emptyStat
+      }
+    }
+  }
+
 }
+

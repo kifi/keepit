@@ -3,7 +3,6 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
-import com.keepit.commanders.OrganizationChatStatisticsCommander.{ SummaryByYearWeek }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -15,6 +14,7 @@ import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Random
 
 case class UserStatistics(
   user: User,
@@ -203,11 +203,25 @@ class UserStatisticsCommander @Inject() (
 
     val (internalMemberChatStatsF, allMemberChatStatsF) = (summaryByWeek(orgChatStatsCommander.internalChats), summaryByWeek(orgChatStatsCommander.allChats))
 
+    val statsF = for {
+      internalMemberChatStats <- internalMemberChatStatsF
+      allMemberChatStats <- allMemberChatStatsF
+    } yield {
+      if (allMemberChatStats.isEmpty) {
+        (internalMemberChatStats, allMemberChatStats)
+      } else {
+        val allStatWeeks = allMemberChatStats ++ internalMemberChatStats
+        val min = allStatWeeks.min
+        val max = allStatWeeks.max
+        val fillInMissing = SummaryByYearWeek.fillInMissing(min, max) _
+        (fillInMissing(internalMemberChatStats), fillInMissing(allMemberChatStats))
+      }
+    }
+
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
-      internalMemberChatStats <- internalMemberChatStatsF
-      allMemberChatStats <- allMemberChatStatsF
+      (internalMemberChatStats, allMemberChatStats) <- statsF
     } yield OrganizationStatistics(
       org = org,
       orgId = orgId,

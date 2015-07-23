@@ -23,6 +23,8 @@
                 <th># of membership candidates</th>
                 <th># of org libraries</th>
                 <th># of org keeps</th>
+                <th>Chats between members</th>
+                <th>All member chats</th>
                 <th>Creation date</th>
             </tr>
             @for(orgStats <- orgs) {
@@ -33,6 +35,8 @@
                     <td>@orgStats.candidates.size</td>
                     <td>@orgStats.numLibraries</td>
                     <td>@orgStats.numKeeps</td>
+                    <td>@orgStats.internalMemberChatStats</td>
+                    <td>@orgStats.allMemberChatStats</td>
                     <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
                 </tr>
             }
