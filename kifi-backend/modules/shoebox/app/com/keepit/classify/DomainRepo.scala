@@ -63,7 +63,7 @@ class DomainRepoImpl @Inject() (
   }
 
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
-    val normalizedDomainNames = domainNames.map(_.toLowerCase.toUpperCase.toLowerCase) // remove any odd mappings from uppercase to lowercase e.g. "ı"
+    val normalizedDomainNames = domainNames.map(_.toLowerCase.toUpperCase.toLowerCase) // hack to map "ı" -> "I" -> "i", since MySQL converts "ı" -> "i" // todo(cam) find the MySQL conversion
     val existingDomains = getAllByName(normalizedDomainNames.toSeq, None).toSet
 
     val existingDomainByName = existingDomains.map { domain =>
