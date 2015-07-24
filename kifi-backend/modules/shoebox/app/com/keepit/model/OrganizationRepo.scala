@@ -18,6 +18,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult }
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
+  def allActive(implicit session: RSession): Seq[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
   def getOrgByName(name: String)(implicit session: RSession): Option[Organization]
@@ -63,6 +64,11 @@ class OrganizationRepoImpl @Inject() (
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {
     super.save(model.copy(seq = deferredSeqNum()))
+  }
+
+  def allActive(implicit session: RSession): Seq[Organization] = {
+    val q = for { row <- rows if row.state === OrganizationStates.ACTIVE } yield row
+    q.list
   }
 
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {

@@ -44,7 +44,7 @@ class AdminOrganizationController @Inject() (
 
   private def getOrgs(page: Int, orgFilter: Organization => Boolean = _ => true): Future[(Int, Seq[OrganizationStatisticsOverview])] = {
     val all = db.readOnlyReplica { implicit s =>
-      orgRepo.all
+      orgRepo.allActive
     }
     val filteredOrgs = all.filter(orgFilter).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
     val orgsCount = filteredOrgs.length
@@ -267,6 +267,15 @@ class AdminOrganizationController @Inject() (
   def removeDomainOwnership(orgId: Id[Organization], domainId: Id[Domain]) = AdminUserAction { implicit request =>
     orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainId)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def setInactive(orgId: Id[Organization]) = AdminUserAction { implicit request =>
+    db.readWrite { implicit session =>
+      val org = orgRepo.get(orgId)
+      val orgInactive = org.copy(state = OrganizationStates.INACTIVE)
+      orgRepo.save(orgInactive)
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
   }
 
 }
