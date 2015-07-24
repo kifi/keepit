@@ -16,23 +16,24 @@ exec = (command) ->
 
 module.exports = (robot) ->
 
-  robot.respond /deploy ([^ ]*)(?: only ([^ ]*))?(?: version ([^ ]*))?$/, (res) ->
+  robot.respond /.*?deploy ([a-zA-Z0-9_-]*)(?:.*? only ([a-zA-Z0-9_-]*))?(?:.*? version ([a-zA-Z0-9_-]*))?.*$/, (res) ->
 
+    console.log(res.match)
     service = res.match[1]
     host = res.match[2]
     version = res.match[3]
     user = res.message.user.name
 
-    reply_msg = "Starting deploy for #{service}"
+    reply_msg = "Starting deploy for '#{service}'"
     command = "/home/eng/bin/deploy #{service} --iam #{user}-via-eddie"
 
-    if version isnt undefined
-      reply_msg += " with version #{version}"
-      command += " --version #{version}"
-
     if host isnt undefined
-      reply_msg += " only on host #{host}"
+      reply_msg += " only on host '#{host}'"
       command += " --host #{host}"
+
+    if version isnt undefined
+      reply_msg += " with version '#{version}'"
+      command += " --version #{version}"
 
     res.reply reply_msg
     exec command
