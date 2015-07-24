@@ -460,37 +460,33 @@ class UserThreadRepoImpl @Inject() (
     ) yield (row.lastNotification, row.unread, row.uriId)).firstOption
   }
 
-  private val firstOf2015 = new DateTime(2015, 1, 1, 0, 0)
-
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-
-    val threads = for {
-      row <- rows
-      if (row.user inSet users) && row.replyable && (row.createdAt >= firstOf2015)
-    } yield row
-
-    val grouped = threads.groupBy(thread => thread.id).map {
-      case (threadId, group) => (threadId, group.map(_.createdAt).max, group.length)
-    }.filter {
-      case (_, _, length) => length > 1
-    }
-
-    grouped.list.map { case (id, time, count) => GroupThreadStats(id.id, time.get, count) }
+    val users_list = users.map(_.id).mkString(",")
+    sql"""
+      select thread_id, created_at, count(*) as c from user_thread
+        where user_id in ($users_list)
+        and replyable = 1
+        and created_at >= '2015-1-1'
+        group by thread_id
+        having count(*) > 1
+        order by week(created_at)
+        desc
+    """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
   }
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val threads = for {
-      row <- rows
-      if (row.user inSet users) && row.replyable && (row.createdAt >= firstOf2015)
-    } yield row
-
-    val grouped = threads.groupBy(thread => thread.id).map {
-      case (threadId, group) => (threadId, group.map(_.createdAt).max, group.length)
-    }
-
-    grouped.list.map { case (id, time, count) => GroupThreadStats(id.id, time.get, count) }
+    val users_list = users.map(_.id).mkString(",")
+    sql"""
+      select thread_id, created_at, count(*) as c from user_thread
+        where user_id in ($users_list)
+        and replyable = 1
+        and created_at >= '2015-1-1'
+        group by thread_id
+        order by week(created_at)
+        desc
+    """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
   }
 
 }
