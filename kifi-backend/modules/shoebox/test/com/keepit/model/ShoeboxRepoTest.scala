@@ -29,7 +29,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationRepo
         val organizationRepo = inject[OrganizationRepo]
         val org = db.readWrite { implicit session =>
-          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, handle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle")))))
+          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, handle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle"))), description = None, site = None))
         }
         org.id must beSome
 

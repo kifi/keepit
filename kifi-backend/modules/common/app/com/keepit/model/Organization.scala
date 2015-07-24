@@ -24,9 +24,10 @@ case class Organization(
     state: State[Organization] = OrganizationStates.ACTIVE,
     seq: SequenceNumber[Organization] = SequenceNumber.ZERO,
     name: String,
-    description: Option[String] = None,
+    description: Option[String],
     ownerId: Id[User],
     handle: Option[PrimaryOrganizationHandle],
+    site: Option[String],
     basePermissions: BasePermissions = Organization.defaultBasePermissions) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
@@ -96,6 +97,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'ownerId).format(Id.format[User]) and
     (__ \ 'handle).formatNullable[PrimaryOrganizationHandle] and
+    (__ \ 'site).formatNullable[String] and
     (__ \ 'basePermissions).format[BasePermissions]
   )(Organization.apply, unlift(Organization.unapply))
 
@@ -110,12 +112,13 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     ownerId: Id[User],
     organizationHandle: Option[OrganizationHandle],
     normalizedOrganizationHandle: Option[OrganizationHandle],
+    site: Option[String],
     basePermissions: BasePermissions) = {
     val primaryOrganizationHandle = for {
       original <- organizationHandle
       normalized <- normalizedOrganizationHandle
     } yield PrimaryOrganizationHandle(original, normalized)
-    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle, basePermissions)
+    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle, site, basePermissions)
   }
 
   def unapplyToDbRow(org: Organization) = {
@@ -129,6 +132,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.ownerId,
       org.handle.map(_.original),
       org.handle.map(_.normalized),
+      org.site,
       org.basePermissions))
   }
 
@@ -184,7 +188,7 @@ object BasePermissions {
 }
 
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
-  override val version = 2
+  override val version = 3
   val namespace = "organization_by_id"
   def toKey(): String = id.id.toString
 }
