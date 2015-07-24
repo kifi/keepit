@@ -107,18 +107,20 @@ object OrganizationNotificationInfo {
   }
 }
 
-case class OrganizationInitialValues(name: String, description: Option[String] = None) {
+case class OrganizationInitialValues(name: String, description: Option[String] = None, site: Option[String] = None) {
   def asOrganizationModifications: OrganizationModifications = {
     OrganizationModifications(
       name = Some(name),
-      description = description
+      description = description,
+      site = site
     )
   }
 }
 object OrganizationInitialValues {
   private val defaultReads: Reads[OrganizationInitialValues] = (
     (__ \ 'name).read[String] and
-    (__ \ 'description).readNullable[String]
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'site).readNullable[String]
   )(OrganizationInitialValues.apply _)
 
   val website = defaultReads
@@ -129,12 +131,14 @@ object OrganizationInitialValues {
 case class OrganizationModifications(
   name: Option[String] = None,
   description: Option[String] = None,
-  basePermissions: Option[BasePermissions] = None)
+  basePermissions: Option[BasePermissions] = None,
+  site: Option[String] = None)
 object OrganizationModifications {
   private val defaultReads: Reads[OrganizationModifications] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'basePermissions).readNullable[BasePermissions]
+    (__ \ 'basePermissions).readNullable[BasePermissions] and
+    (__ \ 'site).readNullable[String]
   )(OrganizationModifications.apply _)
 
   val website = defaultReads

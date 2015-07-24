@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
@@ -187,7 +188,12 @@ class OrganizationCommanderImpl @Inject() (
       // Are there any members that can't even see the organization?
       OrganizationRole.all exists { role => !(bps.permissionsMap.contains(Some(role)) && bps.forRole(role).contains(VIEW_ORGANIZATION)) }
     }
-    !badName && !badBasePermissions
+    val normalizedSiteUrl = modifications.site.map { url =>
+      if (url.startsWith("http://") || url.startsWith("https://")) url
+      else "https://" + url
+    }
+    val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
+    !badName && !badBasePermissions && !badSiteUrl
   }
 
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
