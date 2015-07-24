@@ -4,6 +4,8 @@
 # Commands:
 #    hubot deploy <service> - Starts a deploy for the given service
 #    hubot deploy <service> only <host> - Starts a deploy for the given service, only for the given host
+#    hubot deploy <service> version <version> - Starts a deploy for the given service with the given version
+#    hubot deploy <service> only <host> version <version> - Starts a deploy for the given service with the given version, only for the given host
 
 {spawn} = require 'child_process'
 
@@ -14,15 +16,23 @@ exec = (command) ->
 
 module.exports = (robot) ->
 
-  robot.respond /deploy ([^ ]*)(?: only ([^ ]*))?$/, (res) ->
+  robot.respond /deploy ([^ ]*)(?: only ([^ ]*))?(?: version ([^ ]*))?$/, (res) ->
 
     service = res.match[1]
     host = res.match[2]
+    version = res.match[3]
     user = res.message.user.name
 
-    if host is undefined
-      res.reply "Starting deploy for #{service}"
-      exec "/home/eng/bin/deploy #{service} --iam #{user}-via-eddie"
-    else
-      res.reply "Starting deploy for #{service}, only on host #{host}"
-      exec "/home/eng/bin/deploy #{service} --host #{host} --iam #{user}-via-eddie"
+    reply_msg = "Starting deploy for #{service}"
+    command = "/home/eng/bin/deploy #{service} --iam #{user}-via-eddie"
+
+    if version is not undefined
+      reply_msg += " with version #{version}"
+      command += " --version #{version}"
+
+    if host is not undefined
+      reply_msg += " only on host #{host}"
+      command += " --host #{host}"
+
+    res.reply reply_msg
+    exec command
