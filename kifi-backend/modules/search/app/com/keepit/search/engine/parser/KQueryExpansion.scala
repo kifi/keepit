@@ -28,8 +28,8 @@ trait KQueryExpansion extends QueryParser {
 
   val siteBoost: Float
   val concatBoost: Float
-  val prefixBoost: Float
   val titleBoost: Float
+  def getPrefixBoost(trailing: Boolean): Float
 
   val textQueries: ArrayBuffer[KTextQuery] = ArrayBuffer()
 
@@ -146,7 +146,8 @@ trait KQueryExpansion extends QueryParser {
         }
       }
 
-      if (prefixBoost > 0.0f && trailing) {
+      val prefixBoost = getPrefixBoost(trailing)
+      if (prefixBoost > 0.0f) {
         KPrefixQuery.get("tp", "tv", queryText).foreach { prefixQuery =>
           textQuery.addQuery(prefixQuery, prefixBoost)
         }
