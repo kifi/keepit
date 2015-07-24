@@ -1,11 +1,15 @@
 package com.keepit.classify
 
+import java.security.MessageDigest
+
+import com.keepit.common.strings._
 import com.kifi.macros.json
+import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
 import com.keepit.common.db.{ State, States, ModelWithState, Id }
 import com.keepit.common.time._
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.Normalization
+import com.keepit.model.{ Normalization }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
@@ -17,6 +21,7 @@ case class Domain(
     autoSensitive: Option[Boolean] = None,
     manualSensitive: Option[Boolean] = None,
     isEmailProvider: Boolean = false,
+    hash: DomainHash,
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
@@ -28,6 +33,7 @@ case class Domain(
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
   def isActive: Boolean = state == DomainStates.ACTIVE
   def toDomainInfo = DomainInfo(id, hostname, isEmailProvider)
+  def withHashedHostname: Domain = this.copy(hash = DomainHash(this.hostname))
 }
 
 object Domain {
@@ -37,6 +43,7 @@ object Domain {
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \ 'isEmailProvider).format[Boolean] and
+    (__ \ 'hash).format[DomainHash] and
     (__ \ 'state).format(State.format[Domain]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime]
@@ -46,6 +53,25 @@ object Domain {
   private val MaxLength = 128
 
   def isValid(s: String): Boolean = DomainRegex.findFirstIn(s).isDefined && s.length <= MaxLength
+
+  def withHash(hostname: String) = Domain(hostname = hostname, hash = DomainHash.hashHostname(hostname))
+}
+
+case class DomainHash(hash: String) extends AnyVal {
+  override def toString: String = hash
+  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
+}
+
+object DomainHash {
+  def hashHostname(hostname: String): DomainHash = {
+    val binaryHash = MessageDigest.getInstance("MD5").digest(hostname.toLowerCase)
+    DomainHash(new String(new Base64().encode(binaryHash), UTF8))
+  }
+
+  implicit val format: Format[DomainHash] = new Format[DomainHash] {
+    def reads(json: JsValue): JsResult[DomainHash] = json.validate[String].map(DomainHash.apply)
+    def writes(o: DomainHash): JsValue = JsString(o.hash)
+  }
 }
 
 @json
@@ -62,6 +88,16 @@ case class DomainKey(hostname: String) extends Key[Domain] {
   def toKey(): String = hostname
 }
 
+case class DomainHashKey(domainHash: DomainHash) extends Key[Domain] {
+  override val version = 1
+  val namespace = "domain_by_hash"
+  def toKey(): String = domainHash.hash
+}
+
 class DomainCache(stats: CacheStatistics, accessLog: AccessLog,
   innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[DomainKey, Domain](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+class DomainHashCache(stats: CacheStatistics, accessLog: AccessLog,
+  innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[DomainHashKey, Domain](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
