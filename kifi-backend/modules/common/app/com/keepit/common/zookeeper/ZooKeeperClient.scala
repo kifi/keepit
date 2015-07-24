@@ -72,6 +72,7 @@ trait ZooKeeperClient {
   def onConnected(handler: ZooKeeperSession => Unit): Unit
   def session[T](f: ZooKeeperSession => T): T
   def close(): Unit
+  def refreshSession(): Unit
 }
 
 trait ZooKeeperSession {
@@ -127,7 +128,7 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
     zk.execOnConnectHandler(handler) // if already connected, this executes the handler immediately
   }
 
-  def refreshSession(): Unit = Future {
+  def refreshSession(): Unit = {
     val old = zkSession.getAndSet(Await.result(connect(), Duration.Inf))
     if (old != null) try { old.close() } catch { case _: Throwable => } // make sure the old session is closed
   }
