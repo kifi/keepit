@@ -70,5 +70,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[UserIpAddressSequencingPlugin] != null) // make sure it's not lazy loaded
     require(injector.instance[OrganizationSequencingPlugin] != null)
     require(injector.instance[OrganizationMembershipSequencingPlugin] != null)
+    require(injector.instance[OrganizationMembershipCandidateSequencingPlugin] != null)
+    require(injector.instance[OrganizationDomainOwnershipSequencingPlugin] != null)
   }
 }

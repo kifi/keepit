@@ -367,10 +367,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators":0,
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
                   "membership":{"access":"owner","listed":true,"subscribed":false},
-                  "modifiedAt":${lib2.updatedAt.getMillis}
+                  "modifiedAt":${lib2.updatedAt.getMillis},
+                  "path": "/spongebob/catching-jellyfish"
                 },
                 {
                   "id":"${pubId1.id}",
@@ -394,10 +394,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators": 0,
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
                   "membership":{"access":"owner","listed":true,"subscribed":false},
-                  "modifiedAt":${lib1.updatedAt.getMillis}
+                  "modifiedAt":${lib1.updatedAt.getMillis},
+                  "path": "/spongebob/krabby-patty"
                 }
               ]
             }
@@ -430,7 +430,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
         inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
         // view as owner

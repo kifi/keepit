@@ -45,7 +45,7 @@ class FriendRecommendationsEmailTip @Inject() (
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
-    val friendIdsOptF = abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true)
+    val friendIdsOptF = abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY)
     friendIdsOptF flatMap {
       case Some(userIds) if userIds.size >= MIN_RECOS_TO_SHOW =>
         getManyUserImageUrls(userIds: _*) map { imageUrls =>

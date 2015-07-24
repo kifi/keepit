@@ -86,7 +86,7 @@ object Shoebox extends Service {
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
     def getExperimentsByUserIds() = ServiceRoute(POST, "/internal/shoebox/database/getExperimentsByUserIds")
     def getExperimentGenerators() = ServiceRoute(GET, "/internal/shoebox/database/getExperimentGenerators")
-    def getUsersByExperiment(experiment: ExperimentType) = ServiceRoute(GET, "/internal/shoebox/database/getUsersByExperiment", Param("experiment", experiment.value))
+    def getUsersByExperiment(experiment: UserExperimentType) = ServiceRoute(GET, "/internal/shoebox/database/getUsersByExperiment", Param("experiment", experiment.value))
     def getConnectedUsers(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getConnectedUsers", Param("userId", userId))
     def getBrowsingHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/browsingHistory", Param("userId", userId))
     def getClickHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/clickHistory", Param("userId", userId))
@@ -144,7 +144,7 @@ object Shoebox extends Service {
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getDetailedLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
+    def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/database/canViewLibrary")
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
     def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
@@ -153,12 +153,15 @@ object Shoebox extends Service {
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
     def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
-    def internDomainsByDomainNames() = ServiceRoute(POST, "internal/shoebox/database/internDomainsByDomainNames")
+    def internDomainsByDomainNames() = ServiceRoute(POST, "/internal/shoebox/database/internDomainsByDomainNames")
     def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizations", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMemberships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationMembershipCandidates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIngestableUserIpAddresses(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableUserIpAddresses", Param("seqNum", sequenceNumber), Param("fetchSize", fetchSize))
-    def getMembersByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getMembersByOrganizationId", Param("orgId", orgId))
-    def getInviteEndpointsByOrganizationId(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getInviteEndpointsByOrganizationId", Param("orgId", orgId))
+    def getOrganizationMembers(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationMembers", Param("orgId", orgId))
+    def getOrganizationInviteViews(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationInviteViews", Param("orgId", orgId))
+    def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/hasOrganizationMembership", Param("orgId", orgId), Param("userId", userId))
+    def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -179,12 +182,12 @@ object Search extends Service {
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
-    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String]) =
-      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug))
-    def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =
-      ServiceRoute(GET, "/internal/search/search/library/explain", Param("query", query), Param("userId", userId), Param("libraryId", libraryId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch))
-    def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =
-      ServiceRoute(GET, "/internal/search/search/user/explain", Param("query", query), Param("userId", userId), Param("resultUserId", resultUserId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch))
+    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
+    def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/library/explain", Param("query", query), Param("userId", userId), Param("libraryId", libraryId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
+    def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
+      ServiceRoute(GET, "/internal/search/search/user/explain", Param("query", query), Param("userId", userId), Param("resultUserId", resultUserId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
@@ -193,6 +196,7 @@ object Search extends Service {
     def searchWithConfig() = ServiceRoute(POST, "/internal/searchWithConfig")
 
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
+    def versions() = ServiceRoute(GET, "/internal/search/index/versions")
     def updateUserGraph() = ServiceRoute(POST, "/internal/search/userGraph/update")
     def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
     def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
@@ -231,14 +235,13 @@ object Eliza extends Service {
     def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/eliza/keepAttribution", Param("userId", userId), Param("uriId", uriId))
     def checkUrisDiscussed(userId: Id[User]) = ServiceRoute(POST, "/internal/eliza/checkUrisDiscussed", Param("userId", userId))
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
+    def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
+    def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
   }
 }
 
 object Heimdal extends Service {
   object internal {
-    def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
-    def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
-    def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))
     def deleteUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delete", Param("userId", userId))
     def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
@@ -309,12 +312,17 @@ object ABook extends Service {
     def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
-    def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean) = ServiceRoute(GET, s"/internal/abook/${userId}/getFriendRecommendations", Param("offset", offset), Param("limit", limit), Param("bePatient", bePatient))
-    def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideFriendRecommendation", Param("irrelevantUserId", irrelevantUserId))
-    def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
-    def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
-    def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeopleForUser")
-    def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeopleForOrg")
+    def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getFriendRecommendations", Param("offset", offset), Param("limit", limit))
+    def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
+    def getInviteRecommendationsForUser(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
+    def hideInviteRecommendationForUser(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideNonUserRecommendation")
+    def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeople")
+    def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeople")
+    def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerId", viewerId), Param("disclosePrivateEmails", disclosePrivateEmails), Param("offset", offset), Param("limit", limit))
+    def hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/org/$orgId/hideUserRecommendation")
+    def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
+    def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
+    def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideOrganizationRecommendation", Param("irrelevantOrganizationId", irrelevantOrganizationId))
   }
 }
 
@@ -331,15 +339,6 @@ object Cortex extends Service {
   type LDAVersionOpt = Option[LDAVersion]
 
   object internal {
-    def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
-    def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
-    def uriKeywords(uri: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/word2vec/uriKeywords", Param("uri", uri))
-    def batchGetURIKeywords() = ServiceRoute(POST, "/internal/cortex/word2vec/batchUriKeywords")
-    def word2vecURISimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = ServiceRoute(GET, s"/internal/cortex/word2vec/uriSimilarity", Param("uri1", uri1), Param("uri2", uri2))
-    def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
-    def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
-    def word2vecUserUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userUriSimilarity")
-    def word2vecFeedUserUris() = ServiceRoute(POST, "/internal/cortex/word2vec/feedUserUris")
 
     def defulatLDAVersion() = ServiceRoute(GET, "/internal/cortex/lda/defaultVersion")
     def ldaNumOfTopics(implicit version: LDAVersionOpt) = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics", Param("version", version))

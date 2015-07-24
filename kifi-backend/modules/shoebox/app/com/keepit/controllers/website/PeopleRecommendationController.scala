@@ -10,7 +10,7 @@ import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
-import com.keepit.abook.model.InviteRecommendation
+import com.keepit.abook.model.UserInviteRecommendation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.core._
 
@@ -68,7 +68,7 @@ class PeopleRecommendationController @Inject() (
 
   def hideInviteRecommendation() = UserAction.async(parse.json) { request =>
     val network = (request.body \ "network").as[SocialNetworkType]
-    val identifier = (request.body \ "identifier").as(InviteRecommendation.identifierFormat)
+    val identifier = (request.body \ "identifier").as(UserInviteRecommendation.identifierFormat)
     val irrelevantFriendId = identifier.right.map { socialId =>
       val socialUserInfo = db.readOnlyReplica { implicit session => socialUserRepo.get(socialId, network) }
       socialUserInfo.id.get

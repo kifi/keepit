@@ -28,8 +28,6 @@ object ImageSize {
     ImageSize(w.toInt, h.toInt)
   }
 
-  def apply(bufferedImage: BufferedImage): ImageSize = ImageSize(bufferedImage.getWidth, bufferedImage.getHeight)
-
   implicit val queryStringBinder = new QueryStringBindable[ImageSize] {
     private val stringBinder = implicitly[QueryStringBindable[String]]
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ImageSize]] = {

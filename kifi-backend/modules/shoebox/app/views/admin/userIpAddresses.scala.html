@@ -1,7 +1,7 @@
 @import com.keepit.common.service.IpAddress
 @(user: User,
 logs: Seq[UserIpAddress],
-sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage]
+sharedIpAddresses: Map[IpAddress, Map[User, Set[Organization]]]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @networkLogoLink(sui: SocialUserInfo) = {
@@ -19,23 +19,14 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
 
 
 
-@formatListOfUsers(userData: com.keepit.controllers.admin.UserStatisticsPage) = {
-    @for((userStatistics, i) <- userData.users.zipWithIndex) {
+@formatListOfUsers(userData: Map[User, Set[Organization]]) = {
+    @for((user, orgs) <- userData) {
     <tr>
-        <td></td>
-        <td>@{i+1}</td>
-        <td><span class="badge">@userStatistics.user.id.get.id</span></td>
-        <td>@adminHelper.userDisplay(userStatistics.user)</td>
-        <td>@userStatistics.connections</td>
-        <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
-        <td>@userStatistics.invitations</td>
-        <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
-        <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
-        <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
-        <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
-        <td>@userStatistics.privateKeeps</td>
-        <td>@userStatistics.publicKeeps</td>
-        <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
+        <td><span class="badge">@user.id.get.id</span></td>
+        <td>@adminHelper.userDisplay(user)</td>
+        <td>@adminHelper.orgsDisplay(orgs)</td>
+        <td>@user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+        <td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
     </tr>
     }
 }
@@ -43,23 +34,15 @@ sharedIpAddresses: Map[IpAddress,com.keepit.controllers.admin.UserStatisticsPage
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <table class="table table-bordered">
         <tr>
-            <th>#</th>
             <th>Id</th>
             <th>User</th>
-            <th>kifi Conns</th>
-            <th>Invited By</th>
-            <th>Invite Sent</th>
-            <th>Messages al/ac/st</th>
-            <th>Lib cr/fw</th>
-            <th>Network</th>
+            <th>Orgs</th>
             <th>mail</th>
-            <th>Prvt Keep</th>
-            <th>Pub Keep</th>
             <th>Date Joined</th>
         </tr>
         @for((ipAddress, userData) <- sharedIpAddresses) {
             <tr>
-                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.users.size}</td>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.size}</td>
             </tr>
             @formatListOfUsers(userData)
         }

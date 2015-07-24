@@ -1,0 +1,14 @@
+<div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
+  <button ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
+    <span class="kf-upl-create-card-add-icon svg-create-library"></span>
+    <div class="kf-upl-create-card-text">CREATE A LIBRARY</div>
+  </button>
+  <div kf-user-profile-library-card="library" ng-repeat="library in libraries"
+    current-page-name="{{::currentPageName}}" current-page-origin="{{::currentPageOrigin}}" library-type="{{::libraryType}}" profile-id="{{::profile.id}}">
+  </div>
+  <div class="kf-upl-empty" ng-if="libraries.length === 0">
+    <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
+    <span ng-if="libraryType === 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
+    <span ng-if="libraryType === 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
+  </div>
+</div>

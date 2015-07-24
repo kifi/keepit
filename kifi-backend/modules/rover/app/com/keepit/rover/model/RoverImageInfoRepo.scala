@@ -65,7 +65,7 @@ class RoverImageInfoRepoImpl @Inject() (
   }
 
   def intern(sourceImageHash: ImageHash, imageSource: ImageSource, sourceImageUrl: Option[String], uploadedImage: UploadedImage)(implicit session: RWSession): RoverImageInfo = {
-    val imageSize = ImageSize(uploadedImage.image)
+    val imageSize = ImageSize(uploadedImage.imageInfo.width, uploadedImage.imageInfo.height)
     getByImage(sourceImageHash, imageSize, uploadedImage.processOperation, uploadedImage.format) match {
       case Some(existingInfo) => {
         val updatedInfo = existingInfo.copy(state = RoverImageInfoStates.ACTIVE, sourceImageUrl = sourceImageUrl, path = uploadedImage.key)

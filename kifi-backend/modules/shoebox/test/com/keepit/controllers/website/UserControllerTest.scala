@@ -38,14 +38,14 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
-          inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
+          inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
           user
         }
 
         val path = routes.UserController.currentUser().url
         path === "/site/user/me"
 
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val request = FakeRequest("GET", path)
         val result = inject[UserController].currentUser()(request)
@@ -61,7 +61,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "username":"test",
               "emails":[],
               "notAuthed":[],
-              "experiments":["admin", "libraries"],
+              "experiments":["admin"],
               "numLibraries":0,
               "numConnections":0,
               "numFollowers":0,
@@ -77,13 +77,13 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           val user = UserFactory.user().withName("George", "Washington").withUsername("GeorgeWash").saved
-          inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
+          inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
           user
         }
         val path = routes.UserController.updateUsername().url
         path === "/site/user/me/username"
 
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val inputJson1 = Json.obj(
           "username" -> "GDubs"
@@ -108,7 +108,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         pathName === "/site/user/me/name"
         pathBio === "/site/user/me/biography"
 
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val inputJson1 = Json.obj(
           "firstName" -> "Abe",

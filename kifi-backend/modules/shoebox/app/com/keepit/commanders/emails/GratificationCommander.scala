@@ -58,14 +58,13 @@ class GratificationCommander @Inject() (
       val userIds = generateUserBatch(batch)
       log.info(s"[GratData] Generated user batch ${userIds.head}-${userIds.last}, getting data")
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
-      log.info(s"[GratData] Batched data received, sending emails")
-      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
+      fGratDatas.map { gratDatas => log.info(s"[GratData] Batched data received, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
 
     if (!UNDER_EXPERIMENT) {
       FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
     } else {
-      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(ExperimentType.GRATIFICATION_EMAIL) }
+      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(UserExperimentType.GRATIFICATION_EMAIL) }
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
       fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }

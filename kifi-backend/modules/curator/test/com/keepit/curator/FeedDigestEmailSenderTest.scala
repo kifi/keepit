@@ -82,8 +82,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         Await.ready(sender.processQueue(), Duration(5, "seconds"))
         fakeQueue.messages.size === 0
-        fakeQueue.lockedMessages.size === 0
-        fakeQueue.consumedMessages.size === 2
+        fakeQueue.lockedMessages.size === 2
+        fakeQueue.consumedMessages.size === 0
       }
     }
 
@@ -154,6 +154,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     "sends not-already-pushed keeps to users" in {
       withDb(modules: _*) { implicit injector =>
         val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
+
+        shoebox.newKeepsInLibrariesExpectation(user2.id.get) = Seq.empty
+        shoebox.newKeepsInLibrariesExpectation(user1.id.get) = Seq.empty
 
         val sumU42F = sender.sendToUser(user1.id.get)
         val sumU43F = sender.sendToUser(user2.id.get)
@@ -246,6 +249,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       withDb(modules: _*) { implicit injector =>
         val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
 
+        shoebox.newKeepsInLibrariesExpectation(user2.id.get) = Seq.empty
+        shoebox.newKeepsInLibrariesExpectation(user1.id.get) = Seq.empty
+
         val uriModels = db.readWrite { implicit rw =>
           Seq(
             makeCompleteUriRecommendation(40, user2, 8.1f, "http://espn.com", allScores = defaultAllScores.copy(recentInterestScore = 8f)),
@@ -300,7 +306,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           Seq(keep0, keep1, keep2, keep3)
         }
 
-        shoebox.allUserExperiments(user2.id.get) = Set(UserExperiment(experimentType = ExperimentType.LIBRARIES, userId = user2.id.get))
         shoebox.newKeepsInLibrariesExpectation(user2.id.get) = keeps
 
         val sumU43F = sender.sendToUser(user2.id.get)

@@ -48,9 +48,15 @@ class ExtLibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
-    val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map {
-      case (lib, membership, collabs) =>
-        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+    val librariesWithMembershipAndCollaborators = libraryCommander.getLibrariesUserCanKeepTo(request.userId)
+    val basicUserById = {
+      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
+      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+    }
+    val datas = librariesWithMembershipAndCollaborators map {
+      case (lib, membership, collaboratorsIds) =>
+        val owner = basicUserById(lib.ownerId)
+        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,

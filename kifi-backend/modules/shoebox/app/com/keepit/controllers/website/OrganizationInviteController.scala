@@ -4,7 +4,9 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
@@ -24,50 +26,78 @@ class OrganizationInviteController @Inject() (
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def inviteUsers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS).async(parse.tolerantJson) { request =>
-    val invites = (request.body \ "invites").as[JsArray].value
-    val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
+    val messageOpt = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
-    val userInvites = invites.filter(inv => (inv \ "type").as[String] == "user")
-    val emailInvites = invites.filter(inv => (inv \ "type").as[String] == "email")
+    implicit val reads = EitherFormat.keyedReads[ExternalId[User], EmailAddress]("id", "email")
+    val invitesValidated = (request.body \ "invites").validate[Seq[Either[ExternalId[User], EmailAddress]]]
 
-    val userExternalIds = userInvites.map(inv => (inv \ "id").as[ExternalId[User]])
-    val userMap = userCommander.getByExternalIds(userExternalIds)
-    val userInfo = userInvites.map { userInvite =>
-      val externalId = (userInvite \ "id").as[ExternalId[User]]
-      val userId = userMap(externalId).id.get
-      val role = (userInvite \ "role").as[OrganizationRole]
-      OrganizationMemberInvitation(Left(userId), role, msg)
-    }
+    invitesValidated match {
+      case JsError(errs) => Future.successful(BadRequest(Json.obj("error" -> "could_not_parse_invites")))
+      case JsSuccess(externalInvites, _) =>
+        val userExternalIds = externalInvites.collect { case Left(userId) => userId }
+        val externalToInternalIdMap = userCommander.getByExternalIds(userExternalIds).mapValues(_.id.get)
+        val invitees: Set[Either[Id[User], EmailAddress]] = externalInvites.collect {
+          case Left(extId) => Left(externalToInternalIdMap(extId))
+          case Right(email) => Right(email)
+        }.toSet
 
-    val emailInfo = emailInvites.map { emailInvite =>
-      val email = (emailInvite \ "email").as[EmailAddress]
-      val role = (emailInvite \ "role").as[OrganizationRole]
-      OrganizationMemberInvitation(Right(email), role, msg)
-    }
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    val inviteResult = orgInviteCommander.inviteToOrganization(request.orgId, request.request.userId, userInfo ++ emailInfo)
-    inviteResult.map {
-      case Left(organizationFail) => organizationFail.asErrorResponse
-      case Right(inviteesWithAccess) =>
-        val result = inviteesWithAccess.map {
-          case (Left(user), role) => Json.obj("user" -> user.externalId, "role" -> role)
-          case (Right(contact), role) => Json.obj("email" -> contact.email, "role" -> role)
+        val inviteeUserIds = invitees.collect { case Left(userId) => userId }
+        val inviteeEmailAddresses = invitees.collect { case Right(emailAddress) => emailAddress }
+
+        val sendInviteRequest = OrganizationInviteSendRequest(orgId = request.orgId, requesterId = request.request.userId, inviteeEmailAddresses, inviteeUserIds, messageOpt)
+
+        val inviteResult = orgInviteCommander.inviteToOrganization(sendInviteRequest)
+        inviteResult.map {
+          case Left(organizationFail) => organizationFail.asErrorResponse
+          case Right(inviteesWithAccess) =>
+            val result = inviteesWithAccess.map {
+              case Left(user) => Json.obj("id" -> user.externalId)
+              case Right(contact) => Json.obj("email" -> contact.email)
+            }.toSeq
+            Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
         }
-        Ok(Json.obj("result" -> "success", "invitees" -> JsArray(result)))
+    }
+  }
+  def cancelInvites(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
+    implicit val reads = EitherFormat.keyedReads[ExternalId[User], EmailAddress]("id", "email")
+    val invitesValidated = (request.body \ "cancel").validate[Seq[Either[ExternalId[User], EmailAddress]]]
+
+    invitesValidated match {
+      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse_cancelations"))
+      case JsSuccess(externalInvites, _) =>
+        val emails = externalInvites.collect { case Right(email) => email }.toSet
+
+        val userExternalIds = externalInvites.collect { case Left(extId) => extId }
+        val externalToInternalIdMap = userCommander.getByExternalIds(userExternalIds).mapValues(_.id.get)
+        val internalToExternalIdMap = externalToInternalIdMap.map(_.swap)
+        val userIds = userExternalIds.map(externalToInternalIdMap.apply).toSet
+
+        val cancelRequest = OrganizationInviteCancelRequest(orgId = request.orgId, requesterId = request.request.userId, targetEmails = emails, targetUserIds = userIds)
+        val cancelResponse = orgInviteCommander.cancelOrganizationInvites(cancelRequest)
+        cancelResponse match {
+          case Left(organizationFail) => organizationFail.asErrorResponse
+          case Right(cancelResult) =>
+            val cancelledEmails = cancelResult.cancelledEmails
+            val cancelledUserIds = cancelResult.cancelledUserIds.map(internalToExternalIdMap.apply)
+
+            val cancelledEmailsJson = JsArray(cancelledEmails.toSeq.map { email => Json.obj("email" -> email) })
+            val cancelledUserIdsJson = JsArray(cancelledUserIds.toSeq.map { userId => Json.obj("id" -> userId) })
+            Ok(Json.obj("cancelled" -> (cancelledUserIdsJson ++ cancelledEmailsJson)))
+        }
     }
   }
 
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.INVITE_MEMBERS)(parse.tolerantJson) { request =>
-    val role = (request.body \ "role").as[OrganizationRole]
-
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId, role) match {
+    orgInviteCommander.createGenericInvite(request.orgId, request.request.userId) match {
       case Right(invite) =>
         Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
       case Left(fail) => fail.asErrorResponse

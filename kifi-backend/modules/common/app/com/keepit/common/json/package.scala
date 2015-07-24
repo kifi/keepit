@@ -113,6 +113,15 @@ package object json {
       def reads(json: JsValue) = json.validate[A].map(Left(_)) orElse json.validate[B].map(Right(_))
       def writes(either: Either[A, B]) = either.left.map(Json.toJson(_)).right.map(Json.toJson(_)).merge
     }
+
+    def keyedReads[A, B](strA: String, strB: String)(implicit aReads: Reads[A], bReads: Reads[B]): Reads[Either[A, B]] = Reads[Either[A, B]] {
+      case obj: JsObject if obj.keys.intersect(Set(strA, strB)).size == 1 =>
+        obj.keys match {
+          case keys if keys.contains(strA) => aReads.reads(obj \ strA).map(Left(_))
+          case keys if keys.contains(strB) => bReads.reads(obj \ strB).map(Right(_))
+        }
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError(s"Expected a JsObject with a single field of [$strA, $strB]"))))
+    }
   }
 
   object TraversableFormat {

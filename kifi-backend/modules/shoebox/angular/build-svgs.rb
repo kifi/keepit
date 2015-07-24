@@ -27,7 +27,7 @@ def createSVG()
     f.truncate 0
     f.puts "<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"display: none\">\n"
     @svg_names.each do |svg_name|
-      f.puts "  <symbol id=\"#{svg_name}\" viewBox=\"0 0 512 512\">"
+      f.puts "  <symbol id=\"#{svg_name}\" preserveAspectRatio=\"none\" viewBox=\"0 0 512 512\">"
       addPathsToFile(f, nil, svg_name, false)
       f.puts "  </symbol>"
 

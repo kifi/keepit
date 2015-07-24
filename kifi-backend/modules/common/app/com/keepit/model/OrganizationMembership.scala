@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -25,24 +26,11 @@ case class OrganizationMembership(
     state = OrganizationMembershipStates.INACTIVE
   )
 
+  def isActive = state == OrganizationMembershipStates.ACTIVE
+
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 
-  def isOwner: Boolean = role == OrganizationRole.OWNER
-  def hasRole(r: OrganizationRole): Boolean = r == role
-
   def toIngestableOrganizationMembership = IngestableOrganizationMembership(id.get, organizationId, userId, createdAt, state, seq)
-}
-
-case class IngestableOrganizationMembership(
-  id: Id[OrganizationMembership],
-  orgId: Id[Organization],
-  userId: Id[User],
-  createdAt: DateTime,
-  state: State[OrganizationMembership],
-  seq: SequenceNumber[OrganizationMembership])
-
-object IngestableOrganizationMembership {
-  implicit val format = Json.format[IngestableOrganizationMembership]
 }
 
 object OrganizationMembership {
@@ -98,7 +86,7 @@ sealed abstract class OrganizationRole(val value: String, val priority: Int) ext
 }
 
 object OrganizationRole {
-  case object OWNER extends OrganizationRole("owner", 0)
+  case object ADMIN extends OrganizationRole("admin", 0)
   case object MEMBER extends OrganizationRole("member", 1)
 
   implicit val format: Format[OrganizationRole] =
@@ -108,10 +96,23 @@ object OrganizationRole {
 
   def apply(str: String): OrganizationRole = {
     str match {
-      case OWNER.value => OWNER
+      case ADMIN.value => ADMIN
       case MEMBER.value => MEMBER
     }
   }
 
-  def all: Seq[OrganizationRole] = Seq(OWNER, MEMBER)
+  def all: Seq[OrganizationRole] = Seq(ADMIN, MEMBER)
 }
+
+case class IngestableOrganizationMembership(
+  id: Id[OrganizationMembership],
+  orgId: Id[Organization],
+  userId: Id[User],
+  createdAt: DateTime,
+  state: State[OrganizationMembership],
+  seq: SequenceNumber[OrganizationMembership])
+
+object IngestableOrganizationMembership {
+  implicit val format = Json.format[IngestableOrganizationMembership]
+}
+

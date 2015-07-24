@@ -47,8 +47,8 @@ object VertexDataId {
   implicit def fromLibraryId(libId: Id[Library]): VertexDataId[LibraryReader] = VertexDataId(libId.id)
   implicit def toLibraryId(libReaderId: VertexDataId[LibraryReader]): Id[Library] = Id(libReaderId.id)
 
-  implicit def fromOrgId(orgId: Id[Organization]): VertexDataId[OrganizationReader] = VertexDataId(orgId.id)
-  implicit def toOrgId(orgReaderId: VertexDataId[OrganizationReader]): Id[Organization] = Id(orgReaderId.id)
+  implicit def fromOrganizationId(orgId: Id[Organization]): VertexDataId[OrganizationReader] = VertexDataId(orgId.id)
+  implicit def toOrganizationId(orgReaderId: VertexDataId[OrganizationReader]): Id[Organization] = Id(orgReaderId.id)
 
   implicit def fromIpAddress(ipAddr: IpAddress): VertexDataId[IpAddressReader] = VertexDataId(ipAddr)
   implicit def toIpAddress(ipReaderId: VertexDataId[IpAddressReader]): IpAddress = ipReaderId.id

@@ -2,7 +2,6 @@ package com.keepit
 
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.cortex.models.word2vec.Word2Vec
 
 package object cortex {
 
@@ -13,7 +12,6 @@ package object cortex {
     val defaultLDAVersion = ModelVersion[DenseLDA](3)
     val experimentalLDAVersion: List[ModelVersion[DenseLDA]] = List()
     val availableLDAVersions = List(defaultLDAVersion) ++ experimentalLDAVersion
-    val word2vecVersion = ModelVersion[Word2Vec](2)
   }
 
   object ModelStorePrefix {

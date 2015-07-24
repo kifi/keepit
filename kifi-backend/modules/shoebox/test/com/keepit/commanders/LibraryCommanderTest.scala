@@ -25,6 +25,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.BasicUser
@@ -191,61 +192,110 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   }
 
   "LibraryCommander" should {
-    "create libraries, memberships & invites" in {
-      withDb(modules: _*) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
+    "create libraries correctly" in {
+      "create libraries, memberships & invites" in {
+        withDb(modules: _*) { implicit injector =>
+          val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
-        db.readOnlyMaster { implicit s =>
-          libraryRepo.count === 0
-        }
+          db.readOnlyMaster { implicit s =>
+            libraryRepo.count === 0
+          }
 
-        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
+          val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
+          val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
+          val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
 
-        val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+          val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
-        val libraryCommander = inject[LibraryCommander]
-        val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
-        add1.isRight === true
-        add1.right.get.name === "Avengers Missions"
-        val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
-        add2.isRight === true
-        add2.right.get.name === "MURICA"
-        val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
-        add3.isRight === true
-        add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
+          val libraryCommander = inject[LibraryCommander]
+          val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
+          add1.isRight === true
+          add1.right.get.name === "Avengers Missions"
+          val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
+          add2.isRight === true
+          add2.right.get.name === "MURICA"
+          val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
+          add3.isRight === true
+          add3.right.get.name === "Science and Stuff"
+          libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
 
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.length === 3
-          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
+          db.readOnlyMaster { implicit s =>
+            val allLibs = libraryRepo.all
+            allLibs.length === 3
+            allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+            allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.COLLABORATOR, LibraryInvitePermissions.OWNER)
 
-          val allMemberships = libraryMembershipRepo.all
-          allMemberships.length === 3
-          allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
-          allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-          allMemberships.map(_.lastJoinedAt).flatten.size === 3
-        }
+            val allMemberships = libraryMembershipRepo.all
+            allMemberships.length === 3
+            allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
+            allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
+            allMemberships.map(_.lastJoinedAt).flatten.size === 3
+          }
 
-        // test re-activating inactive library
-        val libScience = add3.right.get
-        db.readWrite { implicit s =>
-          libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
-        }
-        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
-        db.readOnlyMaster { implicit s =>
-          val allLibs = libraryRepo.all
-          allLibs.length === 3
-          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.color.nonEmpty === true)
+          // test re-activating inactive library
+          val libScience = add3.right.get
+          db.readWrite { implicit s =>
+            libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
+          }
+          libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+          db.readOnlyMaster { implicit s =>
+            val allLibs = libraryRepo.all
+            allLibs.length === 3
+            allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+            allLibs.map(_.color.nonEmpty === true)
+          }
         }
       }
+      "let an org member create a library in that org if they have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).saved
+            (org, owner)
+          }
+          val libraryCommander = inject[LibraryCommander]
 
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, owner.id.get)
+          addResponse.isRight === true
+        }
+      }
+      "fail if an org member tries to create a library in their org but does not have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, member) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+
+            // This org is super crappy, members can't do anything
+            val crappyBPs = BasePermissions(Map(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION)))
+
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
+            (org, owner, member)
+          }
+          val libraryCommander = inject[LibraryCommander]
+
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, member.id.get)
+          addResponse.isLeft === true
+        }
+      }
+      "fail if a non-member tries to add a library to an organization" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).saved
+            (org, owner, rando)
+          }
+          val libraryCommander = inject[LibraryCommander]
+
+          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.addLibrary(addRequest, rando.id.get)
+          addResponse.isLeft === true
+        }
+      }
     }
     "when modify library is called:" in {
       "allow changing organizationId of library" in {
@@ -261,24 +311,25 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             (org, starkTowersOrg)
           }
           // no privs on org, cannot move from personal space.
+          implicit val publicIdConfig = inject[PublicIdConfiguration]
           val cannotMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+            LibraryModifyRequest(space = Some(org.id.get)))
           cannotMoveOrg.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === None
           }
 
-          db.readWrite { implicit s => orgMemberRepo.save(org.newMembership(userAgent.id.get, OrganizationRole.OWNER)) }
+          db.readWrite { implicit s => orgMemberRepo.save(org.newMembership(userAgent.id.get, OrganizationRole.ADMIN)) }
 
           // move from personal space to org space
           val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(org.id))))
+            LibraryModifyRequest(space = Some(org.id.get)))
           canMoveOrg.isRight === true
           canMoveOrg.right.get.organizationId === org.id
 
           // prevent move from org to one without privs
           val attemptToStealLibrary = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           attemptToStealLibrary.isLeft === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === org.id
@@ -286,10 +337,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // move from one org to another where you have invite/remove privs.
           db.readWrite { implicit session =>
-            orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.OWNER)) // how did he pull that off.
+            orgMemberRepo.save(starkOrg.newMembership(userAgent.id.get, OrganizationRole.ADMIN)) // how did he pull that off.
           }
           val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(starkOrg.id))))
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
           moveOrganization.isRight === true
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -297,7 +348,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // try to move library back to owner out of org space.
           val moveHome = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userIron.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+            LibraryModifyRequest(space = Some(userIron.id.get)))
           moveHome.isLeft === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
@@ -305,10 +356,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // owner moves the library home.
           val moveHomeSucceeds = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-            LibraryModifyRequest(orgId = Some(OrganizationMoveRequest(None))))
+            LibraryModifyRequest(space = Some(userAgent.id.get)))
           moveHomeSucceeds.isRight === true // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
-            libraryRepo.get(libShield.id.get).organizationId === None
+            libraryRepo.get(libShield.id.get).space === LibrarySpace.fromUserId(userAgent.id.get)
           }
         }
       }
@@ -361,6 +412,83 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
             allLibs.map(_.color) === Seq(None, None, Some(LibraryColor.SKY_BLUE))
           }
+        }
+      }
+      "correctly alias libraries when they are moved" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val publicIdConfig = inject[PublicIdConfiguration]
+          val libraryCommander = inject[LibraryCommander]
+
+          val (ironMan, earthOrg, starkOrg, ironLib) = db.readWrite { implicit session =>
+            val captainPlanet = UserFactory.user().withName("Captain", "Planet").withUsername("captainplanet").saved
+            val ironMan = UserFactory.user().withName("Tony", "Stark").withUsername("ironman").saved
+            val earthOrg = OrganizationFactory.organization().withName("Earth").withOwner(captainPlanet).withMembers(Seq(ironMan)).saved
+            val starkOrg = OrganizationFactory.organization().withName("Stark Towers").withOwner(ironMan).saved
+            val ironLib = LibraryFactory.library().withName("Hero Stuff").withSlug("herostuff").withUser(ironMan).saved
+            (ironMan, earthOrg, starkOrg, ironLib)
+          }
+
+          // There shouldn't be any aliases initially
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryAliasRepo].count === 0
+          }
+
+          // Move it into starkOrg
+          val response1 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
+          response1.isRight === true
+
+          // Now the library should live in starkOrg, but there is still an alias from ironMan
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryAliasRepo].count === 1
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
+            ironManAlias.isDefined === true
+            ironManAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Move it back into ironMan's personal space
+          val response2 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(space = Some(ironMan.id.get)))
+          response2.isRight === true
+
+          // The ironMan one was reclaimed, so it should be inactive now
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff")).isDefined === true
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"), excludeState = None)
+            ironManAlias.isDefined === true
+            ironManAlias.get.state === LibraryAliasStates.INACTIVE
+
+            val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
+            starkOrgAlias.isDefined === true
+            starkOrgAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Move it into earthOrg
+          val response3 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(space = Some(earthOrg.id.get)))
+          response3.isRight === true
+
+          // Two aliases now, both ironMan and starkOrg
+          db.readOnlyMaster { implicit session =>
+            inject[LibraryRepo].getBySpaceAndSlug(earthOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryAliasRepo].count === 2
+
+            val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
+            ironManAlias.isDefined === true
+            ironManAlias.get.libraryId === ironLib.id.get
+
+            val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
+            starkOrgAlias.isDefined === true
+            starkOrgAlias.get.libraryId === ironLib.id.get
+          }
+
+          // Try to move it back into starkOrg, should fail since by default members cannot remove libraries
+          val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
+            LibraryModifyRequest(space = Some(starkOrg.id.get)))
+          response4.isLeft === true
         }
       }
     }
@@ -520,37 +648,37 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
           val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None))
           val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None))
-          orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.OWNER))
+          orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.ADMIN))
           (user, newLibrary, organization, otherOrg)
         }
 
         // User does not own the library
-        libraryCommander.canMoveToOrg(Id[User](0), newLibrary.id.get, organization.id) === false
+        libraryCommander.canMoveTo(Id[User](0), newLibrary.id.get, organization.id.get) === false
 
         // User owns the library
         // Can move libraries to organizations you are part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(true)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, organization.id.get) must equalTo(true)
         // Cannot inject libraries to random organizations.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = organization.id)) }
         // Can move libraries out of organizations you are part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(true)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(true)
         // Cannot inject libraries from an organization you are part of to a random organization.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = otherOrg.id)) }
         // Cannot remove libraries from other organizations you are not part of.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)
         // Prevent Company Espionage and library stealing!!
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, organization.id.get) must equalTo(false)
         // What about if your library is in an organization and you leave
         db.readWrite { implicit s =>
           val membership = orgMemberRepo.getByOrgIdAndUserId(organization.id.get, user.id.get)
           orgMemberRepo.save(membership.get.copy(state = OrganizationMembershipStates.INACTIVE))
         }
         // You're out of luck.
-        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
+        libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)
       }
     }
 

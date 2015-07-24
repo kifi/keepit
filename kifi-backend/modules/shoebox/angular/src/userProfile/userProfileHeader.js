@@ -76,6 +76,7 @@ angular.module('kifi')
           $rootScope.userLoggedIn ? 'not_friends' : '';
         scope.showConnectCallout = scope.intent === 'connect' && scope.connectionWithUser === 'not_friends';
         scope.sharing = false;
+        scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
         //
         // Scope Functions
@@ -123,6 +124,23 @@ angular.module('kifi')
             }
           });
         };
+
+        scope.bannerButtons = [
+          {
+            className: 'kf-decline',
+            label: 'Decline',
+            click: function () {
+              scope.ignoreFriendRequest();
+            }
+          },
+          {
+            className: 'kf-accept',
+            label: 'Accept',
+            click: function () {
+              scope.acceptFriendRequest();
+            }
+          }
+        ];
 
         scope.acceptFriendRequest = function () {
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAcceptFriend'});

@@ -13,7 +13,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -61,7 +61,9 @@ object UserViewTypes {
   case object AllUsersViewType extends UserViewType
   case object RegisteredUsersViewType extends UserViewType
   case object FakeUsersViewType extends UserViewType
-  case class ByExperimentUsersViewType(exp: ExperimentType) extends UserViewType
+  case class ByExperimentUsersViewType(exp: UserExperimentType) extends UserViewType
+  case object UsersPotentialOrgsViewType extends UserViewType
+  case object LinkedInUsersWithoutOrgsViewType extends UserViewType
 }
 import UserViewTypes._
 
@@ -114,7 +116,7 @@ class AdminUserController @Inject() (
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander,
-    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions {
+    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginationActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
@@ -247,9 +249,10 @@ class AdminUserController @Inject() (
   }
 
   private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
-    var userId = user.id.get
+    val userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
+    val fOrgRecos = abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
@@ -267,16 +270,23 @@ class AdminUserController @Inject() (
       (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
-    val experiments = db.readOnlyReplica { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
+    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
+      (
+        userExperimentRepo.getUserExperiments(user.id.get),
+        orgRepo.getPotentialOrganizationsForUser(userId),
+        userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations))
+    }
 
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       contacts <- contactsF
+      orgRecos <- fOrgRecos
     } yield {
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
       Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers))
+        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
     }
   }
 
@@ -321,6 +331,8 @@ class AdminUserController @Inject() (
   def allUsersView = usersView(0)
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
+  def allUsersPotentialOrgsView = usersPotentialOrgsView(0)
+  def allLinkedInUsersWithoutOrgsView = linkedInUsersWithoutOrgsView(0)
 
   def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
     val usersF = Future {
@@ -328,12 +340,22 @@ class AdminUserController @Inject() (
         userViewType match {
           case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
-          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
-          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, pageSize),
-            userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+          case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
+          case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
+            userRepo.countIncludingWithExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
           case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, pageSize),
             userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
+          case UsersPotentialOrgsViewType =>
+            (
+              userRepo.pageUsersWithPotentialOrgs(page, pageSize),
+              userRepo.countUsersWithPotentialOrgs()
+            )
+          case LinkedInUsersWithoutOrgsViewType =>
+            (
+              userRepo.pageLinkedInUsersWithoutOrgs(page, pageSize),
+              userRepo.countLinkedInUsersWithoutOrgs()
+            )
         }
       }
     }
@@ -400,6 +422,14 @@ class AdminUserController @Inject() (
     userStatisticsPage(FakeUsersViewType, page).map { p => Ok(html.admin.users(p, None)) }
   }
 
+  def usersPotentialOrgsView(page: Int = 0) = AdminUserPage.async { implicit request =>
+    userStatisticsPage(UsersPotentialOrgsViewType, page).map { p => Ok(html.admin.users(p, None)) }
+  }
+
+  def linkedInUsersWithoutOrgsView(page: Int = 0) = AdminUserPage.async { implicit request =>
+    userStatisticsPage(LinkedInUsersWithoutOrgsViewType, page).map { p => Ok(html.admin.users(p, None)) }
+  }
+
   def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val nameOpt = request.body.get("name").flatMap(_.headOption)
     val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
@@ -421,7 +451,7 @@ class AdminUserController @Inject() (
   }
 
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
-    userStatisticsPage(ByExperimentUsersViewType(ExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
+    userStatisticsPage(ByExperimentUsersViewType(UserExperimentType(exp)), page).map { p => Ok(html.admin.users(p, None)) }
   }
 
   def searchUsers() = AdminUserPage { implicit request =>
@@ -522,10 +552,10 @@ class AdminUserController @Inject() (
     SUPER_ADMIN_SET contains userId
   }
 
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+  def isAdminExperiment(expType: UserExperimentType) = expType == UserExperimentType.ADMIN
 
-  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType.get(experiment)
+  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType.get(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
@@ -552,13 +582,13 @@ class AdminUserController @Inject() (
     }
   }
 
-  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
-    val expType = ExperimentType(experiment)
+  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, UserExperimentType] = {
+    val expType = UserExperimentType(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
     } else {
       db.readWrite { implicit session =>
-        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, UserExperimentType(experiment))
         ue foreach { ue =>
           userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
           val experiments = userExperimentRepo.getUserExperiments(userId)
@@ -959,8 +989,20 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, UserStatisticsPage] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersStatisticsPage(userIds) }.toMap
+    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
+  }
+
+  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+    db.readOnlyReplica { implicit s =>
+      val users = userRepo.getAllUsers(userIds).values.toList
+      val orgs = users map { user =>
+        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.orgId).toSet
+        val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
+        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+      }
+      orgs.toMap
+    }
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
@@ -983,6 +1025,7 @@ class AdminUserController @Inject() (
     } else {
       UnprocessableEntity("Invalid input")
     }
+
   }
 
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
@@ -1002,4 +1045,16 @@ class AdminUserController @Inject() (
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
 
+  def setIgnoreForPotentialOrganizations(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val ignorePotentialOrgs = request.body.get("ignorePotentialOrgs").isDefined
+    db.readWrite { implicit session =>
+      userValueRepo.setValue(userId, UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, ignorePotentialOrgs)
+    }
+    Redirect(routes.AdminUserController.userView(userId))
+  }
+
+  def hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization]) = AdminUserPage { request =>
+    abookClient.hideOrganizationRecommendationForUser(userId, orgId)
+    Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
 }

@@ -1,15 +1,26 @@
 package com.keepit.commanders
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 
 class OrganizationCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+  val modules = Seq(
+    FakeExecutionContextModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule()
+  )
   "organization commander" should {
     "create an organization" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -23,12 +34,34 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         memberships.size === 1
         memberships.head.userId === Id[User](1)
-        memberships.head.role === OrganizationRole.OWNER
+        memberships.head.role === OrganizationRole.ADMIN
+      }
+    }
+
+    "grab an organization's visible libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org, owner, nonMember, publicLibs, orgLibs) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().withName("Owner", "McOwnerson").saved
+          val nonMember = UserFactory.user().withName("Rando", "McRanderson").saved
+          val org = OrganizationFactory.organization().withName("Test Org").withOwner(owner).saved
+          val publicLibs = LibraryFactory.libraries(10).map(_.withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganization(Some(org.id.get))).saved
+          val orgLibs = LibraryFactory.libraries(20).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(Some(org.id.get))).saved
+          (org, owner, nonMember, publicLibs, orgLibs)
+        }
+
+        val orgCommander = inject[OrganizationCommander]
+        val ownerVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(owner.id.get), offset = Offset(0), limit = Limit(100))
+        val randoVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))
+        val nooneVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, None, offset = Offset(0), limit = Limit(100))
+
+        ownerVisibleLibraries.length === 30
+        randoVisibleLibraries.length === 10
+        nooneVisibleLibraries.length === 10
       }
     }
 
     "modify an organization" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -67,7 +100,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
     }
 
     "modify an organization's base permissions" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
@@ -108,7 +141,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
     }
 
     "delete an organization" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -119,7 +152,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
         }
 
@@ -152,7 +185,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
     "transfer ownership of an organization" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -163,7 +196,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
         }
 
@@ -193,7 +226,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         }
         modifiedOrg.state === OrganizationStates.ACTIVE
         modifiedOrg.ownerId === Id[User](3)
-        newOwnerMembership.role === OrganizationRole.OWNER
+        newOwnerMembership.role === OrganizationRole.ADMIN
       }
     }
   }

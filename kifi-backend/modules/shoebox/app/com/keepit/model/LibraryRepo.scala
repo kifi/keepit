@@ -61,6 +61,10 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countMutualLibrariesForUsers(user1: Id[User], users: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getMutualLibrariesForUser(user1: Id[User], user2: Id[User], offset: Int, size: Int)(implicit session: RSession): Seq[Library]
 
+  // Org Library methods
+  def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int
+  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library]
+
   // other
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]]
@@ -192,7 +196,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   private def getByUserIdAndSlug(userId: Id[User], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.slug === slug && b.ownerId === userId && !b.state.inSet(excludeStates)) yield b).firstOption
+    (for (b <- rows if b.slug === slug && b.ownerId === userId && b.orgId.isEmpty && !b.state.inSet(excludeStates)) yield b).firstOption
   }
   private def getByOrgIdAndSlug(orgId: Id[Organization], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
     (for (b <- rows if b.slug === slug && b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).firstOption
@@ -448,6 +452,32 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"""select * from library lib where lib.id in (select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active') order by member_count desc, last_kept desc limit $size offset $offset"""
     query.as[Library].list
+  }
+
+  // Organization Library Repo methods
+  private def visibleOrganizationLibrariesHelper(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession) = {
+    if (includeOrgVisibleLibraries) {
+      for {
+        lib <- rows if lib.orgId === orgId && (
+          (lib.visibility === (LibraryVisibility.ORGANIZATION: LibraryVisibility)) ||
+          (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
+          lib.id.inSet(viewerLibraryMemberships) // user's can see any library they are a member of
+        )
+      } yield lib
+    } else {
+      for {
+        lib <- rows if lib.orgId === orgId && (
+          (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
+          lib.id.inSet(viewerLibraryMemberships)
+        )
+      } yield lib
+    }
+  }
+  def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int = {
+    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).length.run
+  }
+  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library] = {
+    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).drop(offset.value).take(limit.value).list.toSet
   }
 
   def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]] = {

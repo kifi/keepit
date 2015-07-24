@@ -16,7 +16,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val (org, membership) = db.readWrite { implicit s =>
           val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
-          val membership = orgMemberRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.OWNER))
+          val membership = orgMemberRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           (org, membership)
         }
 
@@ -35,8 +35,8 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val (org, activeMember, inactiveMember) = db.readWrite { implicit s =>
           val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
-          val active = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.OWNER))
-          val inactive = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.OWNER).withState(OrganizationMembershipStates.INACTIVE))
+          val active = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.ADMIN))
+          val inactive = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.ADMIN).withState(OrganizationMembershipStates.INACTIVE))
           (org, active, inactive)
         }
 
@@ -58,7 +58,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val orgs = db.readWrite { implicit session =>
           val orgs = for (i <- 1 to 10) yield orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
-          for (org <- orgs) orgMemberRepo.save(org.newMembership(role = OrganizationRole.OWNER, userId = Id[User](1)))
+          for (org <- orgs) orgMemberRepo.save(org.newMembership(role = OrganizationRole.ADMIN, userId = Id[User](1)))
 
           orgMemberRepo.save(orgs(0).newMembership(role = OrganizationRole.MEMBER, userId = Id[User](2)))
           orgs

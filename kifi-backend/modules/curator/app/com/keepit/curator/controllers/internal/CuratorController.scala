@@ -62,10 +62,10 @@ class CuratorController @Inject() (
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy =
-        if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
+        if (experiments.contains(UserExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
         else topScoreRecoStrategy
-      val scoringStrategy = if (experiments.contains(ExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
-      val applyFeedback = experiments.contains(ExperimentType.APPLY_RECO_FEEDBACK)
+      val scoringStrategy = if (experiments.contains(UserExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
+      val applyFeedback = experiments.contains(UserExperimentType.APPLY_RECO_FEEDBACK)
 
       val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context, applyFeedback)
 
@@ -114,7 +114,6 @@ class CuratorController @Inject() (
 
   def refreshUserRecos(userId: Id[User]) = Action { request =>
     SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
-    scheduleToSendDigestEmail(userId)
     Ok
   }
 
@@ -155,47 +154,6 @@ class CuratorController @Inject() (
       subSource getOrElse RecommendationSubSource.Unknown)
 
     NoContent
-  }
-
-  private def scheduleToSendDigestEmail(userId: Id[User]) = {
-    val sendEmailF = shoebox.getExperimentsByUserIds(Seq(userId)) flatMap { usersExperiments =>
-      if (usersExperiments(userId).contains(ExperimentType.SEND_DIGEST_EMAIL_ON_REFRESH)) {
-        shoebox.getUserValue(userId, UserValueName.LAST_DIGEST_EMAIL_SCHEDULED_AT) map { dateTimeStrOpt =>
-          dateTimeStrOpt.isEmpty || dateTimeStrOpt.exists { dateTimeStr =>
-            DateTimeJsonFormat.reads(JsString(dateTimeStr)).fold(
-              valid = { date =>
-                val now = DateTimeJsonFormat.writes(currentDateTime).value
-                shoebox.setUserValue(userId, UserValueName.LAST_DIGEST_EMAIL_SCHEDULED_AT, now)
-                date < currentDateTime.minusHours(24)
-              },
-              invalid = { errors =>
-                val errMsg = errors.map(_._2.map(_.message)).flatten.mkString("; ")
-                airbrake.notify(s"invalid UserValue (${UserValueName.LAST_DIGEST_EMAIL_SCHEDULED_AT} = $dateTimeStr): $errMsg")
-                false
-              }
-            )
-          }
-        }
-      } else Future.successful(false)
-    }
-
-    sendEmailF.filter(_ == true).foreach { _ =>
-      // todo(josh) add a delayed job onto SQS queue
-      log.info(s"[refreshUserRecos] scheduled to send digest email to userId=$userId")
-
-      // note: use of scheduler is for internal prototyping
-      scheduler.scheduleOnce(10 minutes) {
-        val digestRecoMailF = feedEmailSender.sendToUser(userId, RecentInterestRankStrategy)
-
-        digestRecoMailF.onComplete {
-          case Success(digestRecoMail) =>
-            if (digestRecoMail.mailSent) {
-              log.info(s"[refreshUserRecos] digest email sent to userId=$userId")
-            } else log.info(s"[refreshUserRecos] digest email NOT sent to userId=$userId")
-          case Failure(e) => airbrake.notify(s"refreshUserRecos failed to send to userId=$userId", e)
-        }
-      }
-    }
   }
 
   def publicFeedStartInitialLoading = Action { request =>

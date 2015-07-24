@@ -51,12 +51,6 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def trackEvent(event: HeimdalEvent): Unit
 
-  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject]
-
-  def updateMetrics(): Unit
-
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray]
-
   def deleteUser(userId: Id[User]): Unit
 
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit
@@ -142,23 +136,6 @@ class HeimdalServiceClientImpl @Inject() (
 
   def trackEvent(event: HeimdalEvent): Unit = {
     actor.ref ! event
-  }
-
-  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map { response =>
-      Json.parse(response.body).as[JsObject]
-    }
-  }
-
-  def updateMetrics(): Unit = {
-    broadcast(Heimdal.internal.updateMetrics())
-  }
-
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray] = {
-    val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(companion.typeCode, eventNames, limit, window)).map { response =>
-      Json.parse(response.body).as[JsArray]
-    }
   }
 
   def deleteUser(userId: Id[User]): Unit = call(Heimdal.internal.deleteUser(userId))
@@ -348,7 +325,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
     val payload = Json.toJson(userIds)
-    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(responseTimeout = Some(30000), maxJsonParseTime = Some(30000), maxWaitTime = Some(30000)), routingStrategy = offlinePriority).map { response =>
+    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(responseTimeout = Some(120000), maxJsonParseTime = Some(120000), maxWaitTime = Some(120000)), routingStrategy = offlinePriority).map { response =>
       log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.json}")
       (response.json \ "gratDatas").as[Seq[GratificationData]]
     }

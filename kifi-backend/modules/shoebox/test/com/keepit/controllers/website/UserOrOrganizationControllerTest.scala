@@ -92,7 +92,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(modules: _*) { implicit injector =>
           val (user, _) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(user.username)
           val response = controller.getByHandle(user.username)(request)
 
@@ -104,7 +104,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(modules: _*) { implicit injector =>
           val (user, org) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(org.getHandle)
           val response = controller.getByHandle(org.getHandle)(request)
 
@@ -129,7 +129,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(modules: _*) { implicit injector =>
           val (user, _) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getLibrariesByHandle(user.username)
           val response = controller.getLibrariesByHandle(user.username, page = 0, pageSize = 10, filter = "own")(request)
 
@@ -138,11 +138,10 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         }
       }
       "get an org" in {
-        skipped("not implemented yet :(")
         withDb(modules: _*) { implicit injector =>
           val (user, org) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getLibrariesByHandle(org.getHandle)
           val response = controller.getLibrariesByHandle(org.getHandle, page = 0, pageSize = 10, filter = "own")(request)
 

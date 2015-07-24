@@ -34,8 +34,10 @@ class ShoeboxDataPipeController @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     userIpAddressRepo: UserIpAddressRepo,
     domainRepo: DomainRepo,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -252,6 +254,15 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
+  def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgMemCands = db.readOnlyReplica { implicit s => organizationMembershipCandidateRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toIngestableOrganizationMembershipCandidate
+      }
+      Ok(Json.toJson(orgMemCands))
+    }
+  }
+
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val ipAddresses = db.readOnlyReplica { implicit s => userIpAddressRepo.getBySequenceNumber(seqNum, fetchSize) }.map {
@@ -269,6 +280,17 @@ class ShoeboxDataPipeController @Inject() (
         domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
       }
       Ok(Json.toJson(domainInfoByName))
+    }
+  }
+
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgDomainOwnerships = db.readOnlyReplica { implicit s =>
+        orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize)
+      }.map {
+        _.toIngestableOrganizationDomainOwnership
+      }
+      Ok(Json.toJson(orgDomainOwnerships))
     }
   }
 }

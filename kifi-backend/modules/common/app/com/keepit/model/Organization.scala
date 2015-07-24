@@ -38,6 +38,9 @@ case class Organization(
   def withBasePermissions(newBasePermissions: BasePermissions): Organization = {
     this.copy(basePermissions = new BasePermissions(basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
   }
+  def hiddenFromNonmembers: Organization = {
+    this.withBasePermissions(BasePermissions(Map(None -> Set())))
+  }
 
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
@@ -75,7 +78,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     BasePermissions(Map(
       None -> Set(OrganizationPermission.VIEW_ORGANIZATION),
 
-      Some(OrganizationRole.OWNER) -> OrganizationPermission.all,
+      Some(OrganizationRole.ADMIN) -> OrganizationPermission.all,
 
       Some(OrganizationRole.MEMBER) -> Set(
         OrganizationPermission.VIEW_ORGANIZATION,
@@ -181,7 +184,7 @@ object BasePermissions {
 }
 
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
-  override val version = 1
+  override val version = 2
   val namespace = "organization_by_id"
   def toKey(): String = id.id.toString
 }

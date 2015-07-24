@@ -119,7 +119,7 @@ class GraphServiceClientImpl(
   def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]): Future[Option[SociallyRelatedEntitiesForOrg]] = {
 
     def needRefresh(cachedEntities: Option[SociallyRelatedEntitiesForOrg]): Boolean = {
-      !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(12)))
+      !cachedEntities.exists(_.createdAt.isAfter(currentDateTime.minusHours(1)))
     }
 
     cacheProvider.relatedEntitiesForOrgCache.

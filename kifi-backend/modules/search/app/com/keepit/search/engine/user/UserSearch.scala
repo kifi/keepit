@@ -1,23 +1,22 @@
 package com.keepit.search.engine.user
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, Keep, User }
+import com.keepit.model.{ Library, User }
 import com.keepit.search.engine._
 import com.keepit.search.engine.uri.UriSearch
 import com.keepit.search.index.Searcher
-import com.keepit.search.{ Lang, SearchConfig, SearchFilter }
-import com.keepit.search.engine.result.{ ResultCollector, HitQueue }
+import com.keepit.search.{ SearchContext, Lang, SearchConfig, SearchFilter }
+import com.keepit.search.engine.result.HitQueue
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
-import com.keepit.search.index.graph.keep.KeepRecord
 
 class UserSearch(
     userId: Id[User],
     numHitsToReturn: Int,
-    filter: SearchFilter,
+    context: SearchContext,
     config: SearchConfig,
     engineBuilder: QueryEngineBuilder,
     librarySearcher: Searcher,
@@ -32,7 +31,7 @@ class UserSearch(
     timeLogs: SearchTimeLogs,
     explain: Option[(Id[User], Lang, Option[Lang])]) extends DebugOption with Logging {
   private[this] val percentMatch = config.asFloat("percentMatch")
-  private[this] val myFriendBoost = config.asFloat("myFriendBoost")
+  private[this] val myNetworkBoost = config.asFloat("myNetworkBoost")
 
   def execute(): UserShardResult = {
 
@@ -40,7 +39,7 @@ class UserSearch(
     debugLog(s"myHits: ${myHits.size()}/${myHits.totalHits}")
     debugLog(s"othersHits: ${othersHits.size()}/${othersHits.totalHits}")
 
-    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, filter, config, explanation)
+    val userShardResult = UserSearch.merge(myHits, othersHits, numHitsToReturn, context.filter, config, explanation)
     debugLog(s"userShardResult: ${userShardResult.hits.map(_.id).mkString(",")}")
     timeLogs.processHits()
     timeLogs.done()
@@ -63,11 +62,11 @@ class UserSearch(
         new UserSearchExplanationBuilder(libraryId, (firstLang, secondLang), query, labels)
     }
 
-    val collector = new UserResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myFriendBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
+    val collector = new UserResultCollector(librarySearcher, keepSearcher, numHitsToReturn * 5, myNetworkBoost, percentMatch / 100.0f, libraryQualityEvaluator, explanation)
 
-    val userScoreSource = new UserScoreVectorSource(userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new UserFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, libraryQualityEvaluator, explanation)
-    val libraryScoreSource = new UserFromLibrariesScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, filter, config, monitoredAwait, explanation)
+    val userScoreSource = new UserScoreVectorSource(userSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
+    val keepScoreSource = new UserFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, librarySearcher, libraryQualityEvaluator, explanation)
+    val libraryScoreSource = new UserFromLibrariesScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
 
     if (debugFlags != 0) {
       engine.debug(this)

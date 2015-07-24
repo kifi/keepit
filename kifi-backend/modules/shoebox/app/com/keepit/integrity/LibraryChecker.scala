@@ -2,7 +2,6 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.core.tailrec
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -10,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
+import com.keepit.common.core._
 
 class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
@@ -38,44 +38,29 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     syncOnLibraryMove() // reads libraries, updates keeps. (This is kind of recursive, but not really as I only update the ones that are wrong.)
   }
 
-  // terminates early when it runs out of elements.
-  @tailrec
-  final def stream[A](f: (Limit, Offset) => Iterable[A], needed: Limit, pageSize: Limit, currentOffset: Offset = Offset(0))(block: A => Unit): Unit = {
-    Math.min(Math.max(needed.value, 0), pageSize.value) match {
-      case 0 =>
-      case howManyToQueryFor =>
-        val items = f(Limit(howManyToQueryFor), currentOffset)
-        items.foreach(block)
-        if (items.size == pageSize.value && items.size != needed.value) {
-          stream(f, Limit(needed.value - items.size), pageSize, Offset(currentOffset.value + items.size))(block)
-        }
-    }
-  }
-
   private[integrity] def syncOnLibraryMove(): Unit = {
     val timer = new NamedStatsdTimer("LibraryChecker.syncOnLibraryMove")
     val libraries = db.readOnlyReplica { implicit s =>
       val lastSeq = getLastSeqNum(LIBRARY_MOVED_NAME)
       libraryRepo.getBySequenceNumber(lastSeq, LIBRARY_FETCH_SIZE)
     }
-    val nextSeqNum = if (libraries.isEmpty) None else Some(libraries.map(_.seq).max)
 
-    libraries.foreach { library =>
-      // only gets the keeps that have no matching orgId
-      def getKeeps(limit: Limit, offset: Offset): Iterable[Keep] = db.readOnlyReplica { implicit s =>
-        keepRepo.getByLibraryWithoutOrgId(library.id.get, library.organizationId, offset = offset, limit = limit)
+    libraries.map(_.seq).maxOpt.foreach { maxSeq =>
+      libraries.foreach { library =>
+        var fixedInPreviousBatch = 0
+        do {
+          db.readWrite { implicit session =>
+            val invalidKeepIds = keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, library.organizationId, limit = Limit(100))
+            invalidKeepIds.foreach { invalidKeepId =>
+              updateKeep(invalidKeepId, _.copy(organizationId = library.organizationId))
+            }
+            fixedInPreviousBatch = invalidKeepIds.size
+          }
+        } while (fixedInPreviousBatch > 0)
       }
-      // iterate over all keeps by 100keep pages.
-      db.readWrite { implicit session =>
-        stream(getKeeps, needed = Limit(Long.MaxValue), pageSize = Limit(100)) { keep =>
-          updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
-        }
-      }
-    }
 
-    nextSeqNum.foreach { seqNum =>
       db.readWrite { implicit session =>
-        systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, seqNum)
+        systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, maxSeq)
       }
     }
     timer.stopAndReport(appLog = true)

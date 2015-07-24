@@ -77,11 +77,11 @@
     if (chart == "mainSearch") {
       options.title = "Main Search Performance"
       if ($("#yscale").val() == "percent") {
-        options.target = ["substr(asPercent(stats.timers.search.mainSearch.*.mean_99,stats.timers.search.mainSearch.total.mean_99),4,5)"]
+        options.target = ["substr(asPercent(stats.timers.search.mainSearch.*.mean_90,stats.timers.search.mainSearch.total.mean_90),4,5)"]
         options.logBase = null;
       } else {
         //make offsets so log will always work
-        options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.mainSearch.*.mean_99,0.1),4,5)")
+        options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.mainSearch.*.mean_90,0.1),4,5)")
         options.logBase = $("#yscale").val() == "log" ? 2 : null;
       }
     }
@@ -89,11 +89,11 @@
     if (chart == "extSearch") {
       options.title = "Ext Search Performance"
       if ($("#yscale2").val() == "percent") {
-        options.target = ["substr(asPercent(stats.timers.search.extSearch.*.mean_99,stats.timers.search.extSearch.total.mean_99),4,5)"]
+        options.target = ["substr(asPercent(stats.timers.search.extSearch.*.mean_90,stats.timers.search.extSearch.total.mean_90),4,5)"]
         options.logBase = null;
       } else {
         //make offsets so log will always work
-        options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.extSearch.*.mean_99,0.1),4,5)")
+        options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.extSearch.*.mean_90,0.1),4,5)")
         options.logBase = $("#yscale2").val() == "log" ? 2 : null;
       }
     }

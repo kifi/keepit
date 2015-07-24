@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.keep
 import com.keepit.common.db.Id
 import com.keepit.common.strings._
 import com.keepit.model._
-import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
+import com.keepit.search.index.{ Searcher, FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
@@ -25,6 +25,8 @@ object KeepFields {
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
+  val titlePrefixField = "tp"
+  val titleValueField = "tv"
   val contentField = "c"
   val contentStemmedField = "cs"
   val siteField = "site"
@@ -35,9 +37,18 @@ object KeepFields {
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
-  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val minimalSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val fullTextSearchFields = Set(contentField, contentStemmedField)
+  val prefixSearchFields = Set(titlePrefixField)
+
+  val maxPrefixLength = 8
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+}
+
+object KeepIndexable {
+  @inline
+  def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
 case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
@@ -71,6 +82,9 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
     doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+    doc.add(buildPrefixField(titlePrefixField, keep.title.getOrElse(""), maxPrefixLength))
+    doc.add(buildStringDocValuesField(titleValueField, keep.title.getOrElse("")))
+
     doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
 
     val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang

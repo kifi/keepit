@@ -16,7 +16,7 @@ case class UserSearchExplanation(
     matching: Float,
     matchingThreshold: Float,
     minMatchingThreshold: Float,
-    myFriendBoost: Float,
+    myNetworkBoost: Float,
     rawScore: Float,
     score: Float,
     scoreComputation: String,
@@ -26,8 +26,8 @@ case class UserSearchExplanation(
     val sb = new StringBuilder
     sb.append("<table>\n")
     sb.append(s"<tr> <th colspan=3> $title </th> </tr>\n")
-    sb.append("<tr> <th> matching boost </th> <th> myFriend boost </th> </tr>\n")
-    sb.append(s"<tr> <td> $matching </td> <td> $myFriendBoost </td> </tr>\n")
+    sb.append("<tr> <th> matching boost </th> <th> myNetwork Boost </th> </tr>\n")
+    sb.append(s"<tr> <td> $matching </td> <td> $myNetworkBoost </td> </tr>\n")
     sb.append("</table>\n")
 
     sb.toString
@@ -44,7 +44,7 @@ object UserSearchExplanation {
 class UserSearchExplanationBuilder(userId: Id[User], lang: (Lang, Option[Lang]), query: Query, labels: Array[String]) extends SearchExplanationBuilder[User](userId, lang, query, labels) {
 
   private[this] var _score: Float = -1f
-  private[this] var _myFriendBoostValue: Float = -1f
+  private[this] var _myNetworkBoostValue: Float = -1f
 
   def build() = {
     UserSearchExplanation(
@@ -55,7 +55,7 @@ class UserSearchExplanationBuilder(userId: Id[User], lang: (Lang, Option[Lang]),
       matching,
       matchingThreshold,
       minMatchingThreshold,
-      _myFriendBoostValue,
+      _myNetworkBoostValue,
       rawScore,
       _score,
       scoreComputation,
@@ -66,7 +66,7 @@ class UserSearchExplanationBuilder(userId: Id[User], lang: (Lang, Option[Lang]),
   def collectScore(id: Long, score: Float, myUserBoost: Float): Unit = {
     if (id == userId.id) {
       _score = score
-      _myFriendBoostValue = myUserBoost
+      _myNetworkBoostValue = myUserBoost
     }
   }
 

@@ -24,9 +24,9 @@ trait LanguageCommander {
     userId: Id[User],
     query: String,
     acceptLangCodes: Seq[String],
-    libraryContext: LibraryContext): Future[(Lang, Option[Lang])]
+    libraryScope: Option[LibraryScope]): Future[(Lang, Option[Lang])]
 
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]]
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryScope: Option[LibraryScope]): Future[Map[Lang, Int]]
 }
 
 @Singleton
@@ -38,12 +38,8 @@ class LanguageCommanderImpl @Inject() (
   private[this] val reqConsolidator = new RequestConsolidator[(Id[User], Long), ListBuffer[Map[Lang, Int]]](60 seconds)
   private[this] val localConsolidator = new RequestConsolidator[(Id[User], Long), Map[Lang, Int]](60 seconds)
 
-  private def getLibraryId(libraryContext: LibraryContext) = {
-    libraryContext match {
-      case LibraryContext.Authorized(libId) => libId
-      case LibraryContext.NotAuthorized(libId) => libId
-      case _ => -1L
-    }
+  private def getLibraryId(libraryScope: Option[LibraryScope]): Long = {
+    libraryScope.map(_.id.id) getOrElse -1L
   }
 
   def getLangs(
@@ -52,7 +48,7 @@ class LanguageCommanderImpl @Inject() (
     userId: Id[User],
     query: String,
     acceptLangCodes: Seq[String],
-    libraryContext: LibraryContext): Future[(Lang, Option[Lang])] = {
+    libraryScope: Option[LibraryScope]): Future[(Lang, Option[Lang])] = {
 
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
@@ -62,16 +58,16 @@ class LanguageCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val libId = getLibraryId(libraryContext)
+    val libId = getLibraryId(libraryScope)
 
     val future = reqConsolidator((userId, libId)) { key =>
       val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
 
       if (dispatchPlan.nonEmpty) {
-        resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryContext)
+        resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryScope)
       }
       if (localShards.nonEmpty) {
-        resultFutures += distLangFreqs(localShards, userId, libraryContext)
+        resultFutures += distLangFreqs(localShards, userId, libraryScope)
       }
 
       Future.sequence(resultFutures)
@@ -139,11 +135,11 @@ class LanguageCommanderImpl @Inject() (
     }
   }
 
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
-    val libId = getLibraryId(libraryContext)
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryScope: Option[LibraryScope]): Future[Map[Lang, Int]] = {
+    val libId = getLibraryId(libraryScope)
 
     localConsolidator((userId, libId)) { key =>
-      searchFactory.getLibraryIdsFuture(userId, libraryContext).flatMap {
+      searchFactory.getLibraryIdsFuture(userId, libraryScope).flatMap {
         case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
           Future.traverse(shards) { shard =>
             SafeFuture {

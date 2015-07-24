@@ -105,6 +105,10 @@ class GraphUpdateFetcherImpl @Inject() (
       case OrganizationMembershipGraphUpdate => shoebox.getIngestableOrganizationMemberships(seq.copy(), fetchSize).imap(_.map(OrganizationMembershipGraphUpdate.apply))
 
       case UserIpAddressGraphUpdate => shoebox.getIngestableUserIpAddresses(seq.copy(), fetchSize).imap(_.map(UserIpAddressGraphUpdate.apply))
+
+      case OrganizationMembershipCandidateGraphUpdate => shoebox.getIngestableOrganizationMembershipCandidates(seq.copy(), fetchSize).imap(_.map(OrganizationMembershipCandidateGraphUpdate.apply))
+
+      case OrganizationDomainOwnershipGraphUpdate => shoebox.getIngestableOrganizationDomainOwnerships(seq.copy(), fetchSize).imap(_.map(OrganizationDomainOwnershipGraphUpdate.apply))
     }
   }
 }

@@ -1,7 +1,6 @@
 package com.keepit.common.images
 
-import java.awt.image.BufferedImage
-import java.io.{ ByteArrayOutputStream, PrintWriter }
+import java.io.{ File, ByteArrayOutputStream, PrintWriter }
 import java.util
 import javax.imageio.ImageIO
 
@@ -29,6 +28,13 @@ class Image4javaWrapper @Inject() (
     checkToolsAvailable() //call on constructor in production to get a fast fail
   }
 
+  def imageInfo(image: File): Try[RawImageInfo] = {
+    Try {
+      val info = new Info(image.getAbsolutePath, true)
+      RawImageInfo(info.getImageFormat, info.getImageWidth, info.getImageHeight)
+    }
+  }
+
   private def command() = new ConvertCmd(false)
 
   def checkToolsAvailable(): Unit = {
@@ -44,29 +50,10 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  private def addOptions(format: ImageFormat, operation: IMOperation): IMOps = format match {
-    //                -quality 100 -define webp:lossless=true -define webp:method=6
-    // optionally use -quality 80  -define webp:auto-filter=true -define webp:method=6
-    case ImageFormat.PNG => operation.strip().quality(95d).define("webp:auto-filter=true").define("webp:method=6")
-    // -strip -gaussian-blur 0.05 -quality 75% source.jpg result.jpg
-    case ImageFormat.JPG => operation.strip().gaussianBlur(0.05).quality(75d)
-    case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
-  }
-
-  private def imageByteSize(img: BufferedImage, format: ImageFormat): Int = Try {
-    val tmp = new ByteArrayOutputStream()
-    ImageIO.write(img, format.value, tmp)
-    tmp.close()
-    tmp.size()
-  } getOrElse (-1) //this is only for logging, I don't want it to break production
-
-  def resizeImage(image: BufferedImage, format: ImageFormat, boundingBox: Int): Try[BufferedImage] =
-    resizeImage(image: BufferedImage, format: ImageFormat, boundingBox, boundingBox)
-
   /**
    * using temporary file for resized image reading. for more info see http://www.imagemagick.org/discourse-server/viewtopic.php?t=19621
    */
-  def resizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
+  def resizeImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
     if (format == ImageFormat.GIF) {
       safeResizeImage(gifToPng(image), ImageFormat.PNG, width, height)
@@ -75,7 +62,7 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  def cropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): Try[BufferedImage] = Try {
+  def cropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
     if (format == ImageFormat.GIF) {
       safeCropImage(gifToPng(image), ImageFormat.PNG, width, height)
@@ -84,34 +71,30 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  def gifToPng(image: BufferedImage): BufferedImage = {
-    val inputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageIn", suffix = ".gif").file
-    inputFile.deleteOnExit()
-    ImageIO.write(image, "gif", inputFile)
+  def gifToPng(inputFile: File): File = {
 
     val outputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageOut", suffix = ".png").file
     outputFile.deleteOnExit()
 
     val operation = new IMOperation
-    operation.addImage(inputFile.getAbsolutePath)
+    operation.addImage(inputFile.getAbsolutePath + "[0]")
 
     operation.addImage(outputFile.getAbsolutePath)
 
     val convert = command()
 
     handleExceptions(convert, operation)
-
-    ImageIO.read(outputFile)
+    outputFile
   }
 
-  private def safeResizeImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
+  private def safeResizeImage(image: File, format: ImageFormat, width: Int, height: Int): File = {
     val operation = new IMOperation
 
     val outputFile = TemporaryFile(prefix = "ImageMagicResizeImage", suffix = s".${format.value}").file
     val filePath = outputFile.getAbsolutePath
     outputFile.deleteOnExit()
 
-    operation.addImage()
+    operation.addImage(image.getAbsolutePath)
     operation.resize(width, height)
 
     addOptions(format, operation)
@@ -119,22 +102,21 @@ class Image4javaWrapper @Inject() (
 
     val convert = command()
 
-    handleExceptions(convert, operation, Some(image))
+    handleExceptions(convert, operation)
 
-    val resized = ImageIO.read(outputFile)
-    log.info(s"resize image from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(resized, format)} bytes (${resized.getWidth}w/${resized.getWidth}h) using file $filePath")
-    resized
+    log.info(s"resize image from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
+    outputFile
   }
 
-  private def safeCropImage(image: BufferedImage, format: ImageFormat, width: Int, height: Int): BufferedImage = {
-    log.info(s"[safeCropImage] START format=$format cropWidth=$width cropHeight=$height imageWidth=${image.getWidth} imageHeight=${image.getHeight}")
+  private def safeCropImage(image: File, format: ImageFormat, width: Int, height: Int): File = {
+    log.info(s"[safeCropImage] START format=$format cropWidth=$width cropHeight=$height")
     val operation = new IMOperation
 
     val outputFile = TemporaryFile(prefix = "ImageMagicCropImage", suffix = s".${format.value}").file
     val filePath = outputFile.getAbsolutePath
     outputFile.deleteOnExit()
 
-    operation.addImage()
+    operation.addImage(image.getAbsolutePath)
 
     // minimum resize while preserving aspect ratio
     operation.resize(width, height, '^')
@@ -150,11 +132,10 @@ class Image4javaWrapper @Inject() (
     operation.addImage(filePath)
 
     val convert = command()
-    handleExceptions(convert, operation, Some(image))
+    handleExceptions(convert, operation)
 
-    val cropped = ImageIO.read(outputFile)
-    log.info(s"[safeCropImage] from ${imageByteSize(image, format)} bytes (${image.getWidth}w/${image.getWidth}h) to ${imageByteSize(cropped, format)} bytes (${cropped.getWidth}w/${cropped.getWidth}h) using file $filePath")
-    cropped
+    log.info(s"[safeCropImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
+    outputFile
   }
 
   private def getScript(convert: ConvertCmd, operation: IMOperation): String = {
@@ -179,15 +160,13 @@ class Image4javaWrapper @Inject() (
                                            |  $ sudo apt-get install imagemagick
                                          """.stripMargin
 
-  private def handleExceptions(convert: ConvertCmd, operation: IMOperation, image: Option[BufferedImage] = None): Unit = {
+  private def handleExceptions(convert: ConvertCmd, operation: IMOperation): Unit = {
     if (playMode == Mode.Test) {
-      println(getScript(convert, operation))
+      // If you need the script printed in tests, uncomment this:
+      //println(getScript(convert, operation))
     }
     try {
-      image match {
-        case None => convert.run(operation)
-        case Some(img) => convert.run(operation, img)
-      }
+      convert.run(operation)
     } catch {
       case topLevelException: Throwable => rootException(topLevelException) match {
         case e: CommandException =>
@@ -211,4 +190,37 @@ class Image4javaWrapper @Inject() (
     val cause = e.getCause
     if (cause == null || cause == e) e else rootException(cause)
   }
+
+  private def addOptions(format: ImageFormat, operation: IMOperation): IMOps = format match {
+    //                -quality 100 -define webp:lossless=true -define webp:method=6
+    // optionally use -quality 80  -define webp:auto-filter=true -define webp:method=6
+    case ImageFormat.PNG =>
+      operation
+        .strip()
+        .quality(95d)
+        .dither("None")
+        .define("png:compression-filter=5")
+        .define("png:compression-level=9")
+        .define("png:compression-filter=5")
+        .define("png:compression-strategy=1")
+        .define("png:exclude-chunk=all")
+        .define("webp:auto-filter=true")
+        .define("webp:method=6")
+        .colorspace("sRGB")
+        .interlace("None")
+    // -strip -gaussian-blur 0.05 -quality 75% source.jpg result.jpg
+    case ImageFormat.JPG =>
+      operation
+        .strip()
+        .gaussianBlur(0.05)
+        .quality(75d)
+        .define("jpeg:fancy-upsampling=off")
+        .colorspace("sRGB")
+        .interlace("None")
+    case _ => throw new UnsupportedOperationException(s"Can't resize format $format")
+  }
+
+  private def imageByteSize(img: File): Int = Try {
+    img.length().toInt
+  } getOrElse (-1) //this is only for logging, I don't want it to break production
 }

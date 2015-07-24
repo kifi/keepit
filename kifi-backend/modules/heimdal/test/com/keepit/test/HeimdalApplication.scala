@@ -21,7 +21,7 @@ import com.keepit.heimdal.HeimdalServiceTypeModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 
-class HeimdalApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
+class HeimdalApplication(overridingModules: Module*)(implicit path: File = new File("./modules/heimdal/"))
   extends DbTestApplication(path, overridingModules, Seq(
     FakeExecutionContextModule(),
     HeimdalServiceTypeModule(),

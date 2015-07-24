@@ -3,6 +3,7 @@ package com.keepit.abook.model
 import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.social.{ SocialId, SocialNetworkType }
+import com.kifi.macros.json
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -57,7 +58,7 @@ object RichSocialConnection {
   )(RichSocialConnection.apply, unlift(RichSocialConnection.unapply))
 }
 
-case class InviteRecommendation(
+case class UserInviteRecommendation(
   network: SocialNetworkType,
   identifier: Either[EmailAddress, SocialId],
   name: Option[String],
@@ -65,7 +66,7 @@ case class InviteRecommendation(
   lastInvitedAt: Option[DateTime],
   score: Double)
 
-object InviteRecommendation {
+object UserInviteRecommendation {
   val identifierFormat = EitherFormat[EmailAddress, SocialId]
   implicit val format = (
     (__ \ 'network).format[SocialNetworkType] and
@@ -74,7 +75,26 @@ object InviteRecommendation {
     (__ \ 'pictureUrl).formatNullable[String] and
     (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat) and
     (__ \ 'score).format[Double]
-  )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
+  )(UserInviteRecommendation.apply, unlift(UserInviteRecommendation.unapply))
+}
+
+@json
+case class OrganizationUserMayKnow(
+  orgId: Id[Organization],
+  score: Double)
+
+case class OrganizationInviteRecommendation(
+  identifier: Either[Id[User], EmailAddress],
+  name: Option[String],
+  score: Double)
+
+object OrganizationInviteRecommendation {
+  implicit val eitherFormat = EitherFormat[Id[User], EmailAddress]
+  implicit val format = (
+    (__ \ 'target).format[Either[Id[User], EmailAddress]] and
+    (__ \ 'name).formatNullable[String] and
+    (__ \ 'score).format[Double]
+  )(OrganizationInviteRecommendation.apply, unlift(OrganizationInviteRecommendation.unapply))
 }
 
 case class IrrelevantPeopleForUser(

@@ -47,7 +47,8 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
-  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]]
+  def getCollaboratorsByLibrary(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Set[Id[User]]]
+  def getCollaborators(userId: Id[User])(implicit session: RSession): Set[Id[User]]
 
   //
   // Profile Library Repo functions
@@ -407,11 +408,21 @@ class LibraryMembershipRepoImpl @Inject() (
     q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
   }
 
-  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]] = {
-    val access: LibraryAccess = LibraryAccess.READ_WRITE
-    (for { row <- rows if row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.userId =!= excludeUser && row.access === access } yield (row.userId, row.libraryId)).list.groupBy(_._2).mapValues { seq =>
-      seq.map(_._1).toSeq
+  def getCollaboratorsByLibrary(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Set[Id[User]]] = {
+    (for { row <- rows if row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.access.inSet(LibraryAccess.collaborativePermissions) } yield (row.userId, row.libraryId)).list.groupBy(_._2).mapValues { collaboratorAndLibraries =>
+      collaboratorAndLibraries.map(_._1).toSet
     }
+  }
+
+  private val getCollaboratorsCompiled = Compiled { (userId: Column[Id[User]]) =>
+    for {
+      userMembership <- rows if userMembership.userId === userId && userMembership.state === LibraryMembershipStates.ACTIVE && userMembership.access.inSet(LibraryAccess.collaborativePermissions)
+      libMembership <- rows if libMembership.libraryId === userMembership.libraryId && libMembership.userId =!= userId && libMembership.state === LibraryMembershipStates.ACTIVE && libMembership.access.inSet(LibraryAccess.collaborativePermissions)
+    } yield libMembership.userId
+  }
+
+  def getCollaborators(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
+    getCollaboratorsCompiled(userId).run.toSet
   }
 }
 

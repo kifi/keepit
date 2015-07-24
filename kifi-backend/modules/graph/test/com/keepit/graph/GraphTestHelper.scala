@@ -82,6 +82,9 @@ trait GraphTestHelper {
   val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
+  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, t1, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
+  val orgMemCandidateUpdates = List(orgMemCandidateUpdate1)
+
   val emailAccountUpdate1 = EmailAccountGraphUpdate(emailAccountId1, Some(userid1), Some(domainId1), verified = true, emailSeq = SequenceNumber(1))
   val emailAccountUpdate2 = EmailAccountGraphUpdate(emailAccountId2, Some(userid2), Some(domainId1), verified = true, emailSeq = SequenceNumber(2))
   val emailAccountUpdates = List(emailAccountUpdate1, emailAccountUpdate2)
@@ -89,6 +92,10 @@ trait GraphTestHelper {
   val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
   val uriUpdates = List(normalizedUriUpdate1)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++ emailAccountUpdates ++ uriUpdates
+  val orgDomainOwnershipUpdate1 = OrganizationDomainOwnershipGraphUpdate(orgId1, domainId1, OrganizationDomainOwnershipStates.ACTIVE, SequenceNumber(1))
+  val orgDomainOwnershipUpdates = List(orgDomainOwnershipUpdate1)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++
+    orgMemCandidateUpdates ++ emailAccountUpdates ++ uriUpdates ++ orgDomainOwnershipUpdates
 
 }

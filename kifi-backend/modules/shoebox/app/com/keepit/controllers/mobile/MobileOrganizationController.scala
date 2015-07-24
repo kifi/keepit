@@ -25,7 +25,7 @@ class MobileOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
-    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       request.body.validate[OrganizationInitialValues](OrganizationInitialValues.mobileV1) match {
         case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
@@ -35,9 +35,9 @@ class MobileOrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val orgView = orgCommander.getOrganizationView(response.newOrg.id.get)
-              implicit val writes = OrganizationView.mobileV1
-              Ok(Json.obj("organization" -> Json.toJson(orgView)))
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              implicit val writes = OrganizationView.mobileWrites
+              Ok(Json.obj("organization" -> Json.toJson(organizationView)))
           }
       }
     }
@@ -50,9 +50,9 @@ class MobileOrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val orgView = orgCommander.getOrganizationView(response.modifiedOrg.id.get)
-            implicit val writes = OrganizationView.mobileV1
-            Ok(Json.obj("organization" -> Json.toJson(orgView)))
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            implicit val writes = OrganizationView.mobileWrites
+            Ok(Json.obj("organization" -> Json.toJson(organizationView)))
         }
     }
   }
@@ -66,18 +66,20 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("organization" -> Json.toJson(orgCommander.getOrganizationView(request.orgId))(OrganizationView.mobileV1)))
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
+    Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.mobileWrites), "viewer_permissions" -> requesterPermissions))
   }
 
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
-    if (!request.experiments.contains(ExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
+    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
-      val user = userCommander.getByExternalIds(Seq(extId)).values.head
-      val publicOrgs = orgMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgCards = orgCommander.getOrganizationCards(publicOrgs).values.toSeq
+      val user = userCommander.getByExternalId(extId)
+      val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
+      val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-      implicit val writes = OrganizationCard.mobileV1
+      implicit val writes = OrganizationCard.mobileWrites
       Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
     }
   }
