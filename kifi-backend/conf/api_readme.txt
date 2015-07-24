@@ -1,5 +1,65 @@
 ***API Readme***
 
+APIs:
+
+GET /site/organizations/:id
+  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo } }
+
+GET /site/user/:id/organizations
+  out: {“organizations”: Array[OrganizationCard]}
+
+POST /site/organizations/create
+  in:  OrganizationInitialValues
+  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo }
+
+POST /site/organizations/:id/modify
+  in: OrganizationModifications
+  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo}
+
+DELETE /site/organizations/:id/delete
+
+GET /site/organizations/:id/members?offset=OFF&limit=LIM
+  out: {“members”: Array[MaybeOrganizationMember]}
+
+POST /site/organizations/:id/members/invite
+  in: {“message”: Option[String],
+    “invites”: Array[“id”: ExternalId[User] OR “email”: EmailAddress}
+  out: {“result”: “success”,
+    “invitees”: Array[“id”: ExternalId[User] OR “email”: EmailAddress]}
+
+POST /site/organizations/:id/members/invites/cancel
+  in: {“cancel”: Array[OrganizationMemberInvitation]}
+  out: {“cancelled”: Array[OrganizationMemberInvitation]}
+
+POST /site/organizations/:id/members/invites/accept?authToken=AUTH
+  out: NoContent
+
+POST /site/organizations/:id/members/invites/decline
+  out: NoContent
+
+POST /site/organizations/:id/members/invites/link
+  out: {“link”: URL}
+
+POST /site/organizations/:id/members/modify
+  in:  {“members”: Array[{“userId”: ExternalId[User],
+        “newRole”: OrganizationRole}]}
+  out: {“modifications”: Array[{“userId”: ExternalId[User],
+        “newRole”: OrganizationRole}]}
+
+POST /site/organizations/:id/members/remove
+  in:   {“members”: Array[{“userId”: ExternalId[User]}]}
+  out:  {“removals”: Array[ExternalId[User]]}
+
+GET /site/organizations/:id/libraries?offset=OFF&limit=LIM
+  out:  {“libraries”: Array[LibraryInfo]}
+
+GET /site/user-or-org/:handle
+  out: {“type”: (“user” or “org”)
+        “result”: (UserProfile or OrganizationView)}
+
+GET /site/user-or-org/:handle/libraries
+  out: {“libraries”: Array[LibraryInfo]}
+
 Models:
 
   ExternalId[User] and PublicId[Organization] are both strings that uniquely identify users/orgs respectively. EmailAddress is a string that must look like an email address.
@@ -77,64 +137,5 @@ Models:
     modifiedAt: DateTime,
     kind: LibraryKind,
     invite: Option[LibraryInviteInfo] = None) // currently only for Invited tab on viewer's own user profile
-
-APIs:
 
-GET /site/organizations/:id
-  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo } }
-
-GET /site/user/:id/organizations
-  out: {“organizations”: Array[OrganizationCard]}
-
-POST /site/organizations/create
-  in:  OrganizationInitialValues
-  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo }
-
-POST /site/organizations/:id/modify
-  in: OrganizationModifications
-  out: {“organization”: OrganizationInfo, “membership”: MembershipInfo}
-
-DELETE /site/organizations/:id/delete
-
-GET /site/organizations/:id/members?offset=OFF&limit=LIM
-  out: {“members”: Array[MaybeOrganizationMember]}
-
-POST /site/organizations/:id/members/invite
-  in: {“message”: Option[String],
-    “invites”: Array[“id”: ExternalId[User] OR “email”: EmailAddress}
-  out: {“result”: “success”,
-    “invitees”: Array[“id”: ExternalId[User] OR “email”: EmailAddress]}
-
-POST /site/organizations/:id/members/invites/cancel
-  in: {“cancel”: Array[OrganizationMemberInvitation]}
-  out: {“cancelled”: Array[OrganizationMemberInvitation]}
-
-POST /site/organizations/:id/members/invites/accept?authToken=AUTH
-  out: NoContent
-
-POST /site/organizations/:id/members/invites/decline
-  out: NoContent
-
-POST /site/organizations/:id/members/invites/link
-  out: {“link”: URL}
-
-POST /site/organizations/:id/members/modify
-  in:  {“members”: Array[{“userId”: ExternalId[User],
-        “newRole”: OrganizationRole}]}
-  out: {“modifications”: Array[{“userId”: ExternalId[User],
-        “newRole”: OrganizationRole}]}
-
-POST /site/organizations/:id/members/remove
-  in:   {“members”: Array[{“userId”: ExternalId[User]}]}
-  out:  {“removals”: Array[ExternalId[User]]}
-
-GET /site/organizations/:id/libraries?offset=OFF&limit=LIM
-  out:  {“libraries”: Array[LibraryInfo]}
-
-GET /site/user-or-org/:handle
-  out: {“type”: (“user” or “org”)
-        “result”: (UserProfile or OrganizationView)}
-
-GET /site/user-or-org/:handle/libraries
-  out: {“libraries”: Array[LibraryInfo]}
 
