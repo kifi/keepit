@@ -169,7 +169,7 @@ angular.module('kifi')
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
-          type: ['orgProfileService', '$stateParams', function ($stateParams, orgProfileService) {
+          type: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
             return orgProfileService
               .userOrOrg($stateParams.handle)
               .then(function (userOrOrgData) {
@@ -177,7 +177,7 @@ angular.module('kifi')
               });
           }],
           libraryService: 'libraryService',
-          library: ['libraryService', 'net', '$stateParams', 'type', function (libraryService, net, $stateParams, type) {
+          library: ['libraryService', 'orgProfileService', '$stateParams', 'type', function (libraryService, orgProfileService, $stateParams, type) {
             function getOrgId(userOrOrgData) {
               return userOrOrgData.result.organization.organizationInfo.id;
             }
@@ -202,10 +202,10 @@ angular.module('kifi')
               return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
             } else {
               // Org Library
-              return userProfileService
+              return orgProfileService
                 .userOrOrg($stateParams.handle)
                 .then(getOrgId)
-                .then(net.getOrgLibraries.bind(net))
+                .then(orgProfileService.getOrgLibraries)
                 .then(getLibraryIdBySlug)
                 .then(libraryService.getLibraryById.bind(libraryService))
                 .then(function (response) {
