@@ -149,17 +149,24 @@ class ServiceDiscoveryImpl(
     })
   }
 
+  private def doRefetch(): Unit = {
+    zkClient.session { zk =>
+      for (cluster <- clusters.values) {
+        val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
+        cluster.update(zk, children)
+      }
+    }
+  }
+
   @volatile private[this] var forceUpdateInProgress = false
   def forceUpdate(): Unit = if (!forceUpdateInProgress) synchronized {
     if (!forceUpdateInProgress) {
       forceUpdateInProgress = true
       try {
-        zkClient.session { zk =>
-          for (cluster <- clusters.values) {
-            val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
-            cluster.update(zk, children)
-          }
-        }
+        doRefetch()
+      } catch {
+        case ex: org.apache.zookeeper.KeeperException.SessionExpiredException => zkClient.refreshSession()
+        case ex: org.apache.zookeeper.KeeperException.ConnectionLossException => zkClient.refreshSession()
       } finally {
         forceUpdateInProgress = false
       }

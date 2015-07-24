@@ -54,16 +54,18 @@ angular.module('kifi')
       .state('userOrOrg', {
         url: '/:handle',
         controller: [
-          'net', '$state', '$stateParams',
-          function (net, $state, $stateParams) {
-            net.userOrOrg($stateParams.handle).then(function (response) {
-              var type = response.data.type;
-              if (type === 'user') {
-                $state.go('userProfile.libraries.own', $stateParams, { location: false });
-              } else if (type === 'org') {
-                $state.go('orgProfile.libraries', $stateParams, { location: false });
-              }
-            });
+          '$state', '$stateParams', 'orgProfileService',
+          function ($state, $stateParams, orgProfileService) {
+            orgProfileService
+              .userOrOrg($stateParams.handle)
+              .then(function (userOrOrgData) {
+                var type = userOrOrgData.type;
+                if (type === 'user') {
+                  $state.go('userProfile.libraries.own', $stateParams, { location: false });
+                } else if (type === 'org') {
+                  $state.go('orgProfile.libraries', $stateParams, { location: false });
+                }
+              });
           }
         ]
       })
@@ -74,23 +76,25 @@ angular.module('kifi')
         controller: 'OrgProfileCtrl',
         resolve: {
           profile: [
-            'net', '$state', '$stateParams',
-            function (net, $state, $stateParams) {
+            '$state', '$stateParams','orgProfileService',
+            function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
-              return net.userOrOrg($stateParams.handle).then(function (response) {
-                var type = response.data.type;
+              return orgProfileService
+                .userOrOrg($stateParams.handle)
+                .then(function (userOrOrgData) {
+                  var type = userOrOrgData.type;
 
-                if (type === 'org') { // sanity check
-                  if (response.data.result && response.data.result.error) {
-                    throw new Error(response.data.result.error);
+                  if (type === 'org') { // sanity check
+                    if (userOrOrgData.result && userOrOrgData.result.error) {
+                      throw new Error(userOrOrgData.result.error);
+                    } else {
+                      // success
+                      return userOrOrgData.result.organization;
+                    }
                   } else {
-                    // success
-                    return response.data.result.organization;
+                    throw new Error('orgProfile state was given invalid type ' + type);
                   }
-                } else {
-                  throw new Error('orgProfile state was given invalid type ' + type);
-                }
-              });
+                });
             }
           ]
         },
@@ -112,18 +116,20 @@ angular.module('kifi')
         controller: 'UserProfileCtrl',
         resolve: {
           profile: [
-            'net', '$state', '$stateParams',
-            function (net, $state, $stateParams) {
+            '$state', '$stateParams', 'orgProfileService',
+            function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
-              return net.userOrOrg($stateParams.handle).then(function (response) {
-                var type = response.data.type;
+              return orgProfileService
+                .userOrOrg($stateParams.handle)
+                .then(function (userOrOrgData) {
+                  var type = userOrOrgData.type;
 
-                if (type === 'user') { // sanity check
-                  return response.data.result;
-                } else {
-                  throw new Error('userProfile state was given invalid type ' + type);
-                }
-              });
+                  if (type === 'user') { // sanity check
+                    return userOrOrgData.result;
+                  } else {
+                    throw new Error('userProfile state was given invalid type ' + type);
+                  }
+                });
             }
           ]
         },
@@ -163,15 +169,17 @@ angular.module('kifi')
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
-          type: ['net', '$stateParams', function (net, $stateParams) {
-            return net.userOrOrg($stateParams.handle).then(function (response) {
-              return response.data.type;
-            });
+          type: ['orgProfileService', '$stateParams', function ($stateParams, orgProfileService) {
+            return orgProfileService
+              .userOrOrg($stateParams.handle)
+              .then(function (userOrOrgData) {
+                return userOrOrgData.type;
+              });
           }],
           libraryService: 'libraryService',
           library: ['libraryService', 'net', '$stateParams', 'type', function (libraryService, net, $stateParams, type) {
-            function getOrgId(response) {
-              return response.data.result.organization.organizationInfo.id;
+            function getOrgId(userOrOrgData) {
+              return userOrOrgData.result.organization.organizationInfo.id;
             }
 
             function getLibraryIdBySlug(response) {
@@ -194,7 +202,8 @@ angular.module('kifi')
               return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
             } else {
               // Org Library
-              return net.userOrOrg($stateParams.handle)
+              return userProfileService
+                .userOrOrg($stateParams.handle)
                 .then(getOrgId)
                 .then(net.getOrgLibraries.bind(net))
                 .then(getLibraryIdBySlug)

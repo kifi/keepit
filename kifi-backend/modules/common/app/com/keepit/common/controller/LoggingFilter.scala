@@ -31,8 +31,6 @@ class LoggingFilter() extends EssentialFilter {
         val message = s"Current status of service ${myAmazonInstanceInfo.info.localIp} ${discovery.myStatus.getOrElse("UNKNOWN")}, last changed ${discovery.timeSinceLastStatusChange}ms ago"
         //system is going down, maybe the logger, emails, airbrake are gone already
         println(message)
-        //we can remove this airbrake once we'll see the system works right
-        airbrake.notify(message)
         Done(Result(header = ResponseHeader(Status.SERVICE_UNAVAILABLE), body = Enumerator()))
       } else {
         val timer = accessLog.timer(HTTP_IN)

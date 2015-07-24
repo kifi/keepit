@@ -177,8 +177,13 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
-  def allHaveOrg(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
-    clusterUsers.forall { case (_, orgs, cands) => orgs.nonEmpty || cands.nonEmpty }
+  def shouldIgnoreAll(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
+    db.readOnlyReplica { implicit s =>
+      clusterUsers.forall {
+        case (user, orgs, cands) =>
+          orgs.nonEmpty || cands.nonEmpty || userValueRepo.getValue(user.id.get, UserValues.ignoreForPotentialOrganizations)
+      }
+    }
 
   def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
@@ -195,8 +200,9 @@ class UserIpAddressEventLogger @Inject() (
 
       ipInfoOpt foreach { ipInfo =>
         if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-          if (allHaveOrg(usersFromCluster)) {
-            log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or candidates of the same organization")
+          if (shouldIgnoreAll(usersFromCluster)) {
+            log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or " +
+              s"candidates of organizations or have been marked as ignored for potential organizations")
           } else {
             log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about $clusterIp")
             val msg = formatCluster(ipInfo, usersFromCluster, newUserId)

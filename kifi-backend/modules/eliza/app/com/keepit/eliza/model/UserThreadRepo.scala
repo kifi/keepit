@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.FortyTwoGenericTypeMappers
+import com.keepit.common.db.slick.SQLInterpolation_WarningsFixed
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ User, NormalizedURI }
 
@@ -464,16 +464,19 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val users_list = users.map(_.id).mkString(",")
     log.info(s"[ELIZA DEBUG] Shared threads maps $users into $users_list")
-    val result = sql"""
+    val queryStr = """
       select thread_id, created_at, count(*) as c from user_thread
-        where user_id in ($users_list)
+        where user_id in (""" + users_list + """)
         and replyable = 1
         and created_at >= '2015-1-1'
         group by thread_id
         having count(*) > 1
         order by week(created_at)
         desc
-    """.as[(Long, DateTime, Int)].list
+    """
+    val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
+    log.info(s"[ELIZA DEBUG] Shared threads for $users generates query ${query(()).getStatement}")
+    val result = query.list
     log.info(s"[ELIZA DEBUG] Shared threads for $users returns ${result.length} records")
     result.map((GroupThreadStats.apply _).tupled)
   }
@@ -482,15 +485,18 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val users_list = users.map(_.id).mkString(",")
     log.info(s"[ELIZA DEBUG] All threads maps $users into $users_list")
-    val result = sql"""
+    val queryStr = """
       select thread_id, created_at, count(*) as c from user_thread
-        where user_id in ($users_list)
+        where user_id in (""" + users_list + """)
         and replyable = 1
         and created_at >= '2015-1-1'
         group by thread_id
         order by week(created_at)
         desc
-    """.as[(Long, DateTime, Int)].list
+    """
+    val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
+    log.info(s"[ELIZA DEBUG] All threads for $users generates query ${query(()).getStatement}")
+    val result = query.list
     log.info(s"[ELIZA DEBUG] All threads for $users returns ${result.length} records")
     result.map((GroupThreadStats.apply _).tupled)
   }

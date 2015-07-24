@@ -90,7 +90,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 3, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
     val tracer = new StackTrace()
     val respFuture = RetryFuture(attempts, { case t: ConnectException => serviceCluster.refresh(); true }) {
       callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
