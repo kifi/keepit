@@ -245,5 +245,4 @@ class AdminOrganizationController @Inject() (
     orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainId)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
-
 }
