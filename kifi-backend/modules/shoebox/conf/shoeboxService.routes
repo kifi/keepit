@@ -565,10 +565,6 @@ GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
 
-GET     /admin/ids/all              @com.keepit.controllers.admin.AdminIDController.listAll
-GET     /admin/ids/byPublicId       @com.keepit.controllers.admin.AdminIDController.byPublicId(name: String, id: String)
-GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDController.byId(name: String, id: Long)
-
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
@@ -877,6 +873,9 @@ POST          /admin/rover/urlRules/create                                      
 GET           /admin/goodies/testRegex                                               @com.keepit.controllers.admin.AdminGoodiesController.testRegex
 GET           /admin/goodies/testRegexFilled                                         @com.keepit.controllers.admin.AdminGoodiesController.testRegexFilled(regex: String, test: Option[String])
 POST          /admin/goodies/performRegexTest                                        @com.keepit.controllers.admin.AdminGoodiesController.performRegexTest
+GET           /admin/goodies/ids/all                                             @com.keepit.controllers.admin.AdminGoodiesController.listAllExternalIds
+GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
+GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
 
 ##########################################
 # Common Healthcheck / service routes
