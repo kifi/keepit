@@ -463,7 +463,7 @@ class UserThreadRepoImpl @Inject() (
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val users_list = users.map(_.id).mkString(",")
-    log.info("[ELIZA DEBUG] Shared threads maps $users into $users_list")
+    log.info(s"[ELIZA DEBUG] Shared threads maps $users into $users_list")
     val result = sql"""
       select thread_id, created_at, count(*) as c from user_thread
         where user_id in ($users_list)
@@ -474,14 +474,14 @@ class UserThreadRepoImpl @Inject() (
         order by week(created_at)
         desc
     """.as[(Long, DateTime, Int)].list
-    log.info("[ELIZA DEBUG] Shared threads for $users returns ${result.length} records")
+    log.info(s"[ELIZA DEBUG] Shared threads for $users returns ${result.length} records")
     result.map((GroupThreadStats.apply _).tupled)
   }
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val users_list = users.map(_.id).mkString(",")
-    log.info("[ELIZA DEBUG] All threads maps $users into $users_list")
+    log.info(s"[ELIZA DEBUG] All threads maps $users into $users_list")
     val result = sql"""
       select thread_id, created_at, count(*) as c from user_thread
         where user_id in ($users_list)
@@ -491,7 +491,7 @@ class UserThreadRepoImpl @Inject() (
         order by week(created_at)
         desc
     """.as[(Long, DateTime, Int)].list
-    log.info("[ELIZA DEBUG] All threads for $users returns ${result.length} records")
+    log.info(s"[ELIZA DEBUG] All threads for $users returns ${result.length} records")
     result.map((GroupThreadStats.apply _).tupled)
   }
 
