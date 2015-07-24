@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'net', 'modalService', '$timeout', 
-  function ($state, $http, $analytics, $location, net, modalService, $timeout) {
+  '$state', '$http', '$analytics', '$location', 'net', 'modalService', 'orgProfileService', '$timeout',
+  function ($state, $http, $analytics, $location, net, modalService, orgProfileService, $timeout) {
 
   return {
     restrict: 'A',
@@ -56,7 +56,7 @@ angular.module('kifi')
           }, 1500);
           return updateMe(res.data);
         });
-      
+
       };
 
       scope.onOrgProfileImageClick = function (event) {
@@ -101,8 +101,12 @@ angular.module('kifi')
           label: 'Accept',
           className: 'kf-accept',
           click: function () {
-            net.acceptOrgMemberInvite(scope.profile.id, $location.search().authToken);
-            scope.acknowledgedInvite = true;
+            orgProfileService
+              .acceptOrgMemberInvite(scope.profile.id, $location.search().authToken)
+              .then(function () {
+                scope.acknowledgedInvite = true;
+                $state.reload();
+              });
           }
         }
       ];
