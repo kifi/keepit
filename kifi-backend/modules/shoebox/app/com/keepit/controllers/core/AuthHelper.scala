@@ -10,6 +10,7 @@ import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.Play
 import play.api.libs.oauth.RequestToken
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -238,7 +239,10 @@ class AuthHelper @Inject() (
       case _ => // Anything BUT twitter waitlist
         if (!emailConfirmedAlready) {
           val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
-          SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
+          if (Play.isProd) {
+            // Do not sent the email in dev
+            SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
+          }
         } else {
           db.readWrite { implicit session =>
             emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -246,7 +250,10 @@ class AuthHelper @Inject() (
             }
             userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
           }
-          SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
+          if (Play.isProd) {
+            // Do not sent the email in dev
+            SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
+          }
         }
     }
 

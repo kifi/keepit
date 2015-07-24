@@ -14,6 +14,7 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
   def onConnected(handler: ZooKeeperSession => Unit): Unit = { handler(zk) }
   def session[T](f: ZooKeeperSession => T): T = f(zk)
   def close() = {}
+  def refreshSession(): Unit = {}
 }
 
 class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) extends ZooKeeperSession {

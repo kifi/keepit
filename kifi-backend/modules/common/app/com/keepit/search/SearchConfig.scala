@@ -21,7 +21,8 @@ object SearchConfig {
     Map[String, String](
       // Common Query Parser
       "titleBoost" -> "2.0",
-      "prefixBoost" -> "1.0",
+      "prefixBoost" -> "0.0",
+      "trailingPrefixBoost" -> "0.8",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
@@ -65,7 +66,8 @@ object SearchConfig {
     Map[String, String](
       // Common Query Parser
       "titleBoost" -> "boost value for title field vs main content",
-      "prefixBoost" -> "importance of prefix query vs regular text query",
+      "prefixBoost" -> "importance of prefix query vs regular text query for a non-trailing term",
+      "trailingPrefixBoost" -> "importance of prefix query vs regular text query for a trailing term",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",

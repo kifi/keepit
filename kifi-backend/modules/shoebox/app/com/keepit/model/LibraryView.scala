@@ -46,7 +46,7 @@ case class ExternalLibraryAddRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  externalSpace: Option[ExternalLibrarySpace] = None)
+  space: Option[ExternalLibrarySpace] = None)
 
 object ExternalLibraryAddRequest {
   implicit val reads: Reads[ExternalLibraryAddRequest] = (

@@ -1,8 +1,8 @@
-.kf-organization-member-manage
-  width: 75%;
-  max-width: 500px;
-  min-width: 400px;
-  margin: 15px auto
+.kf-org-member-manage
+  width: 80%;
+  max-width: 700px
+  min-width: 400px
+  margin: 40px auto
   background-color: #fff
   border-radius: 16px
   padding: 15px
@@ -11,19 +11,24 @@
   > * + *
     margin-top: 10px
 
-  > .kf-organization-member + .kf-organization-member
-    border-top: 1px solid lightgray
-    padding-top: 10px
+.kf-org-member
+  &:nth-child(odd)
+    background: whitesmoke
+    padding: 5px 15px
+    margin-left: -15px
+    margin-right: -15px
 
-.kf-organization-member-invite
+.kf-org-member-invite
   box-sizing: border-box
   width: 100%
   padding: 10px
   border: 2px dashed lightgray
   border-radius: 6px
   background: none
+  margin-bottom: 15px
+  color: textBlackColor
 
-.kf-organization-member-email
+.kf-org-member-email
   width: 42px
   height: 42px
   background-repeat: no-repeat

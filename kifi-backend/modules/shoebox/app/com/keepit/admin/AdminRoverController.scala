@@ -122,29 +122,4 @@ class AdminRoverController @Inject() (
     )).map(_ => Redirect(routes.AdminRoverController.getAllUrlRules()))
   }
 
-  def testRegex = AdminUserPage { implicit request =>
-    Ok(views.html.admin.roverTestRegex())
-  }
-
-  def testRegexFilled = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val body = request.body
-    val regex = body.get("regex").flatMap(_.headOption)
-    val tests = body.get("tests")
-    Ok(views.html.admin.roverTestRegex(regex, tests))
-  }
-
-  def performRegexTest = AdminUserPage(parse.json) { implicit request =>
-    val body = request.body
-    try {
-      val regex = (body \ "regex").as[String]
-      val pattern = Pattern.compile(regex)
-      val tests = (body \ "tests").as[List[String]]
-      val results = tests.map { pattern.matcher(_).matches }
-      Ok(Json.toJson(results))
-    } catch {
-      case e: PatternSyntaxException =>
-        BadRequest(Json.toJson(e.toString))
-    }
-  }
-
 }
