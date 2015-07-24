@@ -141,9 +141,9 @@ class AdminOrganizationController @Inject() (
       val existedCand = new AtomicInteger(0)
       allLines.split("\\r?\\n") foreach { line =>
         try {
-          val args = line.split(",").map(_.trim).filter(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filter(_.isEmpty)
+          val args = line.split(",").map(_.trim).filterNot(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filterNot(_.isEmpty)
           if (args.size < 2) {
-            throw new Exception(s"less then two args: $args")
+            throw new Exception(s"less then two args: ${args.mkString(",")}")
           }
           val userId = Id[User](args.head.toLong)
           val orgNames = args.drop(1)
