@@ -17,18 +17,35 @@ angular.module('kifi')
       link: function ($scope, $element) {
         $scope.view = {
           editableValue: $scope.value,
-          inputPlaceholder: $scope.inputPlaceholder
+          inputPlaceholder: $scope.inputPlaceholder,
+          textareaHeight: '',
+          textareaWidth: ''
         };
         $scope.saveable = true;
+
+        var calculateHeight = function() {
+          var textarea = $element.find('textarea'),
+              span     = $element.find('span');
+          if (textarea && span) {
+            // Show an element that matches the textarea's styling to determine
+            // how high it should be to show all of textarea's text.
+            $scope.view.textareaHeight = {'height': span.css('height') };
+            $scope.view.textareaWidth = {'width': textarea.css('width') };
+          }
+        };
+
+        $scope.$watch('view.editableValue', function() { calculateHeight(); });
+        $scope.$evalAsync(function() { calculateHeight(); });
 
         $scope.editEvent = function($event) {
           if ($event.which === 27) {
             $scope.cancel();
           }
           else if ($event.which === 13) {
+            $event.preventDefault();
             $scope.save();
           }
-        }
+        };
 
         $scope.cancel = function () {
           $scope.view.editableValue = $scope.value;

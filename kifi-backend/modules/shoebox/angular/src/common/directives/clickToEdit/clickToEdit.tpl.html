@@ -1,4 +1,5 @@
 <div class="kf-click-to-edit">
   <input ng-hide="textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" placeholder="{{view.inputPlaceholder}}" />
-  <textarea ng-show="textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" />
+  <span class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester" ng-style="view.textareaWidth">{{view.editableValue}}</span>
+  <textarea class="kf-click-to-edit-textarea" ng-show="textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" ng-style="view.textareaHeight"></textarea>
 </div>
