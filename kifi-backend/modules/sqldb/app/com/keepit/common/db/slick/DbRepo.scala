@@ -33,6 +33,7 @@ trait Repo[M <: Model[M]] {
   def count(implicit session: RSession): Int
   def page(page: Int, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def pageAscendingIds(page: Int, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[Id[M]]
+  def pageAscending(page: Int, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M]
   def invalidateCache(model: M)(implicit session: RSession): Unit
   def deleteCache(model: M)(implicit session: RSession): Unit
 }
@@ -112,6 +113,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       t <- rows if !t.state.inSet(excludeStates)
     } yield t.id
     q.sortBy(_ asc).drop(page * size).take(size).list
+  }
+
+  def pageAscending(page: Int, size: Int, excludeStates: Set[State[M]])(implicit session: RSession): Seq[M] = {
+    val q = for {
+      t <- rows if !t.state.inSet(excludeStates)
+    } yield t
+    q.sortBy(_.id asc).drop(page * size).take(size).list
   }
 
   private def insert(model: M)(implicit session: RWSession): Id[M] = {
