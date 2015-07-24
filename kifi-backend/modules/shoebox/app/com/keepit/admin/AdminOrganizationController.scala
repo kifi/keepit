@@ -177,12 +177,14 @@ class AdminOrganizationController @Inject() (
             }
           }
         } catch {
-          case e: Exception => throw new Exception(s"error on line: $line", e)
+          case e: Exception => throw new Exception(s"error on line: $line $e", e)
         }
       }
       Ok(s"for ${users.get} users: created ${createdOrgs.get} orgs, reviewed ${existedOrgs.get}, created ${createdCand.get} connections, activated ${activatedCand.get} connections and reviewed ${existedCand.get} connections")
     } catch {
-      case e: Exception => InternalServerError(e.toString)
+      case e: Exception =>
+        log.error(allLines, e)
+        InternalServerError(e.toString)
     }
   }
 
