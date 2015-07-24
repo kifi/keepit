@@ -15,6 +15,7 @@ trait OrganizationMembershipCandidateRepo extends Repo[OrganizationMembershipCan
   def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
   def getAllByOrgId(orgId: Id[Organization], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
   def getByUserId(userId: Id[User], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
+  def getByUserAndOrg(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Option[OrganizationMembershipCandidate]
   def getAllByUserId(userId: Id[User], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit session: RSession): Seq[OrganizationMembershipCandidate]
   def deactivate(model: OrganizationMembershipCandidate)(implicit session: RWSession): Unit
 }
@@ -52,6 +53,11 @@ class OrganizationMembershipCandidateRepoImpl @Inject() (val db: DataBaseCompone
   def getByUserId(userId: Id[User], limit: Limit, offset: Offset, states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
     (for { row <- rows if row.userId === userId && row.state.inSet(states) } yield row).drop(offset.value).take(limit.value).list
   }
+
+  def getByUserAndOrg(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Option[OrganizationMembershipCandidate] = {
+    (for { row <- rows if row.userId === userId && row.orgId === orgId } yield row).firstOption
+  }
+
   def getAllByUserId(userId: Id[User], states: Set[State[OrganizationMembershipCandidate]] = Set(OrganizationMembershipCandidateStates.ACTIVE))(implicit s: RSession): Seq[OrganizationMembershipCandidate] = {
     getByUserId(userId, limit = Limit(Int.MaxValue), offset = Offset(0), states = states)
   }
