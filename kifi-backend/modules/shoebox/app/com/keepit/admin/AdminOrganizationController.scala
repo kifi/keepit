@@ -139,11 +139,11 @@ class AdminOrganizationController @Inject() (
       val createdCand = new AtomicInteger(0)
       val activatedCand = new AtomicInteger(0)
       val existedCand = new AtomicInteger(0)
-      Source.fromString(allLines).getLines() foreach { line =>
+      allLines.split("\\r?\\n") foreach { line =>
         try {
           val args = line.split(",").map(_.trim).filter(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filter(_.isEmpty)
           if (args.size < 2) {
-            throw new Exception(s"less then two args args: $args")
+            throw new Exception(s"less then two args: $args")
           }
           val userId = Id[User](args.head.toLong)
           val orgNames = args.drop(1)
