@@ -1,71 +1,84 @@
-.kf-organization-member
+.kf-org-member
   text-align: left
   font-size: 14px
+  color: textBlackColor
 
-.kf-organization-member-link
-  float: left
-  margin-right: 15px
+.kf-org-member-link
+  img
+    margin-right: 10px
 
-.kf-organization-member-info
-  float: left
+.kf-org-member-info
+  p
+    margin: 0
 
-.kf-organization-member-info-email
+    + p
+      margin-top: 5px
+
+.kf-org-member-info,
+.kf-org-member-link img
+  display: inline-block
+  vertical-align: middle
+
+.kf-org-member-info-name
+  font-weight: bold
+  color: textBlackColor
+
+  &:hover
+    text-decoration: underline
+
+.kf-org-member-info-role
+  text-decoration: none
+  color: lighten(textBlackColor, 15%)
+
+.kf-org-member-info-email
   font-style: italic
 
-.kf-organization-member-upper-left
+.kf-org-member-upper-left
   float: left
   width: 50%
 
-.kf-organization-member-upper-right
+.kf-org-member-upper-right
   float: right
 
-.kf-organization-member-lower
+.kf-org-member-lower
   clear: both
   margin-top: 10px
 
-.kf-organization-member-lower-left
+.kf-org-member-lower-left
   float: left
   width: 50%
 
-.kf-organization-member-lower-right
+.kf-org-member-lower-right
   float: right
 
-.kf-organization-member-pic
+.kf-org-member-pic
   display: inline-block
   border-radius: 100%
   width: 42px
   height: 42px
 
-.kf-organization-member-action-button
+.kf-org-member-action-button
   border: 0
   background: none
   font-size: 14px
+  color: textBlackColor
 
-.kf-organization-membership-action
+.kf-org-membership-action
   text-decoration: underline
 
-.kf-organization-member-admin-action
+.kf-org-member-admin-action
   border: 1px solid black
   background: none
 
-.kf-organization-member-no-actions
-  padding: 0
-  margin: 0
-  color: gray
-  padding-left: 15px
-
-.kf-organization-member-invite-sent
+.kf-org-member-invite-sent
   color: #56b263
 
 .kf-dropdown-arrow-icon
-  width: 15px
-  height: 8px
-  margin-left: 10px
-  fill: none
-  stroke: lightgray
-  stroke-width: 30px
+  width: 20px
+  height: 20px
+  fill: lightgray
 
-.kf-organization-member-action-button:hover
+.kf-org-member-action-button:hover
   text-decoration: underline
 
   .kf-dropdown-arrow-icon

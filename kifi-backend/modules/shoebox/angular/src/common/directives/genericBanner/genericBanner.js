@@ -8,7 +8,9 @@ angular.module('kifi')
       templateUrl: 'common/directives/genericBanner/genericBanner.tpl.html',
       scope: {
         text: '@',
-        actions: '='
+        actions: '=',
+        icon: '=',
+        variation: '='
       },
       replace: true,
       link: function () {

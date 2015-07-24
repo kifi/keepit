@@ -31,11 +31,6 @@ ophImageWidth = 200px
     margin-left: 20px
     margin-right: 20px
 
-.kf-oph-actions
-  position: absolute
-  top: 10px
-  right: 0
-
 .kf-oph-pic
   width: ophImageWidth
 
@@ -77,15 +72,13 @@ ophImageWidth = 200px
     font-size: 14px
 
 .kf-oph-description
-  margin: 0 auto 20px
   color: #d8d8d8
   line-height: 1.6em
   font-size: 0.9em
   font-smoothing: antialiased
   word-break: break-word
-  border-bottom: 1px solid white
   width: 100%
-  padding-bottom: 20px
+  margin-bottom: 10px
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     line-height: 16px
@@ -97,24 +90,13 @@ ophImageWidth = 200px
     &:hover
       text-decoration: underline
 
-.kf-oph-link
-  color: accentGreent
+.kf-oph-url
+  margin-top: 0
 
-// .kf-oph-stats
-//   width: 175px
-//   text-align: center
-//   margin: 0px auto
-//
-//   th
-//     text-transform: uppercase
-//     font-weight: 100
-//     font-size: 0.7em
-//
-//   td
-//     font-size: 1.2em
-//
-//     a
-//       color: white
+  input
+    font-size: 0.85rem
+    color: lighten(accentGreen, 15%)
+    text-decoration: underline
 
 .kf-oph-stats
   text-align: center

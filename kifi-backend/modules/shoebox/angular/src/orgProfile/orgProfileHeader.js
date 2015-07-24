@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'net', 'modalService',
-  function ($state, $http, $analytics, $location, net, modalService) {
+  '$state', '$http', '$analytics', '$location', 'net', 'modalService', '$timeout', 
+  function ($state, $http, $analytics, $location, net, modalService, $timeout) {
 
   return {
     restrict: 'A',
@@ -15,6 +15,7 @@ angular.module('kifi')
     link: function (scope) {
 
       scope.editing = false;
+      scope.notification = null;
       var lastSavedInfo = {};
 
       scope.myTextValue = 'Hello';
@@ -37,7 +38,7 @@ angular.module('kifi')
       scope.save = function () {
         var data = {
           name: scope.profile.name,
-          link: scope.profile.link,
+          site: scope.profile.site,
           description: scope.profile.description
         };
 
@@ -46,8 +47,16 @@ angular.module('kifi')
             'action': 'updateOrgProfile',
             'path': $location.path()
           });
+          // TODO (Adam): Should validate.
+          // Success: sets last value to current one, shows success.
+          // Error: Sets current value to last one, shows error.
+          scope.notification = 'save';
+          $timeout(function() {
+            scope.notification = null;
+          }, 1500);
           return updateMe(res.data);
         });
+      
       };
 
       scope.onOrgProfileImageClick = function (event) {
