@@ -107,7 +107,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
         case (node, instance) =>
           val ip = instance.instanceInfo.localIp
           machines.get(ip) foreach { existing =>
-            airbrake.get.notify(s"there are two existing ZK nodes with the same IP address $ip: $existing and $node for service ${instance}, removing the smallest node")
             val newNodeId = instances(node).id.id
             val existingNodeId = instances(existing).id.id
             if (newNodeId == existingNodeId) {
