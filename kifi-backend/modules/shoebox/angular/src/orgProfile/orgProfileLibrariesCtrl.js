@@ -11,7 +11,7 @@ angular.module('kifi')
 
     $scope.openCreateLibrary = function () {
       modalService.open({
-        template: 'libraries/manageLibraryModal.tpl.html',
+        template: 'libraries/manageUserLibraryModal.tpl.html',
         modalData: {
           returnAction: function (newLibrary) {
             // Add new library to right behind the two system libraries.

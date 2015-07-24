@@ -99,7 +99,7 @@ angular.module('kifi')
       }
 
       modalService.open({
-        template: 'libraries/manageLibraryModal.tpl.html',
+        template: 'libraries/manageUserLibraryModal.tpl.html',
         modalData: {
           returnAction: function (newLibrary) {
             addNewLibAnimationClass(newLibrary);

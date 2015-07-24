@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfManageLibrary', [
+.directive('kfManageUserLibrary', [
   '$location', '$state', 'friendService', 'libraryService', 'modalService',
   'profileService', 'util',
   function ($location, $state, friendService, libraryService, modalService,
@@ -10,7 +10,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       require: '^kfModal',
-      templateUrl: 'libraries/manageLibrary.tpl.html',
+      templateUrl: 'libraries/manageUserLibrary.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
         //
         // Internal data.
