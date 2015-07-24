@@ -26,11 +26,11 @@ module.exports = (robot) ->
     reply_msg = "Starting deploy for #{service}"
     command = "/home/eng/bin/deploy #{service} --iam #{user}-via-eddie"
 
-    if version is not undefined
+    if version isnt undefined
       reply_msg += " with version #{version}"
       command += " --version #{version}"
 
-    if host is not undefined
+    if host isnt undefined
       reply_msg += " only on host #{host}"
       command += " --host #{host}"
 
