@@ -5,21 +5,18 @@
         <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">
-          <div class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</div>
+          <p class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</p>
+          <p class="kf-org-member-info-role">{{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}</p>
         </div>
       </a>
     </div>
     <div class="kf-org-member-upper-right">
-      <button class="kf-org-member-action-button" ng-click="toggleControls()">
-        {{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}
+      <button class="kf-org-member-action-button" ng-click="toggleControls()" ng-if="shouldShowMakeAdmin() || shouldShowInvite() || shouldShowRemove()">
         <svg kf-symbol-sprite icon="dropdown-arrow" class="{{ 'kf-dropdown-arrow-icon' + (isOpen() ? ' kf-dropdown-arrow-icon-inverted' : '') }}"></svg>
       </button>
     </div>
   </div>
-  <div class="kf-org-member-lower clearfix" ng-style="isOpen() ? null : { 'display': 'none' }">
-    <p class="kf-org-member-no-actions" ng-if="!shouldShowMakeAdmin() && !shouldShowInvite() && !shouldShowRemove()">
-      There are no actions to perform
-    </p>
+  <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
       <button ng-if="shouldShowMakeAdmin()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerMakeAdmin(member)">Make admin</button>
     </div>

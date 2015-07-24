@@ -4,33 +4,6 @@ angular.module('kifi')
 
 .directive('kfOrgMember', [
   function () {
-
-    function _open() {
-      var $scope = this;
-      $scope._controlsOpen = true;
-      $scope.$emit('openedMember', $scope.member);
-    }
-
-    function _close() {
-      var $scope = this;
-      $scope._controlsOpen = false;
-      $scope._resentInvite = false;
-    }
-
-    function _isOpen() {
-      var $scope = this;
-      return $scope._controlsOpen;
-    }
-
-    function _toggleControls() {
-      var $scope = this;
-      if ($scope._controlsOpen) {
-        $scope.close();
-      } else {
-        $scope.open();
-      }
-    }
-
     function _isMe() {
       var $scope = this;
       return $scope.member.id === $scope.me.id;
@@ -110,10 +83,27 @@ angular.module('kifi')
         $scope._resentInvite = false;
         $scope._controlsOpen = false;
 
-        $scope.open = _open;
-        $scope.close = _close;
-        $scope.isOpen = _isOpen;
-        $scope.toggleControls = _toggleControls;
+        $scope.open = function() {
+          $scope.controlsOpen = true;
+          $scope.$emit('openedMember', $scope.member);
+        };
+
+        $scope.close = function() {
+          $scope.controlsOpen = false;
+          $scope.resentInvite = false;
+        };
+
+        $scope.isOpen = function() {
+          return $scope.controlsOpen;
+        };
+
+        $scope.toggleControls = function() {
+          if ($scope.controlsOpen) {
+            $scope.close();
+          } else {
+            $scope.open();
+          }
+        };
 
         $scope.isMe = _isMe;
 

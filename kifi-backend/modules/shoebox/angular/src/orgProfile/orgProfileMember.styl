@@ -8,8 +8,11 @@
     margin-right: 10px
 
 .kf-org-member-info
-  &:hover
-    text-decoration: underline
+  p
+    margin: 0
+
+    + p
+      margin-top: 5px
 
 .kf-org-member-info,
 .kf-org-member-link img
@@ -19,6 +22,13 @@
 .kf-org-member-info-name
   font-weight: bold
   color: textBlackColor
+
+  &:hover
+    text-decoration: underline
+
+.kf-org-member-info-role
+  text-decoration: none
+  color: lighten(textBlackColor, 15%)
 
 .kf-org-member-info-email
   font-style: italic
@@ -60,22 +70,13 @@
   border: 1px solid black
   background: none
 
-.kf-org-member-no-actions
-  padding: 0
-  margin: 0
-  color: gray
-  text-align: right
-
 .kf-org-member-invite-sent
   color: #56b263
 
 .kf-dropdown-arrow-icon
-  width: 15px
-  height: 8px
-  margin-left: 10px
-  fill: none
-  stroke: lightgray
-  stroke-width: 30px
+  width: 20px
+  height: 20px
+  fill: lightgray
 
 .kf-org-member-action-button:hover
   text-decoration: underline
