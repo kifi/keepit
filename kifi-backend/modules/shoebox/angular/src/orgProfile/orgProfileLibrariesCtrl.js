@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
-  '$scope', 'net', 'profile', 'profileService', 'modalService',
-  function($scope, net, profile, profileService, modalService) {
+  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
+  function ($scope, profile, profileService, orgProfileService, modalService) {
     var organization = profile.organizationInfo;
 
     $scope.libraries = [];
@@ -21,8 +21,10 @@ angular.module('kifi')
       });
     };
 
-    net.getOrgLibraries(organization.id).then(function (response) {
-      $scope.libraries = response.data.libraries;
-    });
+    orgProfileService
+      .getOrgLibraries(organization.id)
+      .then(function (libraryData) {
+        $scope.libraries = libraryData.libraries;
+      });
   }
 ]);
