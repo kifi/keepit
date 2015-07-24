@@ -19,18 +19,20 @@ editButtonWidth = 40px
 .kf-click-to-edit-editing:hover:before
   content: 'save'
 
-.kf-click-to-edit input
-  width: 'calc(100% - %s)' % editButtonWidth
-  box-sizing: border-box
-  padding: 2px
-  background: none
-  border-radius: 2px
-  color: inherit
-  border: 1px dashed transparent
+.kf-click-to-edit 
+  input,
+  textarea
+    width: 'calc(100% - %s)' % editButtonWidth
+    box-sizing: border-box
+    padding: 2px
+    background: none
+    border-radius: 2px
+    color: inherit
+    border: 1px dashed transparent
 
-  &:hover
-    border-color: rgba(255, 255, 255, 0.25)
+    &:hover
+      border-color: rgba(255, 255, 255, 0.25)
 
-  &:focus,
-  &:hover:focus
-    border-color: #fff
+    &:focus,
+    &:hover:focus
+      border-color: #fff

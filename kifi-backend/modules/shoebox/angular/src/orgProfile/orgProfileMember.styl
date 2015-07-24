@@ -1,13 +1,24 @@
 .kf-org-member
   text-align: left
   font-size: 14px
+  color: textBlackColor
 
 .kf-org-member-link
-  float: left
-  margin-right: 15px
+  img
+    margin-right: 10px
 
 .kf-org-member-info
-  float: left
+  &:hover
+    text-decoration: underline
+
+.kf-org-member-info,
+.kf-org-member-link img
+  display: inline-block
+  vertical-align: middle
+
+.kf-org-member-info-name
+  font-weight: bold
+  color: textBlackColor
 
 .kf-org-member-info-email
   font-style: italic
@@ -40,6 +51,7 @@
   border: 0
   background: none
   font-size: 14px
+  color: textBlackColor
 
 .kf-org-membership-action
   text-decoration: underline

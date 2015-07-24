@@ -10,6 +10,7 @@ angular.module('kifi')
       scope: {
         value: '=',
         inputPlaceholder: '=',
+        textarea: '=',
         onSave: '='
       },
       replace: true,
@@ -29,13 +30,6 @@ angular.module('kifi')
           }
         }
 
-        $scope.enableEditor = function() {
-          $scope.view.editableValue = $scope.value;
-          $timeout(function () {
-            $element.find('input').focus();
-          });
-        };
-
         $scope.cancel = function () {
           $scope.view.editableValue = $scope.value;
           $scope.disableEditor();
@@ -48,17 +42,14 @@ angular.module('kifi')
         };
 
         $scope.save = function () {
-          $scope.value = $scope.view.editableValue;
+          if ($scope.onSave && $scope.value !== $scope.view.editableValue) {
+            $scope.value = $scope.view.editableValue;
 
-          if ($scope.onSave) {
             $timeout(function() {
               $scope.onSave();
             });
           }
           $scope.disableEditor();
-          // TODO (Adam): Should validate.
-          // Success: sets last value to current one, shows success.
-          // Error: Sets current value to last one, shows error.
         };
 
         $scope.onBlur = function () {

@@ -4,10 +4,10 @@
       <a href="{{member|profileUrl}}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="close()">
         <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
+        <div class="kf-org-member-info">
+          <div class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</div>
+        </div>
       </a>
-      <div class="kf-org-member-info">
-        <div class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</div>
-      </div>
     </div>
     <div class="kf-org-member-upper-right">
       <button class="kf-org-member-action-button" ng-click="toggleControls()">
