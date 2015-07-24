@@ -28,7 +28,11 @@ class KQueryParser(
     val titleBoost = config.asFloat("titleBoost")
     val siteBoost = config.asFloat("siteBoost")
     val concatBoost = config.asFloat("concatBoost")
-    val prefixBoost = if (disablePrefixSearch) 0.0f else config.asFloat("prefixBoost")
+    def getPrefixBoost(trailing: Boolean) = {
+      if (disablePrefixSearch) 0.0f
+      else if (trailing) config.asFloat("trailingPrefixBoost")
+      else config.asFloat("prefixBoost")
+    }
     val lang: Lang = qp.analyzer.lang
   }
 

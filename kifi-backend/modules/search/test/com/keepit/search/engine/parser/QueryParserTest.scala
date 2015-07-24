@@ -124,5 +124,19 @@ class QueryParserTest extends Specification {
       query = parser.parse("aaa site:")
       query.toString === "Some(aaa)"
     }
+
+    "strip leading spaces" in new QueryParserScope {
+      var query = parser.parse("    aaa")
+      query.toString === "Some(aaa)"
+    }
+
+    "detect trailing terms" in new QueryParserScope {
+      parser.parseSpecs("    aaa bbb").get.head === QuerySpec(Occur.SHOULD, "", "aaa", false, false)
+      parser.parseSpecs("    aaa ").get.head === QuerySpec(Occur.SHOULD, "", "aaa", false, false)
+      parser.parseSpecs("    \"aaa\" ").get.head === QuerySpec(Occur.SHOULD, "", "aaa", true, false)
+
+      parser.parseSpecs("    aaa").get.head === QuerySpec(Occur.SHOULD, "", "aaa", false, true)
+      parser.parseSpecs("    \"aaa\"").get.head === QuerySpec(Occur.SHOULD, "", "aaa", true, true)
+    }
   }
 }
