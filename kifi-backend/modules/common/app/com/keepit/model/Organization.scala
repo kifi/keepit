@@ -24,10 +24,10 @@ case class Organization(
     state: State[Organization] = OrganizationStates.ACTIVE,
     seq: SequenceNumber[Organization] = SequenceNumber.ZERO,
     name: String,
-    description: Option[String] = None,
+    description: Option[String],
     ownerId: Id[User],
     handle: Option[PrimaryOrganizationHandle],
-    site: Option[String] = None,
+    site: Option[String],
     basePermissions: BasePermissions = Organization.defaultBasePermissions) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))

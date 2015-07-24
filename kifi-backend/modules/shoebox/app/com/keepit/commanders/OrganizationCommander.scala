@@ -208,7 +208,7 @@ class OrganizationCommanderImpl @Inject() (
         getValidationError(request) match {
           case Some(fail) => Left(fail)
           case None =>
-            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
