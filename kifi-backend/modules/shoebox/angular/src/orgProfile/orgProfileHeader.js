@@ -9,7 +9,8 @@ angular.module('kifi')
   return {
     restrict: 'A',
     scope: {
-      profile: '='
+      profile: '=',
+      membership: '='
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
@@ -86,7 +87,7 @@ angular.module('kifi')
 
       scope.shouldShowInviteBanner = function () {
         // TODO: Check if this user is a member already
-        return $location.search().authToken && !scope.acknowledgedInvite;
+        return scope.membership.isInvited && !scope.acknowledgedInvite;
       };
 
       scope.bannerButtons = [
