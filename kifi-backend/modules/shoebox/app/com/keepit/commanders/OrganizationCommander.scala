@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
@@ -79,6 +80,7 @@ class OrganizationCommanderImpl @Inject() (
     val orgHandle = org.getHandle
     val orgName = org.name
     val description = org.description
+    val site = org.site
 
     val ownerId = userRepo.get(org.ownerId).externalId
 
@@ -96,6 +98,7 @@ class OrganizationCommanderImpl @Inject() (
       handle = orgHandle,
       name = orgName,
       description = description,
+      site = site,
       avatarPath = avatarPath,
       members = membersAsBasicUsers,
       numMembers = memberCount,
@@ -185,13 +188,19 @@ class OrganizationCommanderImpl @Inject() (
       // Are there any members that can't even see the organization?
       OrganizationRole.all exists { role => !(bps.permissionsMap.contains(Some(role)) && bps.forRole(role).contains(VIEW_ORGANIZATION)) }
     }
-    !badName && !badBasePermissions
+    val normalizedSiteUrl = modifications.site.map { url =>
+      if (url.startsWith("http://") || url.startsWith("https://")) url
+      else "https://" + url
+    }
+    val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
+    !badName && !badBasePermissions && !badSiteUrl
   }
 
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
       .withBasePermissions(modifications.basePermissions.getOrElse(org.basePermissions))
+      .withSite(modifications.site.orElse(org.site))
   }
 
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
@@ -200,7 +209,7 @@ class OrganizationCommanderImpl @Inject() (
         getValidationError(request) match {
           case Some(fail) => Left(fail)
           case None =>
-            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None)
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)

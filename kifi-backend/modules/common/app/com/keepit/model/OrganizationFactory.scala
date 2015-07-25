@@ -11,7 +11,7 @@ object OrganizationFactory {
   private[this] val idx = new AtomicLong(10000 + System.currentTimeMillis() % 100)
 
   def organization(): PartialOrganization = {
-    new PartialOrganization(Organization(name = RandomStringUtils.random(10), ownerId = Id[User](nextInt(10000)), handle = None))
+    new PartialOrganization(Organization(name = RandomStringUtils.random(10), ownerId = Id[User](nextInt(10000)), handle = None, description = None, site = None))
   }
 
   def organizations(count: Int): Seq[PartialOrganization] = List.fill(count)(organization())

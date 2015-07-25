@@ -1,5 +1,7 @@
 package com.keepit.controllers.admin
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.common.service.IpAddress

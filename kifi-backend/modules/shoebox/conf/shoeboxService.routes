@@ -706,6 +706,7 @@ POST    /admin/organization/:id/removeMember       @com.keepit.controllers.admin
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/ownDomain       @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
 GET    /admin/organization/:id/disownDomain/:domainId @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainId: Id[com.keepit.classify.Domain])
+POST    /admin/organization/:id/setInactive       @com.keepit.controllers.admin.AdminOrganizationController.setInactive(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                    @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
@@ -718,6 +719,7 @@ GET     /admin/findOrganizationByName             @com.keepit.controllers.admin.
 GET     /admin/findOrganizationByNameJson             @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByNameJson(orgName: String)
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId             @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
+POST    /admin/organizations/importOrgsFromLinkedIn @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView

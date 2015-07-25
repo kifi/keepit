@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$scope', 'net', 'profile', 'profileService', 'modalService',
-  function($scope, net, profile, profileService, modalService) {
+  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
+  function($scope, profile, profileService, orgProfileService, modalService) {
     var organization = profile.organizationInfo;
 
     function handleErrorResponse(response) {
@@ -34,9 +34,10 @@ angular.module('kifi')
     $scope.members = [];
     $scope.me = null;
 
-    net.getOrgMembers(organization.id)
-      .then(function success(response) {
-        $scope.members = response.data.members;
+    orgProfileService
+      .getOrgMembers(organization.id)
+      .then(function success(memberData) {
+        $scope.members = memberData.members;
         $scope.me = $scope.members.filter(function (m) {
           return m.username === profileService.me.username;
         }).pop() || profileService.me;
@@ -49,7 +50,7 @@ angular.module('kifi')
     });
 
     $scope.$on('removeMember', function (e, member) {
-      net.removeOrgMember(organization.id, {
+      orgProfileService.removeOrgMember(organization.id, {
           members: [{
             userId: member.id
           }]
@@ -62,20 +63,21 @@ angular.module('kifi')
 
     $scope.$on('inviteMember', function (e, member, cb) {
       //trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'kifiFriend' });
-      var promise = net.sendOrgMemberInvite(organization.id, {
-        invites: [{
-          id: member.id ? member.id : undefined,
-          email: member.email ? member.email : undefined,
-          role: 'member'
-        }]
-      })
-      ['catch'](handleErrorResponse);
+      var promise = orgProfileService
+        .sendOrgMemberInvite(organization.id, {
+          invites: [{
+            id: member.id ? member.id : undefined,
+            email: member.email ? member.email : undefined,
+            role: 'member'
+          }]
+        })
+        ['catch'](handleErrorResponse);
 
       cb(promise);
     });
 
     $scope.$on('cancelInvite', function (e, member) {
-      net.cancelOrgMemberInvite(organization.id, {
+      orgProfileService.cancelOrgMemberInvite(organization.id, {
         cancel: [{
           id: member.id ? member.id : undefined,
           email: member.email ? member.email : undefined
@@ -88,7 +90,7 @@ angular.module('kifi')
     });
 
     $scope.$on('promoteMember', function (e, member) {
-      net.modifyOrgMember(organization.id, {
+      orgProfileService.modifyOrgMember(organization.id, {
         members: [{
           userId: member.id,
           newRole: 'admin'

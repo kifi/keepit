@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'net', 'modalService', '$timeout', 
-  function ($state, $http, $analytics, $location, net, modalService, $timeout) {
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout',
+  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout) {
 
   return {
     restrict: 'A',
     scope: {
-      profile: '='
+      profile: '=',
+      membership: '='
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
@@ -42,21 +43,22 @@ angular.module('kifi')
           description: scope.profile.description
         };
 
-        return net.updateOrgProfile(scope.profile.id, data).then(function (res) {
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'updateOrgProfile',
-            'path': $location.path()
+        return orgProfileService
+          .updateOrgProfile(scope.profile.id, data)
+          .then(function (res) {
+            $analytics.eventTrack('user_clicked_page', {
+              'action': 'updateOrgProfile',
+              'path': $location.path()
+            });
+            // TODO (Adam): Should validate.
+            // Success: sets last value to current one, shows success.
+            // Error: Sets current value to last one, shows error.
+            scope.notification = 'save';
+            $timeout(function() {
+              scope.notification = null;
+            }, 1500);
+            return updateMe(res.data);
           });
-          // TODO (Adam): Should validate.
-          // Success: sets last value to current one, shows success.
-          // Error: Sets current value to last one, shows error.
-          scope.notification = 'save';
-          $timeout(function() {
-            scope.notification = null;
-          }, 1500);
-          return updateMe(res.data);
-        });
-      
       };
 
       scope.onOrgProfileImageClick = function (event) {
@@ -85,7 +87,7 @@ angular.module('kifi')
 
       scope.shouldShowInviteBanner = function () {
         // TODO: Check if this user is a member already
-        return $location.search().authToken && !scope.acknowledgedInvite;
+        return scope.membership.isInvited && !scope.acknowledgedInvite;
       };
 
       scope.bannerButtons = [
@@ -93,7 +95,7 @@ angular.module('kifi')
           label: 'Decline',
           className: 'kf-decline',
           click: function () {
-            net.declineOrgMemberInvite(scope.profile.id);
+            orgProfileService.declineOrgMemberInvite(scope.profile.id);
             scope.acknowledgedInvite = true;
           }
         },
@@ -101,8 +103,12 @@ angular.module('kifi')
           label: 'Accept',
           className: 'kf-accept',
           click: function () {
-            net.acceptOrgMemberInvite(scope.profile.id, $location.search().authToken);
-            scope.acknowledgedInvite = true;
+            orgProfileService
+              .acceptOrgMemberInvite(scope.profile.id, $location.search().authToken)
+              .then(function () {
+                scope.acknowledgedInvite = true;
+                $state.reload();
+              });
           }
         }
       ];
