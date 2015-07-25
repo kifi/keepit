@@ -42,38 +42,14 @@
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
       </div>
-      <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id">
+      <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id"><!-- This controls who gets the controls -->
         <button class="kf-keep-top-menu-btn"></button>
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add a note'}}</button>
           <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, keep)">Delete Keep</button>
         </menu>
       </div>
-      <div class="kf-keep-top">
-        <section class="kf-keep-top-l">
-          <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-          <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
-        </section>
-        <section class="kf-keep-top-r">
-          <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
-          <div class="kf-keep-time" ng-if="::keep.user">
-            <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
-            <span ng-if="::!keep.createdAt">kept this</span>
-            <span ng-if="::!library && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
-              in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
-            </span>
-            <span ng-if="::keep.sourceAttribution.twitter.screenName">
-              <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
-                <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
-              </a>
-            </span>
-          </div>
-        </section>
-      </div>
-      <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
-      <div class="kf-keep-add-note" ng-if="::keep.user.id === me.id"><!-- wrapping button in div to reduce watch count on read-only libraries -->
-        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note (type # to add a tag)</button>
-      </div>
+
       <div kf-keep-card="keep" boxed gallery-view="galleryView" current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
     </div>
   </ol>

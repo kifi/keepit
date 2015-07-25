@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
-  'modalService', 'keepActionService', 'undoService', '$rootScope',
+  'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
   function ($analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService, $rootScope) {
+      modalService, keepActionService, undoService, $rootScope, profileService) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -96,6 +96,7 @@ angular.module('kifi')
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
           scope.defaultDescLines = 4;
+          scope.me = profileService.me;
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
