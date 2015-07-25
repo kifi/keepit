@@ -11,7 +11,7 @@ angular.module('kifi')
 
     $scope.openCreateLibrary = function () {
       modalService.open({
-        template: 'libraries/manageLibraryModal.tpl.html',
+        template: 'libraries/manageOrgLibraryModal.tpl.html',
         modalData: {
           organization: organization,
           returnAction: function (newLibrary) {

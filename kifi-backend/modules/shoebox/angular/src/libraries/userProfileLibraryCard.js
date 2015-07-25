@@ -24,7 +24,7 @@ angular.module('kifi')
 
     function openModifyLibrary(library) {
       modalService.open({
-        template: 'libraries/manageLibraryModal.tpl.html',
+        template: 'libraries/manageUserLibraryModal.tpl.html',
         modalData: {
           pane: 'manage',
           library: library,
