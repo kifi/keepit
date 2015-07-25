@@ -5,9 +5,7 @@ import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ LibraryQualityEvaluator, Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
-import com.keepit.search.index.IndexerVersionProviders.LibraryMembership
 import com.keepit.search.index.Searcher
-import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexable
 
@@ -19,7 +17,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
 
   private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, UriResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
-  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val networkHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
 
   @inline private def isUserCreated(libId: Long): Boolean = {
@@ -44,7 +42,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
           myHits
         } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          friendsHits
+          networkHits
         } else {
           othersHits
         }
@@ -56,7 +54,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
         else {
           //todo(Léo): boost libraries if isUserCreated
-          val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
+          val keepCount = LibraryIndexable.getKeepCount(librarySearcher, id) getOrElse 1L
           val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
           score = score * publishedLibraryBoost
         }
@@ -70,5 +68,5 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
     }
   }
 
-  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, networkHits, othersHits)
 }

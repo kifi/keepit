@@ -17,7 +17,6 @@ import com.keepit.controllers.core.AuthController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
@@ -33,7 +32,6 @@ class OAuth2Test extends Specification with ShoeboxApplicationInjector {
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -45,7 +43,6 @@ class OAuth2Test extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule(),
     FakeOAuth1ConfigurationModule(),
@@ -58,7 +55,7 @@ class OAuth2Test extends Specification with ShoeboxApplicationInjector {
     path === s"/signup/${providerConfig.name}"
 
     val request = FakeRequest("GET", path)
-    val result = authController.signup(providerConfig.name)(request)
+    val result = authController.signup(providerConfig.name, None, None, None)(request)
 
     status(result) === SEE_OTHER // 303
     val sess = session(result)

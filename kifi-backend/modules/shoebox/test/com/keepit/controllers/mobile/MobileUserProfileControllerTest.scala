@@ -1,16 +1,19 @@
 package com.keepit.controllers.mobile
 
+import java.util.concurrent.TimeUnit
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
-import com.keepit.model.KeepFactory._
+import com.keepit.graph.FakeGraphServiceClientImpl
+import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntitiesForUser }
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactory._
@@ -25,11 +28,13 @@ import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json._
 import play.api.mvc.{ Result, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import scala.concurrent.Future
+import scala.collection.parallel.ParSeq
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 
 class MobileUserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -37,7 +42,6 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCryptoModule()
   )
@@ -97,7 +101,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -120,7 +125,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -143,9 +149,179 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numConnections": 3,
               "numFollowers": 3,
               "numInvitedLibraries": 0,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
+      }
+    }
+
+    "get profile following libraries for anonymous" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
+
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        val resStr = contentAsString(result1)
+
+        val publicLibrary = resStr.indexOf("Public Library")
+        val privateLibrary = resStr.indexOf("Private Library")
+
+        publicLibrary must greaterThan(-1)
+        privateLibrary must equalTo(-1)
+
+      }
+    }
+
+    "get profile following libraries for other user" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
+        // user 2 currently owns the library, user 1 follows
+        // let's have user2 look at user1
+
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        val resStr = contentAsString(result1)
+
+        val publicLibrary = resStr.indexOf("Public Library")
+        val privateLibrary = resStr.indexOf("Private Library")
+
+        publicLibrary must greaterThan(-1)
+        privateLibrary must greaterThan(-1)
+
+      }
+    }
+
+    "get profile following libraries for self" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibrariesAndFollowers()
+        // user 2 currently owns the library, user 1 follows
+
+        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.FOLLOWING, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        val resStr = contentAsString(result1)
+
+        val publicLibrary = resStr.indexOf("Public Library")
+        val privateLibrary = resStr.indexOf("Private Library")
+
+        publicLibrary must greaterThan(-1)
+        privateLibrary must greaterThan(-1)
+
+      }
+    }
+
+    "get profile libraries for anonymous" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibraries()
+
+        val result1 = getProfileLibrariesForAnonymous(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        val resStr = contentAsString(result1)
+
+        val publicLibrary = resStr.indexOf("Public Library")
+        val privateLibrary = resStr.indexOf("Private Library")
+
+        publicLibrary must greaterThan(-1)
+        privateLibrary must equalTo(-1)
+
+      }
+    }
+
+    "order libraries by priority" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user, highPriorityMemberships, highPriorityLibs) = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val libs1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
+          val libs2 = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
+          val libs3 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
+
+          val highPriorityMemberships = for (lib <- libs2) yield {
+            val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = user.id.get).get
+            libraryMembershipRepo.save(membership.copy(priority = 1))
+          }
+          (user, highPriorityMemberships, libs2)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+
+        val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, orderedByPriority = true)
+        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
+
+        infos.length === 6
+
+        val highPriorityPublicIds = highPriorityLibs.map { lib => Library.publicId(lib.id.get) }.toSet
+        highPriorityPublicIds === infos.take(2).map(_.id).toSet
+        highPriorityPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
+        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
+      }
+    }
+
+    "get profile libraries for other user" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibraries()
+
+        val result1 = getProfileLibrariesForOtherUser(user2, user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        val res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        val resStr = contentAsString(result1)
+
+        val publicLibrary = resStr.indexOf("Public Library")
+        val privateLibrary = resStr.indexOf("Private Library")
+
+        publicLibrary must greaterThan(-1)
+        privateLibrary must equalTo(-1)
+
+      }
+    }
+
+    "get profile libraries for self v2" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, lib2) = createUsersWithLibraries()
+
+        val result1 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.ALPHABETICAL))
+        status(result1)
+        var res = Await.result(result1, Duration.apply(1, TimeUnit.SECONDS))
+        var resStr = contentAsString(result1)
+        // test that "Public Library" comes ahead of "RxJava" library
+        var publicLibrary = resStr.indexOf("Public Library")
+        var privateLibrary = resStr.indexOf("Private Library")
+        publicLibrary must greaterThan(-1)
+        privateLibrary must greaterThan(-1)
+        publicLibrary must greaterThan(privateLibrary)
+
+        val result2 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.MEMBER_COUNT))
+        status(result2)
+        res = Await.result(result2, Duration.apply(1, TimeUnit.SECONDS))
+        resStr = contentAsString(result2)
+        // test that "Public Library" comes ahead of "RxJava" library
+        publicLibrary = resStr.indexOf("Public Library")
+        privateLibrary = resStr.indexOf("Private Library")
+        publicLibrary must greaterThan(-1)
+        privateLibrary must greaterThan(-1)
+        publicLibrary must lessThan(privateLibrary)
+
+        val result3 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, Some(LibraryOrdering.LAST_KEPT_INTO))
+        status(result3)
+        res = Await.result(result3, Duration.apply(1, TimeUnit.SECONDS))
+        resStr = contentAsString(result3)
+        privateLibrary = resStr.indexOf("Private Library")
+        publicLibrary = resStr.indexOf("Public Library")
+        privateLibrary must greaterThan(-1)
+        publicLibrary must greaterThan(-1)
+        publicLibrary must lessThan(privateLibrary)
+
+        val result4 = getProfileLibrariesV2(user1, 0, 10, LibraryFilter.OWN, None)
+        status(result4)
+        res = Await.result(result4, Duration.apply(1, TimeUnit.SECONDS))
+        resStr = contentAsString(result4)
+        publicLibrary = resStr.indexOf("Public Library")
+        privateLibrary = resStr.indexOf("Private Library")
+        publicLibrary must greaterThan(-1)
+        privateLibrary must greaterThan(-1)
+
       }
     }
 
@@ -153,7 +329,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, lib1, lib2) = db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          val user1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("spongebob"), normalizedUsername = "spongebob", createdAt = t1))
+          val user1 = UserFactory.user().withName("Spongebob", "Squarepants").withUsername("spongebob").withCreatedAt(t1).saved
           val library1 = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
           libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library1.id.get, access = LibraryAccess.OWNER))
           val library2 = libraryRepo.save(Library(name = "Catching Jellyfish", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("catching-jellyfish"), memberCount = 1, createdAt = t1.plusMinutes(1)))
@@ -191,10 +367,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators":0,
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscription":false},
-                  "modifiedAt":${lib2.updatedAt.getMillis}
+                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "modifiedAt":${lib2.updatedAt.getMillis},
+                  "path": "/spongebob/catching-jellyfish"
                 },
                 {
                   "id":"${pubId1.id}",
@@ -218,10 +394,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators": 0,
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
-                  "listed": true,
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscription":false},
-                  "modifiedAt":${lib1.updatedAt.getMillis}
+                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "modifiedAt":${lib1.updatedAt.getMillis},
+                  "path": "/spongebob/krabby-patty"
                 }
               ]
             }
@@ -235,11 +411,80 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       }
     }
 
+    "get profile connections" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user3).saved
+          connect(user1 -> user4).saved
+          connect(user2 -> user4).saved
+          (user1, user2, user3, user4, user5)
+        }
+
+        val relationship = SociallyRelatedEntitiesForUser(
+          RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
+        )
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
+        // view as owner
+        val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val resultJson1 = contentAsJson(result1)
+        (resultJson1 \ "count") === JsNumber(2)
+        (resultJson1 \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson1 \ "ids") === JsArray()
+
+        // view as anybody
+        val result2 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \ "count") === JsNumber(2)
+        (resultJson2 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson2 \ "ids") === JsArray()
+
+        (resultJson2 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        db.readWrite { implicit s =>
+          friendRequestRepo.save(FriendRequest(senderId = user5.id.get, recipientId = user1.id.get, messageHandle = None))
+        }
+
+        val result3 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        val resultJson3 = contentAsJson(result3)
+        (resultJson3 \ "count") === JsNumber(2)
+        (resultJson3 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson3 \ "ids") === JsArray()
+
+        (resultJson3 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        val result4 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val resultJson4 = contentAsJson(result4)
+        (resultJson4 \ "count") === JsNumber(2)
+        (resultJson4 \ "users" \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson4 \ "ids") === JsArray()
+
+        (resultJson4 \ "invitations" \\ "id") === Seq(user5).map(u => JsString(u.externalId.id))
+      }
+    }
+
     "get followers" in {
       withDb(modules: _*) { implicit injector =>
         val profileUsername = Username("cfalc")
         val (user1, user2, user3, user4) = db.readWrite { implicit s =>
-          val user1 = user().withName("Captain", "Falcon").withUsername(profileUsername).saved
+          val user1 = user().withName("Captain", "Falcon").withUsername(profileUsername.value).saved
           val library1 = library().withUser(user1).saved
 
           val otherUsers = users(3).saved
@@ -285,14 +530,100 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     controller.profile(username.value)(request)
   }
 
+  private def getProfileConnections(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {
+    viewerOpt match {
+      case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+      case _ => inject[FakeUserActionsHelper].unsetUser()
+    }
+    controller.getProfileConnections(username, limit)(request(routes.MobileUserProfileController.getProfileConnections(username, limit)))
+  }
+
   private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileUserProfileController.getProfileLibraries(user.username, page, size, filter)))
   }
 
+  private def getProfileLibrariesV2(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering], sortDirection: Option[SortDirection] = None, orderedByPriority: Boolean = false)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = orderedByPriority)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+  }
+
+  private def getProfileLibrariesForOtherUser(viewer: User, user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(viewer)
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+  }
+
+  private def getProfileLibrariesForAnonymous(user: User, page: Int, size: Int, filter: LibraryFilter, ordering: Option[LibraryOrdering])(implicit injector: Injector): Future[Result] = {
+    controller.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, orderedByPriority = false)(request(routes.MobileUserProfileController.getProfileLibrariesV2(user.externalId, page, size, filter, ordering, None, false)))
+  }
+
   private def getProfileFollowers(viewer: User, username: Username, page: Int, size: Int)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(viewer)
     controller.getProfileFollowers(username, page, size)(request(routes.MobileUserProfileController.getProfileFollowers(username, page, size)))
+  }
+
+  /*
+      Helpers for getting started with premade test databases
+   */
+
+  private def createUsersWithLibraries()(implicit injector: Injector) = {
+    db.readWrite { implicit s =>
+      val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+      // create two users, Alvin, and Ben
+      val alvinUser = UserFactory.user().withName("Alvin", "Adams").withUsername("alvinadams").withCreatedAt(t1).saved
+      val benUser = UserFactory.user().withName("Ben", "Burns").withUsername("benburns").withCreatedAt(t1).saved
+      // We are going to give Alvin two libraries, one public, one private
+      // Ben will be following Alvin's private library
+      // private.createdAt < public.createdAt
+      // private.lastKept < public.lastKept
+      // public.memberCount > private.memberCount
+
+      // private
+      val privateLibrary = libraryRepo.save(Library(name = "Private Library", ownerId = alvinUser.id.get,
+        visibility = LibraryVisibility.SECRET, slug = LibrarySlug("private-library"), memberCount = 1,
+        createdAt = t1.plusMinutes(1), keepCount = 10, lastKept = Some(t1.plusMinutes(1))))
+      libraryMembershipRepo.save(LibraryMembership(userId = alvinUser.id.get,
+        libraryId = privateLibrary.id.get, access = LibraryAccess.OWNER))
+
+      // public
+      val publicLibrary = libraryRepo.save(Library(name = "Public Library", ownerId = alvinUser.id.get,
+        visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("public-library"), memberCount = 2,
+        createdAt = t1.plusMinutes(2), keepCount = 10, lastKept = Some(t1.plusMinutes(2))))
+      libraryMembershipRepo.save(LibraryMembership(userId = alvinUser.id.get,
+        libraryId = publicLibrary.id.get, access = LibraryAccess.OWNER))
+
+      (alvinUser, benUser, privateLibrary, publicLibrary)
+    }
+  }
+
+  private def createUsersWithLibrariesAndFollowers()(implicit injector: Injector) = {
+    db.readWrite { implicit s =>
+      val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+      // create a few users
+      val alvinUser = UserFactory.user().withName("Alvin", "Adams").withUsername("alvinadams").withCreatedAt(t1).saved
+      val benUser = UserFactory.user().withName("Ben", "Burns").withUsername("benburns").withCreatedAt(t1).saved
+      //      val cathyUser = UserFactory.user().withName("Cathy", "Clarkson").withUsername("benburns").withCreatedAt(t1).saved
+      //      val donnaUser = UserFactory.user().withName("Donna", "Davidson").withUsername("benburns").withCreatedAt(t1).saved
+
+      // private
+      val privateLibrary = libraryRepo.save(Library(name = "Private Library", ownerId = alvinUser.id.get,
+        visibility = LibraryVisibility.SECRET, slug = LibrarySlug("private-library"), memberCount = 1,
+        createdAt = t1.plusMinutes(1), keepCount = 10, lastKept = Some(t1.plusMinutes(1))))
+      libraryMembershipRepo.save(LibraryMembership(userId = benUser.id.get,
+        libraryId = privateLibrary.id.get, access = LibraryAccess.OWNER))
+
+      // public
+      val publicLibrary = libraryRepo.save(Library(name = "Public Library", ownerId = alvinUser.id.get,
+        visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("public-library"), memberCount = 2,
+        createdAt = t1.plusMinutes(2), keepCount = 10, lastKept = Some(t1.plusMinutes(2))))
+      libraryMembershipRepo.save(LibraryMembership(userId = benUser.id.get,
+        libraryId = publicLibrary.id.get, access = LibraryAccess.OWNER))
+
+      membership().withLibraryFollower(privateLibrary, alvinUser).saved
+      membership().withLibraryFollower(publicLibrary, alvinUser).saved
+
+      (alvinUser, benUser, privateLibrary, publicLibrary)
+    }
   }
 
   private def controller(implicit injector: Injector) = inject[MobileUserProfileController]

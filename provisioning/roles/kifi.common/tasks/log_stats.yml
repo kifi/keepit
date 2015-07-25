@@ -1,0 +1,21 @@
+---
+- name: install log_stats python dependencies
+  pip: name={{ item }}
+  with_items:
+    - boto
+    - iso8601
+    - portalocker
+    - python-dateutil
+- name: copy log_stats script
+  copy:
+    src: log_stats.py
+    dest: "{{ app_home}}/log_stats.py"
+    owner: fortytwo
+    group: fortytwo
+- name: setup log_stats cron
+  cron:
+    name: log stats
+    minute: 0
+    hour: "*/2"
+    user: fortytwo
+    job: /usr/bin/python {{ app_home }}/log_stats.py

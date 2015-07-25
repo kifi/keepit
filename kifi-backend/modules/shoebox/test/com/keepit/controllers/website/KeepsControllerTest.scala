@@ -20,7 +20,6 @@ import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -29,6 +28,8 @@ import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
@@ -37,7 +38,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -45,7 +45,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )
@@ -90,8 +89,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, user2, bookmark1, bookmark2, bookmark3, lib1) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withCreatedAt(t1).withName("Andrew", "C").withUsername("test").saved
+          val user2 = UserFactory.user().withCreatedAt(t2).withName("Eishay", "S").withUsername("test").saved
 
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -203,8 +202,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, bookmark1, bookmark2, bookmark3, lib1) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withCreatedAt(t1).withName("Andrew", "C").withUsername("test").saved
+          val user2 = UserFactory.user().withCreatedAt(t2).withName("Eishay", "S").withUsername("test").saved
 
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -501,7 +500,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "allCollections (default sorting)" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
           val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
@@ -535,7 +534,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val user1 = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
@@ -550,7 +549,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
+          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
@@ -595,7 +594,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
         }
 
         val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
@@ -626,7 +625,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode with long name" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
         }
 
         val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
@@ -643,7 +642,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "reorder tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
-          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
+          val user1 = UserFactory.user().withName("Tony", "Stark").withUsername("test2").saved
 
           val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
           val tagB = Collection(userId = user1.id.get, name = Hashtag("tagB"))
@@ -730,7 +729,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val user1 = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
@@ -746,7 +745,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val mainLib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("main"))
+          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))

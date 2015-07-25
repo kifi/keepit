@@ -5,10 +5,10 @@ import javax.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.rover.manager.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
+import com.keepit.rover.store.RoverArticleStoreMigrationActor
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.Random
 
 trait RoverManagerPlugin
 
@@ -19,6 +19,7 @@ class RoverManagerPluginImpl @Inject() (
     fetchingActor: ActorInstance[RoverArticleFetchingActor],
     imageSchedulingActor: ActorInstance[RoverArticleImageSchedulingActor],
     imageProcessingActor: ActorInstance[RoverArticleImageProcessingActor],
+    articleStoreMigrationActor: ActorInstance[RoverArticleStoreMigrationActor],
     implicit val executionContext: ExecutionContext,
     val scheduling: SchedulingProperties) extends RoverManagerPlugin with SchedulerPlugin {
 
@@ -27,11 +28,12 @@ class RoverManagerPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart(): Unit = {
-    scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
-    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "Fetch Scheduling")
-    scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnOneMachine(imageSchedulingActor.system, 200 seconds, 1 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead, "ArticleImage Scheduling")
-    scheduleTaskOnAllMachines(imageProcessingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(ingestionActor.system, 400 seconds, 8 minute, ingestionActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(fetchSchedulingActor.system, 400 seconds, 8 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnAllMachines(fetchingActor.system, 250 seconds, 5 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(imageSchedulingActor.system, 300 seconds, 8 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnAllMachines(imageProcessingActor.system, 300 seconds, 5 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnOneMachine(articleStoreMigrationActor.system, 400 seconds, 10 minutes, articleStoreMigrationActor.ref, IfYouCouldJustGoAhead, "Article Store Cleanup")
   }
 
   override def onStop(): Unit = {

@@ -5,6 +5,7 @@
 @message = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.MESSAGE) }
 @digest = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.DIGEST) }
 @activity = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.ACTIVITY) }
+@gratification = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.GRATIFICATION_EMAIL) }
 @all = @{ !opts.contains(NotificationCategory.ALL) }
 
 @content = {
@@ -30,6 +31,9 @@
       </label>
       <label>
         <input type="checkbox" name="activity" value="true" @if(activity){checked}> Kifi Activity emails
+      </label>
+      <label>
+        <input type="checkbox" name="gratification" value="true" @if(gratification){checked}> "Your Week on Kifi" emails
       </label>
       <input type="hidden" name="all" value="@if(all){true}else{false}" id="can-recieve-emails">
 

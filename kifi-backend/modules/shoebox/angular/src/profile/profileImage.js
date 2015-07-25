@@ -120,7 +120,7 @@ angular.module('kifi')
             });
 
             xhr.addEventListener('load', function () {
-              deferred.resolve(JSON.parse(xhr.responseText));
+              deferred.resolve($window.JSON.parse(xhr.responseText));
             });
 
             xhr.addEventListener('loadend', function () {

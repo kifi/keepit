@@ -1,0 +1,4 @@
+<ul class="kf-org-member-manage">
+  <li ng-if="me.role === 'admin'"><button class="kf-org-member-invite" ng-click="openInviteModal()">Invite new member</button></li>
+  <li ng-repeat="member in members" kf-org-member member="member" me="me"></li>
+</ul>

@@ -8,18 +8,17 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.article.{ EmbedlyArticle }
 import com.keepit.rover.article.content.{ EmbedlyContent }
 import com.keepit.search.index.article.{ ArticleIndexer, ShardedArticleIndexer }
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
-import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexer
+import com.keepit.search.index.graph.organization.OrganizationMembershipIndexer
 import com.keepit.search.index.phrase._
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.test.SearchTestInjector
@@ -46,7 +45,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int)(implicit injector: Injector) = {
-    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "", username = Username("test" + n), normalizedUsername = "test" + n) }.toList
+    val users = (0 until numUsers).map { n => UserFactory.user().withId(n + 1).withName("foo" + n, "").withUsername("test" + n).get } toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
         normalizedUrl = "http://www.keepit.com/article" + n).withContentRequest(true)
@@ -76,12 +75,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
     }
     val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
 
-    val collectionIndexers = activeShards.local.map { shard =>
-      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
-      (shard -> collectionIndexer)
-    }
-    val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-
     val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -89,8 +82,9 @@ trait SearchTestHelper { self: SearchTestInjector =>
 
     val libraryIndexer = new LibraryIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val libraryMembershipIndexer = new LibraryMembershipIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
+    val orgMembershipIndexer = new OrganizationMembershipIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val phraseDetector = new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier]))
-    val libraryQualityEvaluator = new LibraryQualityEvaluator(activeShards)
+    val libraryQualityEvaluator = new LibraryQualityEvaluator()
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -100,6 +94,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       shardedKeepIndexer,
       libraryIndexer,
       libraryMembershipIndexer,
+      orgMembershipIndexer,
       userIndexer,
       userGraphsSearcherFactory,
       inject[ShoeboxServiceClient],
@@ -111,7 +106,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       libraryQualityEvaluator,
       fortyTwoServices)
 
-    (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer)
+    (shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer)
   }
 
   def mkEmbedlyArticle(url: String, title: String, content: String) = {
@@ -135,14 +130,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
     shoebox.saveConnections(connections)
   }
 
-  def saveCollections(collections: Collection*)(implicit injector: Injector): Seq[Collection] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections: _*)
-  }
-
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*)(implicit injector: Injector) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks: _*)
-  }
-
   def saveBookmarks(bookmarks: Keep*)(implicit injector: Injector): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarks(bookmarks: _*)
   }
@@ -160,15 +147,10 @@ trait SearchTestHelper { self: SearchTestInjector =>
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit injector: Injector): Seq[KeepUriAndTime] = {
-    val future = inject[ShoeboxServiceClient].getUriIdsInCollection(collectionId)
-    inject[MonitoredAwait].result(future, 3 seconds, "getUriIdsInCollection: this should not fail")
-  }
-
   val source = KeepSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(
-    "myBookmarkBoost" -> "1",
+    "myKeepBoost" -> "1",
     "sharingBoostInNetwork" -> "0",
     "sharingBoostOutOfNetwork" -> "0",
     "recencyBoost" -> "0",

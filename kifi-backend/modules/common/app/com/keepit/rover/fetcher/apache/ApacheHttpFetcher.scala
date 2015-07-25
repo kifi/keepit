@@ -1,5 +1,6 @@
 package com.keepit.rover.fetcher.apache
 
+import java.net.SocketTimeoutException
 import java.util.zip.ZipException
 
 import com.keepit.rover.fetcher._
@@ -53,7 +54,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
       execute(request).map {
         case (apacheRequest, apacheResponse) =>
-          processResponse(apacheRequest, apacheResponse, f)
+          processResponse(request, apacheRequest, apacheResponse, f)
       }
     } recoverWith {
       case ex: Throwable =>
@@ -63,11 +64,12 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def execute(request: FetchRequest, disableGzip: Boolean = false): Try[(ApacheFetchRequest, ApacheFetchResponse)] = {
+  private def execute(request: FetchRequest, disableGzip: Boolean = false, retryOnTimeout: Boolean = true): Try[(ApacheFetchRequest, ApacheFetchResponse)] = {
     buildApacheFetchRequest(request, disableGzip).flatMap { apacheRequest =>
       apacheRequest.execute().map((apacheRequest, _))
     } recoverWith {
-      case e: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case z: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case s: SocketTimeoutException if retryOnTimeout => execute(request, disableGzip, retryOnTimeout = false)
       case t: Throwable => Failure(InvalidFetchRequestException(request, t))
     }
   }
@@ -80,9 +82,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
+  private def processResponse[A](originalRequest: FetchRequest, apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
     try {
-      doProcessResponse(apacheRequest.info, response, f)
+      doProcessResponse(apacheRequest.info(originalRequest.proxy), response, f)
     } catch {
       case ex: Throwable =>
         apacheRequest.abort()

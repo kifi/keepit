@@ -1,0 +1,30 @@
+---
+- name: "setup app directories"
+  file:
+    path: "{{ app_home }}/{{ item }}"
+    state: directory
+    owner: fortytwo
+    group: fortytwo
+  with_items:
+    - repo
+    - run
+- name: include variables for {{ service }} and instance type {{ instance_type_key }}
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ec2_tag_Service }}/{{ instance_type_key }}.yml"
+    - "{{ ec2_tag_Service }}.yml"
+  ignore_errors: yes
+- name: "install {{ service }} init.d script"
+  template:
+    src: etc/init.d/{{ service }}.j2
+    dest: /etc/init.d/{{ service }}
+    mode: 0754
+    owner: fortytwo
+    group: fortytwo
+- stat: path=/etc/rc5.d/S20{{ service }}
+  register: st
+- name: "update-rc.d {{ service }}"
+  command: update-rc.d {{ service }} defaults
+  when: not st.stat.exists
+- name: "enable {{ service }} service"
+  service: name={{ service }} enabled=yes state=started

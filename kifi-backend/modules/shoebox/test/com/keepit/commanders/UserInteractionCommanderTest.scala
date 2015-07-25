@@ -2,7 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ UserValues, Username, User, UserValueRepo }
+import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.JsObject
@@ -17,9 +18,9 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
         val userInteractionCommander = inject[UserInteractionCommander]
         val userValueRepo = inject[UserValueRepo]
         val (user1, user2, user3, user4) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "a"))
-          val user2 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("VampireXSlayer"), normalizedUsername = "b"))
-          val user3 = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "c"))
+          val user1 = UserFactory.user().withName("George", "Washington").withUsername("GDubs").saved
+          val user2 = UserFactory.user().withName("Abe", "Lincoln").withUsername("VampireXSlayer").saved
+          val user3 = UserFactory.user().withName("Ben", "Franklin").withUsername("Benji").saved
           val user4 = EmailAddress("unclesam@usa.gov")
 
           userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].length === 0

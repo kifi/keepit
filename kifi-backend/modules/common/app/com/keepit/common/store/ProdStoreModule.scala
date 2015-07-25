@@ -14,8 +14,6 @@ import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.AccessLog
 
-import scala.concurrent.ExecutionContext
-
 trait StoreModule extends ScalaModule
 
 abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {
@@ -57,12 +55,6 @@ trait ProdStoreModule extends StoreModule {
   def articleSearchResultStore(amazonS3Client: AmazonS3, accessLog: AccessLog, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
     new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, accessLog, initialSearchIdCache, articleCache)
-  }
-
-  @Provides @Singleton
-  def articleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): ArticleStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
-    new S3ArticleStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -113,12 +105,6 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
     whenConfigured("amazon.s3.articleSearch.bucket")(
       prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, accessLog, initialSearchIdCache, articleCache)
     ).getOrElse(new InMemoryArticleSearchResultStoreImpl())
-
-  @Provides @Singleton
-  def articleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): ArticleStore =
-    whenConfigured("amazon.s3.article.bucket")(
-      prodStoreModule.articleStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryArticleStoreImpl())
 
   @Singleton
   @Provides

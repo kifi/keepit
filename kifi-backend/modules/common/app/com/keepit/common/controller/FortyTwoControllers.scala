@@ -41,9 +41,6 @@ trait HeimdalServiceController extends ServiceController {
 trait ABookServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.ABOOK
 }
-trait ScraperServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.SCRAPER
-}
 
 trait CortexServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.CORTEX

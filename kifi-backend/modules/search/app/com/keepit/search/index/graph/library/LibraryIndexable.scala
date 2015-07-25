@@ -18,11 +18,14 @@ object LibraryFields {
   val kindField = "k"
   val ownerField = "o"
   val ownerIdField = "oid"
+  val orgField = "org"
+  val orgIdField = "orgId"
   val recordField = "rec"
+  val keepCountValueField = "kc"
 
-  val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
-  val textSearchFields = strictTextSearchFields + namePrefixField
-  val nameSearchFields = Set(nameField, nameStemmedField)
+  val minimalSearchFields = Set(nameField, nameStemmedField)
+  val fullTextSearchFields = Set(descriptionField, descriptionStemmedField)
+  val prefixSearchFields = Set(namePrefixField)
 
   val maxPrefixLength = 8
 
@@ -30,17 +33,20 @@ object LibraryFields {
     val SECRET = 0
     val DISCOVERABLE = 1
     val PUBLISHED = 2
+    val ORGANIZATION = 3
 
     @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
       case LibraryVisibility.SECRET => SECRET
       case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
       case LibraryVisibility.PUBLISHED => PUBLISHED
+      case LibraryVisibility.ORGANIZATION => ORGANIZATION
     }
 
-    @inline def fromNumericCode(visibility: Long) = {
-      if (visibility == SECRET) LibraryVisibility.SECRET
-      else if (visibility == DISCOVERABLE) LibraryVisibility.DISCOVERABLE
-      else LibraryVisibility.PUBLISHED
+    @inline def fromNumericCode(visibility: Long) = visibility match {
+      case SECRET => LibraryVisibility.SECRET
+      case DISCOVERABLE => LibraryVisibility.DISCOVERABLE
+      case ORGANIZATION => LibraryVisibility.ORGANIZATION
+      case _ => LibraryVisibility.PUBLISHED
     }
   }
 
@@ -95,6 +101,9 @@ object LibraryIndexable {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 
+  def getKeepCount(librarySearcher: Searcher, libId: Long): Option[Long] = {
+    librarySearcher.getLongDocValue(LibraryFields.keepCountValueField, libId)
+  }
 }
 
 class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, Library] {
@@ -120,12 +129,19 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     }
 
     doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
+    library.orgId.foreach { orgId =>
+      doc.add(buildKeywordField(orgField, orgId.id.toString))
+    }
 
     doc.add(buildIdValueField(ownerIdField, library.ownerId))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 
+    doc.add(buildIdValueField(orgIdField, library.orgId.getOrElse(Id[Organization](-1))))
+
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
+
+    doc.add(buildLongValueField(keepCountValueField, library.keepCount))
 
     doc
   }

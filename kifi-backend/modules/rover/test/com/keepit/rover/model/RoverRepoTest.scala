@@ -10,6 +10,7 @@ import play.api.test.Helpers._
 import com.keepit.common.time._
 
 class RoverRepoTest extends Specification with RoverApplicationInjector {
+  // This test uses an Application so that actual evolutions are applied and tested.
   "Rover" should {
     "save and retrieve models" in {
       running(new RoverApplication()) {
@@ -17,14 +18,14 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // ArticleRepo
         val articleInfoRepo = inject[ArticleInfoRepo]
         db.readWrite { implicit session =>
-          val saved = articleInfoRepo.save(RoverArticleInfo.initialize(uriId = Id(1), url = "http://www.lemonde.fr", kind = EmbedlyArticle))
-          articleInfoRepo.get(saved.id.get).uriId === Id(1)
+          val saved = articleInfoRepo.save(RoverArticleInfo.initialize(uriId = Id(14), url = "http://www.lemonde.fr", kind = EmbedlyArticle))
+          articleInfoRepo.get(saved.id.get).uriId.id === 14
         }
 
         // HttpProxyRepo
         val httpProxyRepo = inject[RoverHttpProxyRepo]
         db.readWrite { implicit session =>
-          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = "http", username = None, password = None))
+          val saved = httpProxyRepo.save(RoverHttpProxy(alias = "marvin", host = "96.31.86.149", port = 3128, scheme = ProxyScheme.Http, username = None, password = None))
           httpProxyRepo.get(saved.id.get).alias === "marvin"
         }
 
@@ -58,14 +59,22 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         val articleImageRepo = inject[ArticleImageRepo]
         db.readWrite { implicit session =>
           val saved = articleImageRepo.save(ArticleImage(
-            Id(1),
+            url = "url",
+            Id(14),
             EmbedlyArticle,
             ArticleVersionProvider.zero(EmbedlyArticle),
             imageUrl = "imageUrl",
             imageHash = ImageHash("hash")
           ))
           articleImageRepo.get(saved.id.get).articleKind === EmbedlyArticle
-          articleImageRepo.get(saved.id.get).uriId.id === 1
+          articleImageRepo.get(saved.id.get).uriId.id === 14
+        }
+
+        // UrlRuleRepo
+        val urlRuleRepo = inject[RoverUrlRuleRepo]
+        db.readWrite { implicit session =>
+          val saved = urlRuleRepo.save(RoverUrlRule(pattern = "^.*$", example = "", proxy = None))
+          urlRuleRepo.get(saved.id.get).pattern === "^.*$"
         }
       }
     }

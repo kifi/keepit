@@ -8,6 +8,8 @@
         case RegisteredUsersViewType => {Registered Users}
         case FakeUsersViewType => {Fake Users}
         case ByExperimentUsersViewType(exp) => {@exp.value}
+        case UsersPotentialOrgsViewType => {Users with Potential Organizations}
+        case LinkedInUsersWithoutOrgsViewType => {LinkedIn Users without Organizations}
     }
 }
 
@@ -17,10 +19,12 @@
         case RegisteredUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.registeredUsersView(page)}
         case FakeUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
         case ByExperimentUsersViewType(exp) => {@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(page, exp.value)}
+        case UsersPotentialOrgsViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(page)}
+        case LinkedInUsersWithoutOrgsViewType => {@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(page)}
     }
 }
 
-@kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
     @for(installation <- kifiInstallations) {
       <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
@@ -95,12 +99,14 @@
           <th>#</th>
           <th>Id</th>
           <th>User</th>
+          <th>org mem/cand</th>
           <th>kifi Conns</th>
           <th>Invited By</th>
           <th>Invite Sent</th>
           <th>Messages all/active/started</th>
           <th>Lib create/follow</th>
           <th>Network</th>
+          <th>Email Address</th>
           <th>Private Keeps</th>
           <th>Public Keeps</th>
           <th>Date Joined</th>
@@ -112,17 +118,19 @@
           <td>@{i+1}</td>
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
+          <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
           <td>@userStatistics.connections</td>
           <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
           <td>@userStatistics.invitations</td>
           <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
           <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+          <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
           <td>@userStatistics.privateKeeps</td>
           <td>@userStatistics.publicKeeps</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>
-          <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
+          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
         </tr>
       }
       </table>

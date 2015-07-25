@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.test._
 import org.joda.time.DateTime
+import com.keepit.model.UserFactoryHelper._
 
 class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -14,7 +15,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
     "persist" in {
       withDb() { implicit injector =>
         val (user, installExt) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Dafna", "Smith").withUsername("test").saved
           val installExt = installationRepo.save(KifiInstallation(
             userId = user.id.get,
             version = KifiExtVersion("1.1.1"),
@@ -94,8 +95,8 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
         val now = new DateTime(2015, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)
         val clock = inject[FakeClock]
         val (user1, user2, kin) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test2"), normalizedUsername = "test2"))
+          val user1 = UserFactory.user().withName("Dafna", "Smith").withUsername("test").saved
+          val user2 = UserFactory.user().withName("Shanee", "Smith").withUsername("test2").saved
           clock.setTimeValue(now.minusDays(4))
           installationRepo.save(KifiInstallation(
             userId = user1.id.get,

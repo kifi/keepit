@@ -34,7 +34,7 @@ object FetchSchedulingPolicy {
   }
 
   private val embedlySchedulingPolicy = FetchSchedulingPolicy(
-    maxRandomDelay = 10 days,
+    maxRandomDelay = 30 days,
     initialInterval = 14 days,
     minInterval = 7 days,
     maxInterval = 120 days,
@@ -43,7 +43,7 @@ object FetchSchedulingPolicy {
   )
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
-    maxRandomDelay = 10 days,
+    maxRandomDelay = 30 days,
     initialInterval = 14 days,
     minInterval = 7 days,
     maxInterval = 120 days,

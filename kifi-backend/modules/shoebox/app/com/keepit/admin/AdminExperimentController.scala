@@ -1,16 +1,18 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{
   UserExperimentRepo,
   UserRepo,
   UserStates,
-  ExperimentType,
+  UserExperimentType,
   ProbabilisticExperimentGenerator,
   ProbabilisticExperimentGeneratorRepo,
   Name
 }
+import play.api.libs.json._
 
 import com.google.inject.Inject
 
@@ -32,7 +34,7 @@ class AdminExperimentController @Inject() (
         experimentRepo.getDistinctExperimentsWithCounts().toMap)
     }
 
-    val experimentInfos = (ExperimentType._ALL.zip(ExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map {
+    val experimentInfos = (UserExperimentType._ALL.zip(UserExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map {
       case (experimentType, userCount) =>
         db.readOnlyMaster { implicit session =>
           val defaultDensity = generatorRepo.getByName(Name[ProbabilisticExperimentGenerator](experimentType.value + "-default"), None).map(_.density.density.map {
@@ -50,12 +52,20 @@ class AdminExperimentController @Inject() (
     val condition = (data \ "condition").as[String]
     val density = (data \ "density").as[JsObject].fields.map {
       case (name, percentage) =>
-        Probability(ExperimentType(name), percentage.as[Double] / 100)
+        Probability(UserExperimentType(name), percentage.as[Double] / 100)
     }
     db.readWrite { implicit session =>
-      generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[ExperimentType](density), None, Some(ExperimentType(condition)))
+      generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[UserExperimentType](density), None, Some(UserExperimentType(condition)))
     }
     Ok(data)
+  }
+
+  def removeConditions(exId: Id[ProbabilisticExperimentGenerator]) = AdminUserAction { request =>
+    db.readWrite { implicit s =>
+      val model = generatorRepo.get(exId).copy(condition = None)
+      generatorRepo.save(model)
+      Ok(Json.toJson(model))
+    }
   }
 
 }

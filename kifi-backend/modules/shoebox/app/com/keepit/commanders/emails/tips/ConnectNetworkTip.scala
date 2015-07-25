@@ -32,7 +32,6 @@ class ConnectNetworkTip @Inject() (
         else {
           Some(network) collect {
             case FACEBOOK => views.html.email.tips.connectFacebook()
-            case LINKEDIN => views.html.email.tips.connectLinkedIn()
           }
         }
       }

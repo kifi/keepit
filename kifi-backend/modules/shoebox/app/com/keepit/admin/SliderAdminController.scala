@@ -27,10 +27,6 @@ class SliderAdminController @Inject() (
   clock: Clock,
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
-  domainTagRepo: DomainTagRepo,
-  sensitivityUpdater: SensitivityUpdater,
-  domainToTagRepo: DomainToTagRepo,
-  domainRepo: DomainRepo,
   userRepo: UserRepo,
   kifiInstallationStore: KifiInstallationStore,
   userValueRepo: UserValueRepo,
@@ -69,71 +65,6 @@ class SliderAdminController @Inject() (
     }
     eliza.sendToAllUsers(Json.arr("url_patterns", patterns))
     Redirect(routes.SliderAdminController.getPatterns)
-  }
-
-  def getDomainTags = AdminUserPage { implicit request =>
-    val tags = db.readOnlyReplica { implicit session =>
-      domainTagRepo.all
-    }
-    Ok(html.admin.domainTags(tags))
-  }
-
-  def saveDomainTags = AdminUserPage { implicit request =>
-    val tagIdValue = """sensitive_([0-9]+)""".r
-    val sensitiveTags = request.body.asFormUrlEncoded.get.keys
-      .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
-    val tagsToSave = db.readOnlyReplica { implicit s =>
-      domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
-        case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
-          tag.withSensitive(Some(sensitive))
-      }
-    }
-    tagsToSave.foreach { tag =>
-      db.readWrite { implicit s =>
-        domainTagRepo.save(tag)
-      }
-      Future {
-        val domainIds = db.readOnlyMaster { implicit s =>
-          domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
-        }
-        db.readWrite { implicit s =>
-          sensitivityUpdater.clearDomainSensitivity(domainIds)
-        }
-      }
-    }
-    Redirect(routes.SliderAdminController.getDomainTags)
-  }
-
-  def getDomainOverrides = AdminUserPage { implicit request =>
-    val domains = db.readOnlyReplica { implicit session =>
-      domainRepo.getOverrides()
-    }
-    Ok(html.admin.domains(domains))
-  }
-
-  def saveDomainOverrides = AdminUserAction { implicit request =>
-    val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
-      case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
-    }.toMap
-    val domainsToRemove = db.readOnlyReplica { implicit session =>
-      domainRepo.getOverrides()
-    }.filterNot(d => domainSensitiveMap.contains(d.hostname))
-
-    db.readWrite { implicit s =>
-      domainSensitiveMap.foreach {
-        case (domainName, sensitive) if Domain.isValid(domainName) =>
-          val domain = domainRepo.get(domainName)
-            .getOrElse(Domain(hostname = domainName))
-            .withManualSensitive(Some(sensitive))
-          domainRepo.save(domain)
-        case (domainName, _) =>
-          log.debug("Invalid domain: %s" format domainName)
-      }
-      domainsToRemove.foreach { domain =>
-        domainRepo.save(domain.withManualSensitive(None))
-      }
-    }
-    Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
   def getVersionForm = AdminUserPage { implicit request =>

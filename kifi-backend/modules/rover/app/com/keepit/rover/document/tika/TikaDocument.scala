@@ -41,17 +41,21 @@ class TikaDocument(
   def getLinks(rel: String): Set[String] = links.collect { case link if link.getRel == rel => link.getUri }.toSet
 
   def getTitle: Option[String] = getMetadata("title").filter(_.nonEmpty)
+
+  def getMetaRefresh: Option[(Int, String)] = getMetadata("refresh").collect {
+    case TikaDocument.metaRefreshPattern(delay, url) => (delay.toInt, url.trim)
+  }
 }
 
 object TikaDocument extends Logging {
 
-  def parse(input: HttpInputStream, destinationUrl: String, contentType: Option[String]): TikaDocument = {
+  def parse(input: HttpInputStream, destinationUrl: String, contentType: Option[String], maxContentChars: Int): TikaDocument = {
     val metadata = new Metadata()
     contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
-    val mainHandler = MainContentHandler(metadata, destinationUrl)
-    val linkHandler = new LinkContentHandler()
+    val mainHandler = MainContentHandler(maxContentChars, metadata, destinationUrl)
+    val linkHandler = new RoverLinkContentHandler()
     parseTo(input)(mainHandler, linkHandler)
-    new TikaDocument(metadata, mainHandler.getContent(), mainHandler.getKeywords getOrElse Seq(), linkHandler.getLinks)
+    new TikaDocument(metadata, mainHandler.getContent(), mainHandler.getKeywords getOrElse Seq(), linkHandler.links)
   }
 
   private def parseTo(input: HttpInputStream)(mainHandler: MainContentHandler, moreHandlers: ContentHandler*): Unit = {
@@ -99,4 +103,6 @@ object TikaDocument extends Logging {
       htmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
     }
   }
+
+  val metaRefreshPattern = """([0-9])+;\s*(?i:url)=(.+)""".r
 }

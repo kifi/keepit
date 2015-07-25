@@ -21,7 +21,6 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
@@ -41,14 +40,12 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeShoeboxServiceModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeActorSystemModule(),
     FakeUserActionsModule(),
@@ -127,7 +124,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             numCollaborators = 0,
             numFollowers = 10,
             whoCanInvite = LibraryInvitePermissions.COLLABORATOR,
-            modifiedAt = now
+            modifiedAt = now,
+            path = LibraryPathHelper.formatLibraryPath(basicUser1, None, LibrarySlug("scala"))
           )
         )
       }
@@ -138,7 +136,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           | "itemInfo":{"id":"123","name":"Scala","visibility":"published",
           |   "description":"This is a library about scala...","slug":"scala","url":"joe/scala","color":"${LibraryColor.BLUE.hex}","kind":"user_created",
           |   "owner":{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"},
-          |   "followers":[],"collaborators":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10,"whoCanInvite": "collaborator","modifiedAt":${now.getMillis}}}
+          |   "followers":[],"collaborators":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10,"whoCanInvite": "collaborator",
+          |   "modifiedAt":${now.getMillis},"path": "/joe/scala"}}
         """.stripMargin
 
       def runCommonTopRecosTests(call: Call, requestFn: Request[AnyContent] => Future[Result])(implicit injector: Injector): Future[Result] = {
@@ -219,7 +218,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topPublicRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Andrew", "C").withUsername("test").saved
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())

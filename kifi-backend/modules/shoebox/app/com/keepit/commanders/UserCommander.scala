@@ -3,6 +3,7 @@ package com.keepit.commanders
 import akka.actor.Scheduler
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
+import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
@@ -25,13 +26,11 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Left, Right, Try }
+import scala.util._
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -69,7 +68,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int)
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -81,6 +80,7 @@ case class UserProfileStats(
   numKeeps: Int,
   numConnections: Int,
   numFollowers: Int,
+  numTags: Int,
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None)
 
@@ -89,7 +89,7 @@ case class UserNotFoundException(username: Username) extends Exception(username.
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
-    usernameRepo: UsernameAliasRepo,
+    handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -114,12 +114,14 @@ class UserCommander @Inject() (
     libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     emailSender: EmailSenderProvider,
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
+    experimentRepo: UserExperimentRepo,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -216,15 +218,16 @@ class UserCommander @Inject() (
   def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressOpt(address) match {
-        case None => Left("email not found")
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
-          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord)) {
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord.address.address)) {
             updateUserPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
           Right((): Unit)
+        case None => Left("unknown_email")
+        case _ => Left("permission_denied")
       }
     }
   }
@@ -267,17 +270,26 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
-      (basicUser, biography, emails, pendingPrimary, notAuthed)
+      val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
+
+      val libCounts = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, LibraryAccess.all.toSet)
+      val numLibsOwned = libCounts.getOrElse(LibraryAccess.OWNER, 0)
+      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0) + libCounts.getOrElse(LibraryAccess.READ_INSERT, 0)
+      val numLibraries = numLibsOwned + numLibsCollab
+
+      val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
+      val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers)
     }
 
     def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
-    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).map { email =>
+    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).reverse.map { email =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
@@ -285,10 +297,10 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers)
   }
 
-  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+  def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
     heimdalClient.getKeepAttributionInfo(userId)
   }
 
@@ -302,19 +314,18 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
-    val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
-      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
+      val user = userRepo.save(
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
+      )
+      handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
-      userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state,
-          username = username, normalizedUsername = UsernameOps.normalize(username.value)))
     }
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
         userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true)
+        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true) // todo, this shouldn't be true for all users, like when they were invited to a lib
         userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
       }
       searchClient.warmUpUser(newUser.id.get)
@@ -524,14 +535,14 @@ class UserCommander @Inject() (
     }
   }
 
-  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[Map[UserValueName, JsValue]] = {
+  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
       val user = db.readOnlyMaster { implicit s =>
         userRepo.get(userId)
       }
       val time = clock.now()
-      val shouldShowDelightedQuestionFut = if (experiments.contains(ExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
+      val shouldShowDelightedQuestionFut = if (experiments.contains(UserExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
         Future.successful(true)
       } else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId).map { lastDelightedAnswerDate =>
@@ -566,7 +577,7 @@ class UserCommander @Inject() (
     })
   }
 
-  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject] = {
     getPrefUpdates(prefSet, userId, experiments) map { updates =>
       savePrefs(userId, updates)
     } recover {
@@ -609,90 +620,16 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
-    if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
-      db.readWrite(attempts = 3) { implicit session =>
-        val existingUser = userRepo.getByUsername(username)
-        if (existingUser.isDefined && existingUser.get.id.get != userId) {
-          log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
-          Left("username_exists")
-        } else usernameRepo.getByUsername(username) match {
-          case Some(alias) if (!alias.belongsTo(userId) && (alias.isLocked || (alias.isProtected && !overrideProtection))) =>
-            log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
-            Left("username_exists")
-          case _ => {
-            if (!readOnly) {
-              val user = userRepo.get(userId)
-              val normalizedUsername = UsernameOps.normalize(username.value)
-              if (user.normalizedUsername != normalizedUsername) {
-                usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
-                usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
-              }
-              userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
-              //we have to do cache invalidation now, the repo does not have the old username for that
-              usernameCache.remove(UsernameKey(user.username))
-            } else {
-              log.info(s"[dry run] user $userId set with username $username")
-            }
-            Right(username)
-          }
-        }
-      }
-    } else {
-      log.warn(s"[dry run] for user $userId invalid username: $username")
-      Left("invalid_username")
-    }
-  }
-
-  private def createUsernameCandidates(rawFirstName: String, rawLastName: String): Seq[Username] = {
-    val firstName = UsernameOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
-    val lastName = UsernameOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
-    val name = if (firstName.isEmpty || lastName.isEmpty) {
-      if (firstName.isEmpty) lastName else firstName
-    } else {
-      s"$firstName-$lastName"
-    }
-    val seed = if (name.length < 4) {
-      val filler = Seq.fill(4 - name.length)(0)
-      s"$name-$filler"
-    } else name
-    def randomNumber = scala.util.Random.nextInt(999)
-    val censorList = UsernameOps.censorList.mkString("|")
-    val preCandidates = ArrayBuffer[String]()
-    preCandidates += seed
-    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
-    preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
-    val candidates = preCandidates.map { name =>
-      log.info(s"validating username $name for user $firstName $lastName")
-      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
-      log.info(s"username $name is valid")
-      valid
-    }.filter(UsernameOps.isValid)
-    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $firstName $lastName")
-    candidates map { c => Username(c) }
-  }
-
-  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val candidates = createUsernameCandidates(user.firstName, user.lastName)
-    var keepTrying = true
-    var selectedUsername: Option[Username] = None
-    var i = 0
-    log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
-    while (keepTrying && i < candidates.size) {
-      val candidate = candidates(i)
-      setUsername(user.id.get, candidate, readOnly = readOnly) match {
-        case Right(username) =>
-          keepTrying = false
-          selectedUsername = Some(username)
-        case Left(_) =>
-          i += 1
-          log.warn(s"[trial $i] could not set username $candidate for user $user")
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+    db.readWrite(attempts = 3) { implicit session =>
+      val user = userRepo.get(userId)
+      handleCommander.setUsername(user, username, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck) match {
+        case Success(updatedUser) => Right(updatedUser.username)
+        case Failure(InvalidHandleException(handle)) => Left("invalid_username")
+        case Failure(_: UnavailableHandleException) => Left("username_exists")
+        case Failure(error) => throw error
       }
     }
-    if (keepTrying) {
-      log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
-    }
-    selectedUsername
   }
 
   def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
@@ -713,40 +650,44 @@ class UserCommander @Inject() (
         log.info(s"creating new email $emailAddress for user $userId")
         val user = userRepo.get(userId)
         if (user.primaryEmail.isEmpty) userRepo.save(user.copy(primaryEmail = Some(emailAddress)))
-        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
+        userEmailAddressCommander.saveAsVerified(UserEmailAddress(userId = userId, address = emailAddress))
       }
     }
   }
 
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
     val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
-    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntities(userId)
+    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntitiesForUser(userId)
     futureRecommendedUsers.flatMap {
       case None => Future.successful(None)
       case Some(recommendedUsers) =>
-        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          val friends = db.readOnlyMaster { implicit session =>
-            userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
-          }
+        val friends = db.readOnlyMaster { implicit session =>
+          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+        }
+
+        val mutualFriends = recommendedUsers.map { recommendedUserId =>
+          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
+        }.toMap
+
+        val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+          libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+        }
+
+        val allUserIds = mutualFriends.values.flatten.toSet ++ recommendedUsers
+
+        val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(allUserIds, allUserIds)
+
+        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
           val friendshipStrength = {
             val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
             relatedUsers.filter { case (userId, _) => friends.contains(userId) }
           }.toMap[Id[User], Double].withDefaultValue(0d)
 
-          val mutualFriends = recommendedUsers.map { recommendedUserId =>
-            recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
-          }.toMap
+          val sortedMutualFriends = mutualFriends.mapValues(_.toSeq.sortBy(-friendshipStrength(_)))
 
-          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
-            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
-          }
-
-          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
-
-          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
         }
     }
   }
@@ -770,15 +711,16 @@ class UserCommander @Inject() (
     }
     while (batch.nonEmpty && counter < max) {
       batch.map { user =>
-        val orig = user.normalizedUsername
-        val candidate = UsernameOps.normalize(user.username.value)
-        if (orig != candidate) {
-          log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
-          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = candidate)) }
-          counter += 1
-          if (counter >= max) return counter
-        } else {
-          log.info(s"username normalization did not change: $orig")
+        user.primaryUsername.foreach { primaryUsername =>
+          val renormalizedUsermame = Username(HandleOps.normalize(primaryUsername.original.value))
+          if (primaryUsername.normalized != renormalizedUsermame) {
+            log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $renormalizedUsermame")
+            db.readWrite { implicit s => userRepo.save(user.copy(primaryUsername = Some(primaryUsername.copy(normalized = renormalizedUsermame)))) }
+            counter += 1
+            if (counter >= max) return counter
+          } else {
+            log.info(s"username normalization did not change: ${primaryUsername.normalized}")
+          }
         }
       }
       batch = db.readOnlyMaster { implicit s =>
@@ -790,18 +732,27 @@ class UserCommander @Inject() (
     counter
   }
 
-  def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
+  def getUserByUsername(username: Username): Option[(User, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      userRepo.getByUsername(username).filter(_.state == UserStates.ACTIVE).map((_, false)) orElse
-        usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+      handleCommander.getByHandle(username).collect {
+        case (Right(user), isPrimary) if user.state == UserStates.ACTIVE =>
+          (user, isPrimary)
+      }
     }
+  }
+
+  def getByExternalIds(externalIds: Seq[ExternalId[User]]): Map[ExternalId[User], User] = {
+    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(externalIds) }
+  }
+  def getByExternalId(externalId: ExternalId[User]): User = {
+    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(Seq(externalId)).values.head }
   }
 
   def getAllFakeUsers(): Set[Id[User]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     allFakeUsersCache.getOrElse(AllFakeUsersKey) {
-      db.readOnlyMaster { implicit session =>
-        userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
+      db.readOnlyReplica { implicit session =>
+        userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet ++ experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN)
       }
     }
   }

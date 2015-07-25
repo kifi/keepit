@@ -7,10 +7,10 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailTip.toContextData
 import com.keepit.common.mail.template.EmailTrackingParam
-import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
+import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
-import com.keepit.model.{ EmailOptOutRepo, ExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.model.{ EmailOptOutRepo, UserExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
 
@@ -26,6 +26,7 @@ class SendgridCommander @Inject() (
     recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     userExperimentCommander: RemoteUserExperimentCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -81,7 +82,7 @@ class SendgridCommander @Inject() (
         userExperimentCommander.getExperimentsByUser(userId).map { experiments =>
           val builder = heimdalContextBuilder()
           builder.addExistingContext(context)
-          builder += ("userStatus", ExperimentType.getUserStatus(experiments))
+          builder += ("userStatus", UserExperimentType.getUserStatus(experiments))
           builder.addExperiments(experiments)
           val userEventContext = builder.build
           heimdalClient.trackEvent(UserEvent(userId, userEventContext, UserEventTypes.WAS_NOTIFIED, eventTime))
@@ -155,19 +156,16 @@ class SendgridCommander @Inject() (
     case _ => "External Page"
   }
 
-  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit =
-    db.readWrite { implicit rw =>
-      for {
-        userEmail <- email.to.headOption
-        emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
-        if !emailAddr.verified
-      } yield {
-        log.info(s"verifying email($userEmail) from SendGrid event($event)")
-
-        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED,
-          verifiedAt = Some(currentDateTime)))
-      }
+  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit = db.readWrite { implicit rw =>
+    for {
+      userEmail <- email.to.headOption
+      emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
+      if !emailAddr.verified
+    } {
+      log.info(s"verifying email($userEmail) from SendGrid event($event)")
+      userEmailAddressCommander.saveAsVerified(emailAddr)
     }
+  }
 
   private def handleUnsubscribeEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
     db.readWrite { implicit rw =>

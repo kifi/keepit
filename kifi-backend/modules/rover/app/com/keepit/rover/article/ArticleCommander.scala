@@ -1,8 +1,11 @@
 package com.keepit.rover.article
 
+import java.net.SocketTimeoutException
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.core._
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -25,6 +28,7 @@ import scala.util.{ Failure, Try }
 class ArticleCommander @Inject() (
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
+    articleInfoHelper: ArticleInfoHelper,
     articleInfoCache: ArticleInfoUriCache,
     articleStore: RoverArticleStore,
     topPriorityQueue: FetchTaskQueue.TopPriority,
@@ -91,16 +95,17 @@ class ArticleCommander @Inject() (
     getArticleInfoByUrlAndKind(url, kind) match {
       case Some(info) => getOrElseFetchRecentArticle(info, recency, shouldThrottle = false).imap(_.map(_.asExpected[A]))
       case None => { // do not intern the url into a normalized one to make sure it's fetched as it is
-        articleFetcher.fetch(ArticleFetchRequest(kind, url, shouldThrottle = false)).recover {
-          case invalidRequest: InvalidFetchRequestException => None
-          case invalidResponse: InvalidFetchResponseException[_] => None
-        }
+        articleFetcher.fetch(ArticleFetchRequest(kind, url, shouldThrottle = false))
       }
     }
+  } recover {
+    case invalidRequest: InvalidFetchRequestException => None
+    case invalidResponse: InvalidFetchResponseException[_] => None
+    case socketTimeout: SocketTimeoutException => None
   }
 
   private def isInvalidFetch(failureInfo: String): Boolean = {
-    failureInfo.contains("InvalidFetchResponseException") || failureInfo.contains("InvalidFetchRequestException")
+    failureInfo.contains("InvalidFetchResponseException") || failureInfo.contains("InvalidFetchRequestException") || failureInfo.contains("SocketTimeoutException")
   }
 
   private def getOrElseFetchRecentArticle(info: RoverArticleInfo, recency: Duration, shouldThrottle: Boolean): Future[Option[info.A]] = {
@@ -111,13 +116,13 @@ class ArticleCommander @Inject() (
       }
       case oldArticleOpt => { // never fetched or fetched successfully too long ago
         markAsFetching(info.id.get)
-        fetchAndPersist(info, shouldThrottle)
+        fetchAndPersist(info, shouldThrottle).imap { fetchedArticleOpt => fetchedArticleOpt orElse oldArticleOpt }
       }
     }
   }
 
-  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](url: String, uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfos(url, uriId, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
 
@@ -131,14 +136,14 @@ class ArticleCommander @Inject() (
     }
   }
 
-  private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  private def internArticleInfos(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     // natural race condition with the regular ingestion, hence the 3 attempts
     db.readWrite(attempts = 3) { implicit session =>
-      articleInfoRepo.internByUri(uriId, url, kinds)
+      articleInfoHelper.intern(url, uriId, kinds)
     }
   }
 
-  private def getArticleInfoByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+  def getArticleInfoByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A]): Option[RoverArticleInfo] = {
     db.readOnlyMaster { implicit session =>
       articleInfoRepo.getByUrlAndKind(url, kind)
     }
@@ -181,15 +186,17 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
+  def fetchAsap(url: String, uriId: Id[NormalizedURI], refresh: Boolean): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
-    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
-    val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
-    if (neverFetched.isEmpty) Future.successful(())
+    val interned = internArticleInfos(url, uriId, toBeInternedByPolicy)
+
+    val toBeFetched = interned.collect { case (kind, info) if refresh || info.lastFetchedAt.isEmpty => (info.id.get -> info) }
+
+    if (toBeFetched.isEmpty) Future.successful(())
     else {
-      log.info(s"[fetchAsap] Never fetched before for uri ${uriId}: ${url} -> ${neverFetched.keySet.mkString(" | ")}")
-      fetchWithTopPriority(neverFetched.keySet).imap { results =>
-        val resultsByKind = results.collect { case (infoId, result) => neverFetched(infoId).articleKind -> result }
+      log.info(s"[fetchAsap] Never fetched before for uri ${uriId}: ${url} -> ${toBeFetched.keySet.mkString(" | ")}")
+      fetchWithTopPriority(toBeFetched.keySet).imap { results =>
+        val resultsByKind = results.collect { case (infoId, result) => toBeFetched(infoId).articleKind -> result }
         log.info(s"[fetchAsap] Fetching with top priority for uri ${uriId}: ${url} -> ${resultsByKind.mkString(" | ")}")
         val failed = resultsByKind.collect { case (kind, Failure(error)) => kind -> error }
         if (failed.nonEmpty) {
@@ -212,7 +219,7 @@ class ArticleCommander @Inject() (
       }
       case Some(article) => {
         log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
-        articleStore.add(articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
+        articleStore.add(articleInfo.urlHash, articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
           log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
           Some((article, key.version))
         }
@@ -232,7 +239,7 @@ class ArticleCommander @Inject() (
 }
 
 case class ArticleInfoUriKey(uriId: Id[NormalizedURI]) extends Key[Set[ArticleInfo]] {
-  override val version = 1
+  override val version = 2
   val namespace = "article_info_by_uri"
   def toKey(): String = uriId.id.toString
 }

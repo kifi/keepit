@@ -12,3 +12,12 @@ POST    /internal/rover/getImagesByUris             @com.keepit.rover.controller
 POST    /internal/rover/getOrElseFetchArticleSummaryAndImages @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchArticleSummaryAndImages()
 POST    /internal/rover/getOrElseFetchRecentArticle       @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchRecentArticle()
 POST    /internal/rover/getOrElseComputeRecentContentSignature       @com.keepit.rover.controllers.internal.RoverController.getOrElseComputeRecentContentSignature()
+
+GET     /internal/rover/pornDetector/getModel          @com.keepit.rover.controllers.internal.PornDetectorController.getModel
+POST    /internal/rover/pornDetector/detect       @com.keepit.rover.controllers.internal.PornDetectorController.detect
+POST    /internal/rover/pornDetector/whitelist        @com.keepit.rover.controllers.internal.PornDetectorController.whitelist
+
+GET     /internal/rover/getAllProxies           @com.keepit.rover.controllers.internal.RoverController.getAllProxies
+POST    /internal/rover/saveProxy               @com.keepit.rover.controllers.internal.RoverController.saveProxy
+GET     /internal/rover/getAllUrlRules           @com.keepit.rover.controllers.internal.RoverController.getAllUrlRules
+POST    /internal/rover/saveUrlRule               @com.keepit.rover.controllers.internal.RoverController.saveUrlRule

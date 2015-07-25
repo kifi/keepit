@@ -5,7 +5,7 @@ import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.net.{ ClientResponse, CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.actor.{ FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance }
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -51,16 +51,6 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def trackEvent(event: HeimdalEvent): Unit
 
-  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject]
-
-  def updateMetrics(): Unit
-
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray]
-
-  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]]
-
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int]
-
   def deleteUser(userId: Id[User]): Unit
 
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit
@@ -93,7 +83,12 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 
-  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])]
+  def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
+
+  def getGratData(userId: Id[User]): Future[GratificationData]
+
+  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
+
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -142,33 +137,6 @@ class HeimdalServiceClientImpl @Inject() (
   def trackEvent(event: HeimdalEvent): Unit = {
     actor.ref ! event
   }
-
-  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map { response =>
-      Json.parse(response.body).as[JsObject]
-    }
-  }
-
-  def updateMetrics(): Unit = {
-    broadcast(Heimdal.internal.updateMetrics())
-  }
-
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray] = {
-    val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(companion.typeCode, eventNames, limit, window)).map { response =>
-      Json.parse(response.body).as[JsArray]
-    }
-  }
-
-  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]] =
-    call(Heimdal.internal.getEventDescriptors(companion.typeCode)).map { response =>
-      Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
-    }
-
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int] =
-    call(Heimdal.internal.updateEventDescriptor(companion.typeCode), Json.toJson(eventDescriptors)).map { response =>
-      Json.parse(response.body).as[JsNumber].value.toInt
-    }
 
   def deleteUser(userId: Id[User]): Unit = call(Heimdal.internal.deleteUser(userId))
 
@@ -355,9 +323,26 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = {
-    call(Heimdal.internal.getOwnerLibraryViewStats(ownerId)).map { res =>
-      ((res.json \ "cnt").as[Int], (res.json \ "map").as[Map[Id[Library], Int]])
+  def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
+    val payload = Json.toJson(userIds)
+    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(responseTimeout = Some(120000), maxJsonParseTime = Some(120000), maxWaitTime = Some(120000)), routingStrategy = offlinePriority).map { response =>
+      log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.json}")
+      (response.json \ "gratDatas").as[Seq[GratificationData]]
+    }
+  }
+
+  def getGratData(userId: Id[User]): Future[GratificationData] = {
+    call(Heimdal.internal.getGratData(userId)).map { response =>
+      log.info(s"[GratData] Grat Data received. Body: ${response.json}")
+      (response.json \ "gratData").as[GratificationData]
+    }
+  }
+
+  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
+    val payload = Json.toJson(userIds)
+    call(Heimdal.internal.getGratDatas, payload).map { response =>
+      log.info(s"[GratData] Grat Datas received. Body: ${response.json}")
+      (response.json \ "gratDatas").as[Seq[GratificationData]]
     }
   }
 }

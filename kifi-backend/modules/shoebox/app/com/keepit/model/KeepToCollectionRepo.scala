@@ -14,11 +14,9 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
-  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]]
   def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection]
   def getByCollection(collId: Id[Collection],
@@ -75,21 +73,6 @@ class KeepToCollectionRepoImpl @Inject() (
     }
   }
 
-  def getCollectionsForKeep(keep: Keep)(implicit session: RSession): Seq[Id[Collection]] = {
-    if (keep.isActive) {
-      collectionsForKeepCache.getOrElse(CollectionsForKeepKey(keep.id.get)) {
-        val query = for {
-          kc <- rows if kc.bookmarkId === keep.id.get && kc.state === KeepToCollectionStates.ACTIVE
-          c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-        } yield kc
-
-        query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
-      }
-    } else {
-      Seq.empty
-    }
-  }
-
   def getCollectionsForKeeps(keeps: Seq[Keep])(implicit session: RSession): Seq[Seq[Id[Collection]]] = {
     val keepIds = keeps.collect { case k if k.isActive => k.id.get }.toSet
     val collectionsForKeeps = collectionsForKeepCache.bulkGetOrElse(keepIds map CollectionsForKeepKey) { keys =>
@@ -140,19 +123,6 @@ class KeepToCollectionRepoImpl @Inject() (
     q.list.map { ktc => //there should be only [0, 1], iterating on possibly more for safty
       save(ktc.inactivate())
     }
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime] = {
-    import keepRepo.db.Driver.simple._
-    val res = (
-      for {
-        kc <- rows if kc.collectionId === collectionId && kc.state === KeepToCollectionStates.ACTIVE
-        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
-      } yield (k.uriId, k.createdAt)
-    ).list
-
-    res map { r => KeepUriAndTime(r._1, r._2) }
   }
 
   def insertAll(k2c: Seq[KeepToCollection])(implicit session: RWSession): Unit = {

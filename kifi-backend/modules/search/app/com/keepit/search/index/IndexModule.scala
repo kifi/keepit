@@ -3,6 +3,7 @@ package com.keepit.search.index
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexerPluginImpl, LibraryMembershipIndexerPlugin, LibraryMembershipIndexer }
+import com.keepit.search.index.graph.organization._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,9 +12,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.inject.AppScoped
 import com.keepit.model.NormalizedURI
-import com.keepit.search.ArticleStore
 import com.keepit.search.index.article._
-import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
 import com.keepit.search.index.phrase.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
@@ -67,7 +66,6 @@ trait IndexModule extends ScalaModule with Logging {
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
-    bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
@@ -75,6 +73,8 @@ trait IndexModule extends ScalaModule with Logging {
     bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped]
     bind[LibraryMembershipIndexerPlugin].to[LibraryMembershipIndexerPluginImpl].in[AppScoped]
     bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped]
+    bind[OrganizationIndexerPlugin].to[OrganizationIndexerPluginImpl].in[AppScoped]
+    bind[OrganizationMembershipIndexerPlugin].to[OrganizationMembershipIndexerPluginImpl].in[AppScoped]
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -105,20 +105,6 @@ trait IndexModule extends ScalaModule with Logging {
       throw new Exception("no shard spec found")
     }
     ActiveShards(shards)
-  }
-
-  @Singleton
-  @Provides
-  def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedCollectionIndexer = {
-    val version = IndexerVersionProviders.Collection.getVersionByStatus(serviceDisovery)
-    def collectionIndexer(shard: Shard[NormalizedURI]): CollectionIndexer = {
-      val dir = getIndexDirectory("index.collection.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
-      log.info(s"storing CollectionIndex${indexNameSuffix(shard, version)} in $dir")
-      new CollectionIndexer(dir, airbrake)
-    }
-
-    val indexShards = activeShards.local.map { shard => (shard, collectionIndexer(shard)) }
-    new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -210,6 +196,23 @@ trait IndexModule extends ScalaModule with Logging {
     val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
     new ShardedArticleIndexer(indexShards.toMap, shoebox, rover, airbrake, executionContext)
   }
+
+  @Provides @Singleton
+  def organizationIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): OrganizationIndexer = {
+    val version = IndexerVersionProviders.Organization.getVersionByStatus(serviceDisovery)
+    val orgDir = getIndexDirectory("index.organization.directory", noShard, version, backup, conf, IndexerVersionProviders.Organization.getVersionsForCleanup())
+    log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgDir")
+    new OrganizationIndexer(orgDir, shoebox, airbrake)
+  }
+
+  @Provides @Singleton
+  def organizationMembershipIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): OrganizationMembershipIndexer = {
+    val version = IndexerVersionProviders.OrganizationMembership.getVersionByStatus(serviceDisovery)
+    val orgMemDir = getIndexDirectory("index.organizationMembership.directory", noShard, version, backup, conf, IndexerVersionProviders.OrganizationMembership.getVersionsForCleanup())
+    log.info(s"storing organization index ${indexNameSuffix(noShard, version)} in $orgMemDir")
+    new OrganizationMembershipIndexer(orgMemDir, shoebox, airbrake)
+  }
+
 }
 
 case class ProdIndexModule() extends IndexModule {

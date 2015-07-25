@@ -1,0 +1,226 @@
+@import com.keepit.commanders.OrganizationStatistics
+@import play.api.libs.json.Json
+@import com.keepit.commanders.SummaryByYearWeek._
+@(
+orgStats: OrganizationStatistics
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
+<table class="org-summary table table-bordered" style="width:600px">
+    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
+    <tr><td>Name</td>
+        <td>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
+            <input id="set-name-input" type="text" name="name" value="@orgStats.name">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Created At</td>
+        <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Handle</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
+                <input id="set-handle-input" type="text" name="handle" value="@orgStats.handle.value">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
+    <tr><td>Description</td>
+        <td>
+        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+            <input id="set-description-input" type="text" name="description" value="@orgStats.description">
+            <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+    <tr>
+    <th>Experiments</th>
+    <td id="experiments" class="form-inline">
+    @for(exp <- OrganizationExperimentType._ALL) {
+        <label class="checkbox">
+            <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
+        </label>
+    }
+    </td>
+    </tr>
+    <tr>
+        <th>Active</th>
+        <td>
+            @orgStats.org.state
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+                <button type="submit" class="btn btn-default">Set inactive</button>
+            </form>
+        </td>
+    </tr>
+
+</table>
+
+<table class="org-members table table-bordered" style="width:600px">
+    <tr>
+        <th>Member Id</th>
+        <th>Member Name</th>
+        <th>Role</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+        <tr>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+            <td>@membership.role</td>
+            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+        </tr>
+    }
+</table>
+
+<table class="org-candidates table table-bordered" style="width:600px">
+    <tr>
+        <th>Candidate Id</th>
+        <th>Candidate Name</th>
+        <th># of libraries</th>
+        <th># of keeps</th>
+        <th># of chats</th>
+    </tr>
+    @for(candidate <- orgStats.candidates.toSeq) {
+        <tr>
+            <td>@candidate.userId</td>
+            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId">
+                <button type="submit" class="btn btn-default">Remove</button>
+            </form></td>
+        </tr>
+    }
+</table>
+<br/>
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+    <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
+    <input type="Submit" value="Add">
+</form>
+
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="GET" class="form-inline refresh-reco-list">
+    # of Recommendations: <input type="number" name="numMemberRecos" value="30">
+    <input type="Submit" value="Refresh">
+</form>
+
+
+<table class="org-member-recos table table-bordered" style="width:800px">
+    <tr>
+        <th>Recommended User</th>
+        <th>Recommended Email</th>
+        <th>Recommendation Score</th>
+        <th>Associated Orgs</th>
+    </tr>
+    @for(reco <- orgStats.memberRecommendations) {
+        <tr>
+            <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
+            <td class="block">@{reco.user.primaryEmail}</td>
+            <td>@reco.score</td>
+            <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
+            <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
+        </tr>
+    }
+</table>
+
+<table class="org-domains table table-bordered" style="width:800px">
+    <tr>
+        <th>Owned Domain</th>
+    </tr>
+    @for(domain <- orgStats.domains) {
+        <tr>
+            <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.id.get)">@domain.hostname</a><td>
+            <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.id.get)"
+                class="btn btn-small">Remove </a></td>
+        </tr>
+    }
+</table>
+
+    <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
+        <input type="text" name="domainName" placeholder="Domain name">
+        <button type="submit" class="btn btn-default">Add Ownership</button>
+    </form>
+
+<h3>Chat Engagement</h3>
+ 
+
+<canvas id="org-engagement-chart" style="width: 100%; height: 400px;"></canvas>
+
+    <style type="text/css">
+    .line-legend span {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+    }
+    </style>
+
+    <script type="text/javascript">
+
+    var orgEngagementChartElem = $("#org-engagement-chart");
+    var orgEngagementChart = new Chart(orgEngagementChartElem.get(0).getContext("2d")).Line({
+        labels: @Html(Json.toJson(orgStats.allMemberChatStats)(summaryByYearHumanSeqWrites).toString),
+        datasets: [
+            {
+                label: "All chat threads by members of this org",
+                fillColor: "rgba(151,187,205,0.2)",
+                strokeColor: "rgba(151,187,205,1)",
+                pointColor: "rgba(151,187,205,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(151,187,205,1)",
+                data: @Html(Json.toJson(orgStats.allMemberChatStats)(summaryByYearWeekDataSeqWrites).toString)
+            },
+            {
+                label: "All internal chat threads between members of this org",
+                fillColor: "rgba(129,205,145,0.2)",
+                strokeColor: "rgba(129,205,145,1)",
+                pointColor: "rgba(129,205,145,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(129,205,145,1)",
+                data: @Html(Json.toJson(orgStats.internalMemberChatStats)(summaryByYearWeekDataSeqWrites).toString)
+            }
+        ]
+    }, {
+        responsive: true
+    });
+
+    orgEngagementChartElem.before($(orgEngagementChart.generateLegend()));
+
+    $("#experiments").on("click", "input", function() {
+        var $td = $(this).closest("#experiments");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeExperimentAction(orgStats.orgId, "____")'.replace("____", $(this).data("exp")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    function addCandidate(orgId, candidateId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId }).done(done);
+    };
+
+    function addMember(orgId, memberId) {
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
+    };
+
+    function done() {
+      location.reload();
+    };
+
+
+</script>
+}

@@ -1,20 +1,20 @@
 package com.keepit.search.augmentation
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ NormalizedURI, Library, User }
+import com.keepit.model.{ Organization, NormalizedURI, Library, User }
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexable
 import scala.collection.mutable.{ ListBuffer }
 import com.keepit.common.CollectionHelpers
 
-class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
+class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
   def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _)))
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
-  lazy val (myKeeps, moreKeeps) = AugmentedItem.sortKeeps(userId, allFriends, allLibraries, scores, info.keeps)
+  lazy val (myKeeps, moreKeeps) = AugmentedItem.sortKeeps(userId, allFriends, allOrganizations, allLibraries, scores, info.keeps)
   lazy val keeps = myKeeps ++ moreKeeps
   def otherPublishedKeeps: Int = info.otherPublishedKeeps
   def otherDiscoverableKeeps: Int = info.otherDiscoverableKeeps
@@ -58,28 +58,29 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 }
 
 object AugmentedItem {
-  private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
+  // todo(Léo): update this logic to take organizations into account
+  private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], organizations: Set[Id[Organization]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
 
     val sortedKeeps = keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
 
     val myKeeps = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyLibraries = new ListBuffer[RestrictedKeepInfo]()
-    val keepsFromMyFriends = new ListBuffer[RestrictedKeepInfo]()
+    val keepsFromMyNetwork = new ListBuffer[RestrictedKeepInfo]()
     val otherKeeps = new ListBuffer[RestrictedKeepInfo]()
     sortedKeeps.foreach { keep =>
       val keepCategory = {
         if (keep.keptBy.exists(_ == userId)) myKeeps
         else if (keep.keptIn.exists(libraries.contains)) keepsFromMyLibraries
-        else if (keep.keptBy.exists(friends.contains)) keepsFromMyFriends
+        else if (keep.keptBy.exists(friends.contains)) keepsFromMyNetwork
         else otherKeeps
       }
       keepCategory += keep
     }
-    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyFriends ++ otherKeeps
+    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyNetwork ++ otherKeeps
     (myKeeps.toList, moreKeeps.toList)
   }
 
-  def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
-    new AugmentedItem(userId, allFriends, allLibraries, scores)(item, info)
+  def apply(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
+    new AugmentedItem(userId, allFriends, allOrganizations, allLibraries, scores)(item, info)
   }
 }

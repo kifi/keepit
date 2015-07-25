@@ -4,7 +4,6 @@ import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, Probablist
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.search._
-import com.keepit.social._
 
 trait FakeStoreModule extends StoreModule {
 
@@ -13,19 +12,13 @@ trait FakeStoreModule extends StoreModule {
   }
 
   @Provides @Singleton
-  def socialUserRawInfoStore(): SocialUserRawInfoStore = new InMemorySocialUserRawInfoStoreImpl()
-
-  @Provides @Singleton
   def articleSearchResultStore(): ArticleSearchResultStore = new InMemoryArticleSearchResultStoreImpl()
 
   @Singleton
   @Provides
   def probablisticLRUStore(): ProbablisticLRUStore = new InMemoryProbablisticLRUStoreImpl()
 
-  @Singleton
-  @Provides
-  def articleStore(): ArticleStore = new InMemoryArticleStoreImpl()
-
   @Provides @Singleton
   def roverImageStore(): RoverImageStore = new InMemoryRoverImageStoreImpl()
+
 }

@@ -5,8 +5,17 @@
   <a class="dialog-x" ng-click="close()"></a>
   <div class="register-modal-wrap">
       <div class="dialog-body">
-        <div class="kf-register-header" ng-if="!userData.toConnectWith">Join Kifi to get updates to this library</div>
-        <div class="kf-register-header" ng-if="userData.toConnectWith">Join Kifi to connect with {{userData.toConnectWith.firstName}}</div>
+        <div ng-if="userData.invite">
+          <div class="kf-register-header kf-register-header-centered">Join Kifi</div>
+          <div>
+            <img class="kf-register-inviter-pic" ng-src="{{userData.invite.inviter|pic}}"></img>
+            <span class="kf-register-modal-invite-text"> {{userData.invite.inviter.firstName}} invited you to {{userData.invite.access === 'read_only' ? 'follow' : 'collaborate on'}} this library. </span>
+          </div>
+        </div>
+        <div ng-if="!userData.invite">
+          <div class="kf-register-header" ng-if="!userData.toConnectWith">Join Kifi to get updates to this library</div>
+          <div class="kf-register-header" ng-if="userData.toConnectWith">Join Kifi to connect with {{userData.toConnectWith.firstName}}</div>
+        </div>
 
         <div class="register-modal-social-block">
           <a ng-href="{{facebookSignupPath}}" target="_self" ng-click="fbAuth()">

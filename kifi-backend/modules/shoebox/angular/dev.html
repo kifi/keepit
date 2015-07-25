@@ -19,6 +19,23 @@
   mixpanel.init("abb7e1226370392c849ec16fadff2584");*/
 </script>
 <script src="/dist/lib.js"></script>
+<!--
+<script>
+  // Uncomment this script to test the Airbrake reporting functionality
+  window.Airbrake = new airbrakeJs.Client({ projectId: '113130', projectKey: '67e9f4bb3c4fbd7d96e1f81a24e6d374' });
+
+  // Configure vanilla JS client-side error reporting.
+  Airbrake.setEnvironmentName('development');
+  window.onerror = _.debounce(function (message, filename, lineno, colno, error) {
+    Airbrake.push({
+      error: {
+        message: error.toString(),
+        stack: error.stack
+      }
+    });
+  }, 5000, true);
+</script>
+ -->
 <script src="/dist/kifi.js"></script>
 <script>angular.bootstrap(document, ['kifi']);</script>
 <script>
@@ -30,4 +47,19 @@
       return s;
     }());
   }
+
+  var ngAppElem = angular.element(document.querySelector('[ng-app]') || document.body);
+
+  window.injector = ngAppElem.injector();
+  window.inject = injector.invoke;
+  window.$rootScope = ngAppElem.scope();
+  window.inj = injector.get;
+
+  Object.defineProperty(window, '$scope', {
+      get: function () {
+          var elem = angular.element(__commandLineAPI.$0);
+          return elem.isolateScope() || elem.scope();
+      },
+  });
 </script>
+<script>$.get('/dist/symbol-sprite.svg', function(data) { document.body.appendChild(data.documentElement) });</script>

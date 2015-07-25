@@ -1,9 +1,7 @@
 package com.keepit.model
 
-import com.keepit.common.db._
+import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
@@ -62,9 +60,36 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val user1 = user().saved
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10)
+          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10, None, None)
           1 === 1
         }
+      }
+    }
+
+    "keeps by library without orgId" in {
+      withDb() { implicit injector =>
+        val orgId1 = Some(Id[Organization](1))
+        val orgId2 = Some(Id[Organization](2))
+        val library = db.readWrite { implicit s =>
+          val lib = libraryRepo.save(Library(name = "Kifi", ownerId = Id[User](1), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = 1))
+          keeps(20).map(_.withLibrary(lib.id.get).withOrganizationId(orgId1)).saved
+          keeps(20).map(_.withLibrary(lib.id.get).withOrganizationId(orgId2)).saved
+          keeps(10).map(_.withLibrary(lib.id.get)).saved
+          lib
+        }
+
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(library.id.get, 0, 50) }.length === 50
+
+        val keepsWithOrgIdSet = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, None, Limit(50))
+        }
+
+        keepsWithOrgIdSet.size === 40
+
+        val keepsWithoutOrgId1 = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, orgId1, Limit(50))
+        }
+        keepsWithoutOrgId1.size === 30
       }
     }
 

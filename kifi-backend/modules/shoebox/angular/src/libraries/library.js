@@ -93,7 +93,10 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
-
+    $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+    $rootScope.$on('prefsChanged', function() {
+      $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+    });
 
     //
     // Scope methods.
@@ -143,8 +146,8 @@ angular.module('kifi')
     }
 
     $scope.libraryKeepClicked = function (keep, event) {
-      var eventAction = event.target.getAttribute('click-action');
-      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction });
+      var eventAction = event.currentTarget.getAttribute('click-action');
+      $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction, keepView: $scope.galleryView ? 'gallery' : 'list' });
     };
 
     $scope.callAddKeep = function () {
@@ -192,6 +195,14 @@ angular.module('kifi')
         url: absUrl +
           '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +
           '&kcid=na-vf_twitter-library_share-lid_' + library.id
+      });
+    };
+
+    $scope.showFeedModal = function () {
+      libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'rss', action: 'clicked_subscribe_button'});
+      modalService.open({
+        template: 'libraries/libraryFeedModal.tpl.html',
+        scope: $scope
       });
     };
 
@@ -280,10 +291,6 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryOnPage', library);
 
-    if (!libraryService.isLibraryMainOrSecret(library) && library.access !== 'none') {
-      $rootScope.$emit('lastViewedLib', library);
-    }
-
     if (library.keeps.length) {
       // dealing with keeps asynchronously, one by one, to allow header to be drawn
       $timeout(angular.bind(null, renderNextRawKeep, library.keeps.slice()));
@@ -297,40 +304,19 @@ angular.module('kifi')
       if (initParams.getAndClear('install') === '1' && !installService.installedVersion) {
         showInstallModal();
       }
-      if (initParams.getAndClear('intent') === 'follow' && $scope.library.access === 'none') {
+      if (initParams.getAndClear('intent') === 'follow' && !$scope.library.membership) {
+        // todo wtf why is this here and possible? no good.
         libraryService.joinLibrary($scope.library.id);
       }
     });
 
-    if (!$rootScope.userLoggedIn) {
-      library.abTest = {
-        name: 'exp_follow_popup',
-        salt: 'hgg1dv',
-        treatments: [
-          {
-            name: 'none'
-          },
-          {
-            name: 'popupLibrary',
-            data: {
-              buttonText: 'Follow',
-              mainHtml: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          },
-          {
-            name: 'popupCollection',
-            data: {
-              buttonText: 'Save',
-              mainHtml: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          }
-        ]
-      };
-      library.abTestTreatment = AB.chooseTreatment(library.abTest.salt, library.abTest.treatments);
-    }
+    libraryService.noteLibraryViewed(library.id);
+
+    $timeout(function() {
+      libraryService.trackEvent('user_viewed_page', $scope.library, {
+        type: 'library',
+        keepView: $scope.galleryView ? 'gallery' : 'list'
+      });
+    });
   }
 ]);

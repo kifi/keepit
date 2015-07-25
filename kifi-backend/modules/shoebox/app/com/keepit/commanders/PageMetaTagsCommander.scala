@@ -29,7 +29,7 @@ object UserProfileTab {
   object Connections extends UserProfileTab { val paths = Seq("/connections"); def title(name: String) = s"$name’s Connections" }
   object Followers extends UserProfileTab { val paths = Seq("/followers"); def title(name: String) = s"$name’s Followers" }
   val all = Seq(Libraries, FollowingLibraries, InvitedLibraries, Connections, Followers)
-  private val byPath = all.map(t => t.paths.map(p => Seq(p -> t, p + '/' -> t)).flatten).flatten.toMap
+  private val byPath = all.flatMap(t => t.paths.flatMap(p => Seq(p -> t, p + '/' -> t))).toMap
   def apply(path: String): UserProfileTab = {
     val i = path.indexOf("/", 1)
     byPath(if (i < 0) "" else path.substring(i))
@@ -39,6 +39,7 @@ object UserProfileTab {
 class PageMetaTagsCommander @Inject() (
     db: Database,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     keepImageCommander: KeepImageCommander,
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
@@ -61,7 +62,7 @@ class PageMetaTagsCommander @Inject() (
     val libs = relatedLibs.filterNot(_.kind == RelatedLibraryKind.POPULAR).take(6).map(_.library)
     val users = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(libs.map(_.ownerId).toSet) }
     libs.map { related =>
-      val urlPathOnly = Library.formatLibraryPath(users(related.ownerId).username, related.slug)
+      val urlPathOnly = libPathCommander.getPath(related)
       val url = {
         val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
         if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
@@ -114,7 +115,7 @@ class PageMetaTagsCommander @Inject() (
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     val (owner, urlPathOnly) = db.readOnlyMaster { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
-      val urlPathOnly = Library.formatLibraryPath(owner.username, library.slug)
+      val urlPathOnly = libPathCommander.getPath(library)
       (owner, urlPathOnly)
     }
     val altDescF: Future[Option[String]] = if (library.description.exists(_.size > 10)) {
@@ -152,6 +153,7 @@ class PageMetaTagsCommander @Inject() (
           unsafeTitle = s"${library.name}",
           url = url,
           urlPathOnly = urlPathOnly,
+          feedName = Some(library.name),
           unsafeDescription = PublicPageMetaTags.generateLibraryMetaTagDescription(library.description, owner.fullName, library.name, altDesc),
           images = imageUrls,
           facebookId = facebookId,
@@ -197,6 +199,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeTitle = title,
         url = url + tab.paths.head,
         urlPathOnly = urlPath + tab.paths.head,
+        feedName = None,
         unsafeDescription = s"$title on Kifi. Join Kifi to connect with ${user.firstName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,

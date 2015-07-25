@@ -10,9 +10,10 @@ import com.keepit.common.time._
 import com.keepit.controllers.website.FeedController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -30,20 +31,16 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test")
-    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test")
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(u1)
-      val user2 = userRepo.save(u2)
+      val user1 = UserFactory.user().withName("Aaron", "H").withCreatedAt(t1).withUsername("aaron").saved
+      val user2 = UserFactory.user().withName("Jackie", "Chan").withCreatedAt(t1.plusHours(2)).withUsername("jackie").saved
 
       val lib1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1))
@@ -108,7 +105,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 3
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u2.username, lib3.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(u2), None, lib3.slug)}"
 
       }
     }
@@ -129,7 +126,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 1
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u1.username, lib1.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(u1), None, lib1.slug)}"
 
       }
     }

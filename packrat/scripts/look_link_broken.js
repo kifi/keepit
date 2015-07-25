@@ -42,6 +42,7 @@ var showBrokenLookLinkDialog = (function () {
       .mousedown(onMouseDown);
     $(document).data('esc').add(hide);
     api.onEnd.push(hide);
+    return hide;
   };
 
   function hide(e) {

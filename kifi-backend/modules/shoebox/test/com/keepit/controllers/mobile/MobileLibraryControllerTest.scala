@@ -16,6 +16,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
+import com.keepit.controllers.website.LibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -26,7 +27,6 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
@@ -48,13 +48,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
@@ -68,7 +66,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "R2", lastName = "D2", createdAt = t1, username = Username("r2d2"), normalizedUsername = "r2d2"))
+
+          val user = UserFactory.user().withName("R2", "D2").withCreatedAt(t1).withUsername("r2d2").saved
           libraryRepo.getAllByOwner(user.id.get).length === 0
           user
         }
@@ -172,37 +171,42 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           s"""
             {
               "library" : {
-              "id" : "${pubLib1.id}",
-              "name" : "Krabby Patty",
-              "visibility" : "secret",
-              "slug" : "krabby-patty",
-              "url" : "/spongebob/krabby-patty",
-              "image":{
-                "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                "x":50,
-                "y":50
+                "id" : "${pubLib1.id}",
+                "name" : "Krabby Patty",
+                "visibility" : "secret",
+                "slug" : "krabby-patty",
+                "url" : "/spongebob/krabby-patty",
+                "image":{
+                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                  "x":50,
+                  "y":50
+                },
+                "kind" : "user_created",
+                "owner" : {
+                  "id" : "${user1.externalId}",
+                  "firstName" : "Spongebob",
+                  "lastName": "Squarepants",
+                  "pictureName":"0.jpg",
+                  "username":"spongebob"
+                },
+                "followers" : [],
+                "collaborators":[],
+                "keeps" : [],
+                "numKeeps" : 0,
+                "numCollaborators" : 0,
+                "numFollowers" : 0,
+                "whoCanInvite": "collaborator",
+                "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+                "path": "/spongebob/krabby-patty",
+                "membership":{
+                  "access" : "owner",
+                  "listed" : true,
+                  "subscribed" : false
+                },
+                "invite":null
               },
-              "kind" : "user_created",
-              "owner" : {
-                "id" : "${user1.externalId}",
-                "firstName" : "Spongebob",
-                "lastName": "Squarepants",
-                "pictureName":"0.jpg",
-                "username":"spongebob"
-              },
-              "followers" : [],
-              "collaborators":[],
-              "keeps" : [],
-              "numKeeps" : 0,
-              "numCollaborators" : 0,
-              "numFollowers" : 0,
-              "whoCanInvite": "collaborator",
-              "modifiedAt": ${lib1Updated.updatedAt.getMillis}
-              },
-              "membership" : "owner",
-              "subscribedToUpdates":false
-            }
-          """)
+              "membership" : "owner"
+            }""")
       }
     }
 
@@ -224,39 +228,45 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         contentType(result1) must beSome("application/json")
         Json.parse(contentAsString(result1)) === Json.parse(
           s"""
-             |{
-             |  "library" : {
-             |    "id" : "${pubLib1.id}",
-             |    "name" : "Krabby Patty",
-             |    "visibility" : "secret",
-             |    "slug" : "krabby-patty",
-             |    "url" : "/spongebob/krabby-patty",
-             |    "image":{
-             |        "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-             |        "x":50,
-             |        "y":50
-             |      },
-             |    "kind" : "user_created",
-             |    "owner" : {
-             |      "id" : "${user1.externalId}",
-             |      "firstName" : "Spongebob",
-             |      "lastName": "Squarepants",
-             |      "pictureName":"0.jpg",
-             |      "username":"spongebob"
-             |    },
-             |    "followers" : [],
-             |    "collaborators":[],
-             |    "keeps" : [],
-             |    "numKeeps" : 0,
-             |    "numCollaborators" : 0,
-             |    "numFollowers" : 0,
-             |    "whoCanInvite": "collaborator",
-             |    "modifiedAt": ${lib1Updated.updatedAt.getMillis}
-             |  },
-             |  "membership" : "owner",
-             |"subscribedToUpdates":false
-             |}
-           """.stripMargin)
+             {
+               "library" : {
+                 "id" : "${pubLib1.id}",
+                 "name" : "Krabby Patty",
+                 "visibility" : "secret",
+                 "slug" : "krabby-patty",
+                 "url" : "/spongebob/krabby-patty",
+                 "image":{
+                     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                     "x":50,
+                     "y":50
+                   },
+                 "kind" : "user_created",
+                 "owner" : {
+                   "id" : "${user1.externalId}",
+                   "firstName" : "Spongebob",
+                   "lastName": "Squarepants",
+                   "pictureName":"0.jpg",
+                   "username":"spongebob"
+                 },
+                 "followers" : [],
+                 "collaborators":[],
+                 "keeps" : [],
+                 "numKeeps" : 0,
+                 "numCollaborators" : 0,
+                 "numFollowers" : 0,
+                 "whoCanInvite": "collaborator",
+                 "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+                 "membership":{
+                   "access" : "owner",
+                   "listed" : true,
+                   "subscribed" : false
+                 },
+                 "invite" : null,
+                 "path": "/spongebob/krabby-patty"
+               },
+               "membership" : "owner"
+             }
+           """)
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>
@@ -267,6 +277,134 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         (contentAsJson(result2) \\ "name").map(_.as[String]) === Seq("Healthy Habits")
+      }
+    }
+
+    "uninvite user" in {
+
+      def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        db.readWrite { implicit s =>
+          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").withEmailAddress("email@gmail.com").saved
+          val userB = UserFactory.user().withName("Bulba", "Saur").withCreatedAt(t1).withUsername("bulbasaur").saved
+
+          val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
+
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          (userA, userB, libraryB1, inv1)
+        }
+      }
+
+      "succeed when inviter tries to uninvite" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[MobileLibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.mobile.routes.MobileLibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(NO_CONTENT)
+          contentType(result) must beNone
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(library.id.get, inviter.id.get, invitee.id.get, Set(LibraryInviteStates.INACTIVE)) must beSome
+          }
+        }
+      }
+      "fail when someone else tries to uninvite" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[MobileLibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(invitee)
+          val uninvitePath = com.keepit.controllers.mobile.routes.MobileLibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"library_invite_not_found\"}")
+        }
+      }
+
+      "fail for invalid library id" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[MobileLibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = PublicId[Library]("x")
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.mobile.routes.MobileLibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"invalid_library_id\"}")
+        }
+      }
+
+      "fail for invalid user type" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[MobileLibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.mobile.routes.MobileLibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "x",
+            "invitee" -> "email@gmail.com"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"invalid_invitee_type\"}")
+        }
+      }
+
+      "fail for invalid user externalId" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[MobileLibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.mobile.routes.MobileLibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> "00000000-0000-0000-0000-000000000000"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"external_id_does_not_exist\"}")
+        }
       }
     }
 
@@ -357,10 +495,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (userA, userB, userC, userD, lib1) = db.readWrite { implicit s =>
-          val userA = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userB = userRepo.save(User(firstName = "Baron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userC = userRepo.save(User(firstName = "Caron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userD = userRepo.save(User(firstName = "Daron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val userA = UserFactory.user().withName("Aaron", "H").withCreatedAt(t1).withUsername("aaron").saved
+          val userB = UserFactory.user().withName("Baron", "H").withCreatedAt(t1).withUsername("baron").saved
+          val userC = UserFactory.user().withName("Caron", "H").withCreatedAt(t1).withUsername("caron").saved
+          val userD = UserFactory.user().withName("Daron", "H").withCreatedAt(t1).withUsername("daron").saved
 
           val lib1 = libraryRepo.save(Library(ownerId = userA.id.get, name = "Lib1", slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER))
@@ -385,14 +523,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                    |"id":"${userB.externalId}",
                    |"firstName":"Baron",
                    |"lastName":"H",
-                   |"pictureName":"0.jpg","username":"test",
+                   |"pictureName":"0.jpg","username":"baron",
                    |"membership":"read_only"
                  |},
                |{
                  |"id":"${userC.externalId}",
                  |"firstName":"Caron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"caron",
                  |"membership":"read_only"
                |}
                |]
@@ -410,7 +548,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  |"id":"${userD.externalId}",
                  |"firstName":"Daron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"daron",
                  |"membership":"read_only",
                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))(internalTime.DateTimeJsonLongFormat)}
                 |},
@@ -687,18 +825,29 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
         contentAsJson(res1) === Json.parse(
           s"""
-             { "link" : "/nickfury/secret-shield-stuff?authToken=${invite1.authToken}", "access" : "read_only", "message" : "please follow" }
+             {
+              "link": "http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "access": "read_only",
+              "sms": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "email": {
+                "subject": "Check out this Kifi library: ${lib1a.name}",
+                "body": "I think you will find this Kifi library interesting: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}"
+              },
+              "facebook": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "twitter": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "message": ""
+            }
            """
         )
 
         // test collaborator inviting to a secret library (library allows collaborators to invite)
-        val res2 = inviteAnonymousToLibrary(user2, pubLibId1a, Json.obj("access" -> "read_write", "message" -> "please collaborate"))
+        val res2 = inviteAnonymousToLibrary(user2, pubLibId1a, Json.obj("access" -> "read_write"))
         status(res2) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 2
           val invite = libraryInviteRepo.all.last
           invite.inviterId === user2.id.get
-          invite.message === Some("please collaborate")
+          invite.message === None
           invite.access === LibraryAccess.READ_WRITE
           invite.userId === None
           invite.emailAddress === None
@@ -709,11 +858,26 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(res3) must equalTo(BAD_REQUEST)
 
         // test owner inviting to a published library
-        val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only", "message" -> "please follow"))
+        val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only"))
         status(res4) must equalTo(OK)
+        val invite2 = db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.last
+        }
+
         contentAsJson(res4) === Json.parse(
           s"""
-             { "link" : "/nickfury/public-shield-stuff", "access" : "read_only", "message" : "please follow" }
+             {
+              "link": "http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "access": "read_only",
+              "sms": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "email": {
+                "subject": "Check out this Kifi library: ${lib1b.name}",
+                "body": "I think you will find this Kifi library interesting: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}"
+              },
+              "facebook": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "twitter": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "message": ""
+            }
            """
         )
         db.readOnlyMaster { implicit s =>
@@ -808,7 +972,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def setupOneUserOneLibrary()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
-      val user = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("spongebob"), normalizedUsername = "spongebob", createdAt = t1))
+      val user = {
+        val saved = UserFactory.user().withName("Spongebob", "Squarepants").withCreatedAt(t1).saved
+        handleCommander.setUsername(saved, Username("spongebob")).get
+      }
       val library = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER))
       (user, library)
@@ -824,7 +991,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       val library1b = libraryRepo.save(Library(name = "Catching Jellyfish", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("catching-jellyfish"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library1b.id.get, access = LibraryAccess.OWNER))
 
-      val user2 = userRepo.save(User(firstName = "C", lastName = "3PO", username = Username("c3po"), normalizedUsername = "c3po", createdAt = t1))
+      val user2 = UserFactory.user().withName("C", "3PO").withUsername("c3po").withCreatedAt(t1).saved
       val library2a = libraryRepo.save(Library(name = "Nothing", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("nothing"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user2.id.get, libraryId = library2a.id.get, access = LibraryAccess.OWNER))
       (library1b, user2, library2a)

@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 
 trait TestInjectorProvider { this: InjectorProvider =>
   def inject[A](implicit m: Manifest[A], injector: Injector): A = injector.instance[A]
-  def withInjector[T](overridingModules: Module*)(f: Injector => T) = {
+  def withInjector[T](overridingModules: Module*)(f: Injector => T): T = {
     val customModules = Modules.`override`(module).`with`(overridingModules: _*)
     val injector = createInjector(customModules)
     try {
@@ -22,7 +22,8 @@ trait TestInjectorProvider { this: InjectorProvider =>
           case watchable: WatchableExecutionContext =>
             val killed = watchable.kill()
             if (killed > 0) {
-              println(s"[${getClass.getSimpleName}] Killed $killed threads at the end of a test, should have those been running?")
+              val test = new Exception().getStackTrace.filter(_.getClassName.contains("com.keepit")).map(l => l.getFileName + ":" + l.getLineNumber.toString).lastOption.getOrElse("a test")
+              println(s"[${getClass.getSimpleName}] Killed $killed threads at the end of $test, should have those been running?")
             }
           case simple: ExecutionContext => new Exception(s"[${getClass.getSimpleName}] can't close execution context of type ${simple.getClass.getName}. Make sure you use FakeExecutionContextModule in the test!").printStackTrace
         }

@@ -17,6 +17,8 @@ import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.WSResponseHeaders
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -45,7 +47,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
   }
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("Shamdrew", "Bronner").withUsername("test").saved
       val lib = library().saved
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))

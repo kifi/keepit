@@ -56,5 +56,20 @@ class DomainTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "intern domains by hostname" in {
+      withDb() { implicit injector =>
+        val domainRepo = inject[DomainRepo]
+        val domain1 = Domain(hostname = "google.com")
+        val domain2 = Domain(hostname = "apple.com")
+
+        inject[Database].readWrite { implicit c =>
+          val saved = domainRepo.save(domain1)
+          val inactive = domainRepo.save(domain2.copy(state = DomainStates.INACTIVE))
+
+          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com"))
+          internedDomains.keys.toSet === Set("google.com", "apple.com")
+        }
+      }
+    }
   }
 }

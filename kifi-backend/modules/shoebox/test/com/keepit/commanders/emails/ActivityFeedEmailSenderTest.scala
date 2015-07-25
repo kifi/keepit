@@ -21,7 +21,6 @@ import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
@@ -33,6 +32,8 @@ import scala.concurrent.duration.Duration
 
 class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector {
 
+  args(skipAll = true)
+
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeMailModule(),
@@ -40,7 +41,6 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     ProdShoeboxServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
@@ -73,9 +73,9 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     "work" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2) = db.readWrite { implicit rw =>
-          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
-          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
-          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
+          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
+          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
+          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
           keeps(20).foreach(_.withUser(u1).saved)
           keeps(20).foreach(_.withUser(u2).saved)
           keeps(2).foreach(_.withUser(u2).saved)

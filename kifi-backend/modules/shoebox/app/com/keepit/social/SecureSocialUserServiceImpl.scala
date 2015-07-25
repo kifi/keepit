@@ -26,7 +26,7 @@ import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
-import com.keepit.commanders.{ UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.mail.EmailAddress
@@ -43,6 +43,7 @@ class SecureSocialUserPluginImpl @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   userCommander: UserCommander,
   userExperimentCommander: LocalUserExperimentCommander,
+  userEmailAddressCommander: UserEmailAddressCommander,
   clock: Clock)
     extends UserService with SecureSocialUserPlugin with Logging {
 
@@ -115,7 +116,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = try {
     timing(s"updateExperimentIfTestUser $userId") {
-      @inline def setExp(exp: ExperimentType) {
+      @inline def setExp(exp: UserExperimentType) {
         val marked = userExperimentCommander.userHasExperiment(userId, exp)
         if (marked)
           log.debug(s"test user $userId is already marked as $exp")
@@ -163,12 +164,10 @@ class SecureSocialUserPluginImpl @Inject() (
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
       val email = EmailAddress.validate(emailString).get
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
-        case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
-          emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
+        case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty => userEmailAddressCommander.saveAsVerified(e)
         case Some(e) if e.state == UserEmailAddressStates.VERIFIED => e
-        case Some(e) => emailRepo.save(e.withState(UserEmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
-        case None => emailRepo.save(
-          UserEmailAddress(userId = userId, address = email, state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
+        case Some(e) => userEmailAddressCommander.saveAsVerified(e)
+        case None => userEmailAddressCommander.saveAsVerified(UserEmailAddress(userId = userId, address = email))
       }
       log.info(s"[save] Saved email is $emailAddress")
       emailAddress

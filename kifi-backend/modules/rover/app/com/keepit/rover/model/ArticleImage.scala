@@ -13,19 +13,22 @@ case class ArticleImage(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ArticleImage] = ArticleImageStates.ACTIVE,
-    uriId: Id[NormalizedURI],
+    uriId: Id[NormalizedURI], // todo(Léo): make optional
+    url: String,
+    urlHash: UrlHash,
     kind: String,
     version: ArticleVersion,
     fetchedAt: DateTime,
     imageUrl: String,
-    imageHash: ImageHash) extends Model[ArticleImage] with ArticleKindHolder {
+    imageHash: ImageHash) extends ModelWithState[ArticleImage] with ArticleKindHolder {
   def withId(id: Id[ArticleImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
 
 object ArticleImage {
-  def apply[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
-    ArticleImage(uriId = uriId, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash)
+  def apply[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
+    val urlHash = UrlHash.hashUrl(url)
+    ArticleImage(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash)
   }
 
   def applyFromDbRow(
@@ -34,6 +37,8 @@ object ArticleImage {
     updatedAt: DateTime = currentDateTime,
     state: State[ArticleImage] = ArticleImageStates.ACTIVE,
     uriId: Id[NormalizedURI],
+    url: String,
+    urlHash: UrlHash,
     kind: String,
     versionMajor: VersionNumber[Article],
     versionMinor: VersionNumber[Article],
@@ -41,7 +46,7 @@ object ArticleImage {
     imageUrl: String,
     imageHash: ImageHash): ArticleImage = {
     val version = ArticleVersion(versionMajor, versionMinor)
-    ArticleImage(id, createdAt, updatedAt, state, uriId, kind, version, fetchedAt, imageUrl, imageHash)
+    ArticleImage(id, createdAt, updatedAt, state, uriId, url, urlHash, kind, version, fetchedAt, imageUrl, imageHash)
   }
 
   def unapplyToDbRow(articleImage: ArticleImage) = {
@@ -51,6 +56,8 @@ object ArticleImage {
       articleImage.updatedAt,
       articleImage.state,
       articleImage.uriId,
+      articleImage.url,
+      articleImage.urlHash,
       articleImage.kind,
       articleImage.version.major,
       articleImage.version.minor,

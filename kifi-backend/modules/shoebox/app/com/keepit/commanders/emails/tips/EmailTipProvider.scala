@@ -53,7 +53,6 @@ class EmailTipProvider @Inject() (
       val htmlOptF = tip match {
         case EmailTip.FriendRecommendations => peopleRecommendationsTip.render(emailToSend, userId)
         case EmailTip.ConnectFacebook => connectNetwork(FACEBOOK)
-        case EmailTip.ConnectLinkedIn => connectNetwork(LINKEDIN)
         case EmailTip.ImportGmailContacts => importGmail.render(emailToSend)
         case EmailTip.InstallExtension => installExtensionTip.render(emailToSend, userId)
         case EmailTip.KeepFromEmail => keepFromEmailTip.render(emailToSend)

@@ -109,15 +109,23 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 
-  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean): Future[Option[Seq[Id[User]]]] = {
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
     Future.successful(friendRecommendationsExpectations.get(userId))
   }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[UserInviteRecommendation]] = Future.successful(Seq.empty)
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
 
-  def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
+  def getIrrelevantPeopleForUser(userId: Id[User]) = Future.successful(IrrelevantPeopleForUser.empty(userId))
+
+  def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = Future.successful(IrrelevantPeopleForOrg.empty(orgId))
+
+  def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int) = Future.successful(Seq.empty)
+
+  def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Future.successful(Seq.empty)
+
+  def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = Future.successful(())
 }

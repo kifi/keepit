@@ -17,6 +17,8 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector {
 
@@ -30,7 +32,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
           ("facebook_graph_shawn.json", 82)
         )
         val socialUser = inject[Database].readWrite { implicit s =>
-          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          val u = UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("7110335121"),

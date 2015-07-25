@@ -1,8 +1,9 @@
 package com.keepit.search.index.graph.keep
 
+import com.keepit.common.db.Id
 import com.keepit.common.strings._
-import com.keepit.model.{ Hashtag, LibraryVisibility, NormalizedURI, Keep }
-import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
+import com.keepit.model._
+import com.keepit.search.index.{ Searcher, FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
@@ -18,9 +19,14 @@ object KeepFields {
   val userField = "user"
   val userIdField = "userId"
   val userDiscoverableField = "userDisc"
+  val orgField = "org"
+  val orgIdField = "orgId"
+  val orgDiscoverableField = "orgDisc"
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
+  val titlePrefixField = "tp"
+  val titleValueField = "tv"
   val contentField = "c"
   val contentStemmedField = "cs"
   val siteField = "site"
@@ -31,9 +37,18 @@ object KeepFields {
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
-  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val minimalSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val fullTextSearchFields = Set(contentField, contentStemmedField)
+  val prefixSearchFields = Set(titlePrefixField)
+
+  val maxPrefixLength = 8
 
   val decoders: Map[String, FieldDecoder] = Map.empty
+}
+
+object KeepIndexable {
+  @inline
+  def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
 case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
@@ -46,9 +61,19 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     val doc = super.buildDocument
 
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
-    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+
+    if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
+      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
+      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+    }
+
+    keep.organizationId.foreach { orgId =>
+      doc.add(buildKeywordField(orgField, orgId.toString))
+      if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
+        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
+      }
+    }
 
     val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
     val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
@@ -57,6 +82,9 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
     doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+    doc.add(buildPrefixField(titlePrefixField, keep.title.getOrElse(""), maxPrefixLength))
+    doc.add(buildStringDocValuesField(titleValueField, keep.title.getOrElse("")))
+
     doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
 
     val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang
@@ -78,7 +106,8 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.userId))
-    keep.libraryId.foreach(libId => doc.add(buildIdValueField(libraryIdField, libId)))
+    doc.add(buildIdValueField(libraryIdField, keep.libraryId.get))
+    doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 

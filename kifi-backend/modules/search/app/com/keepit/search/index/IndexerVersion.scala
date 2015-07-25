@@ -16,18 +16,33 @@ sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, back
   require(backupVersion >= activeVersion)
   def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.hasBackupCapability) backupVersion else activeVersion
   def getVersionsForCleanup(): Seq[IndexerVersion] = (0 until activeVersion.value).map { v => IndexerVersion(v) }
+  def active: IndexerVersion = activeVersion
 }
 
 object IndexerVersionProviders {
-  case object Article extends IndexerVersionProvider(6, 6)
-  case object URIGraph extends IndexerVersionProvider(0, 0)
-  case object Collection extends IndexerVersionProvider(0, 0)
+  case object Article extends IndexerVersionProvider(8, 8)
   case object User extends IndexerVersionProvider(4, 4)
   case object UserGraph extends IndexerVersionProvider(0, 0)
   case object SearchFriend extends IndexerVersionProvider(0, 0)
   case object Message extends IndexerVersionProvider(0, 0)
   case object Phrase extends IndexerVersionProvider(0, 0)
-  case object Library extends IndexerVersionProvider(9, 9)
-  case object LibraryMembership extends IndexerVersionProvider(1, 1)
-  case object Keep extends IndexerVersionProvider(3, 3)
+  case object Library extends IndexerVersionProvider(11, 11)
+  case object LibraryMembership extends IndexerVersionProvider(3, 3)
+  case object Keep extends IndexerVersionProvider(5, 5)
+  case object Organization extends IndexerVersionProvider(1, 1)
+  case object OrganizationMembership extends IndexerVersionProvider(1, 1)
+
+  val allActiveVersions: Map[String, Int] = {
+    Map("article" -> Article.active.value,
+      "user" -> User.active.value,
+      "userGraph" -> UserGraph.active.value,
+      "searchFriend" -> SearchFriend.active.value,
+      "message" -> Message.active.value,
+      "phrase" -> Phrase.active.value,
+      "library" -> Library.active.value,
+      "libraryMembership" -> LibraryMembership.active.value,
+      "keep" -> Keep.active.value,
+      "organization" -> Organization.active.value,
+      "organizationMembership" -> OrganizationMembership.active.value)
+  }
 }

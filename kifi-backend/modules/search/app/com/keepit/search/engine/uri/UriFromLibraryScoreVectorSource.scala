@@ -6,7 +6,7 @@ import com.keepit.search.engine._
 import com.keepit.search.engine.query.core.QueryProjector
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.engine.query.IdSetFilter
-import com.keepit.search.{ SearchConfig, SearchFilter }
+import com.keepit.search.{ SearchConfig, SearchContext }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
@@ -15,33 +15,28 @@ import org.apache.lucene.index.{ AtomicReaderContext, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Scorer, Query }
 import scala.collection.JavaConversions._
-import scala.concurrent.duration._
 import scala.concurrent.Future
 
 class UriFromLibraryScoreVectorSource(
     librarySearcher: Searcher,
     keepSearcher: Searcher,
-    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
-    filter: SearchFilter,
-    config: SearchConfig,
-    monitoredAwait: MonitoredAwait,
-    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption {
+    protected val userId: Long,
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val restrictedUserIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    protected val orgIdsFuture: Future[Set[Long]],
+    protected val context: SearchContext,
+    protected val config: SearchConfig,
+    protected val monitoredAwait: MonitoredAwait,
+    explanation: Option[UriSearchExplanationBuilder]) extends ScoreVectorSource with Logging with DebugOption with VisibilityEvaluator {
 
   private[this] val libraryNameBoost = config.asFloat("libraryNameBoost")
-
-  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
-    val (myLibIds, memberLibIds, trustedLibIds, authorizedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
-
-    require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
-
-    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
-  }
 
   private[this] var myOwnLibraryKeepCount = 0
   private[this] var memberLibraryKeepCount = 0
   private[this] var authorizedLibraryKeepCount = 0
 
-  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryIdsFuture, monitoredAwait, libraryNameBoost)
+  private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryNameBoost, context.disableFullTextSearch)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     libraryNameSource.prepare(query, matchWeightNormalizer)
@@ -98,8 +93,9 @@ class UriFromLibraryScoreVectorSource(
 
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = filter.idFilter
+      val idFilter = context.idFilter
 
+      val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper
       val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
@@ -109,7 +105,7 @@ class UriFromLibraryScoreVectorSource(
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
 
-          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+          if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
             val keepId = idMapper.getId(docId)
 
             // write to the buffer
@@ -126,8 +122,9 @@ class UriFromLibraryScoreVectorSource(
   private def loadWithNoScore(libsSeen: LongArraySet, output: DataBuffer, writer: DataBufferWriter): Unit = {
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = filter.idFilter
+      val idFilter = context.idFilter
 
+      val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
       val idMapper = reader.getIdMapper
       val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
 
@@ -139,7 +136,7 @@ class UriFromLibraryScoreVectorSource(
           while (docId < NO_MORE_DOCS) {
             val uriId = uriIdDocValues.get(docId)
 
-            if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
               val keepId = idMapper.getId(docId)
 
               // write to the buffer
@@ -176,28 +173,23 @@ class UriFromLibraryScoreVectorSource(
     }
   }
 
-  protected def listLibraries(): Unit = {
-    debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
-    debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
-  }
-
   private def listLibraryKeepCounts(): Unit = {
     debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
     debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
     debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
   }
 
-  private class LibraryNameSource(
-      protected val searcher: Searcher,
-      protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
-      protected val monitoredAwait: MonitoredAwait,
-      libraryNameBoost: Float) extends ScoreVectorSourceLike {
+  private class LibraryNameSource(protected val searcher: Searcher, libraryNameBoost: Float, disableFullTextSearch: Boolean) extends ScoreVectorSourceLike {
 
     private[this] lazy val libIdFilter = new IdSetFilter(memberLibraryIds)
 
-    override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.nameSearchFields) // trim down to name fields
+    override protected def preprocess(query: Query): Query = {
+      val searchFields = {
+        if (disableFullTextSearch) Set.empty[String] // effectively not executing this source
+        else LibraryFields.minimalSearchFields // no prefix search, trim down to name fields
+      }
+      QueryProjector.project(query, searchFields)
+    }
 
     protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

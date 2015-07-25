@@ -30,7 +30,6 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
-  def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getHashtagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
   def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
@@ -156,8 +155,6 @@ class CollectionRepoImpl @Inject() (
       save(collection)
     }
   }
-
-  def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
 
   def getHashtagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation

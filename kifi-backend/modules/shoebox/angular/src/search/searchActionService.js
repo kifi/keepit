@@ -14,7 +14,7 @@ angular.module('kifi')
       return Math.random().toString(16).slice(2);
     }
 
-    function decompressHit(hit, users, libraries, userLoggedIn) {
+    function decompressUriHit(hit, users, libraries, userLoggedIn) {
       hit.user = hit.user === -1 ? profileService.me : users[hit.user];
       hit.library = libraries[hit.library];
 
@@ -120,7 +120,7 @@ angular.module('kifi')
         var uris = resData.uris || {};
         var hits = uris.hits || [];
         _.forEach(hits, function (hit) {
-          decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
+          decompressUriHit(hit, uris.keepers, uris.libraries, userLoggedIn);
         });
 
         $analytics.eventTrack('user_clicked_page', {

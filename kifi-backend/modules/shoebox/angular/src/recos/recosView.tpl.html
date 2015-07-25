@@ -46,7 +46,7 @@
             </header>
 
             <div class="kf-reco-keep" ng-if="::reco.recoData.kind === 'keep'">
-              <div kf-keep-card="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(reco)" current-page-origin="recommendationsPage"></div>
+              <div kf-keep-card="reco.recoKeep" keep-callback="trackRecoKeep(keep)" gallery-view="true" click-callback="trackRecoClick(reco)" current-page-origin="recommendationsPage"></div>
             </div>
             <div ng-if="::reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
             follow-callback="trackLibraryFollow(reco.recoLib)" click-library-callback="trackRecoClick(reco)"></div>
@@ -62,6 +62,8 @@
         <div class="kf-reco-loading-logo svg-small-new-logo" ng-if="loading"></div>
       </div>
       <div class="kf-reco-col-2">
+        <div kf-profile-widget></div>
+        <div kf-user-checklist></div>
         <div kf-people-you-may-know></div>
         <div kf-goodies></div>
       </div>

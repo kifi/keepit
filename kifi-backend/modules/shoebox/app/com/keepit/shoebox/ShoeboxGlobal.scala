@@ -1,17 +1,16 @@
 package com.keepit.shoebox
 
+import com.keepit.commanders.SuggestedSearchTermUpdatePlugin
 import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
-import com.keepit.common.store.ImageDataIntegrityPlugin
-import com.keepit.scraper._
-import com.keepit.shoebox.cron.{ ActivityPushScheduler, ActivityEmailCronPlugin }
+import com.keepit.shoebox.cron.{ UserIpAddressClusterCronPlugin, GratificationEmailCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin }
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
-import com.keepit.integrity.{ ScrapeInfoIntegrityPlugin, UriIntegrityPlugin, DataIntegrityPlugin }
+import com.keepit.integrity.{ UriIntegrityPlugin, DataIntegrityPlugin }
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
@@ -34,7 +33,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
     require(injector.instance[ForkJoinExecContextPlugin] != null)
     require(injector.instance[NormalizationUpdaterPlugin] != null)
-    require(injector.instance[ScraperHealthMonitorPlugin] != null)
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded
@@ -44,14 +42,15 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[DataIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ImageDataIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ScrapeInfoIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ShoeboxTasksPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityEmailCronPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityPushScheduler] != null) //make sure its not lazy loaded
+    require(injector.instance[GratificationEmailCronPlugin] != null) // make sure its not lazy loaded
+    require(injector.instance[SuggestedSearchTermUpdatePlugin] != null) // make sure its not lazy loaded
+    require(injector.instance[UserIpAddressClusterCronPlugin] != null) // make sure its not lazy loaded
 
     // DB sequencing plugins
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
@@ -68,5 +67,10 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[PhraseSequencingPlugin] != null) // make sure its not lazy loaded
     require(injector.instance[UserEmailAddressSeqPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[KeepSequencingPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UserIpAddressSequencingPlugin] != null) // make sure it's not lazy loaded
+    require(injector.instance[OrganizationSequencingPlugin] != null)
+    require(injector.instance[OrganizationMembershipSequencingPlugin] != null)
+    require(injector.instance[OrganizationMembershipCandidateSequencingPlugin] != null)
+    require(injector.instance[OrganizationDomainOwnershipSequencingPlugin] != null)
   }
 }

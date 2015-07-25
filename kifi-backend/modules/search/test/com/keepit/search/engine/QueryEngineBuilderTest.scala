@@ -22,7 +22,7 @@ class QueryEngineBuilderTest extends Specification {
       val titleBoost: Float = 2.0f
       val siteBoost: Float = 1.0f
       val concatBoost: Float = 0.5f
-      val prefixBoost: Float = 0.0f
+      def getPrefixBoost(trailing: Boolean): Float = 0.0f
     }
   }
 

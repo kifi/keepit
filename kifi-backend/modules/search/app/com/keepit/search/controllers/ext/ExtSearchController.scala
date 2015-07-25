@@ -8,10 +8,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
-import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.model.UserExperimentType.ADMIN
+import com.keepit.search.engine.uri.UriShardHit
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
-import com.keepit.search.{ UriSearchCommander }
+import com.keepit.search.util.IdFilterCompressor
+import com.keepit.search.{ SearchContext, SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -39,48 +41,50 @@ class ExtSearchController @Inject() (
 
   import ExtSearchController._
 
-  def search(
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = UserAction { request =>
-
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-
-    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, None, debugOpt, withUriSummary)
-
-    Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
-  }
-
   def search2(
     query: String,
     maxHits: Int,
-    filter: Option[String],
+    proximityFilter: Option[String],
     lastUUIDStr: Option[String],
     context: Option[String],
     extVersion: Option[KifiExtVersion],
     debug: Option[String] = None) = UserAction { request =>
 
-    val libraryContextFuture = getLibraryFilterFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(filter)
+
+    val searchContextFuture = makeSearchFilter(getProximityScope(proximityFilter), Future.successful(None), Future.successful(None), Future.successful(None)).imap {
+      filter => SearchContext(context, SearchRanking.default, filter, disablePrefixSearch = false, disableFullTextSearch = false)
+    }
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, searchContextFuture, maxHits, lastUUIDStr, None, debugOpt)
+    val jsonResultFuture = plainResultFuture.imap { result =>
+      val textMatchesByHit = UriShardHit.getMatches(result.query, result.firstLang, result.hits)
+      val experimentIdJson = result.searchExperimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+      Json.obj(
+        "uuid" -> JsString(result.uuid.toString),
+        "query" -> JsString(query),
+        "hits" -> JsArray(result.hits.map { hit =>
+          json.minify(Json.obj(
+            "title" -> hit.titleJson,
+            "url" -> hit.urlJson,
+            "keepId" -> hit.externalIdJson,
+            "matches" -> textMatchesByHit(hit)
+          ))
+        }),
+        "myTotal" -> JsNumber(result.myTotal),
+        "friendsTotal" -> JsNumber(result.friendsTotal),
+        "mayHaveMore" -> JsBoolean(result.mayHaveMoreHits),
+        "show" -> JsBoolean(result.show),
+        "cutPoint" -> JsNumber(result.cutPoint),
+        "experimentId" -> experimentIdJson,
+        "context" -> JsString(IdFilterCompressor.fromSetToBase64(result.idFilter))
+      )
+    }
+
+    val plainResultEnumerator = safelyFlatten(jsonResultFuture.map(r => Enumerator(r.toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
@@ -129,7 +133,7 @@ class ExtSearchController @Inject() (
     val userIds = ((allKeepersShown.flatMap(_.map(_._1)) ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
 
     val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
     val libraryIndexById = libraryIds.zipWithIndex.toMap
@@ -139,9 +143,9 @@ class ExtSearchController @Inject() (
       shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
         val users = userIds.map(usersById(_))
         val libraries = libraryIds.map { libId =>
-          val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+          val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
-          makeBasicLibrary(library, visibility, owner)
+          makeBasicLibrary(library, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
         }
         (users, libraries)
       }

@@ -1,23 +1,14 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.commanders.UserIpAddressEventLogger
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.KeepFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserConnectionFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryMembershipFactory._
-import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller._
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -28,13 +19,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.KeepFactory._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryMembershipFactory._
-import com.keepit.model.UserConnectionFactory._
-import com.keepit.model.UserFactory._
 import com.keepit.model.{ UserConnection, _ }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.SocialNetworks._
@@ -51,14 +36,12 @@ import securesocial.core.providers.utils.{ BCryptPasswordHasher, PasswordHasher 
 import securesocial.core.{ IdentityId, _ }
 
 import scala.concurrent.Future
-import scala.slick.jdbc.StaticQuery
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val mobileControllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
@@ -69,7 +52,6 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCuratorServiceClientModule()
   )
@@ -82,7 +64,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         val changePwdRoute = routes.MobileUserController.changePassword().toString
         changePwdRoute === "/m/1/password/change"
         inject[Database].readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Richard", "Feynman").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672").saved
           val identityId = IdentityId("me@feynman.com", "userpass")
           val pInfo = bcrypt.hash("welcome")
           val socialUser = new SocialUser(identityId, "Richard", "Feynman", "Richard Feynman", Some(identityId.userId), None, AuthenticationMethod.UserPassword, passwordInfo = Some(pInfo))
@@ -121,7 +103,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
   val modules = Seq(
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
@@ -130,18 +111,18 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     FakeAirbrakeModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
     inject[Database].readWrite { implicit s =>
-      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
-      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
-      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test"), normalizedUsername = "test"))
-      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675"), username = Username("test"), normalizedUsername = "test"))
-      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676"), username = Username("test"), normalizedUsername = "test"))
+      val user1965 = UserFactory.user().withName("Richard", "Feynman").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672").saved
+      val user1933 = UserFactory.user().withName("Paul", "Dirac").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673").saved
+      val user1935 = UserFactory.user().withName("James", "Chadwick").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674").saved
+      val user1927 = UserFactory.user().withName("Arthur", "Compton").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675").saved
+      val user1921 = UserFactory.user().withName("Albert", "Einstein").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676").saved
+
       val friends = List(user1933, user1935, user1927, user1921)
 
       val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
@@ -155,7 +136,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     "get currentUser" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
 
         val ctrl = routes.MobileUserController.currentUser()
@@ -163,7 +144,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         ctrl.method === "GET"
 
         val controller = inject[MobileUserController]
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
 
         val call = controller.currentUser
         val result = call(FakeRequest())
@@ -193,10 +174,33 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
       }
     }
 
+    "log a user's ip" in {
+      withDb(modules: _*) { implicit injector =>
+        val user = inject[Database].readWrite { implicit session =>
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
+        }
+
+        val ctrl = routes.MobileUserController.currentUser()
+        ctrl.toString === "/m/1/user/me"
+        ctrl.method === "GET"
+
+        val controller = inject[MobileUserController]
+        val commander = inject[UserIpAddressEventLogger]
+        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
+
+        val call = controller.currentUser
+        val result = call(FakeRequest())
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        commander.totalNumberOfLogs() === 1
+      }
+    }
+
     "get basic user info for any user" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "James", lastName = "Franco", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("James", "Franco").withUsername("test").saved
         }
 
         inject[FakeUserActionsHelper].setUser(user)
@@ -220,7 +224,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     "updateCurrentUser updates names" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Sam", lastName = "Jackson", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Sam", "Jackson").withUsername("test").saved
         }
 
         val ctrl = routes.MobileUserController.updateCurrentUser()
@@ -300,7 +304,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val route = routes.MobileUserController.socialNetworkInfo().toString
         route === "/m/1/user/networks"
         inject[Database].readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Richard", "Feynman").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672").saved
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("314159265359"), networkType = SocialNetworks.FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("271828"), networkType = SocialNetworks.LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
@@ -322,7 +326,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
       withDb(modules: _*) { implicit injector =>
         val mobileController = inject[MobileUserController]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "gdubs"))
+          UserFactory.user().withName("George", "Washington").withUsername("GDubs").saved
         }
 
         inject[FakeUserActionsHelper].setUser(user)

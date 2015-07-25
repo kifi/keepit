@@ -1,0 +1,31 @@
+<li class="kf-org-member">
+  <div class="kf-org-member-upper clearfix">
+    <div class="kf-org-member-upper-left">
+      <a href="{{member|profileUrl}}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="close()">
+        <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
+        <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
+        <div class="kf-org-member-info">
+          <p class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</p>
+          <p class="kf-org-member-info-role">{{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}</p>
+        </div>
+      </a>
+    </div>
+    <div class="kf-org-member-upper-right">
+      <button class="kf-org-member-action-button" ng-click="toggleControls()" ng-if="shouldShowMakeAdmin() || shouldShowInvite() || shouldShowRemove()">
+        <svg kf-symbol-sprite icon="dropdown-arrow" class="{{ 'kf-dropdown-arrow-icon' + (isOpen() ? ' kf-dropdown-arrow-icon-inverted' : '') }}"></svg>
+      </button>
+    </div>
+  </div>
+  <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
+    <div class="kf-org-member-lower-left">
+      <button ng-if="shouldShowMakeAdmin()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerMakeAdmin(member)">Make admin</button>
+    </div>
+    <div class="kf-org-member-lower-right">
+      <button ng-if="shouldShowAcceptInvite()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerAcceptInvite(member)">accept invite</button>
+      <span ng-if="shouldShowInvite() && resentInvite()" class="kf-org-member-invite-sent">Sent!</span>
+      <button ng-if="shouldShowInvite() && !resentInvite()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerInvite(member)">resend invite</button>
+      <button ng-if="shouldShowInvite()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerCancelInvite(member)">cancel invite</button>
+      <button ng-if="shouldShowRemove()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerRemove(member)">{{ (member.username === me.username ? 'leave organization' : 'remove member') }}</button>
+    </div>
+  </div>
+</li>

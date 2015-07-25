@@ -4,6 +4,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.logging.Logging
+import com.keepit.common.queue.messages.{ SuggestedSearchTermsWithLibraryId, LibrarySuggestedSearchRequest }
 import com.kifi.franz._
 import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 
@@ -26,11 +27,14 @@ abstract class RoverQueueModule extends ScalaModule {
 
 case class ProdRoverQueueModule() extends RoverQueueModule with Logging {
 
-  @Provides @Singleton
-  def sqsClient(basicAWSCreds: BasicAWSCredentials): SQSClient = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
+  private def makeSQSClient(basicAWSCreds: BasicAWSCredentials) = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
 
   @Provides @Singleton
-  def topPriorityQueue(client: SQSClient): FetchTaskQueue.TopPriority = {
+  def sqsClient(basicAWSCreds: BasicAWSCredentials): SQSClient = makeSQSClient(basicAWSCreds)
+
+  @Provides @Singleton
+  def topPriorityQueue(basicAWSCreds: BasicAWSCredentials): FetchTaskQueue.TopPriority = {
+    val client = makeSQSClient(basicAWSCreds) // this queue does not share its client
     val name = QueueName("rover-top-priority-fetch-task-prod")
     val queue = client.formatted[FetchTask](name)
     FetchTaskQueue.TopPriority(queue)
@@ -93,4 +97,5 @@ case class DevRoverQueueModule() extends RoverQueueModule with Logging {
 
   @Provides @Singleton
   def catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp = ArticleImageProcessingTaskQueue.CatchUp(new FakeSQSQueue[ArticleImageProcessingTask] {})
+
 }

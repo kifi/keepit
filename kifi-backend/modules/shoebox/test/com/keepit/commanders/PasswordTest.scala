@@ -17,7 +17,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -28,6 +27,7 @@ import play.api.mvc.{ AnyContentAsJson, Result }
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
+import com.keepit.model.UserFactoryHelper._
 
 import scala.concurrent.Future
 import KifiSession._
@@ -41,7 +41,6 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -53,7 +52,6 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule()
   )
@@ -65,7 +63,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
   def setUp() = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+      val user1 = UserFactory.user().withName("Foo", "Bar").withUsername("test").saved
       val email1a = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr1))
       val email1b = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr2))
       val hasher = Registry.hashers.get("bcrypt").get

@@ -1,6 +1,8 @@
 @(user: User,
   totalBookmarks: Int,
-  experiments: Set[ExperimentType],
+  organizations: Seq[Organization],
+  candidateOrganizations: Seq[Organization],
+  experiments: Set[UserExperimentType],
   socialUsers: Seq[SocialUserBasicInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
@@ -9,10 +11,21 @@
   abookInfos: Seq[ABookInfo],
   econtactCount: Int,
   contacts: Seq[com.keepit.abook.model.RichContact],
-  invitedBy: Seq[User]
+  invitedBy: Seq[User],
+  potentialOrganizations: Seq[Organization],
+  ignoreForPotentialOrganizations: Boolean,
+  recommendedOrganizations: Seq[(Organization, Double)]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+<ul>
+    @for(installation: KifiInstallation <- kifiInstallations.toSet) {
+    <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
+    }
+</ul>
+}
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
     <button class="btn" id="library_push" onclick="libraryPush()">Lib Push</button>
     <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
@@ -22,12 +35,12 @@
     <br/>
     <table class="user-summary table table-bordered">
       <tr>
-        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25><a href="https://www.kifi.com/@{user.username.value}">@user.firstName @user.lastName</a></td>
+        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25><a href="https://www.kifi.com/@user.primaryUsername.map(_.original.value).getOrElse("")">@user.firstName @user.lastName</a></td>
       </tr>
       <tr>
         <th>User Name</th><td>
         <form action="#" method="POST" class="form-inline update-username">
-        	<input id="update-username-input" type="text" name="username" value="@user.username.value">
+        	<input id="update-username-input" type="text" name="username" value="@user.primaryUsername.map(_.original.value).getOrElse("")">
         	<input type="Submit" value="Change">
         </form>
         </td>
@@ -36,8 +49,13 @@
         <th>Id</th><td>@user.id, @user.externalId</td>
       </tr>
       <tr>
-        <th>Total Bookmarks</th><td>@totalBookmarks</td>
+        <th>External services</th><td><a href="https://mixpanel.com/report/311211/explore/#user?distinct_id=@{user.externalId.id}">Mixpanel Profile</a>, <a href="https://mixpanel.com/report/311211/live/#chosen_columns:!('$browser','$city',mp_country_code,distinct_id,'$referring_domain'),column_widths:!(200,100,122,84,118,141,170),query:(distinct_ids:!(),is_or_query:!f,on:'properties%5B%22userId%22%5D%20%3D%3D%201',property_selectors:!((defaults:(filter_state:(),human_readable_params:!(),query:''),distinct_id_operator:and,distinct_ids:!(),human_readable_params:!((type:property,val:userId),(type:operator,val:equals),(type:operand,val:@{user.id.get.id})),query:'properties%5B%22userId%22%5D%20%3D%3D%201',valid_segfilter:(filters:!((filter:(operand:'@{user.id.get.id}',operator:%3D%3D),property:userId,selected_property_type:number,type:number)),op:and))))">Mixpanel Live View</a>, <a href="https://www.linkedin.com/vsearch/p?orig=TRNV&keywords=@{user.firstName}+@{user.lastName}">LinkedIn Search by name</a></td>
       </tr>
+      <tr>
+        <th>Total Keeps</th><td>@totalBookmarks</td>
+      </tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>
@@ -50,11 +68,74 @@
           @for(u <- invitedBy) { <div>@adminHelper.userDisplay(u)</div> }
         </td>
       </tr>
+    <tr>
+        <th>ignore4org</th>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)" method="POST" class="form-inline" id="ignore-potential-orgs-form">
+                <label><input type="checkbox" name="ignorePotentialOrgs" @if(ignoreForPotentialOrganizations) { checked="checked"} id="ignore-potential-orgs-check"> We don't think this user should be associated with an organization now</label>
+            </form>
+        </td>
+    </tr>
+      @if((organizations ++ candidateOrganizations).isEmpty) {
+        <tr>
+            <th>Potential Organizations</th>
+            <td>
+                <ul>
+                    @for( org <- potentialOrganizations ) {
+                    <li>
+                      <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate">
+                          <span style="margin : 2 px">
+                              <a data-hover="tooltip" title="@org.description+"
+                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+                                  @org.name
+                              </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-potential-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
+                          </span>
+                      </form>
+                    </li>
+                    }
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <th>Recommended Organizations</th>
+            <td>
+                <ul>
+                    @for((org, score) <- recommendedOrganizations) {
+                    <li>
+                        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="add-candidate" style="display: inline">
+                          <span style="margin : 2 px">
+                              <a data-hover="tooltip" title="@org.description+"
+                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+                                  @org.name : @score
+                              </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-recommended-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
+                          </span>
+                        </form>
+                        <form action="@com.keepit.controllers.admin.routes.AdminUserController.hideOrganizationRecoForUser(user.id.get, org.id.get)" method="POST" class="hide-org-reco" style="display: inline">
+                            <input style="margin : 2 px" type="Submit" value="Hide Org Reco">
+                        </form>
+                    </li>
+                    }
+                </ul>
+            </td>
+        </tr>
+      }
+        <tr>
+            <th>Add to Org</th>
+            <td>
+                <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidateOrCreateByName(user.id.get)" method="POST" class="form-inline">
+                    <input id="org-name-typeahead" class="form-control" type="text" name="orgName" placeholder="Organization name">
+                    <button type="submit" class="btn btn-default">Add</button>
+                </form>
+            </td>
+        </tr>
       <tr>
         <th>Created At</th><td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
       </tr>
       <tr>
         <th>Last Update</th><td>@adminHelper.dateTimeDisplay(user.updatedAt)</td>
+      </tr>
+      <tr>
+        <th>Versions</th><td>@{formatKifiInstallations(kifiInstallations)}</td>
       </tr>
       <tr>
         <th>Email</th>
@@ -100,7 +181,7 @@
       <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
-          @for(exp <- ExperimentType._ALL) {
+          @for(exp <- UserExperimentType._ALL) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -132,7 +213,7 @@
         <td><form class="form-inline" method="post"
         action="@com.keepit.controllers.admin.routes.AdminUserController.deactivate(user.id.get)">
           <input type="submit" value="Deactivate!">
-          <input type="checkbox" name="doIt" value="true"> I know what I'm doing.
+          <input type="checkbox" name="doIt" value="true"> I know what I'm doing. This will remove all data for this inactive user.
         </form></td>
       </tr>
     }
@@ -145,6 +226,9 @@
     </p>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.userLibrariesView(user.id.get)">User Libraries</a>
+    </p>
+    <p>
+      <a href="@com.keepit.controllers.admin.routes.AdminUserController.userIpAddressesView(user.id.get)">User Ip Addresses</a>
     </p>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(user.id.get)">User Search Config</a>
@@ -199,7 +283,7 @@
                 <td>@abook.oauth2TokenId</td>
                 <td>@abook.numContacts</td>
                 <td>@abook.numProcessed</td>
-                @if(experiments.contains(ExperimentType.ADMIN)) {
+                @if(experiments.contains(UserExperimentType.ADMIN)) {
                   <td>
                       <form class="form-inline" style="display:inline" action="/refreshContacts" method="GET">
                           <input type="hidden" name="abookId"  value=@abook.id>
@@ -220,7 +304,7 @@
             <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
             @for(contact <- contacts) {
             <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td>
-              @if(experiments.contains(ExperimentType.ADMIN)) {
+              @if(experiments.contains(UserExperimentType.ADMIN)) {
                 <td>
                     <form class="form-inline" style="display:inline" action="/invite" method="POST">
                         <input type="hidden" name="fullSocialId" value="email/@contact.email">
@@ -258,7 +342,7 @@
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(user.id.get)"
     }
     $(function() {
-    
+
       $('.update-username').on("submit", function() {
         $.post("@com.keepit.controllers.admin.routes.AdminUserController.setUsername(user.id.get)", $('.update-username').serialize())
         .done(function(data) {
@@ -268,7 +352,7 @@
         });
         return false;
       });
-    
+
       $('.send-email').submit(function () {
         var form = this;
         if (form.sent) return false;
@@ -299,7 +383,7 @@
           alert("Refresh has been triggered. This is a somewhat expensive operation. Please don't click this too often.");
         });
         req.fail(function (r, c, m) {
-          alert("An error ocurrect: " + m);
+          alert("An error occurred: " + m);
         });
         return false;
       });
@@ -331,6 +415,71 @@
           $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
         }
       });
+
+      $("#ignore-potential-orgs-check").on("change", function () {
+        var $form = $("#ignore-potential-orgs-form");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($form);
+        $.post('@com.keepit.controllers.admin.routes.AdminUserController.setIgnoreForPotentialOrganizations(user.id.get)', $form.serialize())
+            .done(done).fail(fail);
+        function done() {
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+      });
+
+      $('#org-name-typeahead').typeahead(null, {
+        name: 'orgs',
+        display: 'name',
+        source: function (query, syncResults, asyncResults) {
+          $.getJSON('/admin/findOrganizationByNameJson?orgName=' + query, function (data) {
+            asyncResults(data)
+          });
+        }
+      });
     });
-  </script>
+</script>
+<style>
+/* Stolen from http://stackoverflow.com/a/26934329/1952271 */
+.tt-query {
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+     -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+          box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+}
+
+.tt-hint {
+  color: #999
+}
+
+.tt-menu {
+  width: 422px;
+  margin-top: 4px;
+  padding: 4px 0;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  -webkit-border-radius: 4px;
+     -moz-border-radius: 4px;
+          border-radius: 4px;
+  -webkit-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+     -moz-box-shadow: 0 5px 10px rgba(0,0,0,.2);
+          box-shadow: 0 5px 10px rgba(0,0,0,.2);
+}
+
+.tt-suggestion {
+  padding: 3px 20px;
+  line-height: 24px;
+}
+
+.tt-suggestion.tt-cursor {
+  color: #fff;
+  background-color: #0097cf;
+
+}
+
+.tt-suggestion p {
+  margin: 0;
+}
+</style>
 }

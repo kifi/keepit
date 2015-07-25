@@ -19,7 +19,6 @@ import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
@@ -33,7 +32,6 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -43,7 +41,6 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())
 
   "AdminPersonaController" should {
@@ -51,7 +48,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
       running(new ShoeboxApplication(modules: _*)) {
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
 
         val testPath = com.keepit.controllers.admin.routes.AdminPersonaController.getAllPersonas().url
         val request1 = FakeRequest("GET", testPath)
@@ -65,7 +62,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
         val testPath = com.keepit.controllers.admin.routes.AdminPersonaController.createPersona().url
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
 
         db.readOnlyMaster { implicit s =>
           personaRepo.all.length === 4
@@ -103,7 +100,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, allPersonas) = setupUserPersona
         val controller = inject[AdminPersonaController]
 
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
 
         db.readOnlyMaster { implicit s =>
           personaRepo.getByState(PersonaStates.ACTIVE).length === 4
@@ -184,7 +181,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
 
         val controller1 = inject[AdminBookmarksController]
         val testPath = com.keepit.controllers.admin.routes.AdminBookmarksController.populateKeepNotesWithTag(0, 10, 10).url
-        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(UserExperimentType.ADMIN))
 
         // create new persona
         val request1 = FakeRequest("POST", testPath)

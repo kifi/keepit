@@ -138,12 +138,14 @@ $(function() {
     if (!validLastName) {
       return;
     }
+    var companyName = $.trim($form.find('.company-name').val());
     var form = this;
     var animation = animateButton($('.btn-authentication'));
     $.when(photoUpload && photoUpload.promise).always(function (upload) {
       $.postJson(form.action, {
         firstName: validFirstName,
         lastName: validLastName,
+        companyName: companyName,
         picToken: upload && upload.token // upload && upload.token
       }).done(function (data) {
         animation.update(1);

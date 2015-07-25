@@ -2,7 +2,7 @@ keepBorderWidth = 1px
 keepBorderRadius = 8px
 keepSidePad = 20px
 keepCardMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
-maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + appSidePad1) - 1 // = 561px
+maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 // = 559px
 
 .kf-main-keeps
   position: relative
@@ -28,7 +28,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   background-color: white
 
   @media (max-width: maxWidthForNarrowKeep)
-    max-width: 2 * keepBorderWidth + keepCardMaxWidth
+    max-width: keepCardMaxWidth
 
 .kf-keep-selection-tools
   border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
@@ -89,13 +89,90 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
 .kf-keep
   position: relative
   border-radius: keepBorderRadius
-  padding: 20px keepSidePad
+  padding: 0 keepSidePad 20px
 
   &.detailed
     background-color: #eff2f7
 
   &.selected.detailed
     background-color: #F7F7F5
+
+  &.mine
+    .kf-keep-note-icon
+      cursor: pointer
+
+    .kf-keep-top-r
+      padding-right: 20px
+
+  &.compact
+    padding: 0 20px 10px
+
+    .kf-keep-header
+      border-bottom: 0
+      margin: 0px -20px
+      margin-bottom: 6px
+      height: 30px
+
+
+    .kf-keep-description
+      line-height: 18px
+
+    .kf-keep-body
+      box-shadow: none
+
+    .kf-side-by-side > .kf-keep-image
+      margin-top: 0
+      margin-bottom: 0
+
+    .kf-keep-content
+      box-sizing: border-box
+      padding-left: 0
+
+      .kf-keep-title
+        margin: 0 0 5px
+        font: bold 20px/22px Lato, sans-serif
+
+    .kf-keep-image,
+    .kf-keep-video
+      width: 75px
+      height: 75px
+      padding: 0
+      border-radius: 0
+      float: right
+      margin-left: 15px
+
+    .kf-keep-keeper-pic
+      width: 18px
+      height: 18px
+      display: inline-block
+      vertical-align: middle
+
+    .kf-keep-keeper-name
+      font-size: 14px
+
+    .kf-keep-time-at
+      padding-left: 5px
+      font-size: 11px
+      color: #999
+
+    .kf-knf // may not be needed
+      margin-top: 35px
+
+    .kf-keep-note-compact
+      display: table-cell
+      vertical-align: top
+      paragraph()
+
+    .svg-note-gray
+      width: 20px
+      height: 20px
+      background-size: 100% 100%
+      display: block
+
+    .kf-keep-note-icon
+      padding-right: 10px
+      display: table-cell
+      vertical-align: top
 
   &.ng-hide-add
   &.ng-hide-remove
@@ -115,7 +192,6 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
     border-top-left-radius: 0
 
   @media (max-width: maxWidthForNarrowKeep)
-    padding-top: 12px
     padding-bottom: 0
 
     &>.kf-keep-body
@@ -145,12 +221,20 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
 
 .kf-keep-top
   display: table
-  width: 100%
-  margin-bottom: 16px
   table-layout: fixed
+  width: 100%
+  padding-top: 16px
+  margin-bottom: 16px
+
+  &:empty
+    padding-top: 4px
 
   @media (max-width: maxWidthForNarrowKeep)
+    padding-top: 12px
     margin-bottom: 12px
+
+    &:empty
+      display: none
 
 .kf-keep-top-menu-container
   position: absolute
@@ -227,6 +311,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   width: 48px
   border-radius: 50%
   background-size: cover
+  position: relative // for ::after
 
   @media (max-width: maxWidthForNarrowKeep)
     height: 36px
@@ -235,10 +320,30 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   &:focus
     outline-color: #ccc
 
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: '%s' % inherit
+    box-shadow: inset 0 0 1px rgba(0,0,0,.2)
+
+.kf-keep-top-l,
 .kf-keep-top-r
-  display: table-cell
+  display: inline-block
   vertical-align: middle
-  padding-left: 12px
+
+  .symbol-sprite
+    display: none
+
+.kf-keep-top-l
+  .kf-keep-keeper-name
+    display: none
+
+.kf-keep-top-r
+  margin-left: 12px
 
 .kf-keep-keeper-name
   color: accentGreen

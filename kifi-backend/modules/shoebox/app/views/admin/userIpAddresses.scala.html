@@ -1,0 +1,68 @@
+@import com.keepit.common.service.IpAddress
+@(user: User,
+logs: Seq[UserIpAddress],
+sharedIpAddresses: Map[IpAddress, Map[User, Set[Organization]]]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@networkLogoLink(sui: SocialUserInfo) = {
+  <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
+    @sui.networkType.name.take(2)
+}
+
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+  <ul>
+    @for(installation <- kifiInstallations) {
+      <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
+    }
+  </ul>
+}
+
+
+
+@formatListOfUsers(userData: Map[User, Set[Organization]]) = {
+    @for((user, orgs) <- userData) {
+    <tr>
+        <td><span class="badge">@user.id.get.id</span></td>
+        <td>@adminHelper.userDisplay(user)</td>
+        <td>@adminHelper.orgsDisplay(orgs)</td>
+        <td>@user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+        <td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
+    </tr>
+    }
+}
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <table class="table table-bordered">
+        <tr>
+            <th>Id</th>
+            <th>User</th>
+            <th>Orgs</th>
+            <th>mail</th>
+            <th>Date Joined</th>
+        </tr>
+        @for((ipAddress, userData) <- sharedIpAddresses) {
+            <tr>
+                <td rowspan="0" align="center"><a href="http://ip-api.com/#@ipAddress">@ipAddress</a> cluster of @{userData.size}</td>
+            </tr>
+            @formatListOfUsers(userData)
+        }
+    </table>
+
+    <h2> Showing @logs.length</h2>
+    <table class="table table-bordered">
+        <tr>
+            <th>#</th>
+            <th>Date and Time</th>
+            <th>Ip Address</th>
+            <th>Agent Type</th>
+        </tr>
+        @for((log, i) <- logs.zipWithIndex) {
+        <tr>
+            <td>@{i+1}</td>
+            <td>@log.createdAt</td>
+            <td><a href="http://ip-api.com/#@{log.ipAddress}">@{log.ipAddress}</a></td>
+            <td>@log.agentType</td>
+        </tr>
+        }
+    </table>
+}

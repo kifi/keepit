@@ -24,7 +24,13 @@ class LibraryViewTrackingCommander @Inject() (
           libId <- extractLibId(context)
         } yield {
           val viewerId = context.get[String]("viewerId").map { x => Id[User](x.toLong) }
-          db.readWrite { implicit s => libViewRepo.save(LibraryViewTracking(ownerId = owner, libraryId = libId, viewerId = viewerId, source = LibraryViewSource.fromContext(context))) }
+          if (viewerId != Some(owner)) {
+            db.readWrite { implicit s =>
+              LibraryViewSource.fromContext(context).map { src =>
+                libViewRepo.save(LibraryViewTracking(ownerId = owner, libraryId = libId, viewerId = viewerId, source = Some(src)))
+              }
+            }
+          }
         }
 
       case _ =>
@@ -38,7 +44,11 @@ class LibraryViewTrackingCommander @Inject() (
           owner <- extractOwnerId(context)
           libId <- extractLibId(context)
         } yield {
-          db.readWrite { implicit s => libViewRepo.save(LibraryViewTracking(ownerId = owner, libraryId = libId, viewerId = None, source = LibraryViewSource.fromContext(context))) }
+          db.readWrite { implicit s =>
+            LibraryViewSource.fromContext(context).map { src =>
+              libViewRepo.save(LibraryViewTracking(ownerId = owner, libraryId = libId, viewerId = None, source = Some(src)))
+            }
+          }
         }
 
       case _ =>

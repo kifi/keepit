@@ -29,6 +29,8 @@ trait ObjectStore[A, B] {
    */
   def syncGet(key: A): Option[B]
 
+  def copy(sourceId: A, destinationId: A): Boolean
+
 }
 
 trait ObjMetadata extends Any { // WIP; if proved useful can be folded into main abstraction

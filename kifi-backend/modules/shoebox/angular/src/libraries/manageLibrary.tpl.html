@@ -8,17 +8,7 @@
       </button>
       {{modalTitle}}
     </h1>
-    <div class="dialog-body">
-      <div ng-if="modifyingExistingLibrary" class="manage-lib-followers-info">
-        <p class="manage-lib-followers-stats">
-          <span ng-pluralize count="library.numFollowers"
-                when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
-          following your library
-        </p>
-        <button ng-if="!showFollowers" class="manage-lib-followers-button" ng-click="showFollowersPanel()">Invite and manage followers</button>
-        <div ng-if="showFollowers" class="manage-lib-invite"
-             kf-library-share-search library="library" manage-lib-invite="true" close="close()" current-page-origin="{{currentPageOrigin}}"></div>
-      </div>
+    <div class="dialog-body" kf-wheel-allow>
 
       <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
@@ -48,7 +38,7 @@
               <div ng-switch-default class="manage-lib-visibility-description-content">
                 Anyone can see and follow this library
                 <div class="manage-lib-listed-visibility">
-                  <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.listed">
+                  <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.membership.listed">
                   <label for="listed-visibility-checkbox">
                     <span></span>
                     List this library on my public profile
@@ -69,31 +59,37 @@
             </label>
           </div>
 
-          <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
-        </div>
 
-        <div class="manage-lib-members-content" kf-wheel-allow smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">
-          <ul class="manage-lib-members">
-            <a href="{{library.owner|profileUrl}}" class="manage-lib-member manage-lib-owner" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/curator">
-              <img ng-src="{{library.owner | pic:100}}" class="manage-lib-member-image">
-              <div class="manage-lib-member-name">{{library.owner|name}}</div>
-              <div class="manage-lib-member-status">Owner</div>
-            </a>
-
-            <li class="manage-lib-member" ng-repeat="member in memberList">
-              <a ng-if="member.id" href="{{member|profileUrl}}" ng-click="close()" class="manage-lib-member-user" kf-track-origin="{{currentPageOrigin}}/follower">
-                <img ng-src="{{member | pic:100}}" class="manage-lib-member-image">
-                <div class="manage-lib-member-name">{{member|name}}</div>
-              </a>
-
-              <div class="manage-lib-member-email" ng-if="member.email">
-                <div class="manage-lib-member-email-image svg-envelope"></div>
-                <div class="manage-lib-member-name">{{member.email}}</div>
+          <div class="manage-lib-input-wrapper">
+            <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
+              <div class="manage-lib-integrations-arrow" ng-class="{'active':showIntegrations}"></div>
+              <span class="manage-lib-integrations-title" ng-class="{'active':showIntegrations}">Integrations</span>
+            </div>
+            <div manage-lib-subs>
+              <div class="manage-lib-integration-view" ng-show="showIntegrations">
+                <div class="manage-lib-subs-heading">Slack</div>
+                <div class="manage-lib-subs-instruct">
+                  <b>It's easy to push updates from this library to one of your company's Slack channels.</b><br>
+                  To configure the integration between Kifi and Slack:
+                    <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook" target="_blank">go to this page</a>.</li>
+                    <li>Choose a default channel, then click "Add Incoming WebHooks Integration"</li>
+                    <li>Copy the Webhook URL, and paste it in the URL fields below.</li>
+                    <li>Enter the name of the #channel, @person, or group you want updates sent to, then "Save".</li>
+                  All new keeps added to this library will now appear in your Slack channel as well!
+                </div>
+                <table class="manage-lib-subs-table">
+                  <form name="slackForm">
+                    <tr ng-repeat="subscription in library.subscriptions">
+                      <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.name}" ng-model="subscription.name" type="text" name="name" placeholder="Name" autocomplete="off" novalidate></td>
+                      <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.url}" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
+                      <td><a class="manage-lib-sub-remove-x" ng-if="$index != (library.subscriptions.length-1) || library.subscriptions.length == 3" ng-click="removeSubscription($index)"></a><a class="manage-lib-sub-add-x" ng-if="$index == (library.subscriptions.length-1) && (library.subscriptions.length != 3)" ng-click="addSubscription()"></a></td>
+                    </tr>
+                  </form>
+                </table>
               </div>
-              <div class="manage-lib-member-status" ng-class="{'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
-            </li>
-
-          </ul>
+            </div>
+          </div>
+          <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
         </div>
       </div>
 

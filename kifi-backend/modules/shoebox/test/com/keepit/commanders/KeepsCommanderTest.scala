@@ -12,7 +12,6 @@ import com.keepit.common.db.Id
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.search.augmentation.LimitedAugmentationInfo
 import com.keepit.test.ShoeboxTestInjector
@@ -28,7 +27,6 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxStoreModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
-    FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::
@@ -46,7 +44,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         val (real, fake) = db.readWrite { implicit s =>
           val user1 = user().saved
           val user2 = user().saved
-          userExperimentRepo.save(UserExperiment(experimentType = ExperimentType.FAKE, userId = user2.id.get))
+          userExperimentRepo.save(UserExperiment(experimentType = UserExperimentType.FAKE, userId = user2.id.get))
           (user1.id.get, user2.id.get)
         }
 

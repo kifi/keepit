@@ -44,7 +44,7 @@ k.keepBox = k.keepBox || (function () {
         if (keep) {
           lib.keep = keep;
         }
-        setShortcut(lib);
+        setExtraInfo(lib);
       });
       show($parent, trigger, guided, data.libraries, data.posting);
     },
@@ -258,7 +258,7 @@ k.keepBox = k.keepBox || (function () {
         if (q) {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
-              libs.forEach(setShortcut);
+              libs.forEach(setExtraInfo);
               (libs[0] || {}).highlighted = true;
               showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
@@ -1096,9 +1096,24 @@ k.keepBox = k.keepBox || (function () {
     $(this).remove();
   }
 
-  function setShortcut(lib) {
+  function setExtraInfo(lib) {
+    function smartlyListCollaboratorNames(collabs) {
+      var names = 'Me'; //max 15 characters
+      while (names.length < 15 && collabs.length > 0) {
+        var collab = collabs.shift();
+        names = names + ', ' + collab.firstName;
+      }
+      if (collabs.length > 1) {
+        names = names + ', ' + collabs.length + ' others';
+      } else if (collabs.length === 1) {
+        names = names + ', ' + collabs[0].firstName;
+      }
+      return names;
+    }
     if (lib.system) {
-      lib.shortcut = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
+      lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
+    } else if (lib.hasCollaborators) {
+      lib.extraInfo = smartlyListCollaboratorNames(lib.collaborators);
     }
   }
 

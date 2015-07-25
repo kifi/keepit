@@ -12,12 +12,12 @@ import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import com.keepit.model.UserFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -30,18 +30,9 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     val connectionRepo = inject[UserConnectionRepo]
 
     db.readWrite { implicit session =>
-      var user1 = userRepo.save(User(
-        firstName = "Homer",
-        lastName = "Simpson", username = Username("homer"), normalizedUsername = "homer"
-      ))
-      var user2 = userRepo.save(User(
-        firstName = "Peter",
-        lastName = "Griffin", username = Username("peter"), normalizedUsername = "peter"
-      ))
-      var user3 = userRepo.save(User(
-        firstName = "Clark",
-        lastName = "Kent", username = Username("clark"), normalizedUsername = "clark"
-      ))
+      var user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").saved
+      var user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
+      var user3 = UserFactory.user().withName("Clark", "Kent").withUsername("clark").saved
 
       val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
       val email2 = emailRepo.save(UserEmailAddress(userId = user2.id.get, address = EmailAddress("peteg@42go.com")))
@@ -69,10 +60,8 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()
@@ -149,7 +138,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
         val (user1, user2, user3) = setup()
         val user4 = db.readWrite { implicit session =>
-          var user4 = userRepo.save(User(firstName = "Jess", lastName = "Jones", username = Username("jess"), normalizedUsername = "jess"))
+          var user4 = UserFactory.user().withName("Jess", "Jones").withUsername("jess").saved
           connectionRepo.addConnections(user1.id.get, Set(user3.id.get, user2.id.get, user4.id.get))
           connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
           user4
@@ -187,15 +176,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "normalize usernames" in {
-      UsernameOps.normalize("léo") === "leo"
-      UsernameOps.normalize("andrew.conner2") === "andrewconner2"
-      UsernameOps.normalize("康弘康弘") === "康弘康弘"
-      UsernameOps.normalize("ân_dréw-c.ön.nér") === "andrewconner"
-      UsernameOps.normalize("bob1234") === "bob1234"
-      UsernameOps.normalize("123bob1234") === "123bob1234"
-    }
-
     "allow change of username" in {
       withDb(modules: _*) { implicit injector =>
         val userCommander = inject[UserCommander]
@@ -231,7 +211,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userCommander = inject[UserCommander]
         val userValueRepo = inject[UserValueRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "test"))
+          UserFactory.user().withName("Abe", "Lincoln").withUsername("AbeLincoln").saved
         }
 
         val email1 = EmailAddress("vampireXslayer@gmail.com")
@@ -281,7 +261,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("jane"), normalizedUsername = "jane"))
+          UserFactory.user().withName("Jane", "Doe").withUsername("jane").withEmailAddress("jane@doe.com").saved
         }
 
         // set service client response

@@ -18,7 +18,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialNetworks, SocialId }
@@ -28,6 +27,8 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core.{ IdentityId, SocialUser, AuthenticationMethod, OAuth1Info }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Future
 
@@ -41,7 +42,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     db.readWrite { implicit s =>
       val identityId = IdentityId("2906435114", "twitter")
       val socialUser = SocialUser(identityId, "woof", "", "woof", None, Some("http://www.woof.com"), AuthenticationMethod.OAuth1, Some(oauth1Info))
-      val user = userRepo.save(User(firstName = "", lastName = "", username = Username("woof"), normalizedUsername = "woof"))
+      val user = UserFactory.user().withName("", "").withUsername("woof").saved
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Woof", state = SocialUserInfoStates.CREATED, socialId = SocialId(identityId.userId), networkType = SocialNetworks.TWITTER, credentials = Some(socialUser)))
       (socialUser, user, sui)
     }
@@ -52,7 +53,6 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -64,7 +64,6 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule(),
     FakeOAuth1ConfigurationModule()

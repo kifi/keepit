@@ -18,7 +18,6 @@ import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
-import com.keepit.scraper.ScrapeScheduler
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -31,7 +30,6 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 class KeepInterner @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
-  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   countByLibraryCache: CountByLibraryCache,
@@ -50,6 +48,7 @@ class KeepInterner @Inject() (
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
   libraryCommander: LibraryCommander,
+  subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
   implicit private val clock: Clock,
@@ -118,7 +117,12 @@ class KeepInterner @Inject() (
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source, installationId)
-    if (persistedBookmarksWithUris.nonEmpty) db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
+    if (persistedBookmarksWithUris.nonEmpty) {
+      db.readWrite { implicit s =>
+        libraryRepo.updateLastKept(library.id.get)
+        Try(libraryRepo.save(libraryRepo.get(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone.
+      }
+    }
     val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
@@ -140,17 +144,26 @@ class KeepInterner @Inject() (
         libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
-      db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
+      db.readWrite { implicit s =>
+        libraryRepo.updateLastKept(library.id.get)
+        Try(libraryRepo.save(libraryRepo.get(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone. Needs to be removed.
+      }
       (bookmark, persistedBookmarksWithUri.isNewKeep)
     }
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWrite { implicit session =>
-      bms.map { bm =>
-        bm -> Try(internUriAndBookmark(bm, userId, library, source, installationId)).flatten
-      }.toMap
-    } partition {
+    val (persisted, failed) = bms.map { bm =>
+      bm -> Try {
+        db.readWrite(attempts = 3) { implicit session =>
+          internUriAndBookmark(bm, userId, library, source, installationId).get
+          // This is bad, and I'm not sure why we need to do it now. Previously, we could batch keeps into one db session.
+          // It appears that when there's a problem, now, we're fetching from rover with ids that may not exist anymore.
+          // So, forcing the Try evaluation to make the db session fail, and then recatching it.
+          // Expect something more elegant soon. Signed, Andrew (May 22 2015)
+        }
+      }
+    }.toMap partition {
       case (bm, res) => res.isSuccess
     }
 
@@ -166,18 +179,10 @@ class KeepInterner @Inject() (
 
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]])(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
-      import com.keepit.model.NormalizedURIStates._
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
-      }
-      if (uri.state == ACTIVE || uri.state == INACTIVE) {
-        val date = source match {
-          case s if KeepSource.discrete.contains(s) => START_OF_TIME
-          case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
-        }
-        scraper.scheduleScrape(uri, date)
       }
 
       if (KeepSource.discrete.contains(source)) {
@@ -213,11 +218,14 @@ class KeepInterner @Inject() (
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
     }
 
-    val trimmedTitle = title.map(_.trim).filter(_.length > 0)
+    val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
     val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
+        val kNote = note orElse { if (wasInactiveKeep) None else bookmark.note }
+        val kTitle = trimmedTitle orElse { if (wasInactiveKeep) None else bookmark.title } orElse uri.title
+
         if (bookmark.isActive && bookmark.inDisjointLib && bookmark.libraryId.get != library.id.get) {
           // invalidate if keep URI is active in a system library
           countByLibraryCache.remove(CountByLibraryKey(bookmark.libraryId.get))
@@ -226,12 +234,12 @@ class KeepInterner @Inject() (
 
         val savedKeep = bookmark.copy(
           userId = userId,
-          title = trimmedTitle orElse bookmark.title orElse uri.title,
+          title = kTitle,
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
           libraryId = Some(library.id.get),
           keptAt = keptAt,
-          note = note orElse bookmark.note,
+          note = kNote,
           url = url
         ) |> { keep =>
             if (wasInactiveKeep) {
@@ -266,9 +274,6 @@ class KeepInterner @Inject() (
       // A inactive keep may have had tags already. Index them if any.
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
-
-    // wrapped in a Try because this is super deadlock prone. Needs to be removed.
-    Try(libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // todo: this is very expensive
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }

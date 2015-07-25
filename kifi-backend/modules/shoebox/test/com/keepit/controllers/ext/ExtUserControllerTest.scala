@@ -9,7 +9,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
@@ -29,8 +28,6 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),

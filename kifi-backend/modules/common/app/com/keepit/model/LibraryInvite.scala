@@ -9,6 +9,8 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.shoebox.Words
+import com.keepit.social.BasicUser
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -27,7 +29,7 @@ case class LibraryInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    authToken: String = RandomStringUtils.randomAlphanumeric(7),
+    authToken: String = RandomStringUtils.randomAlphanumeric(9),
     message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
@@ -45,6 +47,21 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))
 
+  def applyFromDbRow(
+    id: Option[Id[LibraryInvite]],
+    libraryId: Id[Library],
+    inviterId: Id[User],
+    userId: Option[Id[User]],
+    emailAddress: Option[EmailAddress],
+    access: LibraryAccess,
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[LibraryInvite],
+    authToken: String,
+    message: Option[String]) = {
+    LibraryInvite(id, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message)
+  }
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and
     (__ \ 'libraryId).format[Id[Library]] and
@@ -61,6 +78,13 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
+  }
+}
+
+@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: Long)
+object LibraryInviteInfo {
+  def createInfo(invite: LibraryInvite, inviter: BasicUser): LibraryInviteInfo = {
+    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt.getMillis)
   }
 }
 

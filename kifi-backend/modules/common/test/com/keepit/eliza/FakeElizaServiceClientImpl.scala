@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
+import com.keepit.eliza.model._
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
@@ -88,4 +88,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
     Future.successful(Seq.empty)
   }
+
+  override def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = Future.successful(Seq.empty)
+
+  override def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = Future.successful(Seq.empty)
 }

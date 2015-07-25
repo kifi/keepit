@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.{ ExperimentType, User }
+import com.keepit.model.{ UserExperimentType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -21,7 +21,8 @@ object SearchConfig {
     Map[String, String](
       // Common Query Parser
       "titleBoost" -> "2.0",
-      "prefixBoost" -> "1.0",
+      "prefixBoost" -> "0.0",
+      "trailingPrefixBoost" -> "0.8",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
@@ -35,8 +36,8 @@ object SearchConfig {
       // UriSearch
       "libraryNameBoost" -> "0.5",
       "maxResultClickBoost" -> "20.0",
-      "minMyBookmarks" -> "2",
-      "myBookmarkBoost" -> "1.5",
+      "minMyKeeps" -> "2",
+      "myKeepBoost" -> "1.5",
       "usefulPageBoost" -> "1.1",
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.01",
@@ -51,13 +52,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "100.0",
-      "myFriendBoost" -> "1.5",
+      "myNetworkBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",
       "dampingHalfDecayMine" -> "6.0",
-      "dampingHalfDecayFriends" -> "4.0",
+      "dampingHalfDecayNetwork" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
-      "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24"
@@ -66,7 +66,8 @@ object SearchConfig {
     Map[String, String](
       // Common Query Parser
       "titleBoost" -> "boost value for title field vs main content",
-      "prefixBoost" -> "importance of prefix query vs regular text query",
+      "prefixBoost" -> "importance of prefix query vs regular text query for a non-trailing term",
+      "trailingPrefixBoost" -> "importance of prefix query vs regular text query for a trailing term",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",
@@ -75,16 +76,16 @@ object SearchConfig {
       // Shared Search Parameters (should probably not be shared)
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF) for a result to show up",
       "halfDecayHours" -> "the time the recency boost becomes half",
-      "recencyBoost" -> "importance of the recent bookmarks",
+      "recencyBoost" -> "importance of the recent keeps",
 
       // UriSearch
       "libraryNameBoost" -> "boost value for library name in uri search",
       "maxResultClickBoost" -> "boosting by recent result clicks",
-      "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
-      "myBookmarkBoost" -> "importance of my bookmark",
+      "minMyKeeps" -> "the minimum number of my keeps in a search result",
+      "myKeepBoost" -> "importance of my keep",
       "usefulPageBoost" -> "importance of usefulPage (clicked page)",
-      "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
-      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
+      "sharingBoostInNetwork" -> "importance of the number of friends sharing the keep",
+      "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the keep",
       "newContentBoost" -> "importance of a new content introduced to the network",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
 
@@ -96,13 +97,12 @@ object SearchConfig {
 
       // UserSearch
       "userSourceBoost" -> "boost value for user source in user search",
-      "myFriendBoost" -> "boost value for my friends in user search",
+      "myNetworkBoost" -> "boost value for my friends in user search",
 
       "proximityBoost" -> "boosting by proximity",
-      "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
-      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
+      "dampingHalfDecayMine" -> "how many top hits in my keeps are important",
+      "dampingHalfDecayNetwork" -> "how many top hits in network' keeps are important",
+      "dampingHalfDecayOthers" -> "how many top hits in others' keep are important",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search"
@@ -118,7 +118,7 @@ object SearchConfig {
     val map = new mutable.HashMap[UserSegment, SearchConfig]() {
       override def default(key: UserSegment): SearchConfig = SearchConfig.defaultConfig
     }
-    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
+    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayNetwork" -> "2.5", "percentMatch" -> "85"))
   }
   def byUserSegment(seg: UserSegment): SearchConfig = segmentConfigs(seg)
 
@@ -131,12 +131,12 @@ object SearchConfig {
 class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
 
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Unit](ttl = 30 seconds)
-  @volatile private[this] var _activeExperiments: Map[ExperimentType, SearchConfig] = Map()
+  @volatile private[this] var _activeExperiments: Map[UserExperimentType, SearchConfig] = Map()
   @volatile private[this] var _activeExperimentsExpiration: Long = 0L
 
   val defaultConfig = SearchConfig.defaultConfig
 
-  def activeExperiments: Map[ExperimentType, SearchConfig] = {
+  def activeExperiments: Map[UserExperimentType, SearchConfig] = {
     if (_activeExperimentsExpiration < System.currentTimeMillis) {
       consolidateGetExperimentsReq("active") { k => SafeFuture { syncActiveExperiments } }
     }
@@ -157,20 +157,20 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }
 
-  def getConfig(userId: Id[User], userExperiments: Set[ExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+  def getConfig(userId: Id[User], userExperiments: Set[UserExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     val future = getConfigFuture(userId, userExperiments)
     monitoredAwait.result(future, 1 seconds, "getting search config")
   }
 
-  def getConfigFuture(userId: Id[User], userExperiments: Set[ExperimentType]): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+  def getConfigFuture(userId: Id[User], userExperiments: Set[UserExperimentType]): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
     val segFuture = shoeboxClient.getUserSegment(userId)
     userConfig.get(userId) match {
       case Some(config) => Future.successful((config, None))
       case None =>
         val (experimentConfig, experimentId) =
-          if (userExperiments.contains(ExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
+          if (userExperiments.contains(UserExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
           else userExperiments.collectFirst {
-            case experiment @ ExperimentType(SearchConfigExperiment.experimentTypePattern(id)) if activeExperiments.contains(experiment) =>
+            case experiment @ UserExperimentType(SearchConfigExperiment.experimentTypePattern(id)) if activeExperiments.contains(experiment) =>
               (activeExperiments(experiment), Some(Id[SearchConfigExperiment](id.toLong)))
           } getOrElse (SearchConfig.empty, None)
 

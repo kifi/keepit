@@ -3,9 +3,10 @@ package com.keepit.controllers.website
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -15,10 +16,13 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactory
 
 import org.specs2.mutable.Specification
 import org.specs2.matcher.{ Matcher, Expectable }
@@ -35,14 +39,13 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
   val modules = Seq(
     FakeExecutionContextModule(),
+    FakeActorSystemModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()
@@ -54,10 +57,11 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     "route correctly" in {
       running(new ShoeboxApplication(modules: _*)) {
         // Database population
-        val (user1, user2) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez"))
-          val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo"))
-          (u1, u2)
+        val (user1, user2, org) = db.readWrite { implicit session =>
+          val u1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abez").saved
+          val u2 = UserFactory.user().withName("Léo", "HasAnAccentInHisName").withUsername("léo1221").saved
+          val org = OrganizationFactory.organization().withName("Kifi").withHandle(OrganizationHandle("kifiorghandle")).withOwner(u1).saved
+          (u1, u2, org)
         }
 
         val userCommander = inject[UserCommander]
@@ -194,11 +198,11 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // Logged-in page routes
         route(FakeRequest("GET", "/invite")) must beLoginRedirect("/invite")
-        route(FakeRequest("GET", "/profile")) must beLoginRedirect("/profile")
+        route(FakeRequest("GET", "/settings")) must beLoginRedirect("/settings")
         route(FakeRequest("GET", "/tags/manage")) must beLoginRedirect("/tags/manage")
         actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/invite")) must beWebApp
-        route(FakeRequest("GET", "/profile")) must beWebApp
+        route(FakeRequest("GET", "/settings")) must beWebApp
         route(FakeRequest("GET", "/tags/manage")) must beWebApp
 
         // /me
@@ -237,6 +241,16 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/friends/requests/refresh")) must beRedirect(303, "/abez/connections")
         route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
         route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
+
+        // user-or-orgs
+        val orgLibrary = db.readWrite { implicit session =>
+          LibraryFactory.library().withName("Kifi Library").withSlug("kifi-lib").withUser(user1).withOrganization(org.id).saved
+        }
+
+        actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
+        route(FakeRequest("GET", "/kifiorghandle")) must beWebApp
+        route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
+        route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
 
         // catching mobile
         {

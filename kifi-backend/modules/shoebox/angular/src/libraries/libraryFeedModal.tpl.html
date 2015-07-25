@@ -1,0 +1,17 @@
+<div kf-modal class="kf-feed-modal" kf-width="500px">
+	<div class kf-basic-modal-content centered="false" title="Feeds for {{library.name}}">
+		<div class="kf-feed-how-to">
+			<p>Step 1: Select the Feed</p>
+			<p>Step 2: Copy the Feed</p>
+			<p>Step 3: Paste the Feed into an RSS Reader</p>
+		</div>
+		<div class="kf-feed-text">
+			<label for="rss">RSS Feed:</label>
+			<input onclick="this.select();" name="rss" type="text" value='{{"https://www.kifi.com/" + username + "/" + librarySlug + "/rss"}}'></input>
+		</div>
+		<div class="kf-feed-text">
+			<label for="atom">Atom Feed:</label>
+			<input onclick="this.select();" name="atom" type="text" value='{{"https://www.kifi.com/" + username + "/" + librarySlug + "/atom"}}'></input>
+		</div>
+	</div>
+</div>

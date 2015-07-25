@@ -1,7 +1,7 @@
 package com.keepit.common.social
 
-import com.google.inject.Inject
-import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
+import com.google.inject.{ ImplementedBy, Inject }
+import com.keepit.commanders.{ LibraryPathCommander, KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -69,6 +69,7 @@ object PagedTwitterUserInfos {
 
 case class TwitterError(message: String, code: Long)
 
+@ImplementedBy(classOf[TwitterSocialGraphImpl])
 trait TwitterSocialGraph extends SocialGraph {
   val networkType: SocialNetworkType = SocialNetworks.TWITTER
 
@@ -91,6 +92,7 @@ class TwitterSocialGraphImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     elizaServiceClient: ElizaServiceClient,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -225,7 +227,7 @@ class TwitterSocialGraphImpl @Inject() (
             val libOwner = basicUserRepo.load(library.ownerId)
             if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
               val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
-              val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+              val libLink = s"""https://www.kifi.com${libPathCommander.getPath(library)}"""
               val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
               log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
               libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))

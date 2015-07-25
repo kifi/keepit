@@ -61,7 +61,7 @@
         <td>@{meta.hit.isMyBookmark}</td>
         <td>@{meta.hit.keptByFriend}</td>
         <td>
-          <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explainUriResult(result.query, meta.uri.id.get, result.lang, None)" method="GET" class="form-inline">
+          <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explainUriResult(result.query, meta.uri.id.get, None, result.lang, None)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
             <input type="hidden" name="uriId" value="@{meta.uri.id}"/>
             <input type="hidden" name="lang" value="@{result.lang}"/>

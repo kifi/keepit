@@ -56,7 +56,12 @@ class NormalizationServiceImpl @Inject() (
   private def processUpdate(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
     val now = currentDateTime
     val recentFailedChecks = db.readOnlyReplica { implicit s => failedContentCheckRepo.getRecentCountByURL(currentReference.url, now.minusMinutes(5)) }
-    if (recentFailedChecks > 10) {
+    val somethingBadIsHappening = {
+      // Léo: Please improve/fix this properly
+      currentReference.url.length >= URLFactory.MAX_URL_SIZE || candidates.exists(_.url.length >= URLFactory.MAX_URL_SIZE)
+    }
+    if (recentFailedChecks > 10 || somethingBadIsHappening) {
+      log.warn(s"[NormalizationService] Stopping normalization for ${currentReference.uriId}. ${currentReference.url}. Candidates: ${candidates.map(_.url).mkString("  ")}")
       Future.successful(None)
     } else {
       log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")

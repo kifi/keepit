@@ -13,7 +13,6 @@ import com.keepit.common.db.Id
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.joda.time.DateTime
@@ -23,7 +22,6 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
   implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),

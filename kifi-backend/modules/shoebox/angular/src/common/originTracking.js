@@ -40,12 +40,9 @@ angular.module('kifi')
   function (originTrackingService) {
     return {
       restrict: 'A',
-      scope: {
-        origin: '@kfTrackOrigin'
-      },
       link: function (scope, element) {
         element.on('click', function () {
-          originTrackingService.set(scope.origin);
+          originTrackingService.set(element.attr('kf-track-origin'));
         });
       }
     };

@@ -14,14 +14,13 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.concurrent.WatchableExecutionContext
+import com.keepit.model.UserFactoryHelper._
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
   def setup(db: Database, category: NotificationCategory = NotificationCategory.User.WELCOME)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
@@ -30,7 +29,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     val emailRepo = inject[ElectronicMailRepo]
 
     db.readWrite { implicit rw =>
-      val user = userRepo.save(User(firstName = "John", lastName = "Doe", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("John", "Doe").withUsername("test").saved
       val emailAddr = emailAddrRepo.save(UserEmailAddress(address = EmailAddress("johndoe@gmail.com"), userId = user.id.get))
       val email = emailRepo.save(ElectronicMail(
         from = SystemEmailAddress.ENG,
@@ -64,11 +63,9 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule()
+    FakeSocialGraphModule()
   )
 
   "SendgridCommander" should {

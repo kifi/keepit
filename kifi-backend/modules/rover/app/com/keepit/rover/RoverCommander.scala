@@ -9,9 +9,9 @@ import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
 import com.keepit.rover.document.utils.Signature
-import com.keepit.rover.fetcher.{ InvalidFetchResponseException, InvalidFetchRequestException }
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
+import com.keepit.rover.rule.RoverHttpProxyCommander
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.rover.store.ContentSignatureCommander
 import com.keepit.common.time._
@@ -35,10 +35,11 @@ class RoverCommander @Inject() (
     val updatedInfos = articleCommander.getArticleInfosBySequenceNumber(seq, limit)
     if (updatedInfos.isEmpty) Future.successful(None)
     else {
-      val futureUpdates = updatedInfos.map { info =>
-        articleCommander.getLatestArticle(info).imap { latestArticleOption =>
-          latestArticleOption.map(toShoeboxArticleUpdate(info))
-        }
+      val futureUpdates = updatedInfos.collect {
+        case info if !info.isDeleted =>
+          articleCommander.getLatestArticle(info).imap { latestArticleOption =>
+            latestArticleOption.map(toShoeboxArticleUpdate(info))
+          }
       }
       val maxSeq = updatedInfos.map(_.seq).max
       Future.sequence(futureUpdates).imap { updates =>
@@ -76,14 +77,14 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, BasicImages)]] = {
+  def getOrElseFetchArticleSummaryAndImages[A <: Article](url: String, uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, BasicImages)]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val futureArticleSummaryOption = {
       val key = RoverArticleSummaryKey(uriId, kind)
       articleSummaryCache.get(key) match {
         case Some(articleSummary) => Future.successful(Some(articleSummary))
-        case None => articleCommander.getOrElseFetchBestArticle[A](uriId, url).map { articleOption =>
+        case None => articleCommander.getOrElseFetchBestArticle[A](url, uriId).map { articleOption =>
           val fetchedSummaryOpt = articleOption.map(RoverArticleSummary.fromArticle)
           fetchedSummaryOpt tap (articleSummaryCache.set(key, _))
         }

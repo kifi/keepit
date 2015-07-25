@@ -52,6 +52,7 @@ class EmailTestController @Inject() (
     def tip = request.getQueryString("tip")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
+      case "gratification" => emailSenderProvider.gratification(userId, Some(sendTo))
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
       case "welcome" => emailSenderProvider.welcome.sendToUser(userId)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)

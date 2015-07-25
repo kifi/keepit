@@ -5,14 +5,15 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
+  def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
 }
 
 @Singleton
@@ -37,7 +38,8 @@ class DomainRepoImpl @Inject() (
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
-    def * = (id.?, hostname, autoSensitive, manualSensitive, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
+    def isEmailProvider = column[Boolean]("is_email_provider", O.NotNull)
+    def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
 
   def table(tag: Tag) = new DomainTable(tag)
@@ -47,6 +49,11 @@ class DomainRepoImpl @Inject() (
     domainCache.getOrElseOpt(DomainKey(domain)) {
       (for (d <- rows if d.hostname === domain) yield d).firstOption
     } filter { d => excludeState.map(s => d.state != s).getOrElse(true) }
+  }
+
+  def getByIds(domainIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain] = {
+    val q = { for { row <- rows if row.id.inSet(domainIds) && row.state === DomainStates.ACTIVE } yield row }
+    q.list.map { domain => domain.id.get -> domain }.toMap
   }
 
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
@@ -59,5 +66,23 @@ class DomainRepoImpl @Inject() (
     val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())
     domainIds foreach { id => invalidateCache(get(id)) }
     count
+  }
+
+  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
+    val normalizedDomainNames = domainNames.map(_.toLowerCase.toUpperCase.toLowerCase) // hack to map "ı" -> "I" -> "i", since MySQL converts "ı" -> "i" // todo(cam) find the MySQL conversion
+    val existingDomains = getAllByName(normalizedDomainNames.toSeq, None).toSet
+
+    val existingDomainByName = existingDomains.map { domain =>
+      domain.state match {
+        case DomainStates.INACTIVE => domain.hostname -> save(domain.copy(state = DomainStates.ACTIVE))
+        case DomainStates.ACTIVE => domain.hostname -> domain
+      }
+    }.toMap
+
+    val newDomainByName = (normalizedDomainNames -- existingDomainByName.keys.toSet).map { domainName =>
+      domainName -> save(Domain(hostname = domainName))
+    }.toMap
+
+    existingDomainByName ++ newDomainByName
   }
 }

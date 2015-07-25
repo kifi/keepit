@@ -6,8 +6,8 @@ import com.keepit.common.db.Id
 
 class LibraryAliasTest extends Specification with ShoeboxTestInjector {
 
-  val firstUser = Id[User](134)
-  val secondUser = Id[User](-134)
+  val léo = LibrarySpace.UserSpace(Id[User](134))
+  val kifi = LibrarySpace.OrganizationSpace(Id[Organization](1))
 
   val theBest = LibrarySlug(LibrarySlug.generateFromName("the best library in the world"))
   val theWorst = LibrarySlug(LibrarySlug.generateFromName("the worst library ever"))
@@ -23,54 +23,54 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
 
         // first user
 
-        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) }
-        theBestFromFirstUserAlias.ownerId === firstUser
-        theBestFromFirstUserAlias.slug === theBest
-        theBestFromFirstUserAlias.libraryId == theBestLibraryId
-        theBestFromFirstUserAlias.state === LibraryAliasStates.ACTIVE
+        val theBestFromLéoAlias = db.readWrite { implicit session => libraryAliasRepo.alias(léo, theBest, theBestLibraryId) }
+        theBestFromLéoAlias.space === léo
+        theBestFromLéoAlias.slug === theBest
+        theBestFromLéoAlias.libraryId === theBestLibraryId
+        theBestFromLéoAlias.state === LibraryAliasStates.ACTIVE
 
-        val betterBestFromFirstUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) === theBestFromFirstUserAlias
-          libraryAliasRepo.alias(firstUser, theBest, theBetterBestLibraryId)
+        val betterBestFromLéoAlias = db.readWrite { implicit session =>
+          libraryAliasRepo.alias(léo, theBest, theBestLibraryId) === theBestFromLéoAlias
+          libraryAliasRepo.alias(léo, theBest, theBetterBestLibraryId)
         }
 
-        betterBestFromFirstUserAlias.id.get === theBestFromFirstUserAlias.id.get
-        betterBestFromFirstUserAlias.libraryId === theBetterBestLibraryId
+        betterBestFromLéoAlias.id.get === theBestFromLéoAlias.id.get
+        betterBestFromLéoAlias.libraryId === theBetterBestLibraryId
 
         // second user
 
-        val theBestFromSecondUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.alias(secondUser, theBest, theNotSoGreatBestLibraryId)
+        val theBestFromKifiAlias = db.readWrite { implicit session =>
+          libraryAliasRepo.alias(kifi, theBest, theNotSoGreatBestLibraryId)
         }
 
-        theBestFromSecondUserAlias.id.get !== theBestFromFirstUserAlias.id.get
-        theBestFromSecondUserAlias.ownerId === secondUser
-        theBestFromSecondUserAlias.slug === theBest
-        theBestFromSecondUserAlias.libraryId == theNotSoGreatBestLibraryId
-        theBestFromSecondUserAlias.state === LibraryAliasStates.ACTIVE
+        theBestFromKifiAlias.id.get !== theBestFromLéoAlias.id.get
+        theBestFromKifiAlias.space === kifi
+        theBestFromKifiAlias.slug === theBest
+        theBestFromKifiAlias.libraryId === theNotSoGreatBestLibraryId
+        theBestFromKifiAlias.state === LibraryAliasStates.ACTIVE
 
-        val theWorstFromSecondUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.alias(secondUser, theWorst, theNotSoGreatBestLibraryId)
+        val theWorstFromKifiAlias = db.readWrite { implicit session =>
+          libraryAliasRepo.alias(kifi, theWorst, theNotSoGreatBestLibraryId)
         }
 
-        theWorstFromSecondUserAlias.id.get !== theBestFromSecondUserAlias.id.get
-        theWorstFromSecondUserAlias.ownerId === secondUser
-        theWorstFromSecondUserAlias.slug === theWorst
-        theWorstFromSecondUserAlias.libraryId == theNotSoGreatBestLibraryId
-        theWorstFromSecondUserAlias.state === LibraryAliasStates.ACTIVE
+        theWorstFromKifiAlias.id.get !== theBestFromKifiAlias.id.get
+        theWorstFromKifiAlias.space === kifi
+        theWorstFromKifiAlias.slug === theWorst
+        theWorstFromKifiAlias.libraryId === theNotSoGreatBestLibraryId
+        theWorstFromKifiAlias.state === LibraryAliasStates.ACTIVE
       }
     }
 
     "get active aliases by owner id and library slug" in {
       withDb() { implicit injector =>
-        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) }
+        val theBestFromLéoAlias = db.readWrite { implicit session => libraryAliasRepo.alias(léo, theBest, theBestLibraryId) }
         db.readOnlyMaster { implicit session =>
-          libraryAliasRepo.getByOwnerIdAndSlug(firstUser, theBest) === Some(theBestFromFirstUserAlias)
+          libraryAliasRepo.getBySpaceAndSlug(léo, theBest) === Some(theBestFromLéoAlias)
         }
 
-        db.readWrite { implicit session => libraryAliasRepo.save(theBestFromFirstUserAlias.copy(state = LibraryAliasStates.INACTIVE)) }
+        db.readWrite { implicit session => libraryAliasRepo.save(theBestFromLéoAlias.copy(state = LibraryAliasStates.INACTIVE)) }
         db.readOnlyMaster { implicit session =>
-          libraryAliasRepo.getByOwnerIdAndSlug(firstUser, theBest) === None
+          libraryAliasRepo.getBySpaceAndSlug(léo, theBest) === None
         }
       }
     }

@@ -188,3 +188,39 @@ case object LibraryReader extends VertexKind[LibraryReader] {
   implicit val writes = Writes[LibraryReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[LibraryReader]] { json => (json \ "id").validate.map(LibraryData(_)) }
 }
+
+trait OrganizationReader extends VertexDataReader {
+  type V = OrganizationReader
+  def kind = OrganizationReader
+}
+
+case object OrganizationReader extends VertexKind[OrganizationReader] {
+  val header = 13.toByte
+  def apply(rawDataReader: RawDataReader): OrganizationReader = ???
+  implicit val writes = Writes[OrganizationReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[OrganizationReader]] { json => (json \ "id").validate.map(OrganizationData(_)) }
+}
+
+trait IpAddressReader extends VertexDataReader {
+  type V = IpAddressReader
+  def kind = IpAddressReader
+}
+
+case object IpAddressReader extends VertexKind[IpAddressReader] {
+  val header = 12.toByte
+  def apply(rawDataReader: RawDataReader): IpAddressReader = ???
+  implicit val writes = Writes[IpAddressReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[IpAddressReader]] { json => (json \ "id").validate.map(IpAddressData(_)) }
+}
+
+trait DomainReader extends VertexDataReader {
+  type V = DomainReader
+  def kind = DomainReader
+}
+
+case object DomainReader extends VertexKind[DomainReader] {
+  val header = 14.toByte
+  def apply(rawDataReader: RawDataReader): DomainReader = ???
+  implicit val writes = Writes[DomainReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[DomainReader]] { json => (json \ "id").validate.map(DomainData(_)) }
+}

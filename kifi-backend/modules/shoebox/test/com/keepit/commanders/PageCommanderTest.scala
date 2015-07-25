@@ -1,33 +1,17 @@
 package com.keepit.commanders
 
-import com.keepit.classify.DomainRepo
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
-
-import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
-import com.keepit.common.social.{ BasicUserRepo, FakeSocialGraphModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule }
+import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.time.zones
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
-import com.keepit.search.{ SearchServiceClient, FakeSearchServiceClientModule }
+import com.keepit.search.{ FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
-import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class PageCommanderTest extends Specification with ShoeboxTestInjector {
@@ -37,7 +21,6 @@ class PageCommanderTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxStoreModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
-    FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::

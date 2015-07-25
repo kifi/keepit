@@ -189,6 +189,7 @@ class InviteController @Inject() (db: Database,
     ))
   }
 
+  // Deprecated, do not use. use MobileLibraryController#createAnonymousInviteToLibrary instead
   def getLibraryInviteInfo(id: PublicId[Library]) = UserAction { request =>
     Library.decodePublicId(id).toOption.map { libId =>
       val library = db.readOnlyReplica { implicit session =>
@@ -197,6 +198,7 @@ class InviteController @Inject() (db: Database,
       val link = s"https://kifi.com${libraryCommander.getLibraryPath(library)}"
       val title = library.name
       Ok(Json.obj(
+        "is_api_deprecated" -> "yes_very_much_so",
         "link" -> link,
         "sms" -> s"Check out this interesting Kifi library: $link",
         "email" -> Json.obj(

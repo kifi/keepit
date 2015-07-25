@@ -8,7 +8,7 @@ import com.keepit.curator.RecommendationUserAction
 import com.keepit.curator.feedback.UserRecoFeedbackTrackingCommander
 import com.keepit.curator.model._
 import com.keepit.heimdal.{ ContextList, SimpleContextData, HeimdalContext, ContextData, UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
-import com.keepit.model.{ LibraryRecommendationFeedback, Library, NormalizedURI, User, UriRecommendationFeedback, ExperimentType }
+import com.keepit.model.{ LibraryRecommendationFeedback, Library, NormalizedURI, User, UriRecommendationFeedback, UserExperimentType }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.akka.SafeFuture
@@ -159,7 +159,7 @@ class CuratorAnalytics @Inject() (
       val contextBuilder = heimdalContextBuilder()
       contextBuilder ++= context.contextData.toMap
       contextBuilder += ("experiments", experiments.map(_.value).toSeq)
-      contextBuilder += ("userStatus", ExperimentType.getUserStatus(experiments))
+      contextBuilder += ("userStatus", UserExperimentType.getUserStatus(experiments))
       UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
     }
   }

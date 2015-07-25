@@ -19,6 +19,20 @@
   mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
 </script>
 <script src="/dist/lib.min.js"></script>
+<script>
+  window.Airbrake = new airbrakeJs.Client({ projectId: '113130', projectKey: '67e9f4bb3c4fbd7d96e1f81a24e6d374' });
+
+  // Configure vanilla JS client-side error reporting.
+  Airbrake.setEnvironmentName('production');
+  window.onerror = _.debounce(function (message, filename, lineno, colno, error) {
+    Airbrake.push({
+      error: {
+        message: error.toString(),
+        stack: error.stack
+      }
+    });
+  }, 5000, true);
+</script>
 <script src="/dist/kifi.min.js"></script>
 <script>angular.bootstrap(document, ['kifi']);</script>
 <script>
@@ -30,3 +44,4 @@
   s.parentNode.insertBefore(g, s);
   }(document, 'script');
 </script>
+<script>$.get('/dist/symbol-sprite.svg', function(data) { document.body.appendChild(data.documentElement) });</script>

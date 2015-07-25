@@ -4,7 +4,7 @@ import org.specs2.mutable._
 
 import com.google.inject.Injector
 import com.keepit.akka.TestAkkaSystem
-import com.keepit.common.db.{ FakeSlickSessionProvider, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.time._
 import com.keepit.test._
 
@@ -13,6 +13,7 @@ import play.api.libs.json.Json
 import securesocial.core._
 import com.keepit.social.{ SocialNetworks, SocialId }
 import org.joda.time._
+import com.keepit.model.UserFactoryHelper._
 
 class SocialUserInfoTest extends Specification with ShoeboxTestInjector with TestAkkaSystem {
 
@@ -24,7 +25,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
 
-      val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
 
       // Users that need to be processed
       socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))

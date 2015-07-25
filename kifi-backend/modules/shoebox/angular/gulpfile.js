@@ -28,13 +28,16 @@ var modRewrite = require('connect-modrewrite');
 var gutil = require('gulp-util');
 var karma = require('karma').server;
 var protractor = require('gulp-protractor').protractor;
-var revall = require('gulp-rev-all');
+var RevAll = require('gulp-rev-all');
 var awspublish = require('gulp-awspublish');
 var parallelize = require('concurrent-transform');
 var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
+var sourcemaps = require('gulp-sourcemaps');
+
+require('shelljs/global');
 
 /********************************************************
   Globals
@@ -88,10 +91,12 @@ var libJsFiles = [
   ['lib/jquery/dist/jquery.js', 'lib/jquery/dist/jquery.min.js'],
   ['lib/angular/angular.js', 'lib/angular/angular.min.js'],
   ['lib/angular-cookies/angular-cookies.js', 'lib/angular-cookies/angular-cookies.min.js'],
+  'lib/airbrake-js-client/dist/client.js',
   ['lib/angular-resource/angular-resource.js', 'lib/angular-resource/angular-resource.min.js'],
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],
   ['lib/angular-animate/angular-animate.js', 'lib/angular-animate/angular-animate.min.js'],
   ['lib/angular-ui-router/release/angular-ui-router.js', 'lib/angular-ui-router/release/angular-ui-router.min.js'],
+  ['lib/svg4everybody/svg4everybody.js', 'lib/svg4everybody/svg4everybody.min.js'],
   'lib/jquery-mousewheel/jquery.mousewheel.js',
   'lib/antiscroll/antiscroll.js',
   ['lib/moment/moment.js', 'lib/moment/min/moment.min.js'],
@@ -151,8 +156,10 @@ var cacheUpdater = function (cacheName) {
  ********************************************************/
 
 var makeMinJs = lazypipe()
-  .pipe(uglify)
-  .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.init)
+    .pipe(uglify)
+    .pipe(rename, {suffix: '.min'})
+  .pipe(sourcemaps.write, './')
   .pipe(gulp.dest, outDir);
 
 var makeMinCss = lazypipe()
@@ -264,7 +271,13 @@ gulp.task('sprite-classes', function () {
   return es.merge(img, css);
 });
 
-gulp.task('sprite', ['sprite-imports', 'sprite-classes', 'svg-sprite']);
+gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
+
+gulp.task('symbol-sprites', function() {
+  exec('./build-svgs.rb');
+  return gulp.src(['./img/symbol-sprites/dist/*.svg'])
+    .pipe(gulp.dest('./dist'));
+});
 
 gulp.task('svg-sprite', function() {
   var mapToCss = map(function(code, filename) {
@@ -430,10 +443,11 @@ gulp.task('test', function (done) {
 });
 
 function compileAssetRevs(opts, dest) {
-  opts = merge({ ignore: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
+  opts = merge({ dontRenameFile: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
   dest = dest || 'tmp';
+  var revAll = new RevAll(opts);
   return gulp.src(assetSrc, { base: '.' })
-    .pipe(revall(opts))
+    .pipe(revAll.revision())
     .pipe(gulp.dest(dest));
 }
 

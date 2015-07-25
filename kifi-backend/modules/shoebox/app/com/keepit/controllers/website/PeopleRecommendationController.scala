@@ -10,7 +10,7 @@ import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
-import com.keepit.abook.model.InviteRecommendation
+import com.keepit.abook.model.UserInviteRecommendation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.core._
 
@@ -55,22 +55,20 @@ class PeopleRecommendationController @Inject() (
   }
 
   def getInviteRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
-    val relevantNetworks = db.readOnlyReplica { implicit session =>
-      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
-    }
+    val relevantNetworks = Set[SocialNetworkType](SocialNetworks.EMAIL) // Twitter, LinkedIn, Facebook have restricted our ability to invite
+    /*    db.readOnlyReplica { implicit session =>
+      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO - SocialNetworks.LINKEDIN - SocialNetworks.TWITTER + SocialNetworks.EMAIL
+    }*/
     val futureInviteRecommendations = {
-      if (request.experiments.contains(ExperimentType.GRAPH_BASED_PEOPLE_TO_INVITE)) {
-        abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks)
-      } else {
-        inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)
-      }
+      abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks) // Graph based recommendations
+      //  inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)  RichConnection based recommendations
     }
     futureInviteRecommendations.imap(recommendations => Ok(Json.toJson(recommendations)))
   }
 
   def hideInviteRecommendation() = UserAction.async(parse.json) { request =>
     val network = (request.body \ "network").as[SocialNetworkType]
-    val identifier = (request.body \ "identifier").as(InviteRecommendation.identifierFormat)
+    val identifier = (request.body \ "identifier").as(UserInviteRecommendation.identifierFormat)
     val irrelevantFriendId = identifier.right.map { socialId =>
       val socialUserInfo = db.readOnlyReplica { implicit session => socialUserRepo.get(socialId, network) }
       socialUserInfo.id.get

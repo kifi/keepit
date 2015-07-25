@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
+import com.keepit.eliza.model._
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
@@ -38,8 +38,10 @@ object UserPushNotificationCategory {
   val UserConnectionAccepted = UserPushNotificationCategory("UserConnectionAccepted")
   val ContactJoined = UserPushNotificationCategory("ContactJoined")
   val NewLibraryFollower = UserPushNotificationCategory("NewLibraryFollower")
+  val NewLibraryCollaborator = UserPushNotificationCategory("NewLibraryCollaborator")
   val LibraryInviteAccepted = UserPushNotificationCategory("LibraryInviteAccepted")
   val NewLibraryInviter = UserPushNotificationCategory("NewLibraryInviter")
+  val NewOrganizationMember = UserPushNotificationCategory("NewOrganizationMember")
 }
 
 object LibraryPushNotificationCategory {
@@ -89,6 +91,10 @@ trait ElizaServiceClient extends ServiceClient {
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
 
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
+
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -222,6 +228,18 @@ class ElizaServiceClientImpl @Inject() (
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]] = {
     call(Eliza.internal.getUnreadNotifications(userId, howMany)).map { response =>
       Json.parse(response.body).as[Seq[UserThreadView]]
+    }
+  }
+
+  def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
+    call(Eliza.internal.getSharedThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
+      response.json.as[Seq[GroupThreadStats]]
+    }
+  }
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
+    call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
+      response.json.as[Seq[GroupThreadStats]]
     }
   }
 }

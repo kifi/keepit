@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailLayout.CustomLayout
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
-import com.keepit.model.{ ExperimentType, NotificationCategory, User }
+import com.keepit.model.{ UserExperimentType, NotificationCategory, User }
 
 import scala.concurrent.Future
 
@@ -21,7 +21,7 @@ class WelcomeEmailSender @Inject() (
 
   def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[ElectronicMail] = {
 
-    val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, ExperimentType.PLAIN_EMAIL)
+    val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, UserExperimentType.PLAIN_EMAIL)
 
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
@@ -33,7 +33,7 @@ class WelcomeEmailSender @Inject() (
       htmlTemplate = if (usePlainEmail) { views.html.email.black.welcomePlain(userId) } else { views.html.email.black.welcome(userId) },
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
       templateOptions = if (usePlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty },
-      tips = if (usePlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn) }
+      tips = if (usePlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook) }
     // TODO(josh) add EmailTip.InstallExtension when it's complete
     )
     emailTemplateSender.send(emailToSend)

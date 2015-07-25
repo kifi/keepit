@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, UsernameOps }
+import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, HandleOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -26,11 +26,11 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageIncluding(includeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
-  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countIncluding(includeStates: State[User]*)(implicit session: RSession): Int
-  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(implicit session: RSession): Int
-  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int
+  def countIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(implicit session: RSession): Int
+  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(implicit session: RSession): Int
   def countNewUsers(implicit session: RSession): Int
   def getNoCache(id: Id[User])(implicit session: RSession): User
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
@@ -38,9 +38,14 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getByExternalId(id: ExternalId[User])(implicit session: RSession): User
   def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
+  def countUsersWithPotentialOrgs()(implicit session: RSession): Int
+  def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def countLinkedInUsersWithoutOrgs()(implicit session: RSession): Int
+  def pageLinkedInUsersWithoutOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -67,12 +72,12 @@ class UserRepoImpl @Inject() (
   class UserTable(tag: Tag) extends RepoTable[User](db, tag, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def pictureName = column[String]("picture_name", O.Nullable)
-    def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
-    def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def username = column[Username]("username", O.NotNull)
-    def normalizedUsername = column[String]("normalized_username", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username, normalizedUsername) <> ((User.apply _).tupled, User.unapply)
+    def pictureName = column[Option[String]]("picture_name", O.Nullable)
+    def userPictureId = column[Option[Id[UserPicture]]]("user_picture_id", O.Nullable)
+    def primaryEmail = column[Option[EmailAddress]]("primary_email", O.Nullable)
+    def username = column[Option[Username]]("username", O.Nullable)
+    def normalizedUsername = column[Option[Username]]("normalized_username", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, primaryEmail, username, normalizedUsername) <> ((User.applyFromDbRow _).tupled, User.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -84,12 +89,6 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = deferredSeqNum())
-    user.id foreach { id =>
-      val currentUser = get(id)
-      if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
-        airbrake.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
-      }
-    }
     super.save(toSave)
   }
 
@@ -103,7 +102,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
+  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -111,7 +110,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
+  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -124,7 +123,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(implicit session: RSession): Int = {
+  def countIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -132,7 +131,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int = {
+  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -146,24 +145,27 @@ class UserRepoImpl @Inject() (
   }
 
   override def deleteCache(user: User)(implicit session: RSession): Unit = {
-    user.id map { id =>
+    user.id foreach { id =>
       idCache.remove(UserIdKey(id))
-      basicUserCache.remove(BasicUserUserIdKey(id))
       UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
-      usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
+      user.primaryUsername.foreach { username =>
+        usernameCache.remove(UsernameKey(username.original))
+        basicUserCache.remove(BasicUserUserIdKey(id))
+      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
     if (user.state == UserStates.ACTIVE) {
-      val basicUser = BasicUser.fromUser(user)
       for (id <- user.id) {
         idCache.set(UserIdKey(id), user)
-        basicUserCache.set(BasicUserUserIdKey(id), basicUser)
-        usernameCache.set(UsernameKey(user.username), user)
         UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+        user.primaryUsername.foreach { username =>
+          usernameCache.set(UsernameKey(username.original), user)
+          basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+        }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)
       session.onTransactionSuccess {
@@ -247,6 +249,10 @@ class UserRepoImpl @Inject() (
     }
   }
 
+  def getByExternalId(id: ExternalId[User])(implicit session: RSession): User = {
+    getAllUsersByExternalId(Seq(id)).values.head
+  }
+
   def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User] = {
     if (ids.isEmpty) {
       Map.empty
@@ -264,19 +270,123 @@ class UserRepoImpl @Inject() (
   }
 
   def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
-    val normalizedUsername = UsernameOps.normalize(username.value)
+    val normalizedUsername = Username(HandleOps.normalize(username.value))
     usernameCache.getOrElseOpt(UsernameKey(username)) {
       getByNormalizedUsernameCompiled(normalizedUsername).firstOption
     }
   }
 
-  private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[String] =>
+  private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[Username] =>
     for (f <- rows if f.normalizedUsername === normalizedUsername) yield f
   }
 
   def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
+  }
+
+  def countUsersWithPotentialOrgs()(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select count(distinct cur_user.id) from user as cur_user
+      inner join (
+        select user_2 as related_id, user_1 as cur_id from user_connection
+        union all
+          select user_1 as related_id, user_1 as cur_id from user_connection
+      ) as relation
+      on relation.cur_id = cur_user.id
+      inner join user on user.id = cur_user.id
+      where user.state = 'active'
+      and not exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = cur_user.id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = cur_user.id
+      ) and exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = relation.related_id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
+      ) and not exists (
+        select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
+      ) and not exists (
+        select user_id from user_experiment where experiment_type = 'fake' and state = 'active' and user_id = cur_user.id
+      ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = cur_user.id) >= 10;
+      """.as[Int].first
+  }
+
+  def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val ids = sql"""
+      select distinct cur_user.id from user as cur_user
+      inner join (
+        select user_2 as related_id, user_1 as cur_id from user_connection
+        union all
+          select user_1 as related_id, user_1 as cur_id from user_connection
+      ) as relation
+      on relation.cur_id = cur_user.id
+      inner join user on user.id = cur_user.id
+      where user.state = 'active'
+      and not exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = cur_user.id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = cur_user.id
+      ) and exists (
+        select user_id, organization_id from organization_membership where organization_membership.user_id = relation.related_id
+        union all
+          select user_id, organization_id from organization_membership_candidate where organization_membership_candidate.user_id = relation.related_id
+      ) and not exists (
+        select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = cur_user.id
+      ) and not exists (
+        select user_id from user_experiment where experiment_type = 'fake' and state = 'active' and user_id = cur_user.id
+      ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = cur_user.id) >= 10
+      limit $size offset ${size * page};
+      """.as[Id[User]].list
+
+    val userMaps = getUsers(ids)
+
+    ids.map(id => userMaps(id))
+  }
+
+  def countLinkedInUsersWithoutOrgs()(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+      select count(user.id) from social_user_info
+        inner join user on user.id = social_user_info.user_id
+        where user.state = 'active'
+        and social_user_info.network_type = 'linkedin'
+        and social_user_info.user_id is not null
+        and social_user_info.user_id not in (select user_id from organization_membership_candidate )
+        and social_user_info.user_id not in (select user_id from organization_membership)
+        and not exists (
+          select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
+        ) and not exists (
+          select user_id from user_experiment where experiment_type = 'fake' and state = 'active' and user_id = social_user_info.user_id
+        ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = social_user_info.user_id) >= 10;
+      """.as[Int].first
+  }
+
+  def pageLinkedInUsersWithoutOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val ids = sql"""
+      select user.id from social_user_info
+        inner join user on user.id = social_user_info.user_id
+        where user.state = 'active'
+        and social_user_info.network_type = 'linkedin'
+        and social_user_info.user_id is not null
+        and social_user_info.user_id not in (select user_id from organization_membership_candidate )
+        and social_user_info.user_id not in (select user_id from organization_membership)
+        and not exists (
+          select user_id from user_value where name = 'ignore_for_potential_organizations' and value = 'true' and user_id = social_user_info.user_id
+        ) and not exists (
+          select user_id from user_experiment where experiment_type = 'fake' and state = 'active' and user_id = social_user_info.user_id
+        ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = social_user_info.user_id) >= 10
+        limit $size offset ${size * page};
+      """.as[Id[User]].list
+
+    val userMaps = getUsers(ids)
+
+    ids.map(id => userMaps(id))
   }
 }
 

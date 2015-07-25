@@ -21,6 +21,7 @@ class AndroidAppStoreParamsController @Inject() (
 
   private def processQuery(userId: Id[User], key: String, param: String): Unit = key match {
     case "kcid" => processKcid(userId, param)
+    case "com.android.chrome" => ()
     case other => airbrake.notify(s"unrecognized key $key with param: $param")
   }
 

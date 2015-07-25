@@ -100,6 +100,14 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
       Some(leader)
   }
 
+  private def deleteIfStillThere(zk: ZooKeeperSession, node: Node): Unit = {
+    try {
+      zk.delete(node)
+    } catch {
+      case ex: org.apache.zookeeper.KeeperException.NoNodeException =>
+    }
+  }
+
   def deDuplicate(zk: ZooKeeperSession, instances: TrieMap[Node, ServiceInstance]): TrieMap[Node, ServiceInstance] = {
     try {
       val machines = new TrieMap[IpAddress, Node]()
@@ -107,16 +115,15 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
         case (node, instance) =>
           val ip = instance.instanceInfo.localIp
           machines.get(ip) foreach { existing =>
-            airbrake.get.notify(s"there are two existing ZK nodes with the same IP address $ip: $existing and $node for service ${instance}, removing the smallest node")
             val newNodeId = instances(node).id.id
             val existingNodeId = instances(existing).id.id
             if (newNodeId == existingNodeId) {
               airbrake.get.notify(s"The two existing ZK nodes have same node ID! Don't know what to do $ip: $existing and $node for service ${instance}, breaking out")
             } else if (newNodeId < existingNodeId) {
-              zk.delete(node)
+              deleteIfStillThere(zk, node)
               instances.remove(node)
             } else {
-              zk.delete(existing)
+              deleteIfStillThere(zk, existing)
               instances.remove(existing)
             }
           }

@@ -76,10 +76,6 @@ angular.module('kifi')
           });
         };
 
-        scope.alreadyFollowingLibrary = function () {
-          return libraryService.isFollowingLibrary(scope.library);
-        };
-
         scope.followLibrary = function () {
           scope.followCallback();
           libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedFollowButton'});
@@ -113,11 +109,11 @@ angular.module('kifi')
               scope.library.numKeeps = keepCount;
             }
           }),
-          $rootScope.$on('libraryJoined', function (e, libraryId) {
+          $rootScope.$on('libraryJoined', function (e, libraryId, membership) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.access === 'none') {
-              lib.access = 'read_only';
-              lib.numFollowers++;
+              lib.access = membership.access;
+              lib.numFollowers++;  // TODO: handle join as collaborator properly
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
                 lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));

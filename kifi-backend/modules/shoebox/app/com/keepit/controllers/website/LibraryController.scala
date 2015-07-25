@@ -8,6 +8,7 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
@@ -18,8 +19,10 @@ import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import scala.collection.mutable
 
 import org.joda.time.DateTime
 
@@ -27,6 +30,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
+import scala.collection.parallel.ParSeq
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
 
@@ -37,7 +41,11 @@ class LibraryController @Inject() (
   libraryInviteRepo: LibraryInviteRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  orgRepo: OrganizationRepo,
   basicUserRepo: BasicUserRepo,
+  librarySubscriptionRepo: LibrarySubscriptionRepo,
+  librarySubscriptionCommander: LibrarySubscriptionCommander,
+  libPathCommander: LibraryPathCommander,
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -47,50 +55,96 @@ class LibraryController @Inject() (
   clock: Clock,
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
+  airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
+  val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
-    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10)
-    val (terms, weights) = top.terms.toArray.sortBy(-_._2).unzip
+    val (terms, weights) = suggestedSearchCommander.getTopTermsForLibrary(libId, limit = 10)
     Json.obj("terms" -> terms, "weights" -> weights)
   }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
-    val addRequest = request.body.as[LibraryAddRequest]
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) =>
-        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
-      case Right(newLibrary) =>
-        val membership = db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+    externalAddRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
+      case JsSuccess(externalAddRequest, _) =>
+        val libAddRequest = db.readOnlyReplica { implicit session =>
+          val space = externalAddRequest.space map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryAddRequest(
+            name = externalAddRequest.name,
+            slug = externalAddRequest.slug,
+            visibility = externalAddRequest.visibility,
+            description = externalAddRequest.description,
+            color = externalAddRequest.color,
+            listed = externalAddRequest.listed,
+            whoCanInvite = externalAddRequest.whoCanInvite,
+            subscriptions = externalAddRequest.subscriptions,
+            space = space
+          )
         }
-        libraryCommander.createFullLibraryInfo(Some(request.userId), false, newLibrary, LibraryController.defaultLibraryImageSize).map { lib =>
-          Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+          case Left(fail) =>
+            Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
+          case Right(newLibrary) =>
+            val membership = db.readOnlyMaster {
+              implicit s =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
+            }
+            libraryCommander.createFullLibraryInfo(Some(request.userId), showPublishedLibraries = false, newLibrary, LibraryController.defaultLibraryImageSize).map {
+              lib =>
+                Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
+            }
         }
     }
   }
 
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val libModifyRequest = request.body.as[LibraryModifyRequest]
+    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
+
+    val libModifyRequest = db.readOnlyReplica { implicit session =>
+      val space = externalLibraryModifyRequest.externalSpace map {
+        case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+        case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+      }
+      LibraryModifyRequest(
+        name = externalLibraryModifyRequest.name,
+        slug = externalLibraryModifyRequest.slug,
+        visibility = externalLibraryModifyRequest.visibility,
+        description = externalLibraryModifyRequest.description,
+        color = externalLibraryModifyRequest.color,
+        listed = externalLibraryModifyRequest.listed,
+        whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
+        subscriptions = externalLibraryModifyRequest.subscriptions,
+        space = space
+      )
+    }
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, membership) = db.readOnlyMaster { implicit s =>
+        val (owner, membership, org) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-          (basicUser, membership)
+          val org = lib.organizationId.map { id => orgRepo.get(id) }
+          (basicUser, membership, org)
         }
-        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org))
         Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
@@ -109,24 +163,33 @@ class LibraryController @Inject() (
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
-      val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
-      val accessStr = memOpt.map(_.access.value).getOrElse("none")
-      val listed = memOpt.map(_.listed)
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
+      val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
+      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+      val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
+
+      val membershipJson = Json.toJson(membershipOpt)
+      val inviteJson = Json.toJson(inviteOpt)
+      val subscriptionJson = Json.toJson(subKeys)
+      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
-    val accessStr = memOpt.map(_.access.value).getOrElse("none")
-    val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+    val viewerOpt = request.userOpt
+    val (lib, info) = db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(id)
+      val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
+      val info = libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      (lib, info)
+    }
+    val path = libPathCommander.getPathUrlEncoded(lib)
+    Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
@@ -134,12 +197,30 @@ class LibraryController @Inject() (
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
-            val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val accessStr = memOpt.map(_.access.value).getOrElse("none")
-            val listed = memOpt.map(_.listed)
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
+            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
+            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
+              authTokenOpt.map { authToken =>
+                db.readOnlyMaster { implicit s =>
+                  libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
+                    val inviter = basicUserRepo.load(invite.inviterId)
+                    (invite, inviter)
+                  }
+                }.map {
+                  case (invite, inviter) =>
+                    LibraryInviteInfo.createInfo(invite, inviter)
+                }
+              }.flatten
+            }
+            val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
+
+            libraryCommander.trackLibraryView(request.userIdOpt, library)
+            val membershipJson = Json.toJson(membershipOpt)
+            val inviteJson = Json.toJson(inviteOpt)
+            val subscriptionJson = Json.toJson(subKeys)
+            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {
@@ -148,52 +229,48 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrarySummariesByUser = (UserAction).async { request =>
-    val (libsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
-    val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
-      (invites.sorted.last, lib) // only show one invite per library - the one with highest access
+  def getLibrarySummariesByUser = UserAction.async { request =>
+    val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
+      val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
+      libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
-
-    val basicUsers = db.readOnlyReplica { implicit session =>
-      basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
-    }
-    val libInfosWithMembershipsF = SafeFuture {
-      db.readOnlyReplica { implicit session =>
-        for ((mem, library) <- libsWithMemberships) yield {
-          val owner = basicUsers(library.ownerId)
-          (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+    val objs = libInfos.map {
+      case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
+        val id = Library.decodePublicId(info.id).get
+        val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
+        val path = libPathCommander.getPathUrlEncoded(lib)
+        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
+        if (mem.lastViewed.nonEmpty) {
+          obj ++ Json.obj("lastViewed" -> mem.lastViewed)
+        } else {
+          obj
         }
-      }
     }
-    val libInfosWithInvitesF = SafeFuture {
-      db.readOnlyReplica { implicit session =>
-        for ((invite, lib) <- libsWithInvites) yield {
-          val owner = basicUsers(lib.ownerId)
-          val inviter = basicUsers(invite.inviterId)
-          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
-        }
-      }
-    }
-
-    for {
-      libInfosWithMemberships <- libInfosWithMembershipsF
-      libInfosWithInvites <- libInfosWithInvitesF
-    } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
-      Ok(Json.obj(
-        "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
-        "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
-        "invited" -> libInfosWithInvites.map(pair => Json.toJson(pair._1))
-      ))
+    SafeFuture {
+      Ok(Json.obj("libraries" -> objs.seq))
     }
   }
 
-  @inline private def libInfoToJsonWithLastViewed(pair: (LibraryInfo, LibraryMembership)): JsValue = {
-    val lastViewed = pair._2.lastViewed
-    if (lastViewed.nonEmpty) {
-      Json.toJson(pair._1).as[JsObject] ++ Json.obj("lastViewed" -> lastViewed)
-    } else {
-      Json.toJson(pair._1)
+  def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
+    (json \ "type").as[String] match {
+      case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Left("invalid_invitee_type")
+    }
+  }
+
+  def revokeLibraryInvitation(publicLibraryId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(publicLibraryId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
+      case Success(libraryId) =>
+        getUserByIdOrEmail(request.body) match {
+          case Right(invitee) =>
+            libraryInviteCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+              case Right(ok) => Future.successful(NoContent)
+              case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
+            }
+          case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
+        }
     }
   }
 
@@ -218,7 +295,7 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryInviteCommander.inviteToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(inviteesWithAccess) =>
@@ -231,32 +308,21 @@ class LibraryController @Inject() (
     }
   }
 
-  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None) = UserAction { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribedOpt: Option[Boolean]) = UserAction { request =>
+    Library.decodePublicId(pubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
-        } match {
-          case None =>
-            libraryCommander.joinLibrary(request.userId, libId, authToken) match {
-              case Left(fail) =>
-                Status(fail.status)(Json.obj("error" -> fail.message))
-              case Right(lib) =>
-                val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
-            }
-          case Some(membership) =>
-            log.info(s"user ${request.userId} is already following library $libId, possible race condition")
-            val (lib, owner) = db.readOnlyMaster { implicit s =>
-              val lib = libraryRepo.get(libId)
-              (lib, basicUserRepo.load(lib.ownerId))
-            }
-            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
-            Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
+        }
+
+        libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right((_, mem)) =>
+            Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
         }
     }
   }
@@ -267,7 +333,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        libraryCommander.declineLibrary(request.userId, libId)
+        libraryInviteCommander.declineLibrary(request.userId, libId)
         Ok(JsString("success"))
     }
   }
@@ -555,6 +621,14 @@ class LibraryController @Inject() (
     }
   }
 
+  def suggestTagsSimple(pubId: PublicId[Library], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    keepsCommander.suggestTags(request.userId, None, None, limit).imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
+    }
+  }
+
   def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
     request match {
       case req: UserRequest[_] => {
@@ -588,15 +662,16 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.makeMembersShowable(info.followers, true),
+              followers = LibraryCardInfo.chooseFollowers(info.followers),
               numCollaborators = info.numCollaborators,
-              collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
+              collaborators = LibraryCardInfo.chooseCollaborators(info.collaborators),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               membership = None,
-              caption = None,
               modifiedAt = info.modifiedAt,
-              kind = info.kind)
+              kind = info.kind,
+              path = info.path
+            )
           }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
@@ -608,9 +683,9 @@ class LibraryController @Inject() (
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 
-  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscribedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }

@@ -105,24 +105,29 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def feedV1Test() = UserAction.async { request =>
-    feedV1(RecosRequest(0.75f, None, None))(request)
-  }
-
   def feedV1(req: RecosRequest) = UserAction.async { request =>
     val libCnt = libraryRecoCount(request.userId)
 
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, req.uriContext.isDefined, req.recencyWeight, context = req.uriContext)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = req.libContext)
-    val libUpdatesF = commander.updatesFromFollowedLibraries(request.userId)
+    val libUpdatesF = commander.maybeUpdatesFromFollowedLibraries(request.userId)
 
-    for (libs <- libRecosF; uris <- uriRecosF; libUpdates <- libUpdatesF) yield {
+    for (libs <- libRecosF; uris <- uriRecosF; libUpdatesOpt <- libUpdatesF) yield {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
-      val recos = libUpdates +: mix(urisReco, libsReco)
+      val recos = libUpdatesOpt.map { _ +: mix(urisReco, libsReco) }.getOrElse(mix(urisReco, libsReco))
       val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
 
       Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
+    }
+  }
+
+  def keepUpdates(limit: Int, beforeId: Option[String], afterId: Option[String]) = UserAction.async { request =>
+    val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
+    val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
+
+    commander.updatesFromFollowedLibraries(request.userId, limit, beforeExtId, afterExtId).map { updatedKeeps =>
+      Ok(Json.obj("updatedKeeps" -> updatedKeeps))
     }
   }
 

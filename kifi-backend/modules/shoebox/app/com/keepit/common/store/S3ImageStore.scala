@@ -66,7 +66,7 @@ trait S3ImageStore {
   }
 
   def tempPath(token: String): String = {
-    val pic = if (token.endsWith(".jpg")) token else s"token.jpg"
+    val pic = if (token.endsWith(".jpg")) token else s"$token.jpg"
     s"temp/user/pics/$pic"
   }
 }

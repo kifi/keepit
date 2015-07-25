@@ -13,7 +13,7 @@ import scala.concurrent.Future
 
 class UriSearchNonUserImpl(
     numHitsToReturn: Int,
-    filter: SearchFilter,
+    context: SearchContext,
     config: SearchConfig,
     engineBuilder: QueryEngineBuilder,
     articleSearcher: Searcher,
@@ -22,6 +22,7 @@ class UriSearchNonUserImpl(
     friendIdsFuture: Future[Set[Long]],
     restrictedUserIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
+    orgIdsFuture: Future[Set[Long]],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs,
     lang: (Lang, Option[Lang])) extends UriSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
@@ -33,9 +34,9 @@ class UriSearchNonUserImpl(
 
     val collector = new NonUserUriResultCollector(numHitsToReturn, percentMatch / 100.0f, explanation)
 
-    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, libraryIdsFuture, filter, config, monitoredAwait, explanation)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait, explanation)
-    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter, explanation)
+    val libraryScoreSource = new UriFromLibraryScoreVectorSource(librarySearcher, keepSearcher, -1L, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, config, monitoredAwait, explanation)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, restrictedUserIdsFuture, libraryIdsFuture, orgIdsFuture, context, engine.recencyOnly, config, monitoredAwait, explanation)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, context, explanation)
 
     if (debugFlags != 0) {
       engine.debug(this)

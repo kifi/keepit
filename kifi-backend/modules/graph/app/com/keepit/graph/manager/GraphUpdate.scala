@@ -1,11 +1,14 @@
 package com.keepit.graph.manager
 
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
+import com.keepit.classify.{ DomainInfo, Domain }
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
+import com.keepit.common.service.IpAddress
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ DenseLDA, UriSparseLDAFeatures }
 import com.keepit.model._
+import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.model.view.LibraryMembershipView
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
@@ -106,7 +109,7 @@ case object LDAOldVersionCleanupGraphUpdate extends GraphUpdateKind[LDAOldVersio
   val code = "lda_old_version_cleanup_graph_update"
 }
 
-case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
+case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[Domain]], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
   type U = NormalizedUriGraphUpdate
   def kind = NormalizedUriGraphUpdate
   def seq = kind.seq(uriSeq.value)
@@ -114,10 +117,10 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[Normaliz
 
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
-  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
+  def apply(indexableUri: IndexableUri, domainId: Option[Id[Domain]]): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, domainId, indexableUri.state, indexableUri.seq)
 }
 
-case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
+case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], domainId: Option[Id[Domain]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
   type U = EmailAccountGraphUpdate
   def kind = EmailAccountGraphUpdate
   def seq = kind.seq(emailSeq.value)
@@ -125,8 +128,8 @@ case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId:
 
 case object EmailAccountGraphUpdate extends GraphUpdateKind[EmailAccountGraphUpdate] {
   val code = "email_account_graph_update"
-  def apply(emailAccount: EmailAccountInfo): EmailAccountGraphUpdate = {
-    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.verified, emailAccount.seq)
+  def apply(emailAccount: EmailAccountInfo, domainId: Option[Id[Domain]]): EmailAccountGraphUpdate = {
+    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, domainId, emailAccount.verified, emailAccount.seq)
   }
 }
 
@@ -163,4 +166,59 @@ case class LibraryGraphUpdate(libId: Id[Library], state: State[Library], libSeq:
 case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
   val code = "library_graph_update"
   def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
+}
+
+case class OrganizationGraphUpdate(orgId: Id[Organization], state: State[Organization], orgSeq: SequenceNumber[Organization]) extends GraphUpdate {
+  type U = OrganizationGraphUpdate
+  def kind = OrganizationGraphUpdate
+  def seq = kind.seq(orgSeq.value)
+}
+
+case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpdate] {
+  val code = "organization_graph_update"
+  def apply(org: IngestableOrganization): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
+}
+
+case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
+  type U = OrganizationMembershipGraphUpdate
+  def kind = OrganizationMembershipGraphUpdate
+  def seq = kind.seq(orgMemSeq.value)
+}
+
+case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
+  val code = "organization_membership_graph_update"
+  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+}
+
+case class OrganizationMembershipCandidateGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembershipCandidate], orgMemSeq: SequenceNumber[OrganizationMembershipCandidate]) extends GraphUpdate {
+  type U = OrganizationMembershipCandidateGraphUpdate
+  def kind = OrganizationMembershipCandidateGraphUpdate
+  def seq = kind.seq(orgMemSeq.value)
+}
+
+case object OrganizationMembershipCandidateGraphUpdate extends GraphUpdateKind[OrganizationMembershipCandidateGraphUpdate] {
+  val code = "organization_membership_candidate_graph_update"
+  def apply(orgMemCandidate: IngestableOrganizationMembershipCandidate): OrganizationMembershipCandidateGraphUpdate = OrganizationMembershipCandidateGraphUpdate(orgMemCandidate.orgId, orgMemCandidate.userId, orgMemCandidate.createdAt, orgMemCandidate.state, orgMemCandidate.seq)
+}
+
+case class UserIpAddressGraphUpdate(userId: Id[User], ipAddress: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
+  type U = UserIpAddressGraphUpdate
+  def kind = UserIpAddressGraphUpdate
+  def seq = kind.seq(ipSeq.value)
+}
+
+case object UserIpAddressGraphUpdate extends GraphUpdateKind[UserIpAddressGraphUpdate] {
+  val code = "user_ip_addr_update"
+  def apply(userIpAddress: IngestableUserIpAddress): UserIpAddressGraphUpdate = UserIpAddressGraphUpdate(userIpAddress.userId, userIpAddress.ipAddress, userIpAddress.updatedAt, userIpAddress.seqNum)
+}
+
+case class OrganizationDomainOwnershipGraphUpdate(orgId: Id[Organization], domainId: Id[Domain], state: State[OrganizationDomainOwnership], orgDomainOwnSeq: SequenceNumber[OrganizationDomainOwnership]) extends GraphUpdate {
+  type U = OrganizationDomainOwnershipGraphUpdate
+  def kind: GraphUpdateKind[U] = OrganizationDomainOwnershipGraphUpdate
+  def seq: SequenceNumber[U] = kind.seq(orgDomainOwnSeq.value)
+}
+
+case object OrganizationDomainOwnershipGraphUpdate extends GraphUpdateKind[OrganizationDomainOwnershipGraphUpdate] {
+  val code = "organization_domain_ownership_update"
+  def apply(orgDomainOwn: IngestableOrganizationDomainOwnership): OrganizationDomainOwnershipGraphUpdate = OrganizationDomainOwnershipGraphUpdate(orgDomainOwn.organizationId, orgDomainOwn.domainId, orgDomainOwn.state, orgDomainOwn.seq)
 }

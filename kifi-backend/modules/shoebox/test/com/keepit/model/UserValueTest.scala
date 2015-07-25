@@ -5,6 +5,7 @@ import org.specs2.mutable._
 import com.keepit.common.db._
 import com.keepit.test._
 import com.keepit.model.UserValues.{ UserValueIntHandler, UserValueStringHandler }
+import com.keepit.model.UserFactoryHelper._
 
 class UserValueTest extends Specification with ShoeboxTestInjector {
 
@@ -20,7 +21,7 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
 
         val (user1, uv) = db.readWrite { implicit session =>
           userValueRepo.valueCache.get(UserValueKey(Id[User](1), userValueNameTest)).isDefined === false
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
           userValueRepo.getValue(user1.id.get, test) === test.default
 
           val uv = userValueRepo.save(UserValue(userId = user1.id.get, name = userValueNameTest, value = "this right here!"))

@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.ImageSize
 import com.keepit.graph.FakeGraphServiceClientImpl
-import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
+import com.keepit.graph.model.{ SociallyRelatedEntitiesForUser, RelatedEntities }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -28,7 +28,6 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -49,7 +48,6 @@ import scala.slick.jdbc.StaticQuery
 class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule())
 
@@ -264,7 +262,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -288,7 +287,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections": 3,
               "numFollowers": 3,
               "numInvitedLibraries": 1,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -312,7 +312,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
       }
@@ -384,10 +385,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                     "username": "thirduser"
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
-                "listed": true,
                 "following":true,
-                "membership":{"access":"owner","listed":true,"subscription":false},
-                "modifiedAt":${lib1Updated.updatedAt.getMillis}
+                "membership":{"access":"owner","listed":true,"subscribed":false},
+                "modifiedAt":${lib1Updated.updatedAt.getMillis},
+                "path": "/firstuser/lib1",
+                "subscriptions": []
               }
              ]
           }
@@ -419,10 +421,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "followers":[],
                 "numCollaborators":0,
                 "collaborators":[],
-                "lastKept":${lib3.createdAt.getMillis},
+                "lastKept":${lib3.updatedAt.getMillis},
                 "following": true,
-                "membership": {"access":"read_only","listed":true,"subscription":false},
+                "membership": {"access":"read_only","listed":true,"subscribed":false},
                 "modifiedAt":${lib3.updatedAt.getMillis},
+                "path": "/seconduser/lib3",
                 "kind":"user_created"
               }
             ]
@@ -470,13 +473,14 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5)
         }
 
-        val relationship = SociallyRelatedEntities(
+        val relationship = SociallyRelatedEntitiesForUser(
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
-        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
         // view as owner
         val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
         status(result1) must equalTo(OK)
@@ -538,13 +542,14 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5)
         }
 
-        val relationship = SociallyRelatedEntities(
+        val relationship = SociallyRelatedEntitiesForUser(
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
           RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
-          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, Organization](user1.id.get, Seq.empty)
         )
-        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(user1.id.get, relationship)
 
         // view as owner
         val result1 = getProfileFollowers(Some(user1), Username("GDubs"), 2)

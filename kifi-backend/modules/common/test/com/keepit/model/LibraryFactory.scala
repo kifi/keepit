@@ -37,6 +37,7 @@ object LibraryFactory {
     def published() = new PartialLibrary(library.copy(visibility = PUBLISHED))
     def discoverable() = new PartialLibrary(library.copy(visibility = DISCOVERABLE))
     def withLastKept() = new PartialLibrary(library.copy(lastKept = Some(currentDateTime)))
+    def withOrganization(id: Option[Id[Organization]]) = new PartialLibrary(library.copy(organizationId = id))
     def get: Library = library
   }
 

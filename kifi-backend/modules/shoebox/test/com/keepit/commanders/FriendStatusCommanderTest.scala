@@ -3,7 +3,6 @@ package com.keepit.commanders
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.{ FriendRequest, FriendRequestRepo, UserConnectionRepo, UserConnectionStates }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification

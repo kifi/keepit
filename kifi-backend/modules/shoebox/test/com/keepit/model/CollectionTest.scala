@@ -1,16 +1,15 @@
 package com.keepit.model
 
 import com.google.inject.Injector
-import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo, Id, SequenceNumber }
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.test.Helpers._
+import com.keepit.model.UserFactoryHelper._
 
 class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
 
@@ -22,8 +21,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2, username = Username("test2"), normalizedUsername = "test2"))
+      val user1 = UserFactory.user().withCreatedAt(t1).withName("Andrew", "Conner").withUsername("test").saved
+      val user2 = UserFactory.user().withCreatedAt(t2).withName("Eishay", "Smith").withUsername("test2").saved
 
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -103,7 +102,6 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
         db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
@@ -147,12 +145,9 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala")).get.id.get === coll3.id.get
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Scala")).get.id.get === coll4.id.get
           keepToCollectionRepo.getKeepsForTag(coll3.id.get).length === 1
-          keepToCollectionRepo.getUriIdsInCollection(coll3.id.get).length === 1
           keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 0
-          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 0
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 1
-          keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Cooking")) must beNone
         }
       }
@@ -166,10 +161,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
           keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
       }
@@ -217,22 +210,11 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           n must be > coll2.seq.value
           n
         }
-        val latestSeqNum = db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(
             keepId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
           val seq = collectionRepo.get(coll1.id.get).seq.value
           seq must be > newSeqNum
-          seq
-        }
-
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
-        }
-        db.readWrite { implicit s =>
-          keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
       }
     }

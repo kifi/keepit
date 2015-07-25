@@ -422,7 +422,7 @@ angular.module('kifi')
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
 
-          libraryService.createLibrary(library).then(function (res) {
+          libraryService.createLibrary(library, true).then(function (res) {
             libraryService.fetchLibraryInfos(true).then(function () {
               scope.$evalAsync(function () {
                 invokeWidgetCallbacks(_.find(libraryService.getOwnInfos(), {id: res.data.library.id}));

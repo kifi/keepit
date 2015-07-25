@@ -1,0 +1,40 @@
+<?xml version="1.0" standalone="no"?>
+<?xml-stylesheet href="svg.css" type="text/css"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="settings" viewBox="0 0 512 512">
+      <g stroke-width="0" stroke="none" fill-rule="evenodd">
+          <path d="M255,388.852746 C332.474396,388.852746 389.288953,330.397538 389.288953,256 C389.288953,181.602462 332.474396,123.147254 255,123.147254 C177.525604,123.147254 120.711047,181.602462 120.711047,256 C120.711047,330.397538 177.525604,388.852746 255,388.852746 Z M255.377509,300.892201 C281.556841,300.892201 300.755018,281.139633 300.755018,256 C300.755018,230.860367 281.556841,211.107799 255.377509,211.107799 C229.198177,211.107799 210,230.860367 210,256 C210,281.139633 229.198177,300.892201 255.377509,300.892201 Z" id="Path-Copy-2" ></path>
+          <g transform="translate(72.000000, 73.000000)" >
+              <g transform="translate(146.000000, 0.000000)">
+                  <rect class="wow" x="0.664054969" y="0" width="72.6718901" height="72.4999657"></rect>
+                  <rect x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+              </g>
+              <g transform="translate(183.000000, 182.500000) rotate(-270.000000) translate(-183.000000, -182.500000) translate(146.000000, 0.000000)">
+                  <rect x="0.664054969" y="0" width="72.6718901" height="72.4999657"></rect>
+                  <rect x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+              </g>
+          </g>
+          <g transform="translate(255.707107, 254.792893) rotate(-315.000000) translate(-255.707107, -254.792893) translate(72.707107, 71.292893)" >
+              <g transform="translate(146.000000, 1.000000)">
+                  <rect x="0.664054969" y="1" width="72.6718901" height="72.4999657"></rect>
+                  <rect x="0.664054969" y="293.214854" width="72.6718901" height="72.4999657"></rect>
+              </g>
+              <g transform="translate(183.000000, 184.500000) rotate(-270.000000) translate(-183.000000, -184.500000) translate(146.000000, 2.000000)">
+                  <rect x="0.664054969" y="-1.13686838e-13" width="72.6718901" height="72.4999657"></rect>
+                  <rect x="0.664054969" y="292.214854" width="72.6718901" height="72.4999657"></rect>
+              </g>
+          </g>
+      </g>
+  </symbol>
+  <symbol id="view-gallery" viewBox="0 0 512 512">
+        <g fill-rule="evenodd">
+            <g id="view-gallery" fill="purple">
+                <rect fill="purple" x="75" y="364" width="362" height="77" rx="15"></rect>
+                <rect fill="purple" x="75" y="71" width="362" height="224" rx="15"></rect>
+            </g>
+        </g>
+  </symbol>
+  <use xlink:href="#settings"/>
+</svg>

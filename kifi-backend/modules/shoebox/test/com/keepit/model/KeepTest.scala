@@ -8,7 +8,8 @@ import com.keepit.common.db.slick._
 
 import com.keepit.test._
 import com.google.inject.Injector
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
+import com.keepit.model.UserFactoryHelper._
 
 class KeepTest extends Specification with ShoeboxTestInjector {
 
@@ -20,8 +21,8 @@ class KeepTest extends Specification with ShoeboxTestInjector {
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
+      val user1 = UserFactory.user().withCreatedAt(t1).withName("Andrew", "C").withUsername("test").saved
+      val user2 = UserFactory.user().withCreatedAt(t2).withName("Eishay", "S").withUsername("test").saved
 
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -182,7 +183,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
         db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withCreatedAt(t1).withName("Andrew", "C").withUsername("test").saved
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com/", Some("Kifi")))

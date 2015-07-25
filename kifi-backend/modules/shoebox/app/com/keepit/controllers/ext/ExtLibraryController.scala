@@ -32,6 +32,7 @@ class ExtLibraryController @Inject() (
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
+  libPathCommander: LibraryPathCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
@@ -47,17 +48,24 @@ class ExtLibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
-    val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map {
-      case (lib, hasCollaborators, subscribedToUpdates) =>
-        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+    val librariesWithMembershipAndCollaborators = libraryCommander.getLibrariesUserCanKeepTo(request.userId)
+    val basicUserById = {
+      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
+      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+    }
+    val datas = librariesWithMembershipAndCollaborators map {
+      case (lib, membership, collaboratorsIds) =>
+        val owner = basicUserById(lib.ownerId)
+        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(owner.username, lib.slug),
-          hasCollaborators = hasCollaborators,
-          subscribedToUpdates = subscribedToUpdates
+          path = libPathCommander.getPath(lib),
+          hasCollaborators = !collabs.isEmpty,
+          subscribedToUpdates = membership.subscribedToUpdates,
+          collaborators = collabs
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -78,9 +86,10 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(request.user.username, lib.slug),
+          path = libPathCommander.getPath(lib),
           hasCollaborators = false,
-          subscribedToUpdates = false)))
+          subscribedToUpdates = false,
+          collaborators = Seq.empty)))
     }
   }
 
@@ -138,7 +147,7 @@ class ExtLibraryController @Inject() (
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscripedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }

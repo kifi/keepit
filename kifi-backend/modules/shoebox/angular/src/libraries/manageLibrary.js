@@ -37,6 +37,9 @@ angular.module('kifi')
         scope.showFollowers = false;
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
+        scope.showSubIntegrations = false;
+        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
+        scope.showError = false;
 
         //
         // Scope methods.
@@ -50,8 +53,68 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
+        scope.toggleIntegrations = function() {
+          scope.showIntegrations = !scope.showIntegrations;
+        };
+
+        scope.addIfEnter = function(event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+            scope.addSubscription();
+          }
+        };
+
+        scope.preventNewline = function(event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+          }
+        };
+
+        scope.addSubscription = function() {
+          var lastSub = scope.library.subscriptions.slice(-1)[0];
+          if(lastSub.name === '' && lastSub.info.url === '') {
+            return;
+          } else {
+            scope.library.subscriptions.push(scope.newBlankSub());
+          }
+        };
+
+        scope.removeSubscription = function (index) {
+          scope.library.subscriptions.splice(index,1);
+        };
+
         scope.saveLibrary = function () {
+
           if (submitting) {
+            return;
+          }
+
+          scope.$error = {};
+
+          scope.library.subscriptions.forEach(function(sub) {
+
+            if (sub.name === '' && sub.info.url === '') {
+              return;
+            }
+
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            if (!sub.name || sub.name.indexOf(' ') > -1) {
+              sub.$error = sub.$error || {};
+              sub.$error.name = true;
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
+            }
+
+            if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
+              sub.$error = sub.$error || {};
+              sub.$error.url = true;
+              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
+            }
+          });
+
+          if (scope.$error.general) {
             return;
           }
 
@@ -68,23 +131,30 @@ angular.module('kifi')
 
           submitting = true;
 
+          var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
+            return sub.name !== '' && sub.info.url !== '';
+          });
+
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
             name: scope.library.name,
             description: scope.library.description,
             slug: scope.library.slug,
             visibility: scope.library.visibility,
-            listed: scope.library.listed,
-            color: colorNames[scope.library.color]
-          }).then(function (resp) {
+            listed: scope.library.membership.listed,
+            color: colorNames[scope.library.color],
+            subscriptions: nonEmptySubscriptions
+          }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
-            newLibrary.listed = resp.data.listed;
+            newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
 
             scope.$error = {};
             submitting = false;
             scope.close();
+
+            scope.library.subscriptions = nonEmptySubscriptions;
 
             if (!returnAction) {
               $location.url(newLibrary.url);
@@ -150,53 +220,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-        //
-        // Smart Scroll
-        //
-        scope.moreMembers = true;
-        scope.memberList = [];
-        scope.memberScrollDistance = '100%';
-
-        scope.isMemberScrollDisabled = function () {
-          return !(scope.moreMembers);
-        };
-        scope.memberScrollNext = function () {
-          pageMembers();
-        };
-
-        var pageSize = 10;
-        scope.offset = 0;
-        var loading = false;
-        function pageMembers() {
-          if (loading) { return; }
-          if (scope.library.id) {
-            loading = true;
-            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
-              var members = resp.members;
-              loading = false;
-              if (members.length === 0) {
-                scope.moreMembers = false;
-              } else {
-                scope.moreMembers = true;
-                scope.offset += 1;
-                members.forEach(function (member) {
-                  member.status = setMemberStatus(member);
-                });
-                scope.memberList.push.apply(scope.memberList, members);
-              }
-            });
-          }
-        }
-
-        function setMemberStatus(member) {
-          if (member.lastInvitedAt) {
-            return 'Invitation Pending';
-          } else if (member.membership === 'read_only') {
-            return 'Following';
-          } else {
-            return 'Collaborating';
-          }
-        }
 
         //
         // Watches and listeners.
@@ -221,26 +244,29 @@ angular.module('kifi')
         //
         if (scope.modalData && scope.modalData.library) {
           scope.library = _.cloneDeep(scope.modalData.library);
-          if (scope.modalData.pane === 'members') {
-            scope.viewFollowersFirst = true;
-            scope.showFollowers = true;
-          }
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });
           scope.modifyingExistingLibrary = true;
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
+          scope.library.subscriptions = scope.library.subscriptions || [];
+          if (scope.library.subscriptions.length < 3) {
+            scope.library.subscriptions.push(scope.newBlankSub());
+          }
         } else {
           scope.library = {
             'name': '',
             'description': '',
             'slug': '',
-
-            // By default, the create library form selects the 'published' visibility for a new library.
-            'visibility': 'published',
-            'listed': true
+            'visibility': 'published'
           };
+          scope.library.membership = {
+            access: 'owner',
+            listed: true,
+            subscribed: false
+          };
+          scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
         }
         returnAction = scope.modalData && scope.modalData.returnAction;

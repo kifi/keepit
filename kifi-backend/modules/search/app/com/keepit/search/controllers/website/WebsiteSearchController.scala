@@ -3,6 +3,7 @@ package com.keepit.search.controllers.website
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
@@ -15,7 +16,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
-import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.model.UserExperimentType.ADMIN
 import com.keepit.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -35,6 +36,9 @@ object WebsiteSearchController {
   private[WebsiteSearchController] val maxKeepersShown = 20
   private[WebsiteSearchController] val maxLibrariesShown = 10
   private[WebsiteSearchController] val maxTagsShown = 15
+
+  private[WebsiteSearchController] val maxCollaboratorsShown = 5
+  private[WebsiteSearchController] val maxFollowersShown = 5
 }
 
 class WebsiteSearchController @Inject() (
@@ -49,48 +53,8 @@ class WebsiteSearchController @Inject() (
     searchFactory: SearchFactory,
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
-
-  def search2(
-    query: String,
-    userFilter: Option[String],
-    libraryFilter: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    auth: Option[String],
-    debug: Option[String] = None) = MaybeUserAction.async { request =>
-
-    val libraryContextFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), auth, request)
-    val acceptLangs = getAcceptLangs(request)
-    val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(userFilter)
-
-    val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-
-    uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
-
-      getWebsiteUriSearchResults(userId, uriSearchResult, None).imap {
-        case (hits, users, libraries) =>
-          val librariesJson = libraries.map { library =>
-            Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
-          }
-          val result = Json.obj(
-            "uuid" -> uriSearchResult.uuid,
-            "context" -> IdFilterCompressor.fromSetToBase64(uriSearchResult.idFilter),
-            "experimentId" -> uriSearchResult.searchExperimentId,
-            "mayHaveMore" -> uriSearchResult.mayHaveMoreHits,
-            "myTotal" -> uriSearchResult.myTotal,
-            "friendsTotal" -> uriSearchResult.friendsTotal,
-            "othersTotal" -> uriSearchResult.othersTotal,
-            "hits" -> hits,
-            "libraries" -> librariesJson,
-            "users" -> users
-          )
-          Ok(result)
-      }
-    }
-  }
+    implicit val publicIdConfig: PublicIdConfiguration,
+    airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, idealImageSize: Option[ImageSize]): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
     if (uriSearchResult.hits.isEmpty) {
@@ -184,7 +148,7 @@ class WebsiteSearchController @Inject() (
     val userIds = ((allKeepsShown.flatMap(_.keptBy) ++ allKeepersShown.map(_._1) ++ allLibrariesShown.map(_._2)).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, (allKeepsShown.flatMap(_.keptIn) ++ allLibrariesShown.map(_._1)).toSet)
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, (allKeepsShown.flatMap(_.keptIn) ++ allLibrariesShown.map(_._1)).toSet)
 
     val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
     val libraryIndexById = libraryIds.zipWithIndex.toMap
@@ -194,9 +158,9 @@ class WebsiteSearchController @Inject() (
       shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
         val users = userIds.map(usersById(_))
         val libraries = libraryIds.map { libId =>
-          val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+          val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
-          makeBasicLibrary(library, visibility, owner)
+          makeBasicLibrary(library, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
         }
         (users, libraries)
       }
@@ -261,8 +225,10 @@ class WebsiteSearchController @Inject() (
 
   def search(
     query: String,
-    userFilter: Option[String],
+    proximityFilter: Option[String],
     libraryFilter: Option[String],
+    userFilter: Option[String],
+    organizationFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
     lastUUIDStr: Option[String],
@@ -271,6 +237,8 @@ class WebsiteSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    disableFullTextSearch: Boolean,
+    orderBy: Option[String],
     libraryAuth: Option[String],
     idealImageSize: Option[ImageSize],
     debug: Option[String]) = MaybeUserAction.async { request =>
@@ -278,13 +246,22 @@ class WebsiteSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-    val userFilterFuture = getUserFilterFuture(userFilter)
-    val libraryFilterFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), libraryAuth, request)
+
+    val libraryScopeFuture = getLibraryScope(libraryFilter, request.userIdOpt, libraryAuth)
+    val userScopeFuture = getUserScope(userFilter)
+    val organizationScopeFuture = getOrganizationScope(organizationFilter, request.userIdOpt)
+    val proximityScope = getProximityScope(proximityFilter)
+    val searchFilterFuture = makeSearchFilter(proximityScope, libraryScopeFuture, userScopeFuture, organizationScopeFuture)
+
+    val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
+      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default // todo(Léo): remove this backward compatibility hack, this should be explicitly supplied by client
+    }
 
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      val uriSearchContextFuture = searchFilterFuture.map { filter => SearchContext(uriContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, uriSearchContextFuture, maxUris, lastUUIDStr, None, debugOpt).flatMap { uriSearchResult =>
         getWebsiteUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
@@ -308,22 +285,68 @@ class WebsiteSearchController @Inject() (
     // Library Search
 
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
-      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, userFilterFuture, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
+      val librarySearchContextFuture = searchFilterFuture.map { filter => SearchContext(libraryContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchContextFuture, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
-        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
-        val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-        val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+        val libraryIds = libraryRecordsAndVisibilityById.keySet
+        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryIds, idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize), Some(userId))
+
+        val futureMembersShownByLibraryId = {
+          val futureFriendIds = searchFactory.getFriends(userId)
+          val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
+          val membersByLibraryId = libraryIds.map { libraryId =>
+            libraryId -> LibraryMembershipIndexable.getMembersByLibrary(libraryMembershipSearcher, libraryId)
+          }.toMap
+
+          futureFriendIds.map { allFriendIds =>
+            def orderWithFriendsFirst(userIds: Set[Long]): Seq[Long] = {
+              val (friends, others) = userIds.toSeq.partition(allFriendIds.contains)
+              friends ++ others
+            }
+            membersByLibraryId.map {
+              case (libraryId, (owners, collaborators, followers)) =>
+                if (owners.size > 1) {
+                  airbrake.notify(new IllegalStateException(s"Library $libraryId has more then one owner: $owners"))
+                }
+                val collaboratorsShown = orderWithFriendsFirst(collaborators).take(maxCollaboratorsShown).map(Id[User](_))
+                val followersShown = orderWithFriendsFirst(followers).take(maxFollowersShown).map(Id[User](_))
+
+                libraryId -> (collaboratorsShown, followersShown)
+            }
+          }
+        }
+
+        val futureUsers = futureMembersShownByLibraryId.flatMap { membersShownByLibraryId =>
+          val userIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSet ++ membersShownByLibraryId.values.flatMap {
+            case (collaboratorsShown, followersShown) =>
+              collaboratorsShown ++ followersShown
+          }
+          shoeboxClient.getBasicUsers(userIds.toSeq)
+        }
+
         for {
           usersById <- futureUsers
-          libraryStatisticsById <- futureLibraryStatistics
+          libraryDetailsById <- futureLibraryDetails
+          libraryMembersById <- futureMembersShownByLibraryId
         } yield {
+          def orderWithPictureFirst(users: Seq[BasicUser]): Seq[BasicUser] = {
+            val (usersWithPics, usersNoPics) = users.partition(_.pictureName != "0.jpg")
+            usersWithPics ++ usersNoPics
+          }
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
-              case (library, visibility) =>
+              case (library, visibility, kind) =>
                 val owner = usersById(library.ownerId)
-                val path = Library.formatLibraryPath(owner.username, library.slug)
-                val statistics = libraryStatisticsById(library.id)
+                val (collaboratorIds, followerIds) = libraryMembersById(hit.id)
+                val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
+                val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
+                val path = LibraryPathHelper.formatLibraryPath(owner, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
+                val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
+                val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)
+
+                // todo(Léo): in a perfect world, this converges towards LibraryCardInfo
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
@@ -332,9 +355,16 @@ class WebsiteSearchController @Inject() (
                   "color" -> library.color,
                   "path" -> path,
                   "visibility" -> visibility,
+                  "kind" -> kind,
                   "owner" -> owner,
-                  "memberCount" -> statistics.memberCount,
-                  "keepCount" -> statistics.keepCount
+                  "collaborators" -> collaborators,
+                  "followers" -> followers,
+                  "numFollowers" -> details.numFollowers,
+                  "numCollaborators" -> details.numCollaborators,
+                  "numKeeps" -> details.keepCount,
+                  "membership" -> membershipInfo,
+                  "memberCount" -> (details.numFollowers + details.numCollaborators), // deprecated
+                  "keepCount" -> details.keepCount // deprecated,
                 )
             }
           })
@@ -349,20 +379,21 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userFilter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      val userSearchContextFuture = searchFilterFuture.map { filter => SearchContext(userContext, parsedOrderBy, filter, disablePrefixSearch, disableFullTextSearch) }
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userSearchContextFuture, maxUsers, None, debugOpt, None).flatMap { userSearchResult =>
         val futureFriends = searchFactory.getFriends(userId)
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
-        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibilityAndKind(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         val futureUsers = {
           val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
           shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
         }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
+        val publishedLibrariesCountByCollaborator = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByCollaborator(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -375,9 +406,9 @@ class WebsiteSearchController @Inject() (
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
-                  case (record, visibility) =>
+                  case (record, visibility, _) =>
                     val owner = users(record.ownerId)
-                    val library = makeBasicLibrary(record, visibility, owner)
+                    val library = makeBasicLibrary(record, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                     Json.obj("id" -> library.id, "name" -> library.name, "description" -> record.description, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
@@ -388,7 +419,7 @@ class WebsiteSearchController @Inject() (
                 "pictureName" -> user.pictureName,
                 "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByOwner(hit.id),
+                "libraryCount" -> publishedLibrariesCountByCollaborator(hit.id),
                 "libraryMembershipCount" -> publishedLibrariesCountByMember(hit.id),
                 "keepCount" -> keepCountsByUser(hit.id),
                 "relevantLibrary" -> relevantLibrary

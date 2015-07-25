@@ -1,6 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.service.IpAddress
 import com.keepit.graph.GraphTestHelper
 import com.keepit.graph.model._
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
@@ -10,7 +11,7 @@ import com.keepit.model.{ LibraryStates, Library }
 import org.specs2.mutable.Specification
 
 class GraphManagerTest extends Specification with GraphTestInjector with GraphTestHelper with NeighborQuerier {
-  "grap ingestion" should {
+  "graph ingestion" should {
     "correctly ingest data" in {
       withInjector(SimpleGraphTestModule()) { implicit injector =>
         val manager = inject[GraphManager]
@@ -41,6 +42,25 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           nbs = getNeighbors(v, (UserReader, LibraryReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[LibraryReader].id } === Set(1, 2)
 
+          // user to ip address
+          nbs = getNeighbors(v, (UserReader, IpAddressReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[IpAddressReader].id } === Set(IpAddress.ipToLong(ipAddress1))
+
+          // ip address to users
+          v.moveTo(VertexDataId[IpAddressReader](ipAddress1))
+          nbs = getNeighbors(v, (IpAddressReader, UserReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2)
+
+          // user to org
+          v.moveTo(VertexDataId[UserReader](1))
+          nbs = getNeighbors(v, (UserReader, OrganizationReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
+
+          // org to users
+          v.moveTo(VertexDataId[OrganizationReader](1))
+          nbs = getNeighbors(v, (OrganizationReader, UserReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2, 3)
+
           // library to users
           v.moveTo(VertexDataId[LibraryReader](1))
           nbs = getNeighbors(v, (LibraryReader, UserReader, EmptyEdgeReader), true)
@@ -54,6 +74,36 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[KeepReader](1))
           nbs = getNeighbors(v, (KeepReader, UriReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[UriReader].id } === Set(1)
+
+          // uri to domain
+          v.moveTo(VertexDataId[UriReader](1))
+          nbs = getNeighbors(v, (UriReader, DomainReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[DomainReader].id } === Set(1)
+
+          // domain to uri
+          v.moveTo(VertexDataId[DomainReader](1))
+          nbs = getNeighbors(v, (DomainReader, UriReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UriReader].id } === Set(1)
+
+          // email to domain
+          v.moveTo(VertexDataId[EmailAccountReader](1))
+          nbs = getNeighbors(v, (EmailAccountReader, DomainReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[DomainReader].id } === Set(1)
+
+          // domain to email
+          v.moveTo(VertexDataId[DomainReader](1))
+          nbs = getNeighbors(v, (DomainReader, EmailAccountReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[EmailAccountReader].id } === Set(1, 2)
+
+          // org to domain
+          v.moveTo(VertexDataId[OrganizationReader](1))
+          nbs = getNeighbors(v, (OrganizationReader, DomainReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[DomainReader].id } === Set(1)
+
+          // domain to org
+          v.moveTo(VertexDataId[DomainReader](1))
+          nbs = getNeighbors(v, (DomainReader, OrganizationReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
         }
 
         val libUpdate = LibraryGraphUpdate(libId = Id[Library](1), state = LibraryStates.INACTIVE, libSeq = SequenceNumber[Library](10))

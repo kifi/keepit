@@ -1,11 +1,19 @@
 package com.keepit.graph
 
+import com.keepit.abook.model.EmailAccountInfo
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
+import com.keepit.common.service.IpAddress
+import com.keepit.common.time._
 import com.keepit.graph.manager._
 import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore }
 import com.keepit.model._
+import org.joda.time.DateTime
 
 trait GraphTestHelper {
+
+  val t1 = new DateTime(2015, 6, 23, 10, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
   val u42: Id[User] = Id[User](42)
   val u43: Id[User] = Id[User](43)
 
@@ -31,7 +39,16 @@ trait GraphTestHelper {
   val keepid4: Id[Keep] = Id[Keep](4)
   val keepid5: Id[Keep] = Id[Keep](5)
 
-  val userUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1), username = Username("test"), normalizedUsername = "test"))
+  val orgId1: Id[Organization] = Id[Organization](1)
+
+  val ipAddress1: IpAddress = IpAddress("108.60.110.146")
+
+  val domainId1: Id[Domain] = Id[Domain](1)
+
+  val emailAccountId1: Id[EmailAccountInfo] = Id[EmailAccountInfo](1)
+  val emailAccountId2: Id[EmailAccountInfo] = Id[EmailAccountInfo](2)
+
+  val userUpdate = UserGraphUpdate(UserFactory.user().withId(u42).withName("Tan", "Lin").withUsername("test").withSeq(1).get)
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
     source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
@@ -57,5 +74,28 @@ trait GraphTestHelper {
   val libMemUpdate4 = LibraryMembershipGraphUpdate(Id[User](2), Id[Library](1), LibraryMembershipStates.ACTIVE, SequenceNumber(4))
   val libMemUpdates = List(libMemUpdate1, libMemUpdate2, libMemUpdate3, libMemUpdate4)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates
+  val userIpAddressUpdate1 = UserIpAddressGraphUpdate(userid1, ipAddress1, t1, SequenceNumber(1))
+  val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
+  val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
+
+  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
+  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
+  val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
+
+  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, t1, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
+  val orgMemCandidateUpdates = List(orgMemCandidateUpdate1)
+
+  val emailAccountUpdate1 = EmailAccountGraphUpdate(emailAccountId1, Some(userid1), Some(domainId1), verified = true, emailSeq = SequenceNumber(1))
+  val emailAccountUpdate2 = EmailAccountGraphUpdate(emailAccountId2, Some(userid2), Some(domainId1), verified = true, emailSeq = SequenceNumber(2))
+  val emailAccountUpdates = List(emailAccountUpdate1, emailAccountUpdate2)
+
+  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
+  val uriUpdates = List(normalizedUriUpdate1)
+
+  val orgDomainOwnershipUpdate1 = OrganizationDomainOwnershipGraphUpdate(orgId1, domainId1, OrganizationDomainOwnershipStates.ACTIVE, SequenceNumber(1))
+  val orgDomainOwnershipUpdates = List(orgDomainOwnershipUpdate1)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates ++
+    orgMemCandidateUpdates ++ emailAccountUpdates ++ uriUpdates ++ orgDomainOwnershipUpdates
+
 }

@@ -5,8 +5,7 @@ import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
 import com.keepit.common.commanders.LDACommander
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.models.word2vec.RichWord2VecURIFeatureUpdatePlugin
-import com.keepit.cortex.nlp.POSTagger
+import com.keepit.cortex.tagcloud.TagCloudPlugin
 import play.api.Application
 import play.api.Mode.Prod
 import com.keepit.cortex.dbmodel.CortexDataIngestionPlugin
@@ -34,10 +33,9 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[UserLDAStatisticsPlugin] != null)
     require(injector.instance[LDAInfoUpdatePlugin] != null)
     require(injector.instance[LDALibraryUpdaterPlugin] != null)
-    //require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
     require(injector.instance[LDACommander] != null)
     require(injector.instance[LDARelatedLibraryPlugin] != null)
     require(injector.instance[CortexDataIngestionPlugin] != null)
-    require(POSTagger.enabled)
+    require(injector.instance[TagCloudPlugin] != null)
   }
 }

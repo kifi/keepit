@@ -1,14 +1,12 @@
 package com.keepit.common.controller
 
-import com.google.inject.util.Providers
 import com.keepit.common.controller.KifiSession.HttpSessionWrapper
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.model.{ User, Username }
+import com.keepit.model.{ PrimaryUsername, User, Username }
 import com.keepit.test.CommonTestInjector
-import play.api.mvc.{ Results, AnyContent, Controller }
+import play.api.mvc.{ AnyContent, Controller }
 import play.api.test.FakeRequest
 import org.specs2.mutable._
-import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.common.db.Id
 
@@ -20,7 +18,8 @@ class UserActionsTest extends Specification with CommonTestInjector {
   )
 
   def setUser()(implicit helper: FakeUserActionsHelper): Unit = {
-    helper.setUser(com.keepit.model.User(id = Some(Id[User](1)), firstName = "Test", lastName = "User", username = Username("tuser"), normalizedUsername = "tuser"))
+    val primaryUsername = PrimaryUsername(original = Username("tuser"), normalized = Username("tuser"))
+    helper.setUser(com.keepit.model.User(id = Some(Id[User](1)), firstName = "Test", lastName = "User", primaryUsername = Some(primaryUsername)))
   }
 
   def unsetUser()(implicit helper: FakeUserActionsHelper): Unit = {

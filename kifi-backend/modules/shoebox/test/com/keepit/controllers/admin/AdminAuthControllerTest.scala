@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
@@ -18,12 +18,14 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule }
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -33,7 +35,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -43,7 +44,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())
 
   "AdminAuthController" should {
@@ -55,10 +55,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val su2 = SocialUser(IdentityId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),
           Some("http://www.fb.com/him"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "B")), None)
         val (admin, impersonate) = db.readWrite { implicit s =>
-          val admin = userRepo.save(User(firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val admin = UserFactory.user().withName("A", "1").withUsername("test").saved
           socialUserInfoRepo.save(SocialUserInfo(userId = admin.id, fullName = "A 1", socialId = SocialId("111"),
             networkType = FACEBOOK, credentials = Some(su1)))
-          val impersonate = userRepo.save(User(firstName = "B", lastName = "1", username = Username("test2"), normalizedUsername = "test2"))
+          val impersonate = UserFactory.user().withName("B", "1").withUsername("test2").saved
           socialUserInfoRepo.save(SocialUserInfo(userId = impersonate.id, fullName = "B 1",
             socialId = SocialId("222"), networkType = FACEBOOK, credentials = Some(su2)))
           (admin, impersonate)
@@ -88,7 +88,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         status(impersonateResultFail) must equalTo(403)
 
         db.readWrite { implicit s =>
-          inject[UserExperimentRepo].save(UserExperiment(experimentType = ExperimentType.ADMIN, userId = admin.id.get))
+          inject[UserExperimentRepo].save(UserExperiment(experimentType = UserExperimentType.ADMIN, userId = admin.id.get))
         }
         val impersonateResult = route(impersonateRequest).get
         //status(impersonateResult) must equalTo(200)

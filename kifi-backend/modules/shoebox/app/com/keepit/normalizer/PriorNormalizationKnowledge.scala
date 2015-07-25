@@ -8,7 +8,7 @@ import com.keepit.rover.document.utils.Signature
 import com.google.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Try }
 
-case class PrenormalizationException(cause: Throwable) extends Exception(cause)
+case class PrenormalizationException(uriString: String, cause: Throwable) extends Exception(s"Failed to prenormalize $uriString", cause)
 
 @Singleton
 class PriorNormalizationKnowledge @Inject() (
@@ -24,7 +24,7 @@ class PriorNormalizationKnowledge @Inject() (
         result.toString()
       }
     }.recoverWith {
-      case cause: Throwable => Failure(PrenormalizationException(cause))
+      case cause: Throwable => Failure(PrenormalizationException(uriString, cause))
     }
   }
 

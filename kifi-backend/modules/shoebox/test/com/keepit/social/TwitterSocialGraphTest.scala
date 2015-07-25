@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.Injector
-import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander }
+import com.keepit.commanders.{ LibraryPathCommander, KifiInstallationCommander, LibraryImageCommander }
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
@@ -16,6 +16,8 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
 import securesocial.core.{ IdentityId, AuthenticationMethod, SocialUser, OAuth1Info }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -30,12 +32,13 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val twitterSyncStateRepo = inject[TwitterSyncStateRepo]
     val executionContext = inject[WatchableExecutionContext]
     val libraryMembershipRepo = inject[LibraryMembershipRepo]
+    val libPathCommander = inject[LibraryPathCommander]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
         TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
       }
     }
-    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], inject[ElizaServiceClient], inject[KifiInstallationCommander], inject[PublicIdConfiguration], inject[WatchableExecutionContext], inject[UserRepo]) {
+    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], libPathCommander, inject[ElizaServiceClient], inject[KifiInstallationCommander], inject[PublicIdConfiguration], inject[WatchableExecutionContext], inject[UserRepo]) {
       override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>

@@ -1,5 +1,7 @@
 package com.keepit.controllers.admin
 
+import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -8,24 +10,19 @@ import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.article.content.ArticleContentExtractor
-import com.keepit.rover.model.{ ArticleKey, ArticleVersion }
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.rover.model.{ ArticleVersion }
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.integrity._
 import com.keepit.normalizer._
-import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier }
-import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
-
-import scala.util.{ Failure, Success, Random }
+import play.api.libs.json.{ JsBoolean, JsObject, Json }
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -34,23 +31,23 @@ class UrlController @Inject() (
     uriRepo: NormalizedURIRepo,
     urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
-    duplicateDocumentRepo: DuplicateDocumentRepo,
+    domainRepo: DomainRepo,
+    domainTagRepo: DomainTagRepo,
+    domainToTagRepo: DomainToTagRepo,
+    sensitivityUpdater: SensitivityUpdater,
     urlRenormalizeCommander: URLRenormalizeCommander,
     orphanCleaner: OrphanCleaner,
-    dupeDetect: DuplicateDocumentDetection,
-    duplicatesProcessor: DuplicateDocumentsProcessor,
     uriIntegrityPlugin: UriIntegrityPlugin,
     normalizationService: NormalizationService,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
-    httpProxyRepo: HttpProxyRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    scrapeScheduler: ScrapeScheduler,
-    roverServiceClient: RoverServiceClient) extends AdminUserActions {
+    roverServiceClient: RoverServiceClient,
+    orgDomainOwnCommander: OrganizationDomainOwnershipCommander) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -89,46 +86,6 @@ class UrlController @Inject() (
       }
     }
     Ok
-  }
-
-  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminUserPage { implicit request =>
-    val dupes = db.readOnlyReplica { implicit conn =>
-      duplicateDocumentRepo.getActive(page, size)
-    }
-
-    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a, b) => a._1.id < b._1.id)
-
-    val loadedDupes = db.readOnlyReplica { implicit session =>
-      groupedDupes map { d =>
-        val dupeRecords = d._2.map { sd =>
-          DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
-        }
-        DisplayedDuplicates(d._1, uriRepo.get(d._1).url, dupeRecords)
-      }
-    }
-
-    Ok(html.admin.documentIntegrity(loadedDupes))
-  }
-
-  def handleDuplicate = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[DuplicateDocument](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def handleDuplicates = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[NormalizedURI](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def duplicateDocumentDetection = AdminUserPage { implicit request =>
-    dupeDetect.asyncProcessDocuments()
-    Redirect(routes.UrlController.documentIntegrity())
   }
 
   def normalizationView(page: Int = 0) = AdminUserPage { implicit request =>
@@ -251,10 +208,10 @@ class UrlController @Inject() (
   }
 
   def getPatterns = AdminUserPage { implicit request =>
-    val (patterns, proxies) = db.readOnlyReplica { implicit session =>
-      (urlPatternRuleRepo.all.sortBy(_.id.get.id), httpProxyRepo.all())
+    val patterns = db.readOnlyReplica { implicit session =>
+      urlPatternRuleRepo.all.sortBy(_.id.get.id)
     }
-    Ok(html.admin.urlPatternRules(patterns, proxies))
+    Ok(html.admin.urlPatternRules(patterns))
   }
 
   def savePatterns = AdminUserPage { implicit request =>
@@ -267,11 +224,6 @@ class UrlController @Inject() (
           pattern = body("pattern_" + key),
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
-          isUnscrapable = body.contains("unscrapable_" + key),
-          useProxy = body("proxy_" + key) match {
-            case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
-          },
           normalization = body("normalization_" + key) match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
@@ -294,11 +246,6 @@ class UrlController @Inject() (
           pattern = newPat,
           example = Some(body("new_example")).filter(!_.isEmpty),
           state = if (body.contains("new_active")) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
-          isUnscrapable = body.contains("new_unscrapable"),
-          useProxy = body("new_proxy") match {
-            case "None" => None
-            case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))
-          },
           normalization = body("new_normalization") match {
             case "None" => None
             case scheme => Some(Normalization(scheme))
@@ -396,6 +343,13 @@ class UrlController @Inject() (
     }
   }
 
+  def fetchAsap(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val uri = db.readOnlyMaster { implicit session => uriRepo.get(uriId) }
+    roverServiceClient.fetchAsap(uriId, uri.url, refresh = true).map { _ =>
+      Ok("We got you =)")
+    }
+  }
+
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
     SafeFuture {
       var page = firstPage
@@ -406,10 +360,9 @@ class UrlController @Inject() (
           val uris = uriRepo.page(page, pageSize, excludeStates)
           uris.foreach { uri =>
             if (HttpRedirect.isShortenedUrl(uri.url)) {
-              uriRepo.updateURIRestriction(uri.id.get, None)
-              val updatedUri = uriRepo.get(uri.id.get)
-              scrapeScheduler.scheduleScrape(updatedUri, currentDateTime.plusMinutes((Random.nextInt(10))))
-              log.info(s"[CleaningKeeps] Removed restriction and scheduled scrape for shortened url: $uri")
+              val updatedUri = uri.withContentRequest(true).copy(restriction = None)
+              val savedUri = if (updatedUri != uri) uriRepo.save(updatedUri) else uri
+              log.info(s"[CleaningKeeps] Removed restriction | requested content for shortened url: $savedUri")
             } else {
               uriIntegrityHelpers.improveKeepsSafely(uri)
             }
@@ -423,7 +376,99 @@ class UrlController @Inject() (
     }
     Ok(s"Starting at page $firstPage of size $pageSize, it's on!")
   }
-}
 
-case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
-case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
+  def searchDomain = AdminUserPage { implicit request =>
+    Ok(html.admin.domainFind())
+  }
+
+  def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
+    val hostname = request.body.get("hostname").get.head
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(hostname, None)
+    }
+
+    domain.map { domain => Redirect(routes.UrlController.getDomain(domain.id.get)) }.getOrElse(NotFound)
+  }
+
+  def getDomain(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readOnlyReplica { implicit s =>
+      domainRepo.get(id)
+    }
+    val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(id)
+    Ok(html.admin.domain(domain, owningOrgs))
+  }
+
+  def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
+    val domain = db.readWrite { implicit s =>
+      val domain = domainRepo.get(id)
+      val domainToggled = domain.copy(isEmailProvider = !domain.isEmailProvider) //domain
+      domainRepo.save(domainToggled)
+    }
+    Redirect(routes.UrlController.getDomain(id))
+  }
+
+  def getDomainTags = AdminUserPage { implicit request =>
+    val tags = db.readOnlyReplica { implicit session =>
+      domainTagRepo.all
+    }
+    Ok(html.admin.domainTags(tags))
+  }
+
+  def saveDomainTags = AdminUserPage { implicit request =>
+    val tagIdValue = """sensitive_([0-9]+)""".r
+    val sensitiveTags = request.body.asFormUrlEncoded.get.keys
+      .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
+    val tagsToSave = db.readOnlyReplica { implicit s =>
+      domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
+        case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
+          tag.withSensitive(Some(sensitive))
+      }
+    }
+    tagsToSave.foreach { tag =>
+      db.readWrite { implicit s =>
+        domainTagRepo.save(tag)
+      }
+      Future {
+        val domainIds = db.readOnlyMaster { implicit s =>
+          domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
+        }
+        db.readWrite { implicit s =>
+          sensitivityUpdater.clearDomainSensitivity(domainIds)
+        }
+      }
+    }
+    Redirect(routes.UrlController.getDomainTags)
+  }
+
+  def getDomainOverrides = AdminUserPage { implicit request =>
+    val domains = db.readOnlyReplica { implicit session =>
+      domainRepo.getOverrides()
+    }
+    Ok(html.admin.domainOverrides(domains))
+  }
+
+  def saveDomainOverrides = AdminUserAction { implicit request =>
+    val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
+      case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
+    }.toMap
+    val domainsToRemove = db.readOnlyReplica { implicit session =>
+      domainRepo.getOverrides()
+    }.filterNot(d => domainSensitiveMap.contains(d.hostname))
+
+    db.readWrite { implicit s =>
+      domainSensitiveMap.foreach {
+        case (domainName, sensitive) if Domain.isValid(domainName) =>
+          val domain = domainRepo.get(domainName)
+            .getOrElse(Domain(hostname = domainName))
+            .withManualSensitive(Some(sensitive))
+          domainRepo.save(domain)
+        case (domainName, _) =>
+          log.debug("Invalid domain: %s" format domainName)
+      }
+      domainsToRemove.foreach { domain =>
+        domainRepo.save(domain.withManualSensitive(None))
+      }
+    }
+    Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
+  }
+}

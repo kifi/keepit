@@ -9,7 +9,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Username, User }
+import com.keepit.model.{ UserFactory, User }
 import com.keepit.realtime._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.ElizaTestInjector
@@ -36,6 +36,12 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
     FakeExecutionContextModule()
   )
 
+  def initUsers()(implicit injector: Injector): Seq[User] = {
+    val pika = UserFactory.user().withId(1).withName("Pika", "Chu").withUsername("pikachu").get
+    val jiggly = UserFactory.user().withId(2).withName("Jiggly", "Puff").withUsername("jigglypuff").get
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(pika, jiggly)
+  }
+
   "Mobile Device Controller" should {
 
     "register device (without a token)" in {
@@ -43,11 +49,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
         val deviceRepo = inject[DeviceRepo]
         val (user1, user2) = db.readWrite { implicit s =>
           deviceRepo.count === 0
-          val userPika = User(firstName = "Pika", lastName = "Chu", username = Username("pikachu"), normalizedUsername = "pikachu")
-          val userJiggly = User(firstName = "Jiggly", lastName = "Puff", username = Username("jigglypuff"), normalizedUsername = "jigglypuff")
-          val users = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(userPika, userJiggly)
-          val user1 = users(0)
-          val user2 = users(1)
+          val Seq(user1, user2) = initUsers()
 
           // user2 with existing device (with no signature and a token)
           deviceRepo.save(Device(userId = user2.id.get, token = Some("token2a"), deviceType = DeviceType.IOS))

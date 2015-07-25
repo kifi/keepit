@@ -29,8 +29,8 @@ class ArticleFetchPolicy @Inject() () {
 
   def toBeScraped(url: String): Option[ArticleKind[_ <: Article]] = URI.parse(url).toOption.map {
     case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) if path.endsWith("/watch") && query.containsParam("v") => YoutubeArticle
-    case URI(_, _, Some(Host("com", "github", _*)), _, Some(path), Some(query), _) => GithubArticle
-    case URI(_, _, Some(Host("com", "linkedin", _*)), _, Some(path), Some(query), _) if LinkedInProfile.url.findFirstIn(url).isDefined => LinkedInProfileArticle
+    case URI(_, _, Some(Host("com", "github", _*)), _, _, _, _) => GithubArticle
+    case URI(_, _, Some(Host("com", "linkedin", _*)), _, _, _, _) if LinkedInProfile.url.findFirstIn(url).isDefined => LinkedInProfileArticle
     case _ => DefaultArticle
   }
 }

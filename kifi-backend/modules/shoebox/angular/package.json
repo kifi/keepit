@@ -10,7 +10,7 @@
   },
   "engines": {
     "node": "0.10.x",
-    "npm": "1.3.x"
+    "npm": "2.10.x"
   },
   "scripts": {
     "postinstall": "node node_modules/bower/bin/bower install && ./node_modules/protractor/bin/webdriver-manager update"
@@ -39,15 +39,16 @@
     "gulp-protractor": "0.0.11",
     "gulp-remember": "0.2.0",
     "gulp-rename": "1.2.0",
-    "gulp-rev-all": "0.5.13",
+    "gulp-rev-all": "0.8.21",
     "gulp-rimraf": "0.1.0",
+    "gulp-sourcemaps": "^1.5.2",
     "gulp-stylus": "1.1.0",
     "gulp-svgmin": "0.4.6",
     "gulp-uglify": "0.3.1",
     "gulp-util": "3.0.0",
-    "gulp.spritesmith": "1.1.1",
+    "gulp.spritesmith": "3.7.0",
     "jasmine-core": "2.1.3",
-    "jshint-stylish": "0.4.0",
+    "jshint-stylish": "2.0.0",
     "jsonminify": "0.2.3",
     "karma": "0.12.31",
     "karma-chrome-launcher": "0.1.7",
@@ -64,6 +65,7 @@
     "protractor": "1.0.0",
     "requirejs": "2.1.14",
     "run-sequence": "0.3.6",
+    "shelljs": "^0.5.1",
     "through": "2.3.4",
     "vinyl-map": "1.0.1"
   }

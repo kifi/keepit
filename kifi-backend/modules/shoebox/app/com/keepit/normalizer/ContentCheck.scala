@@ -84,8 +84,8 @@ case class LinkedInProfileCheck(privateProfileId: Long)(implicit rover: RoverSer
   protected def check(publicProfileCandidate: NormalizationCandidate)(implicit executionContext: ExecutionContext) = {
     rover.getOrElseFetchRecentArticle[LinkedInProfileArticle](publicProfileCandidate.url, recency).map {
       case Some(article) if article.content.profile.id.exists(_ == privateProfileId.toString) => true
-      case _ => {
-        log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
+      case invalidArticleOption => {
+        log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed. Fetched article: $invalidArticleOption")
         false
       }
     }

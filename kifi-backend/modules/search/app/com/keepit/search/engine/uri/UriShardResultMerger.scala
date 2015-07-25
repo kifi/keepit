@@ -10,9 +10,9 @@ import scala.math._
 class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayNetwork = config.asFloat("dampingHalfDecayNetwork")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
+  private[this] val minMyKeeps = config.asInt("minMyKeeps")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
@@ -44,7 +44,7 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private def mergeHits(results: Seq[UriShardResult], maxHits: Int, withFinalScores: Boolean): Seq[UriShardHit] = {
 
     val myHits = createQueue(maxHits)
-    val friendsHits = createQueue(maxHits)
+    val networkHits = createQueue(maxHits)
     val othersHits = createQueue(maxHits)
 
     results.foreach { res =>
@@ -53,7 +53,7 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
           val visibility = hit.visibility
           val queue = {
             if ((visibility & Visibility.OWNER) != 0) myHits
-            else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
+            else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) networkHits
             else othersHits
           }
           queue.insert(hit.score, null, hit)
@@ -67,7 +67,7 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     // compute high score excluding others (an orphan uri sometimes makes results disappear)
     // and others high score (used for tailcutting of others hits)
     val highScore = {
-      val highScore = max(myHits.highScore, friendsHits.highScore)
+      val highScore = max(myHits.highScore, networkHits.highScore)
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
@@ -80,13 +80,13 @@ class UriShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       }
     }
 
-    if (friendsHits.size > 0) {
-      val queue = createQueue(maxHits - min(minMyBookmarks, hits.size))
-      hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
+    if (networkHits.size > 0) {
+      val queue = createQueue(maxHits - min(minMyKeeps, hits.size))
+      hits.discharge(hits.size - minMyKeeps).foreach { h => queue.insert(h) }
 
-      friendsHits.toRankedIterator.foreach {
+      networkHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayNetwork) // damping the scores by rank
           queue.insert(score, null, hit.hit)
       }
       queue.foreach { h => hits.insert(h) }

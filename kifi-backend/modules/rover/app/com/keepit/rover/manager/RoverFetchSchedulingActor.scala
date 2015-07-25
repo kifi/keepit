@@ -1,9 +1,8 @@
 package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
@@ -13,8 +12,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure }
 
 object RoverFetchSchedulingActor {
-  val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 12 hours
+  val maxBatchSize = 1000
+  val maxQueuedFor = 5 days
 }
 
 class RoverFetchSchedulingActor @Inject() (
@@ -23,9 +22,11 @@ class RoverFetchSchedulingActor @Inject() (
     firstTimeQueue: FetchTaskQueue.FirstTime,
     newVersionQueue: FetchTaskQueue.NewVersion,
     refreshQueue: FetchTaskQueue.Refresh,
-    implicit val executionContext: ExecutionContext) extends BatchProcessingActor[RoverArticleInfo](airbrake) with Logging {
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[RoverArticleInfo] {
 
   import RoverFetchSchedulingActor._
+
+  protected val logger = log.logger
 
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {

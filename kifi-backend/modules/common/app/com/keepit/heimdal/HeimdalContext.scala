@@ -168,9 +168,9 @@ class HeimdalContextBuilder extends Logging {
 
   def addRemoteAddress(remoteAddress: String) = this += ("remoteAddress", remoteAddress)
 
-  def addExperiments(experiments: Set[ExperimentType]): Unit = {
+  def addExperiments(experiments: Set[UserExperimentType]): Unit = {
     this += ("experiments", experiments.map(_.value).toSeq)
-    this += ("userStatus", ExperimentType.getUserStatus(experiments))
+    this += ("userStatus", UserExperimentType.getUserStatus(experiments))
     experiments.foreach { ex => this += ("exp_" + ex.value, true) }
   }
 

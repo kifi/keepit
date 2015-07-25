@@ -1,6 +1,8 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.json.TupleFormat
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.social.BasicUser
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
@@ -22,8 +24,9 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
@@ -43,10 +46,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeUserActionsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()
@@ -55,11 +55,11 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
   def setupSomeUsers()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
 
-      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", username = Username("test"), normalizedUsername = "test"))
-      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", username = Username("test2"), normalizedUsername = "test2"))
-      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", username = Username("test3"), normalizedUsername = "test3"))
-      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", username = Username("test4"), normalizedUsername = "test4"))
-      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", username = Username("test5"), normalizedUsername = "test5"))
+      val user1965 = UserFactory.user().withName("Richard", "Feynman").withUsername("test").saved
+      val user1933 = UserFactory.user().withName("Paul", "Dirac").withUsername("test2").saved
+      val user1935 = UserFactory.user().withName("James", "Chadwick").withUsername("test3").saved
+      val user1927 = UserFactory.user().withName("Arthur", "Compton").withUsername("test4").saved
+      val user1921 = UserFactory.user().withName("Albert", "Einstein").withUsername("test5").saved
       val friends = List(user1933, user1935, user1927, user1921)
 
       friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get)) }
@@ -106,14 +106,16 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
         val users = user1965 :: friends
         val basicUserRepo = inject[BasicUserRepo]
         val basicUsersJson = inject[Database].readOnlyMaster { implicit s =>
-          users.map { u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
+          val basicUsers = basicUserRepo.loadAll(users.map(_.id.get).toSet)
+          implicit val tuplewrites = TupleFormat.tuple2Writes[Id[User], BasicUser]
+          Json.toJson(basicUsers.toSeq)
         }
 
         val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
         val result = inject[ShoeboxController].getBasicUsers()(FakeRequest().withBody(payload))
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
-        contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+        contentAsString(result) must equalTo(basicUsersJson.toString)
       }
     }
 
@@ -150,9 +152,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
           call.url === s"/internal/shoebox/database/getPrimaryEmailAddressForUsers"
 
           val userEmails = db.readWrite { implicit rw =>
-            for (i <- 1 to 3) yield inject[UserRepo].save(User(firstName = s"first$i",
-              lastName = s"last$i", primaryEmail = Some(EmailAddress(s"test$i@yahoo.com")),
-              username = Username(s"test$i"), normalizedUsername = s"test$i"))
+            for (i <- 1 to 3) yield UserFactory.user().withName(s"first$i", s"last$i").withEmailAddress(s"test$i@yahoo.com").withUsername(s"test$i").saved
           }.map(user => user.id.get -> user.primaryEmail).toMap
 
           val userIds = userEmails.keySet

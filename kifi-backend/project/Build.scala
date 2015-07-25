@@ -16,7 +16,6 @@ object ApplicationBuild extends Build {
   Version.writeVersionToFile()
 
   lazy val searchDependencies = Seq(
-    "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
     "org.apache.lucene" % "lucene-core" % "4.10.2",
     "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
     "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.10.2",
@@ -45,8 +44,6 @@ object ApplicationBuild extends Build {
   )
 
   lazy val heimdalDependencies = Seq(
-    "org.reactivemongo" %% "reactivemongo" % "0.10.5.akka23-SNAPSHOT",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
     "com.maxmind.geoip2" % "geoip2" % "0.5.0",
     "com.mixpanel" % "mixpanel-java" % "1.2.1"
   ) map (_.excludeAll(
@@ -56,18 +53,7 @@ object ApplicationBuild extends Build {
 
   lazy val abookDependencies = Seq()
 
-  lazy val scraperDependencies = Seq(
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
-    "org.apache.httpcomponents" % "httpclient" % "4.3.1",
-    "org.apache.tika" % "tika-parsers" % "1.5"
-  )
-
-  lazy val cortexDependencies = Seq(
-    // got this from http://grepcode.com/
-    "edu.stanford.nlp.models" % "stanford-corenlp-models" % "3.2.0" from
-      "http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.2.0/stanford-corenlp-3.2.0-models.jar",
-    "edu.stanford.nlp" % "stanford-corenlp" % "3.2.0"
-  )
+  lazy val cortexDependencies = Seq()
 
   lazy val graphDependencies = Seq()
 
@@ -75,7 +61,10 @@ object ApplicationBuild extends Build {
     "org.apache.commons" % "commons-math3" % "3.4.1"
   )
 
-  lazy val roverDependencies = Seq()
+  lazy val roverDependencies = Seq(
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
+    "org.apache.tika" % "tika-parsers" % "1.5"
+  )
 
   lazy val commonSettings =
     Global.settings ++
@@ -154,13 +143,6 @@ object ApplicationBuild extends Build {
     javaOptions in Test += "-Dconfig.resource=application-abook.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
-  lazy val scraper = Project("scraper", file("modules/scraper")).enablePlugins(play.PlayScala).settings(
-    commonSettings: _*
-  ).settings(
-    libraryDependencies ++= scraperDependencies,
-    javaOptions in Test += "-Dconfig.resource=application-scraper.conf"
-  ).dependsOn(common % "test->test;compile->compile")
-
   lazy val cortex = Project("cortex", file("modules/cortex")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
   ).settings(
@@ -205,16 +187,15 @@ object ApplicationBuild extends Build {
     eliza % "test->test;compile->compile",
     heimdal % "test->test;compile->compile",
     abook % "test->test;compile->compile",
-    scraper % "test->test;compile->compile",
     cortex % "test->test;compile->compile",
     graph % "test->test;compile->compile",
     curator % "test->test;compile->compile",
     rover % "test->test;compile->compile"
-  ).aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator, rover)
+  ).aggregate(common, shoebox, search, eliza, heimdal, abook, sqldb, cortex, graph, curator, rover)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist")).settings(
       aggregate in update := false
-  ).aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator, rover)
+  ).aggregate(search, shoebox, eliza, heimdal, abook, cortex, graph, curator, rover)
 
   override def rootProject = Some(kifiBackend)
 }

@@ -43,9 +43,14 @@ class UserProfileCommander @Inject() (
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
 
-  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
+  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+    getOwnLibrariesForSelf(user, page, idealSize, None, None, false)
+  }
+
+  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], orderedByPriority: Boolean): ParSeq[LibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
-      val libs = libraryRepo.getOwnerLibrariesForSelf(user.id.get, page)
+      val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, orderedByPriority)
+      println("libraries: " + libs.map(_.id.get))
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
@@ -55,7 +60,7 @@ class UserProfileCommander @Inject() (
     }
     libraryInfos map {
       case (info, lib) =>
-        OwnLibraryCardInfo(
+        LibraryCardInfo( // why does this reconstruct the object? seems like libraryCommander.createLibraryCardInfo fills out everything
           id = info.id,
           name = info.name,
           description = info.description,
@@ -71,20 +76,21 @@ class UserProfileCommander @Inject() (
           numCollaborators = info.numCollaborators,
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
-          listed = memberships(lib.id.get).map(_.listed).getOrElse(false),
           following = Some(true),
           membership = (memberships(lib.id.get)) map (LibraryMembershipInfo.fromMembership(_)),
-          modifiedAt = lib.updatedAt)
+          modifiedAt = lib.updatedAt,
+          path = info.path
+        )
     }
   }
 
-  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+  def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getOwnerLibrariesForAnonymous(user.id.get, page)
+          libraryRepo.getOwnerLibrariesForAnonymous(user.id.get, page, ordering, direction, orderedByPriority)
         case Some(other) =>
-          libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page)
+          libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, orderedByPriority)
       }
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
@@ -92,20 +98,20 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+  def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page)
+            libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
         case Some(other) if other.id == user.id =>
-          libraryRepo.getFollowingLibrariesForSelf(user.id.get, page)
+          libraryRepo.getFollowingLibrariesForSelf(user.id.get, page, ordering, direction, orderedByPriority)
         case Some(other) =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page)
+            libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
@@ -116,9 +122,12 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val libs = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page)
-        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-        libraryCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
+        val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
+        val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
+        libraryCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
+          case (card, invite) =>
+            card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
+        }
       }
     } else {
       ParSeq.empty
@@ -192,7 +201,7 @@ class UserProfileCommander @Inject() (
   }
 
   def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[ConnectedUserId]] = {
-    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
+    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntitiesForUser(viewer)
     val connectionsF = db.readOnlyMasterAsync { implicit s =>
       val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner)) //cached
       (all.getOrElse(viewer, Set.empty), all.getOrElse(owner, Set.empty))
@@ -222,7 +231,7 @@ class UserProfileCommander @Inject() (
   }
 
   def getFollowersSortedByRelationship(viewerOpt: Option[Id[User]], owner: Id[User]): Future[Seq[FollowerUserId]] = {
-    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewerOpt.getOrElse(owner))
+    val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntitiesForUser(viewerOpt.getOrElse(owner))
     val followersF = db.readOnlyReplicaAsync { implicit s =>
       getFollowersByViewer(owner, viewerOpt)
     }

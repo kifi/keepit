@@ -94,6 +94,7 @@ class KeepsCommander @Inject() (
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
+    librarySubscriptionCommander: LibrarySubscriptionCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -265,6 +266,7 @@ class KeepsCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
+    if (isNewKeep) { librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
     postSingleKeepReporting(keep, isNewKeep, library, socialShare)
     (keep, isNewKeep)
   }
@@ -274,6 +276,9 @@ class KeepsCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+
+    newKeeps.foreach { keep => librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
+
     val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
@@ -294,39 +299,6 @@ class KeepsCommander @Inject() (
     (returnedKeeps.map(KeepInfo.fromKeep), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromKeep)))
   }
 
-  def unkeepMultiple(keepInfos: Seq[RawBookmarkRepresentation], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
-    val deactivatedBookmarks = db.readWrite { implicit s =>
-      val bms = keepInfos.map { ki =>
-        normalizedURIInterner.getByUri(ki.url).flatMap { uri =>
-          val ko = keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-            val saved = keepRepo.save(b withActive false)
-            log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
-            saved
-          }
-          if (ko.isEmpty) { log.warn(s"[unkeepMulti($userId,${uri.id})] cannot find keep for ki=$ki; uri=$uri") }
-          ko
-        }
-      }.flatten
-      val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
-      collIds.foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
-      bms
-    }
-    log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
-
-    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
-    finalizeUnkeeping(deactivatedBookmarks, userId)
-    deactivatedKeepInfos
-  }
-
-  def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
-    db.readWrite { implicit session =>
-      keepRepo.getByExtIdAndUser(extId, userId).map(deactivateKeepWithSession(_, userId))
-    } map { keep =>
-      finalizeUnkeeping(Seq(keep), userId)
-      KeepInfo.fromKeep(keep)
-    }
-  }
-
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
     unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
       case Left(why) => Left(why)
@@ -340,22 +312,39 @@ class KeepsCommander @Inject() (
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
       case Some(mem) if mem.canWrite =>
-        var keepsToFinalize = Seq.empty[Keep]
         val (keeps, invalidKeepIds) = db.readWrite { implicit s =>
-          val (keeps, invalidKeepIds) = keepIds.map { kId =>
+          val (keepsE, invalidKeepIdsE) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
-              case Some(k) if k.state != KeepStates.INACTIVE =>
-                keepsToFinalize = k +: keepsToFinalize
-                Left(deactivateKeepWithSession(k, userId))
               case Some(k) =>
                 Left(k)
               case None =>
                 Right(kId)
             }
           }.partition(_.isLeft)
-          (keeps.map(_.left.get), invalidKeepIds.map(_.right.get))
+
+          val keeps = keepsE.map(_.left.get)
+          val invalidKeepIds = invalidKeepIdsE.map(_.right.get)
+
+          // Save keeps as INACTIVE
+          val inactivatedKeeps = keeps.map { k =>
+            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None))
+          }
+          finalizeUnkeeping(keeps, userId)
+
+          // Inactivate tags, update tag
+          val phantomActiveKeeps = keeps.map(_.copy(state = KeepStates.ACTIVE))
+          (keepToCollectionRepo.getCollectionsForKeeps(phantomActiveKeeps) zip keeps).flatMap {
+            case (colls, keep) =>
+              log.info(s"[unkeepManyFromLibrary] Removing tags from ${keep.id.get}: ${colls.mkString(",")}")
+              colls.foreach { collId => keepToCollectionRepo.remove(keep.id.get, collId) }
+              colls
+          }.foreach { coll =>
+            collectionRepo.collectionChanged(coll, inactivateIfEmpty = true)
+          }
+
+          (inactivatedKeeps, invalidKeepIds)
         }
-        finalizeUnkeeping(keepsToFinalize, userId)
+
         Right((keeps map KeepInfo.fromKeep, invalidKeepIds))
       case _ =>
         Left("permission_denied")
@@ -364,21 +353,16 @@ class KeepsCommander @Inject() (
 
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
-    keeps.groupBy(_.libraryId).collect {
-      case (Some(libId), keepsInLib) =>
-        val library = db.readOnlyMaster { implicit s => libraryRepo.get(libId) }
+    keeps.groupBy(_.libraryId).toList.collect {
+      case (Some(libId), _) =>
+        val library = db.readWrite { implicit session =>
+          val library = libraryRepo.get(libId)
+          libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
+          library
+        }
         libraryAnalytics.unkeptPages(userId, keeps, library, context)
     }
     searchClient.updateKeepIndex()
-  }
-
-  private def deactivateKeepWithSession(keep: Keep, userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
-    val saved = keepRepo.save(keep withState KeepStates.INACTIVE)
-    log.info(s"[unkeep($userId)] deactivated keep=$saved")
-    val library = libraryRepo.get(keep.libraryId.get)
-    libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(keep.libraryId.get)))
-    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
-    saved
   }
 
   def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {
@@ -678,8 +662,9 @@ class KeepsCommander @Inject() (
     val futureHits = searchTags(userId, query, None)
     val existingTags = keepIdOpt.map { keepId =>
       db.readOnlyMaster { implicit session =>
-        val keep = keepRepo.get(keepId)
-        collectionRepo.getHashtagsByKeepId(keep.id.get)
+        keepRepo.getOpt(keepId).map { keep =>
+          collectionRepo.getHashtagsByKeepId(keep.id.get)
+        }.getOrElse(Set.empty)
       }
     }.getOrElse(Set.empty)
     futureHits.imap { hits =>

@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.classify.{ DomainInfo, DomainRepo, Domain }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -31,6 +32,12 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    organizationRepo: OrganizationRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    userIpAddressRepo: UserIpAddressRepo,
+    domainRepo: DomainRepo,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -76,14 +83,6 @@ class ShoeboxDataPipeController @Inject() (
         normUriRepo.getCurrentSeqNum()
       }
       Ok(SequenceNumber.format.writes(seq))
-    }
-  }
-
-  def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      Ok(Json.toJson(db.readOnlyReplica { implicit s =>
-        collectionRepo.getCollectionsChanged(seqNum, fetchSize)
-      }))
     }
   }
 
@@ -232,10 +231,66 @@ class ShoeboxDataPipeController @Inject() (
   def dumpLibraryURIIds(libId: Id[Library]) = Action.async { implicit request =>
     SafeFuture {
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
-      val ids = keeps.map {
-        _.uriId
-      }
+      val ids = keeps.filter(_.state == KeepStates.ACTIVE).sortBy(-_.keptAt.getMillis).take(5000).map { _.uriId }
       Ok(Json.toJson(ids))
+    }
+  }
+
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgs = db.readOnlyReplica { implicit s => organizationRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toIngestableOrganization
+      }
+      Ok(Json.toJson(orgs))
+    }
+  }
+
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgMems = db.readOnlyReplica { implicit s => organizationMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toIngestableOrganizationMembership
+      }
+      Ok(Json.toJson(orgMems))
+    }
+  }
+
+  def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgMemCands = db.readOnlyReplica { implicit s => organizationMembershipCandidateRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toIngestableOrganizationMembershipCandidate
+      }
+      Ok(Json.toJson(orgMemCands))
+    }
+  }
+
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val ipAddresses = db.readOnlyReplica { implicit s => userIpAddressRepo.getBySequenceNumber(seqNum, fetchSize) }.map {
+        _.toIngestableUserIpAddress
+      }
+      Ok(Json.toJson(ipAddresses))
+    }
+  }
+
+  def internDomainsByDomainNames() = Action.async(parse.json) { request =>
+    SafeFuture {
+      val domainNames = (request.body \ "domainNames").as[Set[String]]
+
+      val domainInfoByName: Map[String, DomainInfo] = db.readWrite { implicit session =>
+        domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
+      }
+      Ok(Json.toJson(domainInfoByName))
+    }
+  }
+
+  def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgDomainOwnerships = db.readOnlyReplica { implicit s =>
+        orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize)
+      }.map {
+        _.toIngestableOrganizationDomainOwnership
+      }
+      Ok(Json.toJson(orgDomainOwnerships))
     }
   }
 }

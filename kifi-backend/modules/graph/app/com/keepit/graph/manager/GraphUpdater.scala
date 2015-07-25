@@ -25,6 +25,11 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
     case libUpdate: LibraryGraphUpdate => processLibraryGraphUpdate(libUpdate)
     case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
+    case orgUpdate: OrganizationGraphUpdate => processOrganizationGraphUpdate(orgUpdate)
+    case orgMemUpdate: OrganizationMembershipGraphUpdate => processOrganizationMembershipGraphUpdate(orgMemUpdate)
+    case userIpAddressUpdate: UserIpAddressGraphUpdate => processUserIpAddressGraphUpdate(userIpAddressUpdate)
+    case orgMemCandidateUpdate: OrganizationMembershipCandidateGraphUpdate => processOrganizationMembershipCandidateUpdate(orgMemCandidateUpdate)
+    case orgDomainOwnershipUpdate: OrganizationDomainOwnershipGraphUpdate => processOrganizationDomainOwnershipGraphUpdate(orgDomainOwnershipUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -165,16 +170,36 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
   }
 
   private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
-    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
-    case _ => writer.saveVertex(UriData(update.id))
+    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => {
+      writer.removeVertexIfExists(update.id)
+      update.domainId.foreach { domainId =>
+        writer.removeEdgeIfExists(update.id, domainId, EmptyEdgeReader)
+        writer.removeEdgeIfExists(domainId, update.id, EmptyEdgeReader)
+      }
+    }
+    case _ => {
+      writer.saveVertex(UriData(update.id))
+      update.domainId.foreach { domainId =>
+        writer.saveVertex(DomainData(domainId))
+        writer.saveEdge(update.id, domainId, EmptyEdgeData)
+        writer.saveEdge(domainId, update.id, EmptyEdgeData)
+      }
+    }
   }
 
   private def processEmailAccountGraphUpdate(update: EmailAccountGraphUpdate)(implicit writer: GraphWriter) = {
     writer.saveVertex(EmailAccountData(update.emailAccountId))
     update.userId.foreach { userId => // todo(Léo): once we have a more aggressive email verification policy, ignore unverified accounts
       writer.saveVertex(UserData(userId))
+
       writer.saveEdge(userId, update.emailAccountId, EmptyEdgeData)
       writer.saveEdge(update.emailAccountId, userId, EmptyEdgeData)
+
+      update.domainId.foreach { domainId =>
+        writer.saveVertex(DomainData(domainId))
+        writer.saveEdge(update.emailAccountId, domainId, EmptyEdgeData)
+        writer.saveEdge(domainId, update.emailAccountId, EmptyEdgeData)
+      }
     }
   }
 
@@ -183,7 +208,6 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.removeEdgeIfExists(update.abookId, update.emailAccountId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.emailAccountId, update.abookId, EmptyEdgeReader)
     } else {
-
       writer.saveVertex(AddressBookData(update.abookId))
       writer.saveVertex(UserData(update.userId))
       writer.saveVertex(EmailAccountData(update.emailAccountId))
@@ -210,5 +234,52 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case _ =>
       writer.removeEdgeIfExists(update.userId, update.libId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.libId, update.userId, EmptyEdgeReader)
+  }
+
+  private def processOrganizationGraphUpdate(update: OrganizationGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationStates.INACTIVE =>
+      writer.removeVertexIfExists(update.orgId)
+    case OrganizationStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+  }
+
+  private def processOrganizationMembershipGraphUpdate(update: OrganizationMembershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationMembershipStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+    case OrganizationMembershipStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+  }
+
+  private def processOrganizationMembershipCandidateUpdate(update: OrganizationMembershipCandidateGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationMembershipCandidateStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+    case OrganizationMembershipCandidateStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+  }
+
+  private def processUserIpAddressGraphUpdate(update: UserIpAddressGraphUpdate)(implicit writer: GraphWriter) = {
+    writer.saveVertex(IpAddressData(update.ipAddress))
+    writer.saveVertex(UserData(update.userId))
+    writer.saveEdge(update.userId, update.ipAddress, TimestampEdgeData(update.updatedAt.getMillis))
+    writer.saveEdge(update.ipAddress, update.userId, TimestampEdgeData(update.updatedAt.getMillis))
+  }
+
+  private def processOrganizationDomainOwnershipGraphUpdate(update: OrganizationDomainOwnershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationDomainOwnershipStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.orgId, update.domainId, EmptyEdgeReader)
+      writer.removeEdgeIfExists(update.domainId, update.orgId, EmptyEdgeReader)
+    case OrganizationDomainOwnershipStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(DomainData(update.domainId))
+      writer.saveEdge(update.orgId, update.domainId, EmptyEdgeData)
+      writer.saveEdge(update.domainId, update.orgId, EmptyEdgeData)
   }
 }

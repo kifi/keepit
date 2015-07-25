@@ -2,19 +2,16 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.db.Id
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.graph.wander.{ Wanderlust }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
 import play.api.mvc.{ Result }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
-import com.keepit.social.BasicUser
 
 class WanderingAdminController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -99,7 +96,6 @@ class WanderingAdminController @Inject() (
 
             val end = clock.now()
             val timing = end.getMillis - start.getMillis
-
             val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Success(timing)), sortedUsers, sortedSocialUsers, sortedLibraries, sortedUris, sortedExtras))
             promisedResult.success(view)
           }

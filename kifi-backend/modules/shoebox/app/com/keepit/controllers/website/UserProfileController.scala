@@ -6,8 +6,8 @@ import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
@@ -17,7 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Success, Try }
 
 case class ProfileStats(libs: Int, followers: Int, connections: Int)
 
@@ -29,44 +29,61 @@ class UserProfileController @Inject() (
     userValueRepo: UserValueRepo,
     userCommander: UserCommander,
     friendRequestRepo: FriendRequestRepo,
+    librarySubscriptionRepo: LibrarySubscriptionRepo,
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
     userConnectionsCommander: UserConnectionsCommander,
+    collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def getProfile(username: Username) = MaybeUserAction { request =>
     val viewer = request.userOpt
-    userCommander.profile(username, viewer) match {
+    getProfileHelper(username, viewer) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
         NotFound(s"username ${username.value}")
-      case Some(profile) =>
-        val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
-          val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
-          val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-          (numConnections, userBio)
-        }
-
-        val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
-        val jsonProfileInfo = Json.toJson(UserProfileStats(
-          numLibraries = numLibraries,
-          numFollowedLibraries = numFollowedLibraries,
-          numCollabLibraries = numCollabLibraries,
-          numKeeps = profile.numKeeps,
-          numConnections = numConnections,
-          numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
-          numInvitedLibraries = numInvitedLibs,
-          biography = userBiography
-        )).as[JsObject]
-        Ok(jsonFriendInfo ++ jsonProfileInfo)
+      case Some(profilePayload) =>
+        Ok(profilePayload)
     }
+  }
+  def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
+    userCommander.profile(username, viewer) map { profile =>
+      val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+      val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+        val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+        val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+        (numConnections, userBio)
+      }
+
+      val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+      val jsonProfileInfo = Json.toJson(UserProfileStats(
+        numLibraries = numLibraries,
+        numFollowedLibraries = numFollowedLibraries,
+        numCollabLibraries = numCollabLibraries,
+        numKeeps = profile.numKeeps,
+        numConnections = numConnections,
+        numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+        numTags = collectionCommander.getCount(profile.userId),
+        numInvitedLibraries = numInvitedLibs,
+        biography = userBiography
+      )).as[JsObject]
+      jsonFriendInfo ++ jsonProfileInfo
+    }
+  }
+
+  def zipSubscriptionsWithLibInfos(libCardInfos: Seq[LibraryCardInfo]): Seq[JsObject] = {
+    libCardInfos.map { lib =>
+      val libId = Library.decodePublicId(lib.id)
+      val subscriptions = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libId.get).map { LibrarySubscription.toSubKey } }
+      Json.toJson(lib).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
+    }.seq
   }
 
   def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
@@ -80,12 +97,13 @@ class UserProfileController @Inject() (
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq)
+            val libCardInfos = if (viewer.exists(_.id == user.id)) {
+              userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq)
+              userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq
             }
-            Future.successful(Ok(Json.obj("own" -> libs)))
+            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsWithLibInfos(libCardInfos)
+            Future.successful(Ok(Json.obj("own" -> libInfosAndSubscriptions)))
           case "following" =>
             val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
@@ -93,11 +111,14 @@ class UserProfileController @Inject() (
             val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
-            val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq))
+            val libCardInfos = if (viewer.exists(_.id == user.id)) {
+              userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq))
+              userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq
             }
+            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsWithLibInfos(libCardInfos)
+
+            val ownLibsF = SafeFuture(libInfosAndSubscriptions)
             val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
@@ -129,18 +150,19 @@ class UserProfileController @Inject() (
       case Some(user) =>
         val viewer = request.userId
         val userId = user.id.get
-        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
+        val (ofUser, ofViewer, mutualFollow, basicUsers, orgs) = db.readOnlyReplica { implicit s =>
           val ofUser = libraryRepo.getOwnerLibrariesUserFollows(userId, viewer)
           val ofViewer = libraryRepo.getOwnerLibrariesUserFollows(viewer, userId)
           val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
-          (ofUser, ofViewer, mutualFollow, basicUsers)
+          val orgs = orgRepo.getByIds(mutualFollow.flatMap { _.organizationId }.toSet)
+          (ofUser, ofViewer, mutualFollow, basicUsers, orgs)
         }
         Ok(Json.obj(
-          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
-          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
-          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
+          "ofUser" -> Json.toJson(ofUser.map { x => LibraryInfo.fromLibraryAndOwner(x, None, basicUsers(userId), x.organizationId.flatMap { orgs.get(_) }) }),
+          "ofOwner" -> Json.toJson(ofViewer.map { x => LibraryInfo.fromLibraryAndOwner(x, None, basicUsers(viewer), x.organizationId.flatMap { orgs.get(_) }) }),
+          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId), lib.organizationId.flatMap { orgs.get(_) })))
         ))
     }
   }
@@ -254,7 +276,7 @@ class UserProfileController @Inject() (
    * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
    */
   def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
+    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds) map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recommendedUserIds) => {
         val head = recommendedUserIds.take(fullInfoLimit)

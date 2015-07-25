@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
-import com.keepit.model.{ KeepRepo, Library, LibraryRepo, NormalizedURIRepo, User, UserRepo }
+import com.keepit.model.{ KeepRepo, Library, LibraryRepo, NormalizedURIRepo, User, UserRepo, UserValueRepo }
 
 import scala.concurrent.Future
 
@@ -26,12 +26,14 @@ class FakeRecommendationsCommander @Inject() (
   libRepo: LibraryRepo,
   userRepo: UserRepo,
   libCommander: LibraryCommander,
+  libPathCommander: LibraryPathCommander,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
   publicIdConfig: PublicIdConfiguration,
   defaultContext: ExecutionContext,
   keepDecorator: KeepDecorator,
   userExperimentCommander: LocalUserExperimentCommander,
+  userValueRepo: UserValueRepo,
   imageConfig: S3ImageConfig)
     extends RecommendationsCommander(
       curator,
@@ -41,10 +43,12 @@ class FakeRecommendationsCommander @Inject() (
       libRepo,
       userRepo,
       libCommander,
+      libPathCommander,
       rover,
       basicUserRepo,
       keepRepo,
       keepDecorator,
+      userValueRepo,
       defaultContext,
       publicIdConfig,
       imageConfig,

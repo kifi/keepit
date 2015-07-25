@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ User, NotificationCategory, ExperimentType, KifiExtVersion }
+import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -242,11 +242,11 @@ class SharedWsMessagingController @Inject() (
     },
     "eip" -> {
       case JsString(eip) +: _ =>
-        socket.ip = crypt.decrypt(ipkey, eip).toOption
+        socket.ip = crypt.decrypt(ipkey, eip).toOption.map(_.trim)
     },
     "log_event" -> {
       case JsObject(pairs) +: _ =>
-        implicit val experimentFormat = State.format[ExperimentType]
+        implicit val experimentFormat = State.format[UserExperimentType]
         val eventJson = JsObject(pairs).deepMerge(
           Json.obj("experiments" -> socket.experiments)
         )

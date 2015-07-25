@@ -2,14 +2,15 @@ package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
+import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.article.policy.ArticleFetchPolicy
-import com.keepit.rover.model.ArticleInfoRepo
+import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ Future, ExecutionContext }
@@ -22,15 +23,17 @@ object RoverArticleInfoIngestionActor {
 
 class RoverArticleInfoIngestionActor @Inject() (
     db: Database,
-    articleInfoRepo: ArticleInfoRepo,
+    articleInfoHelper: ArticleInfoHelper,
     systemValueRepo: SystemValueRepo,
     shoebox: ShoeboxServiceClient,
     articlePolicy: ArticleFetchPolicy,
     fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     airbrake: AirbrakeNotifier,
-    implicit val executionContext: ExecutionContext) extends BatchProcessingActor[IndexableUri](airbrake) with Logging {
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[IndexableUri] {
 
   import RoverArticleInfoIngestionActor._
+
+  protected val logger = log.logger
 
   protected def nextBatch: Future[Seq[IndexableUri]] = {
     log.info(s"Starting ingestion...")
@@ -50,8 +53,8 @@ class RoverArticleInfoIngestionActor @Inject() (
     if (uris.nonEmpty) {
       db.readWrite { implicit session =>
         uris.foreach { uri =>
-          articleInfoRepo.internByUri(uri.id.get, uri.url, articlePolicy.toBeInterned(uri))
-          articleInfoRepo.deactivateByUriAndKinds(uri.id.get, articlePolicy.toBeDeactivated(uri))
+          articleInfoHelper.intern(uri.url, uri.id.get, articlePolicy.toBeInterned(uri))
+          articleInfoHelper.deactivate(uri.id.get, articlePolicy.toBeDeactivated(uri))
         }
         val maxSeq = uris.map(_.seq).max
         systemValueRepo.setSequenceNumber(roverNormalizedUriSeq, maxSeq)

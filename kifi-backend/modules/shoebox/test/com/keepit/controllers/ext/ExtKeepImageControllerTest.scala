@@ -13,7 +13,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.controllers.ext.routes.{ ExtKeepImageController => Routes }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils
@@ -27,6 +26,9 @@ import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
+
 import scala.concurrent.Future
 
 class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
@@ -34,8 +36,6 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),
@@ -48,8 +48,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     "support image uploads" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withName("U", "1").withUsername("test").saved
+          val user2 = UserFactory.user().withName("U", "2").withUsername("test").saved
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
@@ -98,8 +98,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     "check status of upload" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withName("U", "1").withUsername("test").saved
+          val user2 = UserFactory.user().withName("U", "2").withUsername("test").saved
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
@@ -159,8 +159,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
   //  "change keep image" in {
   //    withDb(controllerTestModules: _*) { implicit injector =>
   //      val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-  //        val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
-  //        val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
+  //        val user1 = UserFactory.user().withName("U", "1").withUsername("test").saved
+  //        val user2 = UserFactory.user().withName("U", "2").withUsername("test").saved
   //        val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
   //        val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
   //        val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))

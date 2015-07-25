@@ -67,9 +67,8 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
-      libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest', {n: 30, q: opt_query || []});
-      },
+      socialInvite: '/invite',
+      connectTwitter: '/twitter/request',
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
         return route('/user/friends/recommended', {offset: offset, limit: limit});
@@ -124,7 +123,8 @@ angular.module('kifi')
       socialSignup: function (provider, opts) {
         var params = {
           publicLibraryId : opts.libraryId || [],
-          intent : opts.intent || []
+          intent: opts.intent || [],
+          libAuthToken: opts.libAuthToken || []
         };
         return navRoute('/signup/' + provider, params);
       },
@@ -139,19 +139,6 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      getLibraryInfos: route('/libraries'),
-      getLibraryByUserSlug: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug, {showPublishedLibraries: 1, authToken: authToken || []});
-      },
-      getLibraryById: function (libraryId) {
-        return route('/libraries/' + libraryId);
-      },
-      getLibraryInfoById: function (libraryId) {
-        return route('/libraries/' + libraryId + '/summary');
-      },
-      getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps', {count: count, offset: offset, authToken: authToken || []});
-      },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
@@ -159,8 +146,8 @@ angular.module('kifi')
       shareLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/invite');
       },
-      joinLibrary: function (libraryId, authToken) {
-        return route('/libraries/' + libraryId + '/join', {authToken: authToken || []});
+      joinLibrary: function (libraryId, authToken, subscribed) {
+        return route('/libraries/' + libraryId + '/join', {authToken: authToken || [], subscribed: subscribed != null ? subscribed ? 1 : 0 : []});
       },
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
@@ -186,8 +173,8 @@ angular.module('kifi')
       getLibraryCoverImages: function (libraryIds, w, h) {
         return route('/libraries/' + libraryIds.join('.') + '/images', {is: w && h ? w + 'x' + h : []});
       },
-      authIntoLibrary: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug + '/auth', {authToken: authToken || []});
+      authIntoLibrary: function (handle, slug, authToken) {
+        return route('/users/' + handle + '/libraries/' + slug + '/auth', {authToken: authToken || []});
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag', {tag: tagName});
@@ -205,21 +192,21 @@ angular.module('kifi')
       ////////////////////////////
       // User Profile           //
       ////////////////////////////
-      getUserProfile: function (username) {
-        return route('/user/' + username + '/profile');
+      getUserProfile: function (handle) {
+        return route('/user/' + handle + '/profile');
       },
-      getUserLibraries: function (username, filter, opt_page, opt_size) {
-        return route('/user/' + username + '/libraries', {
+      getUserLibraries: function (handle, filter, opt_page, opt_size) {
+        return route('/user/' + handle + '/libraries', {
           filter: filter,
           page: _.isUndefined(opt_page) ? [] : opt_page,
           size: _.isUndefined(opt_size) ? [] : opt_size
         });
       },
-      getProfileConnections: function (username, limit) {
-        return route('/users/' + username + '/connections', {n: limit || []});
+      getProfileConnections: function (handle, limit) {
+        return route('/users/' + handle + '/connections', {n: limit || []});
       },
-      getProfileFollowers: function (username, limit) {
-        return route('/users/' + username + '/followers', {n: limit || []});
+      getProfileFollowers: function (handle, limit) {
+        return route('/users/' + handle + '/followers', {n: limit || []});
       },
       getProfileUsers: function (ids) {
         return route('/users/' + ids.join('.'));
@@ -227,6 +214,7 @@ angular.module('kifi')
       getMutualConnections: function (userId) {
         return route('/users/' + userId + '/connections/mutual');
       },
+
 
       /////////////////////////////
       // User Personas           //

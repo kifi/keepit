@@ -45,7 +45,6 @@ object UserValueName {
   val AVAILABLE_INVITES = UserValueName("availableInvites")
   val HAS_SEEN_INSTALL = UserValueName("has_seen_install")
   val WELCOME_EMAIL_SENT = UserValueName("welcomeEmailSent")
-  val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
   val USER_COLLECTION_ORDERING = UserValueName("user_collection_ordering")
@@ -73,19 +72,25 @@ object UserValueName {
   val TWITTER_DESCRIPTION = UserValueName("twitter_description")
   val TWITTER_BANNER_IMAGE = UserValueName("twitter_banner_image")
 
-  val HAS_NO_PASSWORD = UserValueName("has_no_password")
-
+  // ↓↓↓↓ This should be combined with preferences. Why does it exist?
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
+  // ↑↑↑↑↑ Should be combined with preferences
 
-  // temp for libraries-in-search callout for existing users. remove after a while (Mar 17 2015)
-  val SITE_NOTIFY_LIBRARIES_IN_SEARCH = UserValueName("site_notify_libraries_in_search")
-
+  // Site user preferences
+  val USE_MINIMAL_KEEP_CARD = UserValueName("use_minimal_keep_card")
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
   val AUTO_SHOW_PERSONA = UserValueName("auto_show_persona") // for new users, show who-are-you modal on page land
+  val HAS_NO_PASSWORD = UserValueName("has_no_password")
+  val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
+
+  val UPDATED_LIBRARIES_LAST_SEEN = UserValueName("updated_libraries_last_seen")
+  val COMPANY_NAME = UserValueName("company_name")
+
+  val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
@@ -169,6 +174,10 @@ object UserValues {
   val lastSmsSent = UserValueDateTimeHandler(UserValueName.LAST_SMS_SENT, START_OF_TIME)
 
   val twitterSyncAcceptSent = UserValueBooleanHandler(UserValueName.TWITTER_SYNC_ACCEPT_SENT, false)
+
+  val libraryUpdatesLastSeen = UserValueDateTimeHandler(UserValueName.UPDATED_LIBRARIES_LAST_SEEN, START_OF_TIME)
+
+  val ignoreForPotentialOrganizations = UserValueBooleanHandler(UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, default = false)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)

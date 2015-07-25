@@ -167,8 +167,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
   }
 
   def usersToSendEmailTo(): Set[Id[User]] = db.readOnlyReplica { implicit session =>
-    // TODO paginate instead of grabbing all user IDs at once
-    val userIds = userRepo.getAllIds()
+    // TODO: paginate instead of getting all user IDs at once
+    val userIds = userRepo.getAllActiveIds().toSet
 
     // TODO remove this filter when we have quality library recos for users w/o keeps
     keepRepo.getCountByUsersAndSource(userIds, Set(KeepSource.keeper, KeepSource.mobile)).collect {
@@ -478,13 +478,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
           predicate(library)
       }
 
-      val libraryIds = onceFilteredLibraries.map(_.id.get).toSet
-      val libraryStats = libraryCommander.getBasicLibraryStatistics(libraryIds)
-
       // filter out libraries with 0 keeps
-      onceFilteredLibraries.
-        filter { lib => libraryStats.get(lib.id.get).map(_.keepCount).getOrElse(0) > 0 }.
-        sortBy(-_.createdAt.getMillis)
+      onceFilteredLibraries.filter(_.keepCount > 0).sortBy(-_.createdAt.getMillis)
     }
   }
 }

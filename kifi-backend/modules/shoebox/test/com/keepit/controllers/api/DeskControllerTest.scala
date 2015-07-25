@@ -8,6 +8,9 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
+
 class DeskControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq()
@@ -16,7 +19,7 @@ class DeskControllerTest extends Specification with ShoeboxTestInjector {
     "is logged in" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         val path = com.keepit.controllers.api.routes.DeskController.isLoggedIn.toString
         path === "/api/desk/isLoggedIn"

@@ -26,11 +26,13 @@ case class LibraryMembership(
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None,
     lastJoinedAt: Option[DateTime] = None,
-    subscribedToUpdates: Boolean = false) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    subscribedToUpdates: Boolean = false,
+    priority: Long = 0) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
+  def withPriority(newPriority: Long): LibraryMembership = this.copy(priority = newPriority)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
@@ -59,11 +61,12 @@ object LibraryMembership {
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
-    (__ \ 'subscribedToUpdates).format[Boolean]
+    (__ \ 'subscribedToUpdates).format[Boolean] and
+    (__ \ 'priority).format[Long]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
-@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscription: Boolean)
+@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscribed: Boolean)
 
 object LibraryMembershipInfo {
   def fromMembership(mem: LibraryMembership): LibraryMembershipInfo = {
@@ -73,20 +76,7 @@ object LibraryMembershipInfo {
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-sealed abstract class LibraryAccess(val value: String, val priority: Int) {
-  def isHigherAccess(x: LibraryAccess): Boolean = {
-    this.priority > x.priority
-  }
-  def isHigherOrEqualAccess(x: LibraryAccess): Boolean = {
-    this.priority >= x.priority
-  }
-  def isLowerAccess(x: LibraryAccess): Boolean = {
-    this.priority < x.priority
-  }
-  def isLowerOrEqualAccess(x: LibraryAccess): Boolean = {
-    this.priority <= x.priority
-  }
-}
+sealed abstract class LibraryAccess(val value: String, val priority: Int)
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
@@ -110,8 +100,8 @@ object LibraryAccess {
     }
   }
 
-  def all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
-  def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
+  val all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
+  val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)

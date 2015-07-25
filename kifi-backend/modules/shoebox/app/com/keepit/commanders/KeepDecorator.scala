@@ -5,6 +5,7 @@ import com.google.inject.{ Provider, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.model._
@@ -23,17 +24,26 @@ class KeepDecorator @Inject() (
     collectionCommander: CollectionCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
     rover: RoverServiceClient,
+    airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+    val keeps = keepsSeq match {
+      case k: List[Keep] => k
+      case other =>
+        // Make sure we're not dealing with a lazy structure here, which doesn't play nice with a database session...
+        airbrake.notify("[decorateKeepsIntoKeepInfos] Found it! Grab Léo, Yingjie, and Andrew", new Exception())
+        other.toList
+    }
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
@@ -45,6 +55,13 @@ class KeepDecorator @Inject() (
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
+
+        val libIdToOrg = {
+          val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
+          val orgId2org = db.readOnlyMaster { implicit s => orgRepo.getByIds(libId2orgId.values.toSet) }
+          libId2orgId.mapValues { orgId => orgId2org.get(orgId) }.collect { case (id, Some(org)) => id -> org }
+        }
+
         val idToBasicUser = {
           val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
@@ -52,7 +69,11 @@ class KeepDecorator @Inject() (
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+        val idToBasicLibrary = idToLibrary.mapValues { library =>
+          val orgOpt = libIdToOrg.get(library.id.get)
+          val user = idToBasicUser(library.ownerId)
+          BasicLibrary(library, user, orgOpt)
+        }
 
         (idToBasicUser, idToBasicLibrary)
       }
@@ -62,8 +83,17 @@ class KeepDecorator @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = db.readOnlyMaster { implicit s =>
-        keeps.map { keep => keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) } }
+      val sourceAttrs = db.readOnlyReplica { implicit s =>
+        keeps.map { keep =>
+          try {
+            keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) }
+          } catch {
+            case ex: Exception => {
+              airbrake.notify(s"error during keep decoration: keepId = ${keep.id}, keep source attribution id = ${keep.sourceAttributionId}", ex)
+              None
+            }
+          }
+        }
       }
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]

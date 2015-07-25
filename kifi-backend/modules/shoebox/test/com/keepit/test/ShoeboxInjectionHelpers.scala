@@ -1,6 +1,6 @@
 package com.keepit.test
 
-import com.keepit.inject._
+import com.keepit.commanders.{ HandleCommanderImpl, HandleCommander }
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -32,9 +32,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
   def emailAddressRepo(implicit injector: Injector) = inject[UserEmailAddressRepo]
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
-  def urlPatternRuleRepo(implicit injector: Injector): UrlPatternRuleRepo = inject[UrlPatternRuleRepoImpl]
-  def httpProxyRepo(implicit injector: Injector) = inject[HttpProxyRepo]
-  def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
@@ -44,13 +41,15 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[FakeSlickSessionProvider]
   def libraryRepo(implicit injector: Injector) = inject[LibraryRepo]
   def libraryMembershipRepo(implicit injector: Injector) = inject[LibraryMembershipRepo]
+  def librarySubscriptionRepo(implicit injector: Injector) = inject[LibrarySubscriptionRepo]
   def libraryInviteRepo(implicit injector: Injector) = inject[LibraryInviteRepo]
   def libraryImageRepo(implicit injector: Injector) = inject[LibraryImageRepo]
   def libraryImageRequestRepo(implicit injector: Injector) = inject[LibraryImageRequestRepo]
   def keepImageRepo(implicit injector: Injector) = inject[KeepImageRepo]
   def keepImageRequestRepo(implicit injector: Injector) = inject[KeepImageRequestRepo]
-  def usernameAliasRepo(implicit injector: Injector) = inject[UsernameAliasRepo]
+  def handleRepo(implicit injector: Injector) = inject[HandleOwnershipRepo]
   def libraryAliasRepo(implicit injector: Injector) = inject[LibraryAliasRepo]
   def personaRepo(implicit injector: Injector) = inject[PersonaRepo]
   def userPersonaRepo(implicit injector: Injector) = inject[UserPersonaRepo]
+  def handleCommander(implicit injector: Injector) = inject[HandleCommander].asInstanceOf[HandleCommanderImpl]
 }

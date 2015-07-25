@@ -5,17 +5,16 @@ import com.keepit.common.time._
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import com.keepit.model.UserFactoryHelper._
 
 class LibraryInviteTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test")
-    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test")
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(u1)
-      val user2 = userRepo.save(u2)
+      val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "H").withUsername("test").saved
+      val user2 = UserFactory.user().withCreatedAt(t1.plusHours(2)).withName("Jackie", "Chan").withUsername("test2").saved
       val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("A"), memberCount = 1))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),

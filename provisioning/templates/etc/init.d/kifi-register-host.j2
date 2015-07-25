@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# {{ ansible_managed }}
+
+import sys
+import boto.ec2
+import requests
+import os
+from subprocess import call
+
+def who_am_i():
+  ec2 = boto.ec2.connect_to_region("{{ ec2.defaults.region }}",
+          aws_access_key_id="{{ aws_access_key_id }}",
+          aws_secret_access_key="{{ aws_secret_access_key }}")
+  myID = requests.get("http://169.254.169.254/latest/meta-data/instance-id", timeout=1.0).text
+  instance = ec2.get_only_instances([myID])[0]
+  spotRequestId = instance.spot_instance_request_id
+  if spotRequestId is not None:
+    spotRequest = ec2.get_all_spot_instance_requests([spotRequestId])[0]
+    tags = spotRequest.tags
+    for key, value in tags.items():
+      if key not in instance.tags:
+        instance.add_tag(key, value)
+  return ec2.get_only_instances([myID])[0].tags
+
+# set hostname to EC2 Name
+def set_hostname(name):
+  with open("/etc/hostname", "w") as f:
+    f.write(name + "\n")
+  update_code = call(['hostname', '-F', '/etc/hostname'])
+  if update_code != 0: print >>sys.stderr, 'Error updating hostname'
+
+# make sure EC2 Name is in the hosts file
+def update_hosts(name):
+  with open("/etc/hosts", "a+") as f:
+    existing_name = f.read()
+    if name not in existing_name:
+      f.write("\n127.0.0.1 " + name + "\n")
+
+if __name__ == "__main__":
+  try:
+    # figure out who I am
+    me = who_am_i()
+    name = me["Name"]
+    set_hostname(name)
+    update_hosts(name)
+    print name
+
+  except Exception as e:
+    print >>sys.stderr, e

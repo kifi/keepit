@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ LibraryPathCommander, UserCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ LargeString, Id }
@@ -62,7 +62,9 @@ class EmailTemplateProcessorImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
+    keepRepo: KeepRepo,
     userCommander: Provider[UserCommander],
+    libPathCommander: LibraryPathCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
     htmlDecorator: EmailTemplateHtmlDecorator,
@@ -83,8 +85,10 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class LibraryNeeded(id: Id[Library]) extends NeededObject
 
+  case class KeepNeeded(id: Id[Keep]) extends NeededObject
+
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
-    libraries: Map[Id[Library], Library])
+    libraries: Map[Id[Library], Library], keeps: Map[Id[Keep], Keep])
 
   def process(emailToSend: EmailToSend) = new SafeFuture[ProcessedEmailResult]({
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
@@ -114,6 +118,7 @@ class EmailTemplateProcessorImpl @Inject() (
       val userIds = needs.collect { case UserNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
       val libraryIds = needs.collect { case LibraryNeeded(id) => id }
+      val keepIds = needs.collect { case KeepNeeded(id) => id }
 
       val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
 
@@ -125,12 +130,15 @@ class EmailTemplateProcessorImpl @Inject() (
         getUsers(allUserIds.toSeq) map { users => (users, libraries) }
       }
 
+      val keepsF = getKeeps(keepIds)
+
       for {
         (users, libraries) <- usersAndLibrariesF
         userImageUrls <- userImageUrlsF
         tipHtmlOpt <- tipHtmlF
+        keeps <- keepsF
       } yield {
-        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries)
+        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries, keeps = keeps)
         val includedTip = tipHtmlOpt.map(_._1)
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
@@ -167,7 +175,7 @@ class EmailTemplateProcessorImpl @Inject() (
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = {
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = try {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -181,19 +189,23 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def libraryId = tagArgs(0).as[Id[Library]]
       @inline def library: Library = input.libraries(libraryId)
 
-      tagWrapper.label match {
+      @inline def keepId = tagArgs(0).as[Id[Keep]]
+      @inline def keep: Keep = input.keeps(keepId)
+
+      val resultString = tagWrapper.label match {
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
         case tags.libraryUrl =>
-          val libOwner = input.users(library.ownerId)
-          config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, library.slug)
+          config.applicationBaseUrl + libPathCommander.getPath(library)
         case tags.libraryName => library.name
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
           libOwner.fullName
+        case tags.keepName => keep.title.getOrElse("Untitled Keep")
+        case tags.keepUrl => keep.url
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
             case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
@@ -219,7 +231,10 @@ class EmailTemplateProcessorImpl @Inject() (
             auxiliaryData = emailToSend.auxiliaryData
           ).encode
       }
+      resultString.replace("$", "\\$")
     })
+  } catch {
+    case ex: IndexOutOfBoundsException => log.error(s"[EmailTemplate] IOOB Exception. Text: $text"); throw ex
   }
 
   // used to gather the types of objects we need to replace the tags with real values
@@ -231,6 +246,8 @@ class EmailTemplateProcessorImpl @Inject() (
       // only call if Id[User] is expected as the first argument
       @inline def userId = jsValueAsUserId(tagArgs(0))
 
+      @inline def keepId = tagArgs(0).as[Id[Keep]]
+
       tagWrapper.label match {
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
@@ -238,6 +255,8 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
+        case tags.keepName | tags.keepUrl =>
+          KeepNeeded(keepId)
         case _ => NothingNeeded
       }
     }.toSet
@@ -251,6 +270,12 @@ class EmailTemplateProcessorImpl @Inject() (
     db.readOnlyMasterAsync { implicit s =>
       libraryIds.map(id => id -> libraryRepo.get(id)).toMap
     }
+
+  private def getKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Keep]] = {
+    db.readOnlyMasterAsync { implicit s =>
+      keepIds.map(id => id -> keepRepo.get(id)).toMap
+    }
+  }
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {
     Future.sequence(

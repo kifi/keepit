@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.common.net.URI
+
 import scala.concurrent.duration._
 
 import org.joda.time.DateTime
@@ -36,10 +38,7 @@ case class NormalizedURI(
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
   def withState(state: State[NormalizedURI]) = copy(state = state)
-  def withTitle(title: String) = {
-    val cleanTitle = title.trimAndRemoveLineBreaks()
-    if (cleanTitle.isEmpty()) this else copy(title = Some(cleanTitle))
-  }
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
   def toShortString = s"NormalizedUri($id,$seq,${state.toString.toUpperCase},${restriction.getOrElse("N/A")},${normalization},${redirect},${url.take(50)})"
@@ -87,6 +86,7 @@ object NormalizedURI {
 
 case class UrlHash(hash: String) extends AnyVal {
   override def toString: String = hash
+  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
 }
 
 object UrlHash {
@@ -129,17 +129,19 @@ object NormalizedURIStates extends States[NormalizedURI] {
 }
 
 case class IndexableUri(
-  id: Option[Id[NormalizedURI]] = None,
-  title: Option[String] = None,
-  url: String,
-  restriction: Option[Restriction] = None,
-  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  shouldHaveContent: Boolean,
-  seq: SequenceNumber[NormalizedURI])
+    id: Option[Id[NormalizedURI]] = None,
+    title: Option[String] = None,
+    url: String,
+    restriction: Option[Restriction] = None,
+    state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+    shouldHaveContent: Boolean,
+    seq: SequenceNumber[NormalizedURI]) {
+  def getDomainName = URI.parseDomain(url).get
+}
 
 object IndexableUri {
 
-  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.shouldHaveContent, uri.seq)
+  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(id = uri.id, title = uri.title, url = uri.url, restriction = uri.restriction, state = uri.state, shouldHaveContent = uri.shouldHaveContent, seq = uri.seq)
 
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and

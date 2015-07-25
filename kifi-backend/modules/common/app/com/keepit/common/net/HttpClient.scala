@@ -63,7 +63,7 @@ case class CallTimeouts(responseTimeout: Option[Int] = None, maxWaitTime: Option
 }
 
 object CallTimeouts {
-  val NoTimeouts = CallTimeouts(None, None, None)
+  val UseDefaults = CallTimeouts(None, None, None)
 }
 
 trait HttpClient {

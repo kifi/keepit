@@ -5,6 +5,7 @@ import org.specs2.mutable._
 import com.keepit.classify.{ Domain, DomainRepo }
 import com.keepit.common.db.slick._
 import com.keepit.test._
+import com.keepit.model.UserFactoryHelper._
 
 class UserToDomainTest extends Specification with ShoeboxTestInjector {
   "UserToDomain" should {
@@ -14,8 +15,8 @@ class UserToDomainTest extends Specification with ShoeboxTestInjector {
         inject[UserToDomainRepo] must be(repo) // singleton
 
         val (u1, u2, d1, d2, u1d1, u1d2, u2d2) = inject[Database].readWrite { implicit session =>
-          val u1 = inject[UserRepo].save(User(firstName = "J", lastName = "Jacobs", username = Username("test"), normalizedUsername = "test"))
-          val u2 = inject[UserRepo].save(User(firstName = "A", lastName = "Jacobs", username = Username("test2"), normalizedUsername = "test2"))
+          val u1 = UserFactory.user().withName("J", "Jacobs").withUsername("test").saved
+          val u2 = UserFactory.user().withName("A", "Jacobs").withUsername("test2").saved
           val d1 = inject[DomainRepo].save(Domain(hostname = "outlook.com"))
           val d2 = inject[DomainRepo].save(Domain(hostname = "audible.com"))
           (u1, u2, d1, d2,

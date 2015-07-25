@@ -6,7 +6,7 @@ import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
+import com.keepit.common.mail.template.{ EmailToSend }
 import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -14,14 +14,15 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.model.{ SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialId
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.twirl.api.Html
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -29,7 +30,6 @@ import scala.concurrent.duration.Duration
 class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),
@@ -43,7 +43,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
 
   "ConnectNetworkTip" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit rw =>
-      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("Danny", "Tanner").withUsername("test").saved
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),
@@ -94,15 +94,6 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
         }
         val htmlF = inject[ConnectNetworkTip].render(emailToSend, user.id.get)(FACEBOOK)
         Await.result(htmlF, Duration(5, "seconds")) must beNone
-      }
-    }
-
-    "shows connect linkedin tip if not connected to FB" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user, emailToSend) = setup()
-        val htmlF = inject[ConnectNetworkTip].render(emailToSend, user.id.get)(LINKEDIN)
-        val html = Await.result(htmlF, Duration(5, "seconds")).get
-        html.body must contain("Connect with LinkedIn")
       }
     }
 

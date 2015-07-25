@@ -6,8 +6,28 @@
     @media screen and (max-width: 700px)
       width: calc(100% - 25px)
 
+.kf-register-inviter-pic
+  border-radius: 100%
+  margin: 0px 10px
+  width: 64px
+  display: inline-block
+
+.kf-register-modal-invite-text
+  color: #687A8D
+  font-size: 15px
+  display: inline-block
+  width: calc(100% - 100px)
+  vertical-align: middle
+
 .register-modal-wrap
   padding: 53px 59px 58px
+
+  @media screen and (max-width: 400px)
+    padding: 25px
+
+  @media screen and (max-height: 500px)
+    padding-top: 10px
+    padding-bottom: 10px
 
 .register-active-request
   .kf-register-modal-loading
@@ -40,6 +60,13 @@
   font-size: 24px
   font-weight: 300
 
+.kf-register-header-centered
+  margin: auto
+  width: 90px
+
+  @media screen and (max-height: 500px)
+    display: none
+
 .register-modal-social-block
   margin: 21px 0 0
 
@@ -60,6 +87,11 @@
   line-height: 58px
   cursor: pointer
 
+  @media screen and (max-height: 600px)
+    height: 50px
+    line-height: 50px
+    margin-bottom: 15px
+
   &.facebook
     background-color: #4F6CA7
 
@@ -73,7 +105,13 @@
       background-color: lighten(#55acee, 10%)
 
 .kf-or-separator
-  padding: 20px 0 27px
+  padding: 20px 0 20px
+
+  @media screen and (max-height: 600px)
+    padding: 10px 0 15px
+
+  @media screen and (max-height: 500px)
+    padding: 5px 0 5px
 
 .kf-or-separator-circle
   margin: 0 auto
@@ -135,6 +173,9 @@ input.register-email-box
   font-size: 14px
   padding: 13px 20px
 
+  @media screen and (max-width: 400px)
+    width: calc(100% - 160px)
+
 .register-submit
   width: 150px
   background-color: #3DA9F5
@@ -147,6 +188,9 @@ input.register-email-box
   border: 0
   text-decoration: none
 
+  @media screen and (max-width: 600px)
+    width: 100px
+
   &:hover, &:active
     background-color: lighten(#3DA9F5, 10%)
 
@@ -157,6 +201,9 @@ input.register-email-box
   font-size: 15px
   margin-top: 25px
   color: #687A8D
+
+  @media screen and (max-height: 500px)
+    margin-top: 10px
 
 
 // 2nd page

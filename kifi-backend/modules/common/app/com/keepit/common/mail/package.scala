@@ -3,7 +3,7 @@ package com.keepit.common.mail
 import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ Library, User }
+import com.keepit.model.{ Keep, Library, User }
 import com.keepit.social.BasicUser
 import play.twirl.api.Html
 
@@ -29,6 +29,8 @@ package object template {
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
     val libraryOwnerFullName = TagLabel("libraryOwnerFullName")
+    val keepName = TagLabel("keepName")
+    val keepUrl = TagLabel("keepUrl")
     val unsubscribeUrl = TagLabel("unsubscribeUrl")
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
@@ -90,6 +92,10 @@ package object template {
 
     def libraryOwnerFullName(id: Id[Library]) = Tag1(tags.libraryOwnerFullName, id).toHtml
 
+    def keepName(id: Id[Keep]) = Tag1(tags.keepName, id).toHtml
+
+    def keepUrl(id: Id[Keep], content: String) = Html(appendTrackingParams(Tag1(tags.keepUrl, id) + "?", content, openInAppIfMobile = true))
+
     val unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 
     def unsubscribeUrl(id: Id[User]) = Tag1(tags.unsubscribeUserUrl, id).toHtml
@@ -126,7 +132,6 @@ package object template {
     }
 
     def connectFacebookUrl(content: String) = connectNetworkUrl("facebook", content)
-    def connectLinkedInUrl(content: String) = connectNetworkUrl("linkedin", content)
 
     def inviteContactUrl(id: Id[User], content: String) =
       htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", content, openInAppIfMobile = true)

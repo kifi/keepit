@@ -19,17 +19,17 @@ class MessageQueryParser(
     }
   }
 
-  override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
+  override def getFieldQuery(field: String, queryText: String, quoted: Boolean, trailing: Boolean): Option[Query] = {
     val disjunct = new DisjunctionMaxQuery(0.5f)
 
-    super.getFieldQuery(ThreadIndexFields.contentField, queryText, quoted).foreach { query =>
+    super.getFieldQuery(ThreadIndexFields.contentField, queryText, quoted, trailing).foreach { query =>
       disjunct.add(query)
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.titleField))
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.participantNameField))
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.urlKeywordField))
     }
 
-    getStemmedFieldQuery(ThreadIndexFields.contentStemmedField, queryText).foreach { query =>
+    getStemmedFieldQuery(ThreadIndexFields.contentStemmedField, queryText, trailing).foreach { query =>
       if (!quoted) {
         disjunct.add(query)
         disjunct.add(copyFieldQuery(query, ThreadIndexFields.titleStemmedField))

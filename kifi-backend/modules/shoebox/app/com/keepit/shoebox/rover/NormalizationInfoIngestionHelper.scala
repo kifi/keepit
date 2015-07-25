@@ -24,11 +24,15 @@ class NormalizationInfoIngestionHelper @Inject() (
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def processNormalizationInfo(uriId: Id[NormalizedURI], articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Future[Boolean] = {
-    val scrapedCandidates = getUriNormalizationsCandidates(articleKind, destinationUrl, info)
-    val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
-    normalizationService.update(currentReference, scrapedCandidates).map { newReferenceUriIdOption =>
-      processAlternateUrls(newReferenceUriIdOption getOrElse uriId, destinationUrl, info)
-      newReferenceUriIdOption.isDefined
+    try {
+      val scrapedCandidates = getUriNormalizationsCandidates(articleKind, destinationUrl, info)
+      val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
+      normalizationService.update(currentReference, scrapedCandidates).map { newReferenceUriIdOption =>
+        processAlternateUrls(newReferenceUriIdOption getOrElse uriId, destinationUrl, info)
+        newReferenceUriIdOption.isDefined
+      }
+    } catch {
+      case e: Exception => throw new Exception(s"failed processing normalization info for uri $uriId, of kind $articleKind $info : $destinationUrl", e)
     }
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $info found at $destinationUrl") } }
 

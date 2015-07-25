@@ -5,7 +5,7 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import com.keepit.common.db.{ State, ExternalId, SequenceNumber, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.UserStates._
-import com.keepit.model.{ Username, ExperimentType, User }
+import com.keepit.model.{ Username, UserExperimentType, User }
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.social.BasicUser
 import com.keepit.typeahead.PrefixFilter
@@ -21,8 +21,9 @@ object UserFields {
   val recordField = "rec"
   val experimentsField = "exp"
 
-  val nameSearchFields = Set(nameField, nameStemmedField)
-  val textSearchFields = Set(nameField, nameStemmedField, namePrefixField)
+  val minimalSearchFields = Set(nameField, nameStemmedField)
+  val fullTextSearchFields = Set()
+  val prefixSearchFields = Set(namePrefixField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
@@ -31,7 +32,7 @@ object UserIndexable {
   val toBeDeletedStates = Set[State[User]](INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }
 
-class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[ExperimentType]) extends Indexable[User, User] {
+class UserIndexable(user: User, emails: Set[EmailAddress], experiments: Set[UserExperimentType]) extends Indexable[User, User] {
 
   import UserFields._
 

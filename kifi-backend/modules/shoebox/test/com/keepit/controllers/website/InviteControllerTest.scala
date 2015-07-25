@@ -16,7 +16,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -28,6 +27,8 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import com.keepit.commanders.{ FullSocialId, InviteCommander }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -43,10 +44,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
     FakeUserActionsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()
@@ -57,7 +55,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
 
   def setUp()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Foo", username = Username("test"), normalizedUsername = "test"))
+      val user1 = UserFactory.user().withName("Foo", "Foo").withUsername("test").saved
       val email1 = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = senderEmail))
       val pwdInfo = PasswordInfo("bcrypt", BCrypt.hashpw("random_pwd", BCrypt.gensalt()))
       val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
@@ -107,34 +105,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
   }
 
   "InviteController" should {
-    "send Twitter DM invite" in {
-      running(new ShoeboxApplication(modules: _*)) {
-        val (user1, email1, sui1, invite1, sui2, sui3) = setUp()
-        val inviteController = inject[InviteController]
 
-        // ensure path exists
-        val path = com.keepit.controllers.website.routes.InviteController.inviteV2().url
-        path === s"/site/user/invite"
-
-        inject[FakeUserActionsHelper].setUser(user1)
-        val fullSocialId = FullSocialId(SocialNetworks.TWITTER, Left(SocialId("7890")))
-        val request = FakeRequest().withBody(Json.obj("id" -> Json.toJson(fullSocialId)))
-        val result = inviteController.inviteV2()(request)
-
-        status(result) === OK
-        val json = contentAsJson(result)
-        (json \ "sent").as[Boolean] === true
-
-        val invites = db.readOnlyMaster { implicit ro =>
-          invitationRepo.getBySenderId(user1.id.get)
-        }
-        val invite = invites.filter(_.recipientSocialUserId.isDefined).head
-        invite.senderUserId === user1.id
-        invite.recipientSocialUserId.get === sui3.id.get
-        invite.state === InvitationStates.ACTIVE
-        invite.lastSentAt.isDefined === true
-      }
-    }
     "acceptInvite should be public endpoint" in {
       running(new ShoeboxApplication(modules: _*)) {
         val (user1, email1, sui1, invite1, _, _) = setUp()

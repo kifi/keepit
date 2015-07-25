@@ -13,7 +13,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.inject.FortyTwoConfig
 
 object ServiceVersion {
-  val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_\-]*)-([0-9a-z]*)""".r
+  val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_\-\\]*)-([0-9a-z]*)""".r
 }
 
 case class ServiceVersion(value: String) {
@@ -57,7 +57,14 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2)
+
+  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
+    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
+      val capabilities = instance.capabilities
+      if (capabilities.contains("backup")) ServiceStatus.BACKING_UP else ServiceStatus.UP
+    }
+  }
+
   case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", loadFactor = 1, true) {
     override val minInstances = 0
     override val warnInstances = 0
@@ -75,7 +82,7 @@ object ServiceType {
   case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5)
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
-  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: CURATOR :: ROVER :: Nil
+  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: CORTEX :: GRAPH :: CURATOR :: ROVER :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
   lazy val all: List[ServiceType] = inProduction ::: notInProduction
   lazy val fromString: Map[String, ServiceType] = all.map(serviceType => serviceType.name -> serviceType).toMap

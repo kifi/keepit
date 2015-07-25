@@ -13,7 +13,7 @@ import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -26,7 +26,6 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
   def modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),
@@ -53,7 +52,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
       val libMemRepo = inject[LibraryMembershipRepo]
 
       db.readWrite { implicit s =>
-        (1 to 10).foreach { i => userRepo.save(User(firstName = "test" + i, lastName = "foo", username = Username("whatever"), normalizedUsername = "whatever")) }
+        (1 to 10).foreach { i => UserFactory.user().withName("test" + i, "foo").withUsername("whatever" + i).saved }
 
         (1 to 10).foreach { i =>
           val lib = Library(name = s"Library ${i}", ownerId = Id[User](i), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = i)
@@ -173,8 +172,8 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
         val userCommander = inject[UserCommander]
         val experimentCommander = inject[LocalUserExperimentCommander]
-        experimentCommander.addExperimentForUser(Id[User](6), ExperimentType.FAKE)
-        experimentCommander.getExperimentsByUser(Id[User](6)).contains(ExperimentType.FAKE) === true
+        experimentCommander.addExperimentForUser(Id[User](6), UserExperimentType.FAKE)
+        experimentCommander.getExperimentsByUser(Id[User](6)).contains(UserExperimentType.FAKE) === true
 
         val commander = new RelatedLibraryCommanderImpl(db, inject[LibraryRepo], inject[LibraryMembershipRepo], inject[LibraryCommander], fakeCortex, userCommander, inject[LibraryQualityHelper], inject[RelatedLibrariesCache], inject[TopFollowedLibrariesCache], null)
         val resF = commander.suggestedLibrariesInfo(Id[Library](1), Some(Id[User](1)))

@@ -1,9 +1,8 @@
 package com.keepit.rover.model
 
-import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.{ YoutubeArticle, DefaultArticle, EmbedlyArticle }
+import com.keepit.rover.article._
 import com.keepit.rover.test.RoverTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.time._
@@ -12,7 +11,7 @@ import scala.concurrent.duration._
 
 class ArticleInfoTest extends Specification with NoTimeConversions with RoverTestInjector {
 
-  val firstUri: Id[NormalizedURI] = Id(1)
+  val firstUri: Id[NormalizedURI] = Id(25)
   val firstUrl = "http://www.mcsweeneys.net/articles/son-its-time-we-talk-about-where-start-ups-come-from"
 
   "ArticleInfoRepo" should {
@@ -20,7 +19,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
     "intern article infos" in {
       withDb() { implicit injector =>
         db.readWrite { implicit session =>
-          articleInfoRepo.internByUri(firstUri, firstUrl, Set(EmbedlyArticle, DefaultArticle))
+          articleInfoHelper.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -32,7 +31,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
         }
 
         db.readWrite { implicit session =>
-          articleInfoRepo.internByUri(firstUri, firstUrl, Set(YoutubeArticle, DefaultArticle))
+          articleInfoHelper.intern(firstUrl, firstUri, Set(YoutubeArticle, DefaultArticle))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -49,7 +48,7 @@ class ArticleInfoTest extends Specification with NoTimeConversions with RoverTes
       withDb() { implicit injector =>
         val (embedlyArticle, defaultArticle) = db.readWrite { implicit session =>
           val now = clock.now()
-          val articlesByKind = articleInfoRepo.internByUri(firstUri, firstUrl, Set(EmbedlyArticle, DefaultArticle))
+          val articlesByKind = articleInfoHelper.intern(firstUrl, firstUri, Set(EmbedlyArticle, DefaultArticle))
           val embedlyArticle = articleInfoRepo.save(articlesByKind(EmbedlyArticle).copy(imageProcessingRequestedAt = Some(now.minusHours(2))))
           val defaultArticle = articleInfoRepo.save(articlesByKind(DefaultArticle).copy(imageProcessingRequestedAt = Some(now.minusHours(4)), lastImageProcessingAt = Some(now.minusHours(2))))
           (embedlyArticle, defaultArticle)

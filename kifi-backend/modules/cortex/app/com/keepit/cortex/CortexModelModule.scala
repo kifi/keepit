@@ -6,7 +6,7 @@ import com.keepit.cortex.article.CortexArticleProvider
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
 import com.keepit.cortex.nlp.Stopwords
-import com.keepit.search.ArticleStore
+import com.keepit.cortex.tagcloud.{ TagCloudPluginImpl, TagCloudPlugin }
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.common.logging.Logging
@@ -15,7 +15,6 @@ trait CortexModelModule extends ScalaModule
 
 case class CortexProdModelModule() extends CortexModelModule with Logging {
   def configure() {
-    bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
@@ -23,6 +22,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
     bind[LDAInfoUpdatePlugin].to[LDAInfoUpdatePluginImpl].in[AppScoped]
     bind[LDALibraryUpdaterPlugin].to[LDALibraryUpdaterPluginImpl].in[AppScoped]
     bind[LDARelatedLibraryPlugin].to[LDARelatedLibraryPluginImpl].in[AppScoped]
+    bind[TagCloudPlugin].to[TagCloudPluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -49,19 +49,10 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
     MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
-  @Singleton
-  @Provides
-  def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
-    log.info("loading word2vec from model store")
-    val version = ModelVersions.word2vecVersion
-    val word2vec = store.syncGet(version).get
-    Word2VecWordRepresenter(version, word2vec)
-  }
 }
 
 case class CortexDevModelModule() extends CortexModelModule() {
   def configure() {
-    bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
@@ -93,14 +84,6 @@ case class CortexDevModelModule() extends CortexModelModule() {
   def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleProvider: CortexArticleProvider): MultiVersionedLDAURIRepresenter = {
     val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleProvider) }
     MultiVersionedLDAURIRepresenter(uriReps: _*)
-  }
-
-  @Singleton
-  @Provides
-  def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
-    val version = ModelVersions.word2vecVersion
-    val word2vec = store.syncGet(version).get
-    Word2VecWordRepresenter(version, word2vec)
   }
 
 }

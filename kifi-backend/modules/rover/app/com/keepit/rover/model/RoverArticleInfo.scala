@@ -18,7 +18,7 @@ case class RoverArticleInfo(
     updatedAt: DateTime = currentDateTime,
     state: State[RoverArticleInfo] = ArticleInfoStates.ACTIVE,
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
-    uriId: Id[NormalizedURI],
+    uriId: Id[NormalizedURI], // todo(Léo): make optional
     url: String,
     urlHash: UrlHash,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
@@ -122,6 +122,8 @@ object RoverArticleInfo {
       info.state == ArticleInfoStates.INACTIVE,
       info.seq,
       info.uriId,
+      info.url,
+      info.urlHash,
       info.kind,
       info.bestVersion,
       info.latestVersion

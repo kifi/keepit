@@ -25,46 +25,101 @@ colorBarHeight = .4em
     &.kf-system-secret
       height: 16em
 
-invite-banner-orange = #ff7c3c
+
+inviteSidePad = 20px
+inviteMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1) - 1 // = 559px
 
 .kf-lh-invite-banner
   position: absolute
-  z-index: 1
   left: 50%
-  top: 0
-  transform: translate(-50%)
-  border-radius: 0 0 8px 8px
-  padding: .6em 1.25em .9em
-  background-color: invite-banner-orange
-  text-align: center
+  transform: translateX(-50%)
+  max-width: 776px
+  width: 100%
+  height: 60px
+  margin-top: -14px
+  padding-left: 25px
+  box-sizing: border-box
+  border-radius: 10px
+  z-index: 2
   font-size: .8em
+  text-align: initial
+  overflow: hidden
+  opacity: 1.0
 
   &.ng-leave
     transition: transform .25s, opacity .25s
 
   &.ng-leave-active
-    transform: translate(-50%, -100%)
+    transform: translate(-50%, -125%)
     opacity: 0
 
+  @media (max-width: 796px)
+    max-width: 2 * (1 + inviteSidePad) + inviteMaxWidth
+    font-size: 0.76em
+
+  @media (max-width: maxWindowWidthForNarrowKeeps)
+    max-width: inviteMaxWidth
+    font-size: 0.8em
+
+  @media (max-width: 536px)
+    width: calc(100% - 24px)
+
+  @media (max-width: 479px)
+    font-size: 0.87em
+
+.kf-lh-invite-pic
+  position: relative
+  top: -1px
+  display: inline-block
+  width: 36px
+  height: 36px
+  border-radius: 50%
+
+  @media (max-width: 479px)
+    display: none
+
 .kf-lh-invite-banner-text
-  margin-bottom: .6em
+  display: inline-block
+  margin-left: 15px
+  line-height: 60px
   color: #fff
 
+  @media (max-width: 479px)
+    margin-left: 0px
+
+  @media (max-width: 795px)
+    position: relative
+    top: 12px
+    line-height: 18px
+
+  & span
+    @media (max-width: 795px)
+      display: block
+
+
 .kf-lh-invite-banner-button
+  position: relative
+  top: 50%
+  transform: translateY(-50%)
+  float: right
   margin-left: .8em
   border: 1px solid #fff
   border-radius: 4px
-  padding: .44em 1.2em
-  font-size: .85em
+  padding: .44em 1.3em
+
+  @media (max-width: 479px)
+    padding: .44em 1.1em
 
   &.kf-accept
     background: alpha(#fff, .9)
-    color: invite-banner-orange
 
     &:hover:not(:active)
       background-color: #fff
 
   &.kf-ignore
+  &.kf-continue
+    margin-right: 2em
     background: transparent
     color: #fff
 
@@ -93,6 +148,7 @@ invite-banner-orange = #ff7c3c
 followerPicDiam = 2.2em
 
 .kf-lh-followers-a
+  position: relative
   display: inline-block
   width: followerPicDiam + .4em
   text-align: center
@@ -105,6 +161,7 @@ followerPicDiam = 2.2em
 
   &:active:hover
     box-shadow: none
+
 
 .kf-lh-followers-pic
   height: followerPicDiam
@@ -125,6 +182,38 @@ followerPicDiam = 2.2em
 
   @media (min-width: 480px)
     display: block
+
+.kf-lh-view-members
+  position: relative
+  padding: 3px 15px
+  border-radius: 20px
+  font-size: 12px
+  color: white
+  line-height: 28px
+  background: rgba(255,255,255,0.0)
+  outline: none
+  border: 1px solid white
+
+  &:hover
+    background: rgba(255,255,255,0.1)
+
+    .kf-lh-more-members-text
+      text-decoration: underline
+
+  @media (max-width: 719px)
+    line-height: 24px
+    padding: 3px 12px
+    font-size: 11px
+
+  @media (max-width: 559px)
+    line-height: 22px
+    padding: 2px 10px
+    font-size: 10px
+
+  @media (max-width: 479px)
+    line-height: 20px
+    padding: 1px 10px
+    font-size: 10px
 
 .kf-lh-followers-more
   display: inline-block
@@ -154,6 +243,9 @@ followerPicDiam = 2.2em
   text-shadow: 0 1px 1px rgba(0,0,0,.6)
   vertical-align: top
 
+  &.kf-0
+    padding: 0 .7em
+
   &.kf-3
     font-size: .7em
 
@@ -163,10 +255,6 @@ followerPicDiam = 2.2em
   &.kf-5
   &.kf-6
     font-size: .6em
-
-  &::before
-    content: '+'
-    vertical-align: top
 
 .kf-lh-manage-btn
   vertical-align: top
@@ -190,6 +278,7 @@ followerPicDiam = 2.2em
   vertical-align: top
   margin-left: .8em
   position: relative
+  width: 33%
 
   menuGap = 2px
 
@@ -243,7 +332,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-subscribe-btn-wrap
   display: inline-block
-  vertical-align: bottom
+  vertical-align: top
   position: relative // for .kf-lh-subscribed-msg
   opacity: .7
 
@@ -533,7 +622,7 @@ coverDragShadeHeight = 3em
 .kf-lh-collab-image-wrap
   position: relative
   display: inline-block
-  margin: 0 5px
+  margin: 0 4px
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
@@ -643,12 +732,20 @@ collabImageDiam2 = 3.6em
   height: 3.4em
   padding: 0px
   margin-left: 5px
-  background: none
   border-radius: 50%
   border: 1px solid white
   color: white
   outline: none
   vertical-align: top
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    background: none !important
+
+  @media (max-width: 479px)
+    width: 4.4em
+    height: 4.4em
+    margin-bottom: .4em
 
 .kf-lh-add-collab-msg
   position: absolute
@@ -672,31 +769,38 @@ collabImageDiam2 = 3.6em
   padding: 0px
   margin-left: 5px
   border: 1px dashed white
-  background: rgba(255, 255, 255, 0.2)
   outline: none
   border-radius: 50%
   vertical-align: top
   transition: opacity linear 0.1s
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
 
-  &:hover
-    background: rgba(255, 255, 255, 0.3)
-
-    & .kf-lh-add-collab-msg
-      opacity: 1
-      visibility: visible
+  &:hover .kf-lh-add-collab-msg
+    opacity: 1
+    visibility: visible
 
   &.next-to-owner
     position: absolute
     top: 0px
     left: calc(50% + 35px)
     transform: translateX(-10px) scale(0.7)
-    opacity: 0.6
+    opacity: 1.0
 
     &:hover
       opacity: 1.0
 
+  @media (min-width: 480px)
+    background: none !important
+
+  @media (max-width: 479px)
+    width: 4.4em
+    height: 4.4em
+    opacity: 1
+    margin-bottom: .4em
+    display: none // todo: remove when we support mobile modals!
+
 .kf-lh-add-collab-icon
-  width: 1.7em
+  width: 1.73em
   height: 1em
   margin: 0 auto
   background-repeat: no-repeat
@@ -866,16 +970,20 @@ collabImageDiam2 = 3.6em
   padding-top: 1.8em
   text-align: center
 
-bottomBtnsRadius = 12px
-followBtnWidth = 10em
-subsBtnPct = 25%
+buttonHeight = 32px
+buttonFontSize = 13px
+buttonBorderRadius = 12px
+buttonSidePad = 15px
+followBtnWidth = 7.6em
 
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
+  height: buttonHeight
+  border-radius: buttonBorderRadius
   background-color: transparent
-  background-image: none
-  border-radius: bottomBtnsRadius
+  padding: 0 buttonSidePad
+  font-size: buttonFontSize
 
   &:hover
     background-color: alpha(#fff, .5)
@@ -890,59 +998,73 @@ subsBtnPct = 25%
   position: relative // for .kf-lh-fbc
 
 .kf-lh-follow-btn
-  box-sizing: border-box
   width: followBtnWidth
-  border-color: followBlue
+  border: 1px solid followBlue
   color: followBlue
   position: relative  // to stack in front of its hover callout
+
+subsWidth = 32px
+subsDur = .4s
 
 .kf-lh-unfollow-btn-wrap
   display: inline-block
   vertical-align: top
-  width: followBtnWidth
+  border-radius: buttonBorderRadius
   font-size: 13px  // same size as .kf-lh-follow-btn (a .kf-button)
-  position: relative // for .kf-lh-subs-msg
+  position: relative // for .kf-lh-subs and .kf-lh-subs-msg
+  transform: translate(0) // crbug.com/157218
+
+  &:not(.kf-overflowing)
+    overflow: hidden
 
 .kf-lh-unfollow-btn
-  border-radius: bottomBtnsRadius 0 0 bottomBtnsRadius
-  border-color: #20a1f1
+  width: followBtnWidth
+  border: 1px solid followBlue
+  background-color: transparent
+  background-image: none
   color: #20a1f1
-  box-sizing: border-box
-  width: 100% - subsBtnPct
 
-  &::after
+  &::before
     content: 'Following'
-    padding-left: .3em
+    transition: transform subsDur
 
-  &:not(.kf-no-unfollow):hover
+  :not(.kf-no-unfollow):hover>&
     border-color: redColor
 
-    &::after
+    &::before
       content: 'Unfollow'
+      display: inline-block
+      transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
       color: redColor
 
 .kf-lh-subs-btn
-  box-sizing: border-box
-  width: subsBtnPct
-  border-radius: 0 bottomBtnsRadius bottomBtnsRadius 0
-  border-color: transparent
+  position: absolute
+  top: 0
+  right: 0
+  bottom: 0
+  width: subsWidth
+  border: 0
+  border-radius: 0 buttonBorderRadius buttonBorderRadius 0
   background-color: followBlue
   background-position: right 0.64em center
   background-size: 1.1em 1.01em
   background-repeat: no-repeat
   padding: 0
+  transition: transform subsDur
+  transform: translate(subsWidth)
+
+  :not(.kf-no-unfollow):hover>&
+    transform: none
+    background-color: redColor
+
+    &:hover
+      background-color: tint(redColor, 5%)
+
+      &:active
+        background-color: shade(redColor, 2%)
 
   &.svg-notification-off-white
     background-position: right 0.62em center
-
-  &:hover
-    background-color: tint(followBlue, 5%)
-
-    &:active
-      background-color: shade(followBlue, 2%)
-
-  :not(.kf-no-unfollow):hover+&
-    background-color: redColor
 
 .kf-lh-subs-msg
   position: absolute
@@ -963,6 +1085,15 @@ subsBtnPct = 25%
     visibility: hidden
 
 .kf-lh-buttons
+  max-width: 538px // matching max-width of .kf-keep
+  margin: 0 auto
+  border: solid transparent
+  border-width: 0 appSidePad1
+  text-align: right
+
+  @media (min-width: 796px)
+    padding-right: 234px  // rightColWidth + colGapWidth
+
   .kf-library-share-search
     vertical-align: top
     text-align: left
@@ -977,13 +1108,14 @@ subsBtnPct = 25%
       width: 15px
       margin-right: 2px
 
-.kf-lh-edit-keeps
+.kf-lh-edit-keeps,
+.kf-lh-view-option
   float: left
   border-color: transparent
   border-left: 0
   border-right: 0
-  padding-left: 29px
-  padding-right: 0
+  padding-left: 25px
+  padding-right: 15px
   background-position: left center
   background-size: auto 15px
   background-repeat: no-repeat
@@ -997,17 +1129,34 @@ subsBtnPct = 25%
   &:hover
     text-decoration: underline
 
-.kf-lh-buttons.kf-my-lib
-  max-width: 538px // matching max-width of .kf-keep
-  margin: 0 auto
-  border: solid transparent
-  border-width: 0 appSidePad1
-  text-align: right
+.kf-lh-edit-keeps
+  background-size: 25px 25px
+  margin-left: 20px
 
-  @media (min-width: 796px)
-    padding-right: 234px  // rightColWidth + colGapWidth
+.kf-lh-view-option
+  padding-left: 0
 
-  .library-share-button
-    &>.kf-button-icon
-      width: 26px
-      margin-right: 4px
+  figure
+    background-size: cover
+    width: 20px
+    height: 20px
+
+.kf-lh-invite-search-button
+  height: buttonHeight
+  padding: 0 buttonSidePad
+  margin-left: 1em
+  outline: none
+  background: none
+  border: 1px solid #56b263
+  border-radius: buttonBorderRadius
+  color: #56b263
+  font-size: 13px
+  vertical-align: top
+
+  & .svg-share-arrow-green
+    display: inline-block
+    vertical-align: top
+    width: 15px
+    height: 16px
+    background-size: cover
+    margin-right: 5px

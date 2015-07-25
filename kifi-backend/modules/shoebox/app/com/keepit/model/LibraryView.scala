@@ -13,6 +13,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 sealed abstract class LibraryError(val message: String)
 
@@ -33,6 +34,35 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String)
 
 @json
+case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
+
+case class ExternalLibraryAddRequest(
+  name: String,
+  visibility: LibraryVisibility,
+  slug: String,
+  kind: Option[LibraryKind] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  space: Option[ExternalLibrarySpace] = None)
+
+object ExternalLibraryAddRequest {
+  implicit val reads: Reads[ExternalLibraryAddRequest] = (
+    (__ \ 'name).read[String] and
+    (__ \ 'visibility).read[LibraryVisibility] and
+    (__ \ 'slug).read[String] and
+    (__ \ 'kind).readNullable[LibraryKind] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
+  )(ExternalLibraryAddRequest.apply _)
+}
+
 case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
@@ -41,9 +71,35 @@ case class LibraryAddRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  space: Option[LibrarySpace] = None)
 
-@json
+case class ExternalLibraryModifyRequest(
+  name: Option[String] = None,
+  slug: Option[String] = None,
+  visibility: Option[LibraryVisibility] = None,
+  description: Option[String] = None,
+  color: Option[LibraryColor] = None,
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  externalSpace: Option[ExternalLibrarySpace] = None)
+
+object ExternalLibraryModifyRequest {
+  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace]
+  )(ExternalLibraryModifyRequest.apply _)
+}
+
 case class LibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,
@@ -51,7 +107,9 @@ case class LibraryModifyRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+  space: Option[LibrarySpace] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -85,13 +143,13 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, org: Option[Organization], inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryPath(owner.username, lib.slug),
+      url = LibraryPathHelper.formatLibraryPath(owner, org, lib.slug),
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
@@ -104,13 +162,14 @@ object LibraryInfo {
   }
 }
 
-private[model] abstract class BaseLibraryCardInfo(
+case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
   color: Option[LibraryColor], // system libraries have no color
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
+  visibility: LibraryVisibility,
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -118,69 +177,44 @@ private[model] abstract class BaseLibraryCardInfo(
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead! (is viewer following this library? Set to None if viewing anonymously or viewing own profile)
+  following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
+  caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
-  kind: LibraryKind)
-
-@json
-case class OwnLibraryCardInfo( // when viewing own created libraries
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  slug: LibrarySlug,
   kind: LibraryKind,
-  visibility: LibraryVisibility,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  followers: Seq[BasicUser],
-  numCollaborators: Int,
-  collaborators: Seq[BasicUser],
-  lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead!
-  membership: Option[LibraryMembershipInfo],
-  listed: Boolean, // @deprecated use membership object instead! (should this library show up on owner's profile?)
-  modifiedAt: DateTime)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
-
-@json
-case class LibraryCardInfo(
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  slug: LibrarySlug,
-  visibility: LibraryVisibility,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  followers: Seq[BasicUser],
-  numCollaborators: Int,
-  collaborators: Seq[BasicUser],
-  lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead!
-  membership: Option[LibraryMembershipInfo],
-  caption: Option[String],
-  modifiedAt: DateTime,
-  kind: LibraryKind)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
+  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
+  path: String)
 
 object LibraryCardInfo {
-  val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
-    JsObject((Json.toJson(o).as[JsObject].value - "owner").toSeq)
+  implicit val format: Format[LibraryCardInfo] = (
+    (__ \ 'id).format[PublicId[Library]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'owner).format[BasicUser] and
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numFollowers).format[Int] and
+    (__ \ 'followers).format[Seq[BasicUser]] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'collaborators).format[Seq[BasicUser]] and
+    (__ \ 'lastKept).format[DateTime] and
+    (__ \ 'following).formatNullable[Boolean] and
+    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
+    (__ \ 'caption).formatNullable[String] and
+    (__ \ 'modifiedAt).format[DateTime] and
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'invite).formatNullable[LibraryInviteInfo] and
+    (__ \ 'path).format[String]
+  )(LibraryCardInfo.apply, unlift(LibraryCardInfo.unapply))
+  def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
+    collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
   }
 
-  def makeMembersShowable(members: Seq[BasicUser], filterBadPics: Boolean): Seq[BasicUser] = {
-    if (filterBadPics) {
-      members.filter(_.pictureName != "0.jpg").take(3)
-    } else {
-      val (membersWithPics, membersNoPics) = members.partition(_.pictureName != "0.jpg")
-      membersWithPics ++ membersNoPics
-    }
+  def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {
+    followers.filter(_.pictureName != "0.jpg").take(4) // 3 shown, 1 extra in case viewer is one and leaves
   }
 }
 
@@ -229,7 +263,8 @@ case class FullLibraryInfo(
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
-  modifiedAt: DateTime)
+  modifiedAt: DateTime,
+  path: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

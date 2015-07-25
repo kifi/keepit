@@ -221,7 +221,7 @@ h1.login-h1
 
 #center_container.small {
   width: 400px;
-  height: 280px;
+  height: 330px;
   top: 80px;
 }
 
@@ -1326,5 +1326,9 @@ a, .avatars li, img, .tabs_nav li {
   .page.reset-password {
     margin-top: 30px;
   }
+}
+
+.signup-form .inline.company-name {
+  width: 100%;
 }
 

@@ -11,7 +11,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ PersonaName, UserPersona, Persona }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactoryHelper._
@@ -26,7 +25,6 @@ class MobileUserPersonaControllerTest extends Specification with ShoeboxTestInje
   implicit val context = HeimdalContext.empty
   def controllerTestModules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),

@@ -24,6 +24,24 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
     }
   }
 
+  "OrganizationMemberRecommendationRepo" should {
+    "track irrelevant recommendations" in {
+      withDb() { implicit injector =>
+        val memberRecoRepo = inject[OrganizationMemberRecommendationRepo]
+        db.readWrite { implicit session =>
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Left(Id(420)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42), Right(Id(420)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(134), Id(420), Left(Id(430)))
+          memberRecoRepo.recordIrrelevantRecommendation(Id(42), Id(420), Right(Id(430)))
+        }
+        db.readOnlyMaster { implicit session =>
+          memberRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Left(Id(420)), Right(Id(420)), Left(Id(430)))
+          memberRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Right(Id(430)))
+        }
+      }
+    }
+  }
+
   "FacebookInviteRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
@@ -59,10 +77,10 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
       }
     }
   }
-  "EmailInviteRecommendationRepo" should {
+  "UserEmailInviteRecommendationRepo" should {
     "track irrelevant recommendations" in {
       withDb() { implicit injector =>
-        val emailInviteRecoRepo = inject[EmailInviteRecommendationRepo]
+        val emailInviteRecoRepo = inject[UserEmailInviteRecommendationRepo]
         db.readWrite { implicit session =>
           emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
           emailInviteRecoRepo.recordIrrelevantRecommendation(Id(134), Id(42))
@@ -90,6 +108,28 @@ class ABookRecommendationTest extends Specification with ABookTestInjector {
         db.readOnlyMaster { implicit session =>
           twitterInviteRecoRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
           twitterInviteRecoRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
+        }
+      }
+    }
+  }
+
+  "OrganizationRecommendationForUserRepo" should {
+    "track irrelevant recommendations" in {
+      withDb() { implicit injector =>
+        val organizationRecoForUserRepo = inject[OrganizationRecommendationForUserRepo]
+        db.readWrite { implicit session =>
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(42))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(134), Id(420))
+          organizationRecoForUserRepo.recordIrrelevantRecommendation(Id(42), Id(420))
+        }
+        db.readOnlyMaster { implicit session =>
+          println(organizationRecoForUserRepo.getIrrelevantRecommendations(Id(134)))
+          println(organizationRecoForUserRepo.getIrrelevantRecommendations(Id(42)))
+        }
+        db.readOnlyMaster { implicit session =>
+          organizationRecoForUserRepo.getIrrelevantRecommendations(Id(134)) === Set(Id(42), Id(420))
+          organizationRecoForUserRepo.getIrrelevantRecommendations(Id(42)) === Set(Id(420))
         }
       }
     }

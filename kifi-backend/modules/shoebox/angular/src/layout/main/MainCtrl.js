@@ -139,7 +139,7 @@ angular.module('kifi')
           deferred.notify({'name': 'progress', 'event': e});
         });
         xhr.addEventListener('load', function () {
-          deferred.resolve(JSON.parse(xhr.responseText));
+          deferred.resolve($window.JSON.parse(xhr.responseText));
         });
         xhr.addEventListener('error', function (e) {
           deferred.reject(e);

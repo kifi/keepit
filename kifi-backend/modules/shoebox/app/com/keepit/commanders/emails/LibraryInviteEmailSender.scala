@@ -23,6 +23,7 @@ class LibraryInviteEmailSender @Inject() (
     keepRepo: KeepRepo,
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     libraryImageCommander: LibraryImageCommander,
     localUserExperimentCommander: LocalUserExperimentCommander,
     implicit val executionContext: ExecutionContext,
@@ -37,15 +38,16 @@ class LibraryInviteEmailSender @Inject() (
     toRecipientOpt map { toRecipient =>
       val (library, libraryInfo) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
+        val org = library.organizationId.map { id => orgRepo.get(id) }
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, Some(inviter))
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
         (library, libraryInfo)
 
       }
 
-      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.PLAIN_EMAIL) }.getOrElse(false)
+      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, UserExperimentType.PLAIN_EMAIL) }.getOrElse(false)
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
@@ -54,7 +56,7 @@ class LibraryInviteEmailSender @Inject() (
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to my library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
+        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to a Kifi library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {

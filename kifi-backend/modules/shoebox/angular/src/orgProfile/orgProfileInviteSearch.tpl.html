@@ -1,0 +1,81 @@
+<div class="organization-invite-search dialog-content">
+  <a class="dialog-x organization-invites-close-x" ng-click="close()"></a>
+
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header">Who would you like to invite?</h1>
+    <div class="dialog-body">
+      <!-- Search -->
+      <div class="opis-search-box">
+        <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="opis-spinner">
+        <input type="text" ng-model="search.name" class="opis-input opis-search-input" placeholder="Search for people or email" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
+        <span class="opis-search-icon svg-search-icon-gray"></span>
+      </div>
+
+      <!-- Contact List -->
+      <ul class="opis-contact-list" kf-wheel-allow>
+        <li class="opis-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'opis-invite-selected': result.selected, 'opis-invite-actionable': result.actionable}">
+
+          <!-- Kifi friend -->
+          <div ng-if="::result.id" class="opis-contact-container opis-invite-user">
+            <a href="{{result|profileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
+              <img ng-src="{{result|pic:100}}" class="opis-contact-image">
+            </a>
+            <div class="opis-contact-summary">
+              <div class="opis-contact-name" ng-bind-html="result.name"></div>
+              <div class="opis-contact-network">Kifi user</div>
+            </div>
+            <button ng-show="!result.sent && !((isMemberInvite() && result.isFollowing) || result.isCollaborating)" ng-click="inviteOrPromote(result)" class="opis-contact-button">
+              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
+              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
+              Invite
+            </button>
+            <div ng-show="result.isFollowing && isMemberInvite()" class="opis-invite-following">Following</div>
+            <div ng-show="result.isCollaborating" class="opis-invite-collaborating">Collaborating</div>
+            <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Existing email contact -->
+          <div ng-if="::!result.id && !result.custom" class="opis-contact-container opis-contact-email">
+            <div class="opis-contact-email-icon"></div>
+            <div class="opis-contact-summary">
+              <div class="opis-contact-name" ng-bind-html="result.name || result.emailFormatted"></div>
+              <div class="opis-contact-network" ng-bind-html="result.name ? result.emailFormatted : 'An email contact'"></div>
+            </div>
+            <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="opis-contact-button">
+              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
+              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
+              Invite
+            </button>
+            <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Send to any email -->
+          <div ng-if="::result.custom === 'email'" class="opis-contact-container opis-contact-new-email">
+            <div class="opis-contact-new-email-icon"></div>
+            <div class="opis-contact-summary">
+              <div class="opis-contact-name">{{query || 'Send to any email'}}</div>
+              <div class="opis-contact-network">{{queryIsValidEmail ? 'An email address' : query ? 'Keep typing the email address' : 'Type the email address'}}</div>
+            </div>
+            <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="opis-contact-button">
+              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
+              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
+              Invite
+            </button>
+            <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Import from Gmail -->
+          <div ng-if="result.custom === 'importGmail'" ng-click="importGmail()" class="opis-contact-container opis-import-gmail">
+            <div class="opis-contact-gmail-icon"></div>
+            <div class="opis-contact-summary">
+              <div class="opis-contact-import-gmail">Import Gmail contacts</div>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <textarea rows="1" class="opis-input opis-message-input" ng-model="share.message" placeholder="Write a message (optional)"></textarea>
+
+    </div>
+  </div>
+</div>

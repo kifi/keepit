@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.routes.Rover
+import com.keepit.common.routes.{ Scraper, Rover }
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model.{ NormalizedURI }
@@ -24,15 +24,28 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
-  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit]
+  def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean = false): Future[Unit]
+
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
   def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]]
   def getArticleSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverArticleSummary]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
-  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] // slow
-  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] // slow
+
+  // slow, prefer get methods
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]]
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]]
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]]
+
+  def getPornDetectorModel(): Future[Map[String, Float]]
+  def detectPorn(query: String): Future[Map[String, Float]]
+  def whitelist(words: String): Future[String]
+
+  def getAllProxies(): Future[Seq[HttpProxy]]
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy]
+
+  def getAllUrlRules(): Future[Seq[UrlRule]]
+  def saveUrlRule(proxy: UrlRule): Future[UrlRule]
 }
 
 class RoverServiceClientImpl(
@@ -48,10 +61,11 @@ class RoverServiceClientImpl(
     call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
+  def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean): Future[Unit] = {
     val payload = Json.obj(
       "uriId" -> uriId,
-      "url" -> url
+      "url" -> url,
+      "refresh" -> refresh
     )
     new SafeFuture(call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }, Some(s"FetchAsap: $uriId -> $url"))
   }
@@ -71,7 +85,7 @@ class RoverServiceClientImpl(
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       val payload = Json.toJson(uriIds)
-      call(Rover.internal.getArticleInfosByUris, payload).map { r =>
+      call(Rover.internal.getArticleInfosByUris, payload, callTimeouts = longTimeout).map { r =>
         implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[ArticleInfo]]
         (r.json).as[Seq[(Id[NormalizedURI], Set[ArticleInfo])]].toMap
       }
@@ -115,7 +129,7 @@ class RoverServiceClientImpl(
           "uriIds" -> missingUriIds,
           "kind" -> kind
         )
-        call(Rover.internal.getBestArticleSummaryByUris, payload).map { r =>
+        call(Rover.internal.getBestArticleSummaryByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], RoverArticleSummary]
           val missingSummariesByUriId = (r.json).as[Seq[(Id[NormalizedURI], RoverArticleSummary)]].toMap
           missingKeys.map { key => key -> missingSummariesByUriId.get(key.uriId) }.toMap
@@ -137,7 +151,7 @@ class RoverServiceClientImpl(
           "uriIds" -> missingUriIds,
           "kind" -> kind
         )
-        call(Rover.internal.getImagesByUris, payload).map { r =>
+        call(Rover.internal.getImagesByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], BasicImages]
           val missingImagesByUriId = (r.json).as[Seq[(Id[NormalizedURI], BasicImages)]].toMap
           missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, BasicImages.empty) }.toMap
@@ -189,6 +203,53 @@ class RoverServiceClientImpl(
       r.json.asOpt[Signature]
     }
   }
+
+  def getPornDetectorModel(): Future[Map[String, Float]] = {
+    call(Rover.internal.getPornDetectorModel(), callTimeouts = longTimeout).map { r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def detectPorn(query: String): Future[Map[String, Float]] = {
+    val payload = Json.obj("query" -> query)
+    call(Rover.internal.detectPorn(), payload).map { r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def whitelist(words: String): Future[String] = {
+    val payload = Json.obj("whitelist" -> words)
+    call(Rover.internal.whitelist(), payload).map { r =>
+      Json.fromJson[String](r.json).get
+    }
+  }
+
+  def getAllProxies(): Future[Seq[HttpProxy]] = {
+    call(Rover.internal.getAllProxies()).map { r =>
+      Json.fromJson[Seq[HttpProxy]](r.json).get
+    }
+  }
+
+  def saveProxy(proxy: HttpProxy): Future[HttpProxy] = {
+    val payload = Json.toJson(proxy)
+    call(Rover.internal.saveProxy(), payload).map { r =>
+      Json.fromJson[HttpProxy](r.json).get
+    }
+  }
+
+  def getAllUrlRules(): Future[Seq[UrlRule]] = {
+    call(Rover.internal.getAllUrlRules()).map { r =>
+      Json.fromJson[Seq[UrlRule]](r.json).get
+    }
+  }
+
+  def saveUrlRule(urlRule: UrlRule): Future[UrlRule] = {
+    val payload = Json.toJson(urlRule)
+    call(Rover.internal.saveUrlRule(), payload).map { r =>
+      Json.fromJson[UrlRule](r.json).get
+    }
+  }
+
 }
 
 case class RoverCacheProvider @Inject() (

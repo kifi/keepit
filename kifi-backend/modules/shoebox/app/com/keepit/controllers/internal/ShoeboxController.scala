@@ -21,7 +21,6 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
-import com.keepit.scraper._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
@@ -31,7 +30,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-import com.keepit.common.json.TupleFormat
+import com.keepit.common.json.{ EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -59,11 +58,12 @@ class ShoeboxController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
+  orgInviteRepo: OrganizationInviteRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
-  scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
@@ -71,6 +71,8 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
+  organizationInviteCommander: OrganizationInviteCommander,
+  organizationMembershipCommander: OrganizationMembershipCommander,
   userPersonaRepo: UserPersonaRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
   rover: RoverServiceClient)(implicit private val clock: Clock,
@@ -189,14 +191,11 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     if (URI.parse(url).isFailure) throw new Exception(s"when calling internNormalizedURI - can't parse url: $url")
-    val contentWanted = (o \ "contentWanted").asOpt[Boolean] orElse (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
+    val contentWanted = (o \ "contentWanted").asOpt[Boolean] getOrElse false
     val uri = db.readWrite { implicit s => //using cache
       normalizedURIInterner.internByUri(url, contentWanted, NormalizationCandidate.fromJson(o))
     }
-    if (contentWanted) SafeFuture {
-      db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
-      rover.fetchAsap(uri.id.get, uri.url)
-    }
+    if (contentWanted) { rover.fetchAsap(uri.id.get, uri.url) }
     Ok(Json.toJson(uri))
   }
 
@@ -229,22 +228,13 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicUsers() = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
-    val users = db.readOnlyMaster { implicit s => //using cache
-      basicUserRepo.loadAll(userIds.toSet).map { case (id, bu) => id.id.toString -> Json.toJson(bu) }.toMap
+    val userIds = request.body.as[Set[Id[User]]]
+    val basicUsers = db.readOnlyMaster { implicit s => //using cache
+      basicUserRepo.loadAll(userIds)
     }
-    Ok(Json.toJson(users))
-  }
-
-  def getBasicUsersNoCache() = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
-    val users = db.readOnlyMaster { implicit s => //using cache
-      userIds.map { userId =>
-        val user = userRepo.getNoCache(userId)
-        userId.id.toString -> Json.toJson(BasicUser.fromUser(user))
-      }.toMap
-    }
-    Ok(Json.toJson(users))
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], BasicUser]
+    val result = Json.toJson(basicUsers.toSeq)
+    Ok(result)
   }
 
   def getEmailAddressesForUsers() = Action(parse.tolerantJson) { request =>
@@ -271,14 +261,6 @@ class ShoeboxController @Inject() (
         Ok(Json.toJson(userEmailMap))
       }
     )
-  }
-
-  def getCollectionIdsByExternalIds(ids: String) = Action { request =>
-    val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
-    val collectionIds = db.readOnlyReplica(2) { implicit s => //no cache used
-      extCollIds.map { collectionRepo.getOpt(_).map(_.id.get.id) }.flatten
-    }
-    Ok(Json.toJson(collectionIds))
   }
 
   // on kifi
@@ -333,23 +315,12 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(result))
   }
 
-  def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
+  def getUsersByExperiment(experiment: UserExperimentType) = Action { request =>
     val users = db.readOnlyMaster { implicit s =>
       val userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)
     }
     Ok(Json.toJson(users))
-  }
-
-  def getCollectionsByUser(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
-  }
-
-  def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>
-    val uris = db.readOnlyReplica(2) { implicit s =>
-      keepToCollectionRepo.getUriIdsInCollection(collectionId)
-    }
-    Ok(Json.toJson(uris))
   }
 
   def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>
@@ -461,8 +432,8 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
-    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken)))
+    val authorized = libraryCommander.canViewLibrary(userIdOpt, libraryId, authToken)
+    Ok(JsBoolean(authorized))
   }
 
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = Action { request =>
@@ -479,18 +450,12 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
-  def getBasicLibraryStatistics() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Set[Id[Library]]]
-    val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
-    val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
-    Ok(result)
-  }
-
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Set[Id[Library]]]
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds)
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
+    val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
+
+    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
@@ -503,16 +468,6 @@ class ShoeboxController @Inject() (
     }
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], Int]
     val result = Json.toJson(keepCountsByUserId.toSeq)
-    Ok(result)
-  }
-
-  def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
-    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
-    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
-    val imagesByLibraryId = libraryImageCommander.getBestImageForLibraries(libraryIds, idealImageSize)
-    val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
-    val result = Json.toJson(imageUrlsByLibraryId.toSeq)
     Ok(result)
   }
 
@@ -532,5 +487,20 @@ class ShoeboxController @Inject() (
   def getUserActivePersonas(userId: Id[User]) = Action { request =>
     val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
     Ok(Json.toJson(model))
+  }
+
+  def getOrganizationMembers(orgId: Id[Organization]) = Action { request =>
+    val memberIds = organizationMembershipCommander.getMemberIds(orgId)
+    Ok(Json.toJson(memberIds))
+  }
+
+  def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = Action { request =>
+    val hasMembership = organizationMembershipCommander.getMembership(orgId, userId).isDefined
+    Ok(JsBoolean(hasMembership))
+  }
+
+  def getOrganizationInviteViews(orgId: Id[Organization]) = Action { request =>
+    val inviteViews: Set[OrganizationInviteView] = organizationInviteCommander.getInvitesByOrganizationId(orgId).map(OrganizationInvite.toOrganizationInviteView)
+    Ok(Json.toJson(inviteViews))
   }
 }
