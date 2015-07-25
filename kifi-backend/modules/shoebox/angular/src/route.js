@@ -182,8 +182,8 @@ angular.module('kifi')
               return userOrOrgData.result.organization.organizationInfo.id;
             }
 
-            function getLibraryIdBySlug(response) {
-              var libraries = response.data.libraries;
+            function getLibraryIdBySlug(libraryData) {
+              var libraries = libraryData.libraries;
               var slug = $stateParams.librarySlug;
 
               var library = libraries.filter(function (l) {
