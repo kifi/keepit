@@ -116,7 +116,7 @@ class ExtPreferenceController @Inject() (
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
         case Some(d) => d
-        case None => domainRepo.save(Domain.withHash(hostname = host))
+        case None => domainRepo.save(Domain.withHostname(hostname = host))
       }
       userToDomainRepo.get(request.user.id.get, domain.id.get, UserToDomainKinds.KEEPER_POSITION) match {
         case Some(p) if p.state != UserToDomainStates.ACTIVE || p.value.get != pos =>
@@ -137,7 +137,7 @@ class ExtPreferenceController @Inject() (
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.isActive => d
         case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
-        case None => domainRepo.save(Domain.withHash(hostname = host))
+        case None => domainRepo.save(Domain.withHostname(hostname = host))
       }
       userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
         case Some(utd) if (utd.isActive != suppress) =>

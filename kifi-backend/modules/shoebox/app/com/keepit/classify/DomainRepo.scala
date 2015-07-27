@@ -40,7 +40,7 @@ class DomainRepoImpl @Inject() (
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
     def isEmailProvider = column[Boolean]("is_email_provider", O.NotNull)
-    def hash = column[DomainHash]("hash", O.Nullable)
+    def hash = column[Option[DomainHash]]("hash", O.Nullable)
     def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, hash, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
 
@@ -74,16 +74,16 @@ class DomainRepoImpl @Inject() (
   }
 
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
-    val existingDomains = getAllByName(domainNames.toSeq, None).toSet
-    val existingLowerCasedHostnames = existingDomains.map(_.hostname.toLowerCase)
+    val lowerCasedHostnamesToIntern = domainNames.map(_.toLowerCase)
+    val existingDomains = getAllByName(lowerCasedHostnamesToIntern.toSeq, None).toSet
 
-    val allLowerCasedHostnames = domainNames.map(_.toLowerCase)
+    val existingHostnames = existingDomains.map(_.hostname)
 
-    val toBeInserted = (allLowerCasedHostnames -- existingLowerCasedHostnames).map(Domain.withHash)
+    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).map(Domain.withHostname)
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
-        case DomainStates.INACTIVE => domain.hostname -> save(Domain(id = domain.id, hostname = domain.hostname, hash = DomainHash(domain.hostname)))
+        case DomainStates.INACTIVE => domain.hostname -> save(Domain.withHostname(domain.hostname).copy(id = domain.id))
         case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap

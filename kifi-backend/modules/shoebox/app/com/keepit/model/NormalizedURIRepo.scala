@@ -121,7 +121,7 @@ class NormalizedURIRepoImpl @Inject() (
       case e: Throwable =>
         deleteCache(cleaned)
         throw e
-    } // @leo, is this the right way to implement the "first persisted wins" behavior? seems unsafe, albeit atomic
+    }
 
     saved
   }

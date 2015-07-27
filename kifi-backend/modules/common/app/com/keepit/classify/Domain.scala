@@ -21,10 +21,11 @@ case class Domain(
     autoSensitive: Option[Boolean] = None,
     manualSensitive: Option[Boolean] = None,
     isEmailProvider: Boolean = false,
-    hash: DomainHash,
+    hash: Option[DomainHash],
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
+  require(this.hostname.toLowerCase == this.hostname, "Domain.hostname must be lowercase")
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)
@@ -33,7 +34,6 @@ case class Domain(
   val sensitive: Option[Boolean] = manualSensitive orElse autoSensitive
   def isActive: Boolean = state == DomainStates.ACTIVE
   def toDomainInfo = DomainInfo(id, hostname, isEmailProvider)
-  def withHashedHostname: Domain = this.copy(hash = DomainHash(this.hostname))
 }
 
 object Domain {
@@ -43,18 +43,18 @@ object Domain {
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \ 'isEmailProvider).format[Boolean] and
-    (__ \ 'hash).format[DomainHash] and
+    (__ \ 'hash).format[Option[DomainHash]] and
     (__ \ 'state).format(State.format[Domain]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime]
   )(Domain.apply, unlift(Domain.unapply))
 
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
-  private val MaxLength = 128
+  private val MaxLength = 256
 
   def isValid(s: String): Boolean = DomainRegex.findFirstIn(s).isDefined && s.length <= MaxLength
 
-  def withHash(hostname: String) = Domain(hostname = hostname, hash = DomainHash.hashHostname(hostname))
+  def withHostname(hostname: String): Domain = Domain(hostname = hostname.toLowerCase, hash = Some(DomainHash.hashHostname(hostname.toLowerCase)))
 }
 
 case class DomainHash(hash: String) extends AnyVal {
@@ -64,7 +64,7 @@ case class DomainHash(hash: String) extends AnyVal {
 
 object DomainHash {
   def hashHostname(hostname: String): DomainHash = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(hostname.toLowerCase)
+    val binaryHash = MessageDigest.getInstance("MD5").digest(hostname)
     DomainHash(new String(new Base64().encode(binaryHash), UTF8))
   }
 
