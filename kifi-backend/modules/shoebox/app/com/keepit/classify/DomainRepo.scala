@@ -80,7 +80,7 @@ class DomainRepoImpl @Inject() (
 
     val existingHostnames = existingDomains.map(_.hostname)
 
-    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).map(Domain.fromHostname)
+    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).filter(Domain.isValid).map(Domain.fromHostname)
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
