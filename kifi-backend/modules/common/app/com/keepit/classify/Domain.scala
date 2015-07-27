@@ -25,7 +25,7 @@ case class Domain(
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
-  require(this.hostname.toLowerCase == this.hostname, "Domain.hostname must be lowercase")
+  //require(this.hostname.toLowerCase == this.hostname, "Domain.hostname must be lowercase")
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)
@@ -54,7 +54,10 @@ object Domain {
 
   def isValid(s: String): Boolean = DomainRegex.findFirstIn(s).isDefined && s.length <= MaxLength
 
-  def withHostname(hostname: String): Domain = Domain(hostname = hostname.toLowerCase, hash = Some(DomainHash.hashHostname(hostname.toLowerCase)))
+  def withHostname(hostname: String): Domain = {
+    val lowerCasedHostname = hostname.toLowerCase
+    Domain(hostname = lowerCasedHostname, hash = Some(DomainHash.hashHostname(lowerCasedHostname)))
+  }
 }
 
 case class DomainHash(hash: String) extends AnyVal {
