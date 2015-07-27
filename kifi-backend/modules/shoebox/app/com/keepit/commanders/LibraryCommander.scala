@@ -1113,11 +1113,14 @@ class LibraryCommanderImpl @Inject() (
       (lib, allInvites, existingActiveMembership)
     }
 
-    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET) {
+    val isSystemGeneratedLibrary = lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET
+    val userCanJoinLibraryWithoutInvite = canViewLibrary(Some(userId), lib, authToken) // uses a db session
+
+    if (isSystemGeneratedLibrary) {
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-    } else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty && existingActiveMembership.isEmpty) {
+    } else if (!userCanJoinLibraryWithoutInvite && inviteList.isEmpty && existingActiveMembership.isEmpty) {
       // private library & no library invites with matching authtoken
-      Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
+      Left(LibraryFail(FORBIDDEN, "cant_join_library_without_an_invite"))
     } else {
       val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.max.access
       val (updatedLib, updatedMem) = db.readWrite(attempts = 3) { implicit s =>

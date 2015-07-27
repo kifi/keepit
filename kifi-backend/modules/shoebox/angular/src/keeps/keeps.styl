@@ -105,14 +105,20 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
       padding-right: 20px
 
   &.compact
-    .kf-hide-compact
-      display: none
+    padding: 0 20px 10px
+
+    .kf-keep-header
+      border-bottom: 0
+      margin: 0px -20px
+      margin-bottom: 6px
+      height: 30px
+
+
+    .kf-keep-description
+      line-height: 18px
 
     .kf-keep-body
       box-shadow: none
-
-    .kf-keep-footer
-      display: none
 
     .kf-side-by-side > .kf-keep-image
       margin-top: 0
@@ -123,47 +129,34 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
       padding-left: 0
 
       .kf-keep-title
-        margin-top: 0
-
-    .kf-keep-meta
-      display: none
+        margin: 0 0 5px
+        font: bold 20px/22px Lato, sans-serif
 
     .kf-keep-image,
     .kf-keep-video
-      width: 100px
-      height: 100px
+      width: 75px
+      height: 75px
       padding: 0
       border-radius: 0
       float: right
       margin-left: 15px
 
     .kf-keep-keeper-pic
-      width: 25px
-      height: 25px
+      width: 18px
+      height: 18px
       display: inline-block
       vertical-align: middle
 
-    .kf-keep-top
-      display: none
+    .kf-keep-keeper-name
+      font-size: 14px
 
-    .kf-keep-top-l
-      .kf-keep-keeper-name
-        display: inline-block
-        margin-left: 5px
+    .kf-keep-time-at
+      padding-left: 5px
+      font-size: 11px
+      color: #999
 
-    .kf-keep-top-r
-      .kf-keep-time
-        display: inline-block
-        vertical-align: middle
-
-    .kf-knf
+    .kf-knf // may not be needed
       margin-top: 35px
-
-    .kf-keep-add-note
-      display: none
-
-    .kf-keep-note
-      display: none
 
     .kf-keep-note-compact
       display: table-cell
@@ -410,9 +403,6 @@ noteMargin = -6px 0 18px
 
     @media (max-width: maxWidthForNarrowKeep)
       margin: -4px 0 12px
-
-.kf-keep-note-compact
-  display: none
 
 .kf-keep-note-hashtag
   color: accentGreen

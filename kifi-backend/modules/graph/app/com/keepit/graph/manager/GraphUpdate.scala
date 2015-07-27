@@ -1,7 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
-import com.keepit.classify.{ DomainInfo, Domain }
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.common.service.IpAddress
@@ -32,6 +32,8 @@ object GraphUpdateKind {
     all.map { kind => kind.code -> kind }.toMap
   }
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
+
+  val toBeIngested = all -- Set(SparseLDAGraphUpdate, LDAOldVersionCleanupGraphUpdate)
 }
 
 case class UserGraphUpdate(userId: Id[User], state: State[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
@@ -109,7 +111,7 @@ case object LDAOldVersionCleanupGraphUpdate extends GraphUpdateKind[LDAOldVersio
   val code = "lda_old_version_cleanup_graph_update"
 }
 
-case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[Domain]], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
+case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
   type U = NormalizedUriGraphUpdate
   def kind = NormalizedUriGraphUpdate
   def seq = kind.seq(uriSeq.value)
@@ -117,7 +119,7 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[D
 
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
-  def apply(indexableUri: IndexableUri, domainId: Option[Id[Domain]]): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, domainId, indexableUri.state, indexableUri.seq)
+  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
 }
 
 case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], domainId: Option[Id[Domain]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
@@ -179,7 +181,7 @@ case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpd
   def apply(org: IngestableOrganization): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
 }
 
-case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
+case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
   type U = OrganizationMembershipGraphUpdate
   def kind = OrganizationMembershipGraphUpdate
   def seq = kind.seq(orgMemSeq.value)
@@ -187,7 +189,7 @@ case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id
 
 case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
   val code = "organization_membership_graph_update"
-  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.state, orgMem.seq)
 }
 
 case class OrganizationMembershipCandidateGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembershipCandidate], orgMemSeq: SequenceNumber[OrganizationMembershipCandidate]) extends GraphUpdate {

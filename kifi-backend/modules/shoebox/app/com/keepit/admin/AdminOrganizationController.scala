@@ -139,11 +139,11 @@ class AdminOrganizationController @Inject() (
       val createdCand = new AtomicInteger(0)
       val activatedCand = new AtomicInteger(0)
       val existedCand = new AtomicInteger(0)
-      Source.fromString(allLines).getLines() foreach { line =>
+      allLines.split("\\r?\\n") foreach { line =>
         try {
-          val args = line.split(",").map(_.trim).filter(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filter(_.isEmpty)
+          val args = line.split(",").map(_.trim).filterNot(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filterNot(_.isEmpty)
           if (args.size < 2) {
-            throw new Exception(s"less then two args args: $args")
+            throw new Exception(s"less then two args: ${args.mkString(",")}")
           }
           val userId = Id[User](args.head.toLong)
           val orgNames = args.drop(1)
@@ -177,12 +177,14 @@ class AdminOrganizationController @Inject() (
             }
           }
         } catch {
-          case e: Exception => throw new Exception(s"error on line: $line", e)
+          case e: Exception => throw new Exception(s"error on line: $line $e", e)
         }
       }
       Ok(s"for ${users.get} users: created ${createdOrgs.get} orgs, reviewed ${existedOrgs.get}, created ${createdCand.get} connections, activated ${activatedCand.get} connections and reviewed ${existedCand.get} connections")
     } catch {
-      case e: Exception => InternalServerError(e.toString)
+      case e: Exception =>
+        log.error(allLines, e)
+        InternalServerError(e.toString)
     }
   }
 

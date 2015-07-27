@@ -51,7 +51,6 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
         val socialUserInfo = inject[Database].readWrite { implicit s =>
           inject[SocialUserInfoRepo].save(unsaved)
         }
-        // println("SOCIALUSERINFO: " + socialUserInfo)
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Greg Methvin"
