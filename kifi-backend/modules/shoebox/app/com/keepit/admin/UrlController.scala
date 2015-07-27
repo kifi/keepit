@@ -481,7 +481,7 @@ class UrlController @Inject() (
     def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
       db.readWriteAsync { implicit session =>
         val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
-        val updatedDomains = domainBatch.map(domain => domain.copy(hash = Some(DomainHash.hashHostname(domain.hostname))))
+        val updatedDomains = domainBatch.map(domain => domain.copy(hostname = domain.hostname.toLowerCase, hash = Some(DomainHash.hashHostname(domain.hostname))))
         updatedDomains.foreach(domainRepo.save)
         log.info(s"[hashMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
         ()
