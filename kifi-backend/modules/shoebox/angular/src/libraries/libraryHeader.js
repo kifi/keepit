@@ -571,10 +571,10 @@ angular.module('kifi')
           libraryService.leaveLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
-        scope.manageUserLibrary = function () {
-          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageUserLibrary' });
+        scope.manageLibrary = function () {
+          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
           modalService.open({
-            template: 'libraries/manageUserLibraryModal.tpl.html',
+            template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
               pane: 'manage',
               library: scope.library,

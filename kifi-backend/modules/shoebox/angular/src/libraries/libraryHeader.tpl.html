@@ -8,7 +8,7 @@
     <div class="kf-lh-top">
       <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
 
-      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageUserLibrary()" ng-if="isOwner() && !library.isSystem"></button>
+      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isOwner() && !library.isSystem"></button>
 
       <div class="kf-lh-cover-menu-parent" kf-click-menu ng-if="isOwner() && !library.isSystem">
         <button class="kf-lh-cover-menu-btn svg-camera-filled" ng-mouseup="onCameraCoverImageMouseUp($event)"></button>
@@ -103,7 +103,7 @@
     <button class="kf-lh-desc-toggle" ng-click="descExpanded === false ? expandDescription() : descExpanded === true ? collapseDescription() : null">
       {{descExpanded === false ? 'Continue reading…' : descExpanded === true ? 'Show less' : ''}}
     </button>
-    <button class="kf-lh-desc-add" ng-click="manageUserLibrary()" ng-if="!library.description && isOwner() && !library.isSystem">Add a description</button>
+    <button class="kf-lh-desc-add" ng-click="manageLibrary()" ng-if="!library.description && isOwner() && !library.isSystem">Add a description</button>
   </div>
 
   <div class="kf-lh-buttons" ng-if="!isOwnerOrCollaborator()">
