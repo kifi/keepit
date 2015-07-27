@@ -11,7 +11,7 @@ trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
-  def getAllByNameUsingHash(domains: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain]
+  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
@@ -59,8 +59,9 @@ class DomainRepoImpl @Inject() (
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
     (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
-  def getAllByNameUsingHash(domains: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain] = {
-    val hashes = domains.map(DomainHash.hashHostname)
+  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain] = {
+    val lowerCasedDomainNames = domainNames.map(_.toLowerCase)
+    val hashes = lowerCasedDomainNames.map(DomainHash.hashHostname)
     (for (d <- rows if d.hash.inSet(hashes) && d.state =!= excludeState.orNull) yield d).list.toSet
   }
 
