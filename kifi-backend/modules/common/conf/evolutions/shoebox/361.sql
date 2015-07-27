@@ -4,7 +4,7 @@
 
 ALTER TABLE domain ADD hash VARCHAR(26) DEFAULT NULL;
 
-CREATE UNIQUE INDEX domain_hash_index ON DOMAIN (hash);
+CREATE UNIQUE INDEX domain_u_hash ON DOMAIN (hash);
 
 DROP INDEX domain_hostname_index;
 

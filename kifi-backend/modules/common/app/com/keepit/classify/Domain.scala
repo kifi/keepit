@@ -52,9 +52,9 @@ object Domain {
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
   private val MaxLength = 256
 
-  def isValid(s: String): Boolean = DomainRegex.findFirstIn(s).isDefined && s.length <= MaxLength
+  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length <= MaxLength
 
-  def withHostname(hostname: String): Domain = {
+  def fromHostname(hostname: String): Domain = {
     val lowerCasedHostname = hostname.toLowerCase
     Domain(hostname = lowerCasedHostname, hash = Some(DomainHash.hashHostname(lowerCasedHostname)))
   }

@@ -461,7 +461,7 @@ class UrlController @Inject() (
       domainSensitiveMap.foreach {
         case (domainName, sensitive) if Domain.isValid(domainName) =>
           val domain = domainRepo.get(domainName)
-            .getOrElse(Domain.withHostname(hostname = domainName))
+            .getOrElse(Domain.fromHostname(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)
         case (domainName, _) =>
@@ -478,17 +478,17 @@ class UrlController @Inject() (
     val BATCH_SIZE = 10000
     val numBatches = db.readOnlyReplica { implicit session => domainRepo.count / BATCH_SIZE }
 
-    def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
+    def processBatch(batch: Int): Future[Unit] = {
       db.readWriteAsync { implicit session =>
         val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
-        val updatedDomains = domainBatch.map(domain => Domain.withHostname(domain.hostname).copy(id = domain.id, state = domain.state))
+        val updatedDomains = domainBatch.map(domain => Domain.fromHostname(domain.hostname).copy(id = domain.id, state = domain.state))
         updatedDomains.foreach(domainRepo.save)
         log.info(s"[hashMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
         ()
       }
     }
 
-    FutureHelpers.foldLeft(1 to numBatches)(())(processBatch)
+    FutureHelpers.sequentialExec(1 to numBatches)(processBatch)
 
     Ok
   }

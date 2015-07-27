@@ -26,7 +26,7 @@ class DomainRepoImpl @Inject() (
 
   //todo(martin) remove this default implementation so we force repos to implement it
   override def invalidateCache(domain: Domain)(implicit session: RSession): Unit = {
-    domainHashCache.set(DomainHashKey(DomainHash.hashHostname(domain.hostname)), domain) // refactor this to call domain.hash directly once the table is back-filled
+    domainHashCache.set(DomainHashKey(DomainHash.hashHostname(domain.hostname)), domain) // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
   }
 
   override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
@@ -59,7 +59,7 @@ class DomainRepoImpl @Inject() (
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
     (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
-  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain] = {
+  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain] = { // TODO(cam): kill and refactor getAllByName
     val lowerCasedDomainNames = domainNames.map(_.toLowerCase)
     val hashes = lowerCasedDomainNames.map(DomainHash.hashHostname)
     (for (d <- rows if d.hash.inSet(hashes) && d.state =!= excludeState.orNull) yield d).list.toSet
@@ -80,11 +80,11 @@ class DomainRepoImpl @Inject() (
 
     val existingHostnames = existingDomains.map(_.hostname)
 
-    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).map(Domain.withHostname)
+    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).map(Domain.fromHostname)
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
-        case DomainStates.INACTIVE => domain.hostname -> save(Domain.withHostname(domain.hostname).copy(id = domain.id))
+        case DomainStates.INACTIVE => domain.hostname -> save(Domain.fromHostname(domain.hostname).copy(id = domain.id))
         case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap

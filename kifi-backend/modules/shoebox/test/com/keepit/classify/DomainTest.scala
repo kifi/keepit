@@ -59,8 +59,8 @@ class DomainTest extends Specification with ShoeboxTestInjector {
     "intern domains by hostname" in {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
-        val domain1 = Domain.withHostname(hostname = "google.com")
-        val domain2 = Domain.withHostname(hostname = "apple.com")
+        val domain1 = Domain.fromHostname(hostname = "google.com")
+        val domain2 = Domain.fromHostname(hostname = "apple.com")
 
         inject[Database].readWrite { implicit c =>
           val saved = domainRepo.save(domain1)
@@ -75,9 +75,9 @@ class DomainTest extends Specification with ShoeboxTestInjector {
     "get domains by hash" in {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
-        val domain1 = Domain.withHostname(hostname = "google.com")
-        val domain2 = Domain.withHostname(hostname = "Google.com")
-        val domain3 = Domain.withHostname(hostname = "Ğooğle.com")
+        val domain1 = Domain.fromHostname(hostname = "google.com")
+        val domain2 = Domain.fromHostname(hostname = "Google.com")
+        val domain3 = Domain.fromHostname(hostname = "Ğooğle.com")
 
         inject[Database].readWrite { implicit session =>
           val saved = domainRepo.save(domain1)
