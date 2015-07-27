@@ -30,7 +30,7 @@ class DomainRepoImpl @Inject() (
   }
 
   override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
-    domainHashCache.remove(DomainHashKey(DomainHash.hashHostname(domain.hostname)))
+    domainHashCache.remove(DomainHashKey(DomainHash.hashHostname(domain.hostname))) // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
   }
 
   type RepoImpl = DomainTable
