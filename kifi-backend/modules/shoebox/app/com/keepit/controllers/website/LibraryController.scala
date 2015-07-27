@@ -518,23 +518,6 @@ class LibraryController @Inject() (
     }
   }
 
-  def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug), request.userIdOpt) match {
-      case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
-        NoContent // Don't need to check anything, they already have access
-      case Right(library) =>
-        // Check request
-        if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken)) {
-          NoContent
-        } else {
-          BadRequest(Json.obj("error" -> "invalid_access"))
-        }
-      case Left(fail) =>
-        if (fail.status == MOVED_PERMANENTLY) Redirect(fail.message, authToken.map("authToken" -> Seq(_)).toMap, MOVED_PERMANENTLY) else Status(fail.status)(Json.obj("error" -> fail.message))
-    }
-  }
-
   def removeKeep(pubId: PublicId[Library], extId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val source = KeepSource.site
