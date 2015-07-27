@@ -78,8 +78,8 @@ trait GraphTestHelper {
   val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
   val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
 
-  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
-  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
+  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
+  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
   val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, t1, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
@@ -89,7 +89,7 @@ trait GraphTestHelper {
   val emailAccountUpdate2 = EmailAccountGraphUpdate(emailAccountId2, Some(userid2), Some(domainId1), verified = true, emailSeq = SequenceNumber(2))
   val emailAccountUpdates = List(emailAccountUpdate1, emailAccountUpdate2)
 
-  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
+  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, NormalizedURIStates.ACTIVE, SequenceNumber(1))
   val uriUpdates = List(normalizedUriUpdate1)
 
   val orgDomainOwnershipUpdate1 = OrganizationDomainOwnershipGraphUpdate(orgId1, domainId1, OrganizationDomainOwnershipStates.ACTIVE, SequenceNumber(1))

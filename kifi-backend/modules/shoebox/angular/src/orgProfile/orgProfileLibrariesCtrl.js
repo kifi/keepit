@@ -5,7 +5,7 @@ angular.module('kifi')
 .controller('OrgProfileLibrariesCtrl', [
   '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
   function ($scope, profile, profileService, orgProfileService, modalService) {
-    var organization = profile.organizationInfo;
+    var organization = profile.organization;
 
     $scope.libraries = [];
 
@@ -13,6 +13,7 @@ angular.module('kifi')
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
+          organization: organization,
           returnAction: function (newLibrary) {
             // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(2, 0, newLibrary);

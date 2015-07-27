@@ -35,7 +35,7 @@ class GraphManagerActor @Inject() (
   }
 
   def receive = {
-    case UpdateGraph(customFetchSizes, defaultFetchSize) => (GraphUpdateKind.all -- updating).foreach { kind =>
+    case UpdateGraph(customFetchSizes, defaultFetchSize) => (GraphUpdateKind.toBeIngested -- updating).foreach { kind =>
       val fetchSize = customFetchSizes.getOrElse(kind, defaultFetchSize)
       fetch(kind, fetchSize)
       updating += kind

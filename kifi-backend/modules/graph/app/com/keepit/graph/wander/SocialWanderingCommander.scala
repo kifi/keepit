@@ -198,7 +198,11 @@ object SocialWanderlust {
     Component(EmailAccountReader, DomainReader, EmptyEdgeReader),
     Component(DomainReader, EmailAccountReader, EmptyEdgeReader),
 
-    // Organizations Graph
+    // Organization Graph
+    Component(UserReader, OrganizationReader, EmptyEdgeReader),
+    Component(OrganizationReader, UserReader, EmptyEdgeReader),
+
+    // Candidate Organization Graph
     Component(UserReader, OrganizationReader, TimestampEdgeReader),
     Component(OrganizationReader, UserReader, TimestampEdgeReader),
 
