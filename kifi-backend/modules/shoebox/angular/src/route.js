@@ -19,7 +19,7 @@ angular.module('kifi')
           return match[1] + match[2]; // remove trailing slash
         }
       })
-      .when('/:username/libraries', '/:username')
+      .when('/:handle/libraries', '/:handle')
       .otherwise('/');  // last resort
 
     // Set up the states.
@@ -54,16 +54,18 @@ angular.module('kifi')
       .state('userOrOrg', {
         url: '/:handle',
         controller: [
-          'net', '$state', '$stateParams',
-          function (net, $state, $stateParams) {
-            net.userOrOrg($stateParams.handle).then(function (response) {
-              var type = response.data.type;
-              if (type === 'user') {
-                $state.go('userProfile.libraries.own', $stateParams, { location: false });
-              } else if (type === 'org') {
-                $state.go('orgProfile.members', $stateParams, { location: false });
-              }
-            });
+          '$state', '$stateParams', 'orgProfileService',
+          function ($state, $stateParams, orgProfileService) {
+            orgProfileService
+              .userOrOrg($stateParams.handle)
+              .then(function (userOrOrgData) {
+                var type = userOrOrgData.type;
+                if (type === 'user') {
+                  $state.go('userProfile.libraries.own', $stateParams, { location: false });
+                } else if (type === 'org') {
+                  $state.go('orgProfile.libraries', $stateParams, { location: false });
+                }
+              });
           }
         ]
       })
@@ -74,34 +76,36 @@ angular.module('kifi')
         controller: 'OrgProfileCtrl',
         resolve: {
           profile: [
-            'net', '$state', '$stateParams',
-            function (net, $state, $stateParams) {
+            '$state', '$stateParams','orgProfileService',
+            function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
-              return net.userOrOrg($stateParams.handle).then(function (response) {
-                var type = response.data.type;
+              return orgProfileService
+                .userOrOrg($stateParams.handle)
+                .then(function (userOrOrgData) {
+                  var type = userOrOrgData.type;
 
-                if (type === 'org') { // sanity check
-                  if (response.data.result && response.data.result.error) {
-                    throw new Error(response.data.result.error);
+                  if (type === 'org') { // sanity check
+                    if (userOrOrgData.result && userOrOrgData.result.error) {
+                      throw new Error(userOrOrgData.result.error);
+                    } else {
+                      // success
+                      return userOrOrgData.result.organization;
+                    }
                   } else {
-                    // success
-                    return response.data.result.organization;
+                    throw new Error('orgProfile state was given invalid type ' + type);
                   }
-                } else {
-                  throw new Error('orgProfile state was given invalid type ' + type);
-                }
-              });
+                });
             }
           ]
         },
         'abstract': true
       })
       .state('orgProfile.members', {
-        url: '',
+        url: '/members',
         controller: 'OrgProfileMemberManageCtrl',
         templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html'
       })
-      .state('orgProfile.boards', {
+      .state('orgProfile.libraries', {
         url: '',
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
@@ -112,18 +116,20 @@ angular.module('kifi')
         controller: 'UserProfileCtrl',
         resolve: {
           profile: [
-            'net', '$state', '$stateParams',
-            function (net, $state, $stateParams) {
+            '$state', '$stateParams', 'orgProfileService',
+            function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
-              return net.userOrOrg($stateParams.handle).then(function (response) {
-                var type = response.data.type;
+              return orgProfileService
+                .userOrOrg($stateParams.handle)
+                .then(function (userOrOrgData) {
+                  var type = userOrOrgData.type;
 
-                if (type === 'user') { // sanity check
-                  return response.data.result;
-                } else {
-                  throw new Error('userProfile state was given invalid type ' + type);
-                }
-              });
+                  if (type === 'user') { // sanity check
+                    return userOrOrgData.result;
+                  } else {
+                    throw new Error('userProfile state was given invalid type ' + type);
+                  }
+                });
             }
           ]
         },
@@ -159,13 +165,53 @@ angular.module('kifi')
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:username/:librarySlug?authToken',
+        url: '/:handle/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
+          type: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
+            return orgProfileService
+              .userOrOrg($stateParams.handle)
+              .then(function (userOrOrgData) {
+                return userOrOrgData.type;
+              });
+          }],
           libraryService: 'libraryService',
-          library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
-            return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
+          library: ['libraryService', 'orgProfileService', '$stateParams', 'type', function (libraryService, orgProfileService, $stateParams, type) {
+            function getOrgId(userOrOrgData) {
+              return userOrOrgData.result.organization.organizationInfo.id;
+            }
+
+            function getLibraryIdBySlug(libraryData) {
+              var libraries = libraryData.libraries;
+              var slug = $stateParams.librarySlug;
+
+              var library = libraries.filter(function (l) {
+                return l.slug === slug;
+              }).pop();
+
+              if (library) {
+                return library.id;
+              } else {
+                throw new Error('could not find library in org with slug ' + slug);
+              }
+            }
+
+            if (type === 'user') {
+              // User library
+              return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
+            } else {
+              // Org Library
+              return orgProfileService
+                .userOrOrg($stateParams.handle)
+                .then(getOrgId)
+                .then(orgProfileService.getOrgLibraries)
+                .then(getLibraryIdBySlug)
+                .then(libraryService.getLibraryById.bind(libraryService))
+                .then(function (response) {
+                  return response.library;
+                });
+            }
           }],
           libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
             if (library.image) {

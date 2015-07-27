@@ -2,26 +2,8 @@
   <a class="dialog-x organization-invites-close-x" ng-click="close()"></a>
 
   <div class="dialog-body-wrap">
-    <h1 class="dialog-header">{{::canInviteCollabs ? 'Who would you like to invite?' : 'Share this organization'}}</h1>
+    <h1 class="dialog-header">Who would you like to invite?</h1>
     <div class="dialog-body">
-
-      <!-- Menu for access -->
-      <div class="opis-select-access-wrapper" ng-if="::canInviteCollabs">
-        <span>Invite people to:</span>
-        <button class="opis-toggle-access" ng-click="toggleSelector()">
-          <div class="opis-toggle-selector" ng-class="{'toggle' : isMemberInvite()}" ng-style="{'background-color' : library.color}"></div>
-          <div class="opis-toggle-option collab svg-collaborate-white" ng-class="{'on' : isOwnerInvite()}"></div>
-          <div class="opis-toggle-option follow svg-share-arrow-white" ng-class="{'on' : isMemberInvite()}"></div>
-        </button>
-        <span>{{isOwnerInvite() ? 'own' : 'join'}} this Organization</span>
-        <div class="opis-select-access-description">
-          {{isOwnerInvite() ? 'Owners can add, edit, and remove members and libraries': 'Members can view and contribute to libraries in this organization'}}
-        </div>
-      </div>
-
-      <!-- Message -->
-      <textarea rows="1" class="opis-input opis-message-input" ng-model="share.message" placeholder="Write a message (optional)"></textarea>
-
       <!-- Search -->
       <div class="opis-search-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="opis-spinner">
@@ -45,7 +27,7 @@
             <button ng-show="!result.sent && !((isMemberInvite() && result.isFollowing) || result.isCollaborating)" ng-click="inviteOrPromote(result)" class="opis-contact-button">
               <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
               <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              {{::canInviteCollabs ? 'Invite' : 'Send'}}
+              Invite
             </button>
             <div ng-show="result.isFollowing && isMemberInvite()" class="opis-invite-following">Following</div>
             <div ng-show="result.isCollaborating" class="opis-invite-collaborating">Collaborating</div>
@@ -62,7 +44,7 @@
             <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="opis-contact-button">
               <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
               <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              {{::canInviteCollabs ? 'Invite' : 'Send'}}
+              Invite
             </button>
             <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
           </div>
@@ -77,7 +59,7 @@
             <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="opis-contact-button">
               <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
               <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              {{::canInviteCollabs ? 'Invite' : 'Send'}}
+              Invite
             </button>
             <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
           </div>
@@ -92,6 +74,7 @@
         </li>
       </ul>
 
+      <textarea rows="1" class="opis-input opis-message-input" ng-model="share.message" placeholder="Write a message (optional)"></textarea>
 
     </div>
   </div>

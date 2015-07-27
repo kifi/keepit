@@ -242,7 +242,7 @@ class SharedWsMessagingController @Inject() (
     },
     "eip" -> {
       case JsString(eip) +: _ =>
-        socket.ip = crypt.decrypt(ipkey, eip).toOption
+        socket.ip = crypt.decrypt(ipkey, eip).toOption.map(_.trim)
     },
     "log_event" -> {
       case JsObject(pairs) +: _ =>

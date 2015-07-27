@@ -119,12 +119,14 @@ class ServiceDiscoveryImpl(
         }
         return true
       case Some(instance) =>
-        require(myCluster.size > 1)
-        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        val msg = s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance"
+        if (logMe) logLeader(msg)
+        require(myCluster.size > 1, s"$msg; cluster size is ${myCluster.size}")
         return false
       case None =>
-        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
-        require(myCluster.size == 0)
+        val msg = s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is"
+        if (logMe) logLeader(msg)
+        require(myCluster.size == 0, s"$msg; cluster size is ${myCluster.size}")
         return false
     }
   }
@@ -149,17 +151,24 @@ class ServiceDiscoveryImpl(
     })
   }
 
+  private def doRefetch(): Unit = {
+    zkClient.session { zk =>
+      for (cluster <- clusters.values) {
+        val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
+        cluster.update(zk, children)
+      }
+    }
+  }
+
   @volatile private[this] var forceUpdateInProgress = false
   def forceUpdate(): Unit = if (!forceUpdateInProgress) synchronized {
     if (!forceUpdateInProgress) {
       forceUpdateInProgress = true
       try {
-        zkClient.session { zk =>
-          for (cluster <- clusters.values) {
-            val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
-            cluster.update(zk, children)
-          }
-        }
+        doRefetch()
+      } catch {
+        case ex: org.apache.zookeeper.KeeperException.SessionExpiredException => zkClient.refreshSession()
+        case ex: org.apache.zookeeper.KeeperException.ConnectionLossException => zkClient.refreshSession()
       } finally {
         forceUpdateInProgress = false
       }

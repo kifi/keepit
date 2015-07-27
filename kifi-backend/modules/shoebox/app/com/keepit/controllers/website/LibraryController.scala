@@ -77,7 +77,7 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
       case JsSuccess(externalAddRequest, _) =>
         val libAddRequest = db.readOnlyReplica { implicit session =>
-          val space = externalAddRequest.externalSpace map {
+          val space = externalAddRequest.space map {
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
@@ -515,23 +515,6 @@ class LibraryController @Inject() (
     } getOrElse {
       log.error(s"can't parse object from request ${request.body} for user ${request.user}")
       BadRequest(Json.obj("error" -> "Could not parse object from request body"))
-    }
-  }
-
-  def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug), request.userIdOpt) match {
-      case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
-        NoContent // Don't need to check anything, they already have access
-      case Right(library) =>
-        // Check request
-        if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken)) {
-          NoContent
-        } else {
-          BadRequest(Json.obj("error" -> "invalid_access"))
-        }
-      case Left(fail) =>
-        if (fail.status == MOVED_PERMANENTLY) Redirect(fail.message, authToken.map("authToken" -> Seq(_)).toMap, MOVED_PERMANENTLY) else Status(fail.status)(Json.obj("error" -> fail.message))
     }
   }
 

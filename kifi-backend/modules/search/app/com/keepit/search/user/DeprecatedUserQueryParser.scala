@@ -90,4 +90,5 @@ class DeprecatedUserQueryParser(
 
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = ???
 
+  override protected def parseSpecs(queryText: CharSequence): Option[List[QuerySpec]] = ???
 }

@@ -28,17 +28,17 @@ trait KQueryExpansion extends QueryParser {
 
   val siteBoost: Float
   val concatBoost: Float
-  val prefixBoost: Float
   val titleBoost: Float
+  def getPrefixBoost(trailing: Boolean): Float
 
   val textQueries: ArrayBuffer[KTextQuery] = ArrayBuffer()
 
-  override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
+  override def getFieldQuery(field: String, queryText: String, quoted: Boolean, trailing: Boolean): Option[Query] = {
     field.toLowerCase match {
       case "tag" => getTagQuery(queryText)
       case "site" => getSiteQuery(queryText)
       case "media" => getMediaQuery(queryText)
-      case _ => getTextQuery(queryText, quoted)
+      case _ => getTextQuery(queryText, quoted, trailing)
     }
   }
 
@@ -65,7 +65,7 @@ trait KQueryExpansion extends QueryParser {
     }
   }
 
-  protected def getTextQuery(queryText: String, quoted: Boolean): Option[Query] = {
+  protected def getTextQuery(queryText: String, quoted: Boolean, trailing: Boolean): Option[Query] = {
     def copyFieldQuery(query: Query, field: String) = {
       query match {
         case null => null
@@ -101,7 +101,7 @@ trait KQueryExpansion extends QueryParser {
     val textQuery = new KTextQuery(queryText)
     textQueries += textQuery
 
-    super.getFieldQuery("t", queryText, quoted).foreach { q =>
+    super.getFieldQuery("t", queryText, quoted, trailing).foreach { q =>
       textQuery.terms = extractTerms(q)
       val query = if (quoted) q else mayConvertQuery(q, lang)
       textQuery.addQuery(query, titleBoost)
@@ -112,7 +112,7 @@ trait KQueryExpansion extends QueryParser {
     }
 
     altAnalyzer.foreach { alt =>
-      super.getFieldQuery("t", queryText, quoted, alt).foreach { q =>
+      super.getFieldQuery("t", queryText, quoted, trailing, alt).foreach { q =>
         if (!equivalent(textQuery.terms, extractTerms(q))) {
           val query = if (quoted) q else mayConvertQuery(q, alt.lang)
           val boost = if (textQuery.isEmpty) 0.1f else 1.0f
@@ -125,7 +125,7 @@ trait KQueryExpansion extends QueryParser {
     }
 
     if (!quoted) {
-      getStemmedFieldQuery("ts", queryText).foreach { q =>
+      getStemmedFieldQuery("ts", queryText, trailing).foreach { q =>
         textQuery.stems = extractTerms(q)
         val query = mayConvertQuery(q, lang)
         textQuery.addQuery(query, titleBoost)
@@ -134,7 +134,7 @@ trait KQueryExpansion extends QueryParser {
       }
 
       altStemmingAnalyzer.foreach { alt =>
-        getFieldQuery("ts", queryText, false, alt).foreach { q =>
+        getFieldQuery("ts", queryText, false, trailing, alt).foreach { q =>
           if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             val boost = if (textQuery.isEmpty) 0.1f else 1.0f
@@ -146,6 +146,7 @@ trait KQueryExpansion extends QueryParser {
         }
       }
 
+      val prefixBoost = getPrefixBoost(trailing)
       if (prefixBoost > 0.0f) {
         KPrefixQuery.get("tp", "tv", queryText).foreach { prefixQuery =>
           textQuery.addQuery(prefixQuery, prefixBoost)
@@ -170,7 +171,7 @@ trait KQueryExpansion extends QueryParser {
 
     // truncate query if there are too many (>100) terms
     querySpecList.take(100).foreach { spec =>
-      val query = getFieldQuery(spec.field, spec.term, spec.quoted)
+      val query = getFieldQuery(spec.field, spec.term, spec.quoted, spec.trailing)
       query match {
         case Some(query) =>
           query match {

@@ -58,28 +58,4 @@ class UserOrOrganizationController @Inject() (
         }
     }
   }
-
-  def getLibrariesByHandle(handle: Handle, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
-    val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
-    handleOwnerObjectOpt match {
-      case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
-      case Some(handleOwnerObject) =>
-        val (action, actionType) = handleOwnerObject match {
-          case (Left(org), _) =>
-            (orgController.getOrganizationLibraries(Organization.publicId(org.id.get), offset = page * pageSize, limit = pageSize), "org")
-          case (Right(user), _) =>
-            (userProfileController.getProfileLibraries(user.username, page, pageSize, filter), "user")
-        }
-        for (result <- action(request); bodyTry <- extractBody(result)) yield {
-          bodyTry match {
-            case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
-            case Failure(ex) =>
-              airbrake.notify("Could not parse the body in getByHandle: " + ex)
-              BadRequest
-          }
-        }
-    }
-
-  }
-
 }

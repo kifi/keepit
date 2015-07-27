@@ -2,9 +2,9 @@
 
 angular.module('kifi')
 
-.directive('kfOrganizationInviteSearch', [
-  'libraryService', 'profileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
-  function (libraryService, profileService, socialService, $timeout, util, KEY, net) {
+.directive('kfOrgInviteSearch', [
+  'libraryService', 'profileService', 'orgProfileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
+  function (libraryService, profileService, orgProfileService, socialService, $timeout, util, KEY, net) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -37,16 +37,13 @@ angular.module('kifi')
         scope.organization = scope.modalData.organization;
         scope.inviteType = scope.modalData.inviteType || 'join';
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        scope.canInviteCollabs = true; /*(function (access) {
-          return access === 'admin' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
-        }((scope.library.membership || {}).access));*/
 
         function shareLibrary(opts) {
           if (scope.share.message) {
             opts.message = scope.share.message;
           }
           //return libraryService.shareLibrary(scope.library.id, opts);
-          return net.sendOrgMemberInvite(scope.organization.id, opts);
+          return orgProfileService.sendOrgMemberInvite(scope.organization.id, opts);
         }
 
         // function trackShareEvent(eventName, attr) {
@@ -92,8 +89,8 @@ angular.module('kifi')
 
           scope.showSpinner = true;
 
-          function getFirstLibrary(response) {
-            var libraries = response.data.libraries;
+          function getFirstLibrary(libraryData) {
+            var libraries = libraryData.libraries;
             return libraries && libraries[0];
           }
 
@@ -182,7 +179,8 @@ angular.module('kifi')
           }
 
           // Do the magic to get the contacts given the organization id.
-          net.getOrgLibraries(scope.organization.id)
+          orgProfileService
+            .getOrgLibraries(scope.organization.id)
             .then(getFirstLibrary)
             .then(getSearchContacts)
             .then(updateContacts);

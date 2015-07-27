@@ -29,7 +29,7 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
 
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
-  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean
+  def hasFakeExperiment(org: Id[Organization]): Boolean
 }
 
 @Singleton
@@ -67,7 +67,7 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
-  def hasFakeExperiment(org: Id[Organization])(implicit session: RSession): Boolean = {
+  def hasFakeExperiment(org: Id[Organization]): Boolean = db.readOnlyReplica { implicit session =>
     orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
   }
 
@@ -200,6 +200,7 @@ class OrganizationCommanderImpl @Inject() (
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
       .withBasePermissions(modifications.basePermissions.getOrElse(org.basePermissions))
+      .withSite(modifications.site.orElse(org.site))
   }
 
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
