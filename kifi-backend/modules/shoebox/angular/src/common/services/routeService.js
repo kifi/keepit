@@ -139,7 +139,6 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
       },
