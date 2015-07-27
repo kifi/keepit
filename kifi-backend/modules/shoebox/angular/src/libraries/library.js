@@ -73,7 +73,7 @@ angular.module('kifi')
     // Scope data.
     //
     $scope.librarySearch = $state.current.name === 'library.search';
-    $scope.username = $stateParams.username;
+    $scope.username = $stateParams.handle;
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
