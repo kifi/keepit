@@ -178,8 +178,8 @@ angular.module('kifi')
           }],
           libraryService: 'libraryService',
           library: ['libraryService', 'orgProfileService', '$stateParams', 'type', function (libraryService, orgProfileService, $stateParams, type) {
-            function getOrgId(response) {
-              return response.data.result.id;
+            function getOrgId(orgData) {
+              return orgData.result.organization.id;
             }
 
             function getLibraryIdBySlug(libraryData) {
