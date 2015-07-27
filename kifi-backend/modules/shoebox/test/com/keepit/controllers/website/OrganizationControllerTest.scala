@@ -78,7 +78,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val randoResponse = controller.getOrganization(publicId)(randoRequest)
           status(randoResponse) === OK
 
-          val payloads = Seq(ownerResponse, memberResponse, randoResponse).map { response => Json.parse(contentAsString(response)) \ "organization" }
+          val payloads = Seq(ownerResponse, memberResponse, randoResponse).map { response => Json.parse(contentAsString(response)) \ "organization" \ "organizationInfo" }
 
           payloads.foreach(p => (p \ "name").as[String] === "Brewster Corp")
           payloads.foreach(p => (p \ "handle").as[String] === "brewstercorp")
@@ -101,19 +101,19 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
-        (Json.parse(contentAsString(ownerResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
+        (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "membershipInfo" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
 
         inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
         val memberRequest = route.getOrganization(publicId)
         val memberResponse = controller.getOrganization(publicId)(memberRequest)
         status(memberResponse) === OK
-        (Json.parse(contentAsString(memberResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
+        (Json.parse(contentAsString(memberResponse)) \ "organization" \ "membershipInfo" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
 
         inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
         val randoRequest = route.getOrganization(publicId)
         val randoResponse = controller.getOrganization(publicId)(randoRequest)
         status(randoResponse) === OK
-        (Json.parse(contentAsString(randoResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
+        (Json.parse(contentAsString(randoResponse)) \ "organization" \ "membershipInfo" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
       }
       "serve up the right number of libraries depending on viewer permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
@@ -134,13 +134,13 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val ownerRequest = route.getOrganization(publicId)
           val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
           status(ownerResponse) === OK
-          (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "numLibraries").as[Int] === 10 + 15
+          (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "organizationInfo" \ "numLibraries").as[Int] === 10 + 15
 
           inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
           val randoRequest = route.getOrganization(publicId)
           val randoResponse = controller.getOrganization(publicId)(randoRequest)
           status(randoResponse) === OK
-          (Json.parse(contentAsString(randoResponse)) \ "organization" \ "numLibraries").as[Int] === 10
+          (Json.parse(contentAsString(randoResponse)) \ "organization" \ "organizationInfo" \ "numLibraries").as[Int] === 10
         }
       }
     }
@@ -307,8 +307,8 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          (createResponseJson \ "organization" \ "name").as[String] === orgName
-          (createResponseJson \ "organization" \ "description").as[Option[String]] === Some(orgDescription)
+          (createResponseJson \ "organization" \ "organizationInfo" \ "name").as[String] === orgName
+          (createResponseJson \ "organization" \ "organizationInfo" \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }
