@@ -45,9 +45,9 @@
     <tr>
         <th>Restriction</th>
         <td>@uri.restriction.map { restriction =>
-            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.clearRestriction(uri.id.get)" method = "POST">@restriction.context <button type="submit" class="btn">Clear</button></form>
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.clearRestriction(uri.id.get)" method = "POST">@restriction.context <button type="submit" class="btn btn-default">Clear</button></form>
             }.getOrElse {
-            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn">Flag as adult</button></form>
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn btn-default">Flag as adult</button></form>
             }</td>
     </tr>
 
