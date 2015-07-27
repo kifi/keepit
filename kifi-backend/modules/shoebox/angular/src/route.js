@@ -89,7 +89,7 @@ angular.module('kifi')
                       throw new Error(userOrOrgData.result.error);
                     } else {
                       // success
-                      return userOrOrgData.result.organization;
+                      return userOrOrgData.result;
                     }
                   } else {
                     throw new Error('orgProfile state was given invalid type ' + type);
@@ -178,8 +178,8 @@ angular.module('kifi')
           }],
           libraryService: 'libraryService',
           library: ['libraryService', 'orgProfileService', '$stateParams', 'type', function (libraryService, orgProfileService, $stateParams, type) {
-            function getOrgId(userOrOrgData) {
-              return userOrOrgData.result.organization.organizationInfo.id;
+            function getOrgId(response) {
+              return response.data.result.id;
             }
 
             function getLibraryIdBySlug(libraryData) {
