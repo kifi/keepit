@@ -21,16 +21,19 @@ trait DomainRepo extends Repo[Domain] {
 class DomainRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    domainHashCache: DomainHashCache) extends DbRepo[Domain] with DomainRepo {
+    domainHashCache: DomainHashCache,
+    domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
   import db.Driver.simple._
 
   //todo(martin) remove this default implementation so we force repos to implement it
   override def invalidateCache(domain: Domain)(implicit session: RSession): Unit = {
-    domainHashCache.set(DomainHashKey(DomainHash.hashHostname(domain.hostname)), domain) // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domain.hash.foreach { hash => domainHashCache.set(DomainHashKey(hash), domain) } // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domainCache.set(DomainKey(domain.hostname), domain)
   }
 
   override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
-    domainHashCache.remove(DomainHashKey(DomainHash.hashHostname(domain.hostname))) // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domain.hash.foreach { hash => domainHashCache.remove(DomainHashKey(hash)) } // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domainCache.remove(DomainKey(domain.hostname))
   }
 
   type RepoImpl = DomainTable
@@ -48,7 +51,11 @@ class DomainRepoImpl @Inject() (
   initTable()
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
-    (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+    domainHashCache.getOrElseOpt(DomainHashKey(DomainHash.hashHostname(domain))) {
+      domainCache.getOrElseOpt(DomainKey(domain)) {
+        (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+      }
+    }
   }
 
   def getByIds(domainIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain] = {
