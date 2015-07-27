@@ -3,7 +3,7 @@
 @admin("Domain Classifications", stylesheets = List("admin_slider")) {
   <form action="" method="get">
     <div><label>Domain: <input type="text" name="domain" value="@domain.getOrElse("")"></label></div>
-    <div><input type="submit" class="btn" value="Look up classifications"></div>
+    <div><input type="submit" class="btn btn-default" value="Look up classifications"></div>
   </form>
   @for(d <- domain) {
     <h3>tags for @d</h3>
