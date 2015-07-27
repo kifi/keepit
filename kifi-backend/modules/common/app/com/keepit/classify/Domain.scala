@@ -43,7 +43,7 @@ object Domain {
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \ 'isEmailProvider).format[Boolean] and
-    (__ \ 'hash).format[Option[DomainHash]] and
+    (__ \ 'hash).formatNullable[DomainHash] and
     (__ \ 'state).format(State.format[Domain]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime]
