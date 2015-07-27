@@ -50,20 +50,20 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
 
   private def processSocialUserInfoGraphUpdate(update: SocialUserInfoGraphUpdate)(implicit writer: GraphWriter) = update.network match {
     case SocialNetworks.FACEBOOK =>
-      val facebookAccountVertex = FacebookAccountData(update.socialUserId)
-      writer.saveVertex(facebookAccountVertex)
       update.userId.foreach { userId =>
+        val facebookAccountVertex = FacebookAccountData(update.socialUserId)
         val userVertex = UserData(userId)
+        writer.saveVertex(facebookAccountVertex)
         writer.saveVertex(userVertex)
         writer.saveEdge(facebookAccountVertex.id, userVertex.id, EmptyEdgeData)
         writer.saveEdge(userVertex.id, facebookAccountVertex.id, EmptyEdgeData)
       }
 
     case SocialNetworks.LINKEDIN =>
-      val linkedInAccountVertex = LinkedInAccountData(update.socialUserId)
-      writer.saveVertex(linkedInAccountVertex)
       update.userId.foreach { userId =>
+        val linkedInAccountVertex = LinkedInAccountData(update.socialUserId)
         val userVertex = UserData(userId)
+        writer.saveVertex(linkedInAccountVertex)
         writer.saveVertex(userVertex)
         writer.saveEdge(linkedInAccountVertex.id, userVertex.id, EmptyEdgeData)
         writer.saveEdge(userVertex.id, linkedInAccountVertex.id, EmptyEdgeData)
@@ -171,7 +171,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
 
   private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
     case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
-    case _ => writer.saveVertex(UriData(update.id))
+    case _ => // ignore, we're creating NormalizedURI vertices lazily when necessary
   }
 
   private def processEmailAccountGraphUpdate(update: EmailAccountGraphUpdate)(implicit writer: GraphWriter) = {
