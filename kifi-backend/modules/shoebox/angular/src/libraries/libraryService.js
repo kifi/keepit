@@ -145,7 +145,13 @@ angular.module('kifi')
             return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
           }
         }
-        return $http.post(routeService.createLibrary, opts);
+
+        var owner = null;
+        debugger;
+
+        return net.createLibrary({
+          space: owner
+        });
       },
 
       modifyLibrary: function (opts, checkMissingFields) {
