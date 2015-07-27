@@ -33,6 +33,7 @@ angular.module('kifi')
 
     $scope.members = [];
     $scope.me = null;
+    $scope.organization = organization;
 
     orgProfileService
       .getOrgMembers(organization.id)
@@ -90,17 +91,25 @@ angular.module('kifi')
     });
 
     $scope.$on('promoteMember', function (e, member) {
+      modifyMemberRole(member, 'admin');
+    });
+
+    $scope.$on('demoteMember', function (e, member) {
+      modifyMemberRole(member, 'member');
+    });
+
+    function modifyMemberRole(member, role) {
       orgProfileService.modifyOrgMember(organization.id, {
         members: [{
           userId: member.id,
-          newRole: 'admin'
+          newRole: role
         }]
       })
       .then(function success() {
-        member.role = 'admin';
+        member.role = role;
       })
       ['catch'](handleErrorResponse);
-    });
+    }
 
     $scope.openInviteModal = function (inviteType) {
       modalService.open({

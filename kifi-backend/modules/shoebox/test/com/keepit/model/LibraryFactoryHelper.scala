@@ -17,6 +17,11 @@ object LibraryFactoryHelper {
       library
     }
   }
+  implicit class LibraryDeleter(lib: Library) {
+    def deleted(implicit injector: Injector, session: RWSession): Library = {
+      injector.getInstance(classOf[LibraryRepo]).save(lib.sanitizeForDelete)
+    }
+  }
 
   implicit class LibraryOwnershipPersister(library: Library) {
     def savedFollowerMembership(followers: User*)(implicit injector: Injector, session: RWSession): Library = {

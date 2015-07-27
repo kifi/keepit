@@ -6,12 +6,13 @@
     <title>@title</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
+    <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap-theme.min.css")" />
     <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />
     @for(stylesheet <- "admin_main" :: stylesheets) {
       <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
     }
     @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
-      <script src="@routes.Assets.at("javascripts/jquery-1.7.1" + ext)"></script>
+      <script src="@routes.Assets.at("javascripts/jquery" + ext)"></script>
       <script src="@routes.Assets.at("bootstrap/js/bootstrap" + ext)"></script>
     }
     @for(script <- scripts) {
@@ -23,7 +24,7 @@
     <a id="scrlBotm" title="Bottom" href="javascript:" style="position: fixed; top: 133px; right: 20px;"><i class="icon-chevron-down"></i></a>
     <div class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
-        <ul class="nav">
+        <ul class="nav navbar-nav">
 
           <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" >Dashboards</a>

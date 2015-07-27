@@ -11,6 +11,7 @@ trait DomainRepo extends Repo[Domain] {
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
+  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
@@ -20,15 +21,18 @@ trait DomainRepo extends Repo[Domain] {
 class DomainRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
+    domainHashCache: DomainHashCache,
     domainCache: DomainCache) extends DbRepo[Domain] with DomainRepo {
   import db.Driver.simple._
 
   //todo(martin) remove this default implementation so we force repos to implement it
   override def invalidateCache(domain: Domain)(implicit session: RSession): Unit = {
+    domain.hash.foreach { hash => domainHashCache.set(DomainHashKey(hash), domain) }
     domainCache.set(DomainKey(domain.hostname), domain)
   }
 
   override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
+    domain.hash.foreach { hash => domainHashCache.remove(DomainHashKey(hash)) }
     domainCache.remove(DomainKey(domain.hostname))
   }
 
@@ -39,16 +43,19 @@ class DomainRepoImpl @Inject() (
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)
     def isEmailProvider = column[Boolean]("is_email_provider", O.NotNull)
-    def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
+    def hash = column[Option[DomainHash]]("hash", O.Nullable)
+    def * = (id.?, hostname, autoSensitive, manualSensitive, isEmailProvider, hash, state, createdAt, updatedAt) <> ((Domain.apply _).tupled, Domain.unapply _)
   }
 
   def table(tag: Tag) = new DomainTable(tag)
   initTable()
 
   def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
-    domainCache.getOrElseOpt(DomainKey(domain)) {
-      (for (d <- rows if d.hostname === domain) yield d).firstOption
-    } filter { d => excludeState.map(s => d.state != s).getOrElse(true) }
+    domainHashCache.getOrElseOpt(DomainHashKey(DomainHash.hashHostname(domain))) {
+      domainCache.getOrElseOpt(DomainKey(domain)) {
+        (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+      }
+    }
   }
 
   def getByIds(domainIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain] = {
@@ -58,6 +65,12 @@ class DomainRepoImpl @Inject() (
 
   def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
     (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
+
+  def getAllByNameUsingHash(domainNames: Set[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Set[Domain] = { // TODO(cam): kill and refactor getAllByName
+    val lowerCasedDomainNames = domainNames.map(_.toLowerCase)
+    val hashes = lowerCasedDomainNames.map(DomainHash.hashHostname)
+    (for (d <- rows if d.hash.inSet(hashes) && d.state =!= excludeState.orNull) yield d).list.toSet
+  }
 
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
     (for (d <- rows if d.state =!= excludeState.orNull && d.manualSensitive.isDefined) yield d).list
@@ -69,18 +82,22 @@ class DomainRepoImpl @Inject() (
   }
 
   def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
-    val normalizedDomainNames = domainNames.map(_.toLowerCase.toUpperCase.toLowerCase) // hack to map "ı" -> "I" -> "i", since MySQL converts "ı" -> "i" // todo(cam) find the MySQL conversion
-    val existingDomains = getAllByName(normalizedDomainNames.toSeq, None).toSet
+    val lowerCasedHostnamesToIntern = domainNames.map(_.toLowerCase)
+    val existingDomains = getAllByName(lowerCasedHostnamesToIntern.toSeq, None).toSet
+
+    val existingHostnames = existingDomains.map(_.hostname)
+
+    val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).filter(Domain.isValid).map(Domain.fromHostname)
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
-        case DomainStates.INACTIVE => domain.hostname -> save(domain.copy(state = DomainStates.ACTIVE))
+        case DomainStates.INACTIVE => domain.hostname -> save(Domain.fromHostname(domain.hostname).copy(id = domain.id))
         case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap
 
-    val newDomainByName = (normalizedDomainNames -- existingDomainByName.keys.toSet).map { domainName =>
-      domainName -> save(Domain(hostname = domainName))
+    val newDomainByName = toBeInserted.map { domain =>
+      domain.hostname -> save(domain)
     }.toMap
 
     existingDomainByName ++ newDomainByName

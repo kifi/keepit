@@ -25,10 +25,10 @@
     </div>
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
-        <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name"></div>
-        <div class="kf-oph-description" kf-click-to-edit on-save="save" value="profile.description" textarea="true"></div>
+        <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" readonly="readonly"></div>
+        <div class="kf-oph-description" kf-click-to-edit on-save="save" value="profile.description" readonly="readonly" textarea="true"></div>
         <p class="kf-oph-url">
-          <span kf-click-to-edit on-save="save" input-placeholder="'e.g. http://example.com'" value="profile.site"></span>
+          <span kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'e.g. http://example.com'" value="profile.site"></span>
         </p>
       </div>
       <nav class="kf-oph-stats">

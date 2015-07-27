@@ -3,8 +3,7 @@
 @import com.keepit.controllers.admin.routes
 
 @pagination(page: Int, pageCount: Int) = {
-  <div class="pagination pagination-centered pagination-mini">
-    <ul>
+  <ul class="pagination">
       <li>
         @if(page > 0) {
           <a href="@routes.AdminBookmarksController.bookmarksView(page - 1)">
@@ -14,24 +13,24 @@
         Prev
         </a>
       </li>
-      @if(page - 20 > 0) {
+      @if(page > 20) {
         <li class="disabled">
           <a href="@routes.AdminBookmarksController.bookmarksView(0)">...</a>
         </li>
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
-	        <li class="disabled">
+	        <li class="active">
 	          <a href="@routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
         } else {
-	        <li class="active">
+	        <li>
 	          <a href="@routes.AdminBookmarksController.bookmarksView(i)">@{i + 1}</a>
 	        </li>
 	      }
       }
       @if(page + 20 < pageCount - 1) {
-        <li class="disabled">
+        <li>
           <a href="@routes.AdminBookmarksController.bookmarksView(pageCount - 1)">...</a>
         </li>
       }
@@ -44,8 +43,7 @@
         Next
         </a>
       </li>
-    </ul>
-  </div>
+  </ul>
 }
 
 @admin(overallCount + " Total Keeps") {

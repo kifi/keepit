@@ -26,12 +26,12 @@
 }
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
-    <button class="btn" id="library_push" onclick="libraryPush()">Lib Push</button>
-    <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
-    <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
-    <button class="btn" onclick="impersonate()">Impersonate User</button>
-    <button class="btn" onclick="unimpersonate()">Stop Impersonating</button>
-    <button class="btn" onclick="configSearch()">Config Search</button>
+    <button class="btn btn-default" id="library_push" onclick="libraryPush()">Lib Push</button>
+    <button class="btn btn-default" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
+    <button class="btn btn-default" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
+    <button class="btn btn-default" onclick="impersonate()">Impersonate User</button>
+    <button class="btn btn-default" onclick="unimpersonate()">Stop Impersonating</button>
+    <button class="btn btn-default" onclick="configSearch()">Config Search</button>
     <br/>
     <table class="user-summary table table-bordered">
       <tr>
@@ -288,7 +288,7 @@
                       <form class="form-inline" style="display:inline" action="/refreshContacts" method="GET">
                           <input type="hidden" name="abookId"  value=@abook.id>
                           <input type="hidden" name="provider" value=@abook.origin>
-                          <button type="submit" class="btn">Refresh</button>
+                          <button type="submit" class="btn btn-default">Refresh</button>
                       </form>
                   </td>
                 }
@@ -310,7 +310,7 @@
                         <input type="hidden" name="fullSocialId" value="email/@contact.email">
                         <input type="hidden" name="subject" value="You've been invited to join Kifi!">
                         <input type="hidden" name="message" value="Come join us!">
-                        <button type="submit" class="btn">Invite</button>
+                        <button type="submit" class="btn btn-default">Invite</button>
                     </form>
                 </td>
               }

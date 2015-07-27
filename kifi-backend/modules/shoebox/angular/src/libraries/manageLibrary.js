@@ -134,6 +134,8 @@ angular.module('kifi')
           var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
             return sub.name !== '' && sub.info.url !== '';
           });
+          
+          var owner = ('organization' in scope.modalData ? { org: scope.modalData.organization.id } : { user: profileService.me.id });
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -143,7 +145,8 @@ angular.module('kifi')
             visibility: scope.library.visibility,
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
-            subscriptions: nonEmptySubscriptions
+            subscriptions: nonEmptySubscriptions,
+            space: owner
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
