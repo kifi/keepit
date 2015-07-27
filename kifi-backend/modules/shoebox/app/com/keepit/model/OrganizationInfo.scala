@@ -52,10 +52,10 @@ case class OrganizationView(
   membershipInfo: MembershipInfo)
 
 object OrganizationView {
-  val websiteWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
-      "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
-  }
+  val websiteWrites: Writes[OrganizationView] = (
+    (__ \ 'organizationInfo).write(OrganizationInfo.defaultWrites) and
+    (__ \ 'membershipInfo).write(MembershipInfo.defaultWrites)
+  )(unlift(OrganizationView.unapply))
   val mobileWrites = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
   }
