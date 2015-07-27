@@ -90,6 +90,28 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
+  def serveWebAppIfOrganizationFound(handle: OrganizationHandle) = WebAppPage { implicit request =>
+    lookupHandle(handle) map {
+      case (Right(user), _) => notFound(request)
+      case (Left(org), redirectStatusOpt) =>
+        // TODO(ryan): once orgs are live, stop checking for the org experiment
+        val hasOrgExperiment = request match {
+          case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
+          case _ => false
+        }
+        if (!hasOrgExperiment) {
+          notFound(request)
+        } else {
+          redirectStatusOpt map { status =>
+            val foundHandle = Handle.fromOrganizationHandle(org.getHandle)
+            Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
+          } getOrElse {
+            AngularApp.app()
+          }
+        }
+    } getOrElse notFound(request)
+  }
+
   def serveWebAppIfHandleFound(handle: Handle) = WebAppPage { implicit request =>
     lookupHandle(handle) map {
       case (handleOwner, redirectStatusOpt) =>
