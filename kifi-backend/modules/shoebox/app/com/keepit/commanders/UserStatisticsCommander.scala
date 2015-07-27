@@ -165,7 +165,7 @@ class UserStatisticsCommander @Inject() (
     Future.sequence(membersStatsFut).imap(_.toMap)
   }
 
-  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 30): Future[OrganizationStatistics] = {
+  def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int = 60): Future[OrganizationStatistics] = {
     val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))

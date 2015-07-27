@@ -87,7 +87,7 @@ class GraphUpdateFetcherImpl @Inject() (
             emailAccounts.map { email =>
               domainInfoByName.get(email.getDomainName) match {
                 case Some(domain: DomainInfo) if !domain.isEmailProvider => EmailAccountGraphUpdate.apply(email, domain.id)
-                case _ => EmailAccountGraphUpdate(email, None)
+                case _ => EmailAccountGraphUpdate(email, None) // if domain.isEmailProvider || !Domain.isValid(email.getDomainName) (guard in DomainRepo)
               }
             }
           }
