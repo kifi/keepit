@@ -27,12 +27,12 @@ class DomainRepoImpl @Inject() (
 
   //todo(martin) remove this default implementation so we force repos to implement it
   override def invalidateCache(domain: Domain)(implicit session: RSession): Unit = {
-    domain.hash.foreach { hash => domainHashCache.set(DomainHashKey(hash), domain) } // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domain.hash.foreach { hash => domainHashCache.set(DomainHashKey(hash), domain) }
     domainCache.set(DomainKey(domain.hostname), domain)
   }
 
   override def deleteCache(domain: Domain)(implicit session: RSession): Unit = {
-    domain.hash.foreach { hash => domainHashCache.remove(DomainHashKey(hash)) } // TODO(cam): refactor this to call domain.hash directly once the table is back-filled
+    domain.hash.foreach { hash => domainHashCache.remove(DomainHashKey(hash)) }
     domainCache.remove(DomainKey(domain.hostname))
   }
 
