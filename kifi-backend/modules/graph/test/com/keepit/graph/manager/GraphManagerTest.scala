@@ -75,16 +75,6 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           nbs = getNeighbors(v, (KeepReader, UriReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[UriReader].id } === Set(1)
 
-          // uri to domain
-          v.moveTo(VertexDataId[UriReader](1))
-          nbs = getNeighbors(v, (UriReader, DomainReader, EmptyEdgeReader), true)
-          nbs.map { x: VertexId => x.asId[DomainReader].id } === Set(1)
-
-          // domain to uri
-          v.moveTo(VertexDataId[DomainReader](1))
-          nbs = getNeighbors(v, (DomainReader, UriReader, EmptyEdgeReader), true)
-          nbs.map { x: VertexId => x.asId[UriReader].id } === Set(1)
-
           // email to domain
           v.moveTo(VertexDataId[EmailAccountReader](1))
           nbs = getNeighbors(v, (EmailAccountReader, DomainReader, EmptyEdgeReader), true)

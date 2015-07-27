@@ -32,6 +32,8 @@ object GraphUpdateKind {
     all.map { kind => kind.code -> kind }.toMap
   }
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
+
+  val toBeIngested = all -- Set()
 }
 
 case class UserGraphUpdate(userId: Id[User], state: State[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
@@ -109,7 +111,7 @@ case object LDAOldVersionCleanupGraphUpdate extends GraphUpdateKind[LDAOldVersio
   val code = "lda_old_version_cleanup_graph_update"
 }
 
-case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[Domain]], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
+case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
   type U = NormalizedUriGraphUpdate
   def kind = NormalizedUriGraphUpdate
   def seq = kind.seq(uriSeq.value)
@@ -117,7 +119,7 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], domainId: Option[Id[D
 
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
-  def apply(indexableUri: IndexableUri, domainId: Option[Id[Domain]]): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, domainId, indexableUri.state, indexableUri.seq)
+  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
 }
 
 case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], domainId: Option[Id[Domain]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {

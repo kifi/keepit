@@ -89,7 +89,7 @@ trait GraphTestHelper {
   val emailAccountUpdate2 = EmailAccountGraphUpdate(emailAccountId2, Some(userid2), Some(domainId1), verified = true, emailSeq = SequenceNumber(2))
   val emailAccountUpdates = List(emailAccountUpdate1, emailAccountUpdate2)
 
-  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, domainId = Some(domainId1), NormalizedURIStates.ACTIVE, SequenceNumber(1))
+  val normalizedUriUpdate1 = NormalizedUriGraphUpdate(uriid1, NormalizedURIStates.ACTIVE, SequenceNumber(1))
   val uriUpdates = List(normalizedUriUpdate1)
 
   val orgDomainOwnershipUpdate1 = OrganizationDomainOwnershipGraphUpdate(orgId1, domainId1, OrganizationDomainOwnershipStates.ACTIVE, SequenceNumber(1))

@@ -67,19 +67,7 @@ class GraphUpdateFetcherImpl @Inject() (
         }
       }
 
-      case NormalizedUriGraphUpdate => {
-        shoebox.getIndexableUris(seq.copy(), fetchSize).flatMap { indexableUris =>
-
-          shoebox.internDomainsByDomainNames(indexableUris.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
-            indexableUris.map { uri =>
-              domainInfoByName.get(uri.getDomainName) match {
-                case Some(domain: DomainInfo) if !domain.isEmailProvider => NormalizedUriGraphUpdate.apply(uri, domain.id)
-                case _ => NormalizedUriGraphUpdate(uri, None)
-              }
-            }
-          }
-        }
-      }
+      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
 
       case EmailAccountGraphUpdate => {
         abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailAccounts =>

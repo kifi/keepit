@@ -170,21 +170,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
   }
 
   private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
-    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => {
-      writer.removeVertexIfExists(update.id)
-      update.domainId.foreach { domainId =>
-        writer.removeEdgeIfExists(update.id, domainId, EmptyEdgeReader)
-        writer.removeEdgeIfExists(domainId, update.id, EmptyEdgeReader)
-      }
-    }
-    case _ => {
-      writer.saveVertex(UriData(update.id))
-      update.domainId.foreach { domainId =>
-        writer.saveVertex(DomainData(domainId))
-        writer.saveEdge(update.id, domainId, EmptyEdgeData)
-        writer.saveEdge(domainId, update.id, EmptyEdgeData)
-      }
-    }
+    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
+    case _ => writer.saveVertex(UriData(update.id))
   }
 
   private def processEmailAccountGraphUpdate(update: EmailAccountGraphUpdate)(implicit writer: GraphWriter) = {
