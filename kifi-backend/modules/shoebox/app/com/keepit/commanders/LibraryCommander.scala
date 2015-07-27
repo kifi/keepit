@@ -820,7 +820,7 @@ class LibraryCommanderImpl @Inject() (
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
       db.readWrite { implicit s =>
-        libraryRepo.save(oldLibrary.sanitizeForDelete())
+        libraryRepo.save(oldLibrary.sanitizeForDelete)
       }
       searchClient.updateLibraryIndex()
       None
