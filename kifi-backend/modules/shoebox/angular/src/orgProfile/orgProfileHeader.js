@@ -18,7 +18,7 @@ angular.module('kifi')
       scope.editing = false;
       scope.notification = null;
       var lastSavedInfo = {};
-
+      scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
 
