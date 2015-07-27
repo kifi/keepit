@@ -1,7 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
-import com.keepit.classify.{ DomainInfo, Domain }
+import com.keepit.classify.Domain
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.common.service.IpAddress
@@ -33,7 +33,7 @@ object GraphUpdateKind {
   }
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
 
-  val toBeIngested = all -- Set()
+  val toBeIngested = all -- Set(SparseLDAGraphUpdate, LDAOldVersionCleanupGraphUpdate, )
 }
 
 case class UserGraphUpdate(userId: Id[User], state: State[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
