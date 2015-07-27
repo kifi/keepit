@@ -14,6 +14,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.fetcher.{ ArticleFetchRequest, ArticleFetcherProvider }
 import com.keepit.rover.article.policy.ArticleFetchPolicy
+import com.keepit.rover.document.FetchThrottlingException
 import com.keepit.rover.fetcher.{ InvalidFetchResponseException, InvalidFetchRequestException }
 import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
 import com.keepit.rover.model._
@@ -227,6 +228,7 @@ class ArticleCommander @Inject() (
     } andThen {
       case fetched =>
         fetched recover {
+          case throttled: FetchThrottlingException => // ignore
           case error: Exception =>
             log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
         }
