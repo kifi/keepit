@@ -40,13 +40,14 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
     "grab an organization's visible libraries" in {
       withDb(modules: _*) { implicit injector =>
-        val (org, owner, nonMember, publicLibs, orgLibs) = db.readWrite { implicit session =>
+        val (org, owner, nonMember, publicLibs, orgLibs, deletedLibs) = db.readWrite { implicit session =>
           val owner = UserFactory.user().withName("Owner", "McOwnerson").saved
           val nonMember = UserFactory.user().withName("Rando", "McRanderson").saved
           val org = OrganizationFactory.organization().withName("Test Org").withOwner(owner).saved
           val publicLibs = LibraryFactory.libraries(10).map(_.withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganization(Some(org.id.get))).saved
           val orgLibs = LibraryFactory.libraries(20).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(Some(org.id.get))).saved
-          (org, owner, nonMember, publicLibs, orgLibs)
+          val deletedLibs = LibraryFactory.libraries(15).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(Some(org.id.get))).saved.map(_.deleted)
+          (org, owner, nonMember, publicLibs, orgLibs, deletedLibs)
         }
 
         val orgCommander = inject[OrganizationCommander]
@@ -54,9 +55,12 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val randoVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))
         val nooneVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, None, offset = Offset(0), limit = Limit(100))
 
-        ownerVisibleLibraries.length === 30
-        randoVisibleLibraries.length === 10
-        nooneVisibleLibraries.length === 10
+        ownerVisibleLibraries.length === publicLibs.length + orgLibs.length
+        randoVisibleLibraries.length === publicLibs.length
+        nooneVisibleLibraries.length === publicLibs.length
+        db.readOnlyMaster { implicit session =>
+          inject[LibraryRepo].getBySpace(org.id.get, excludeStates = Set.empty).size === publicLibs.length + orgLibs.length + deletedLibs.length
+        }
       }
     }
 

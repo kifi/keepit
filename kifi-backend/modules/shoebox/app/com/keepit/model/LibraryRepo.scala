@@ -455,10 +455,11 @@ class LibraryRepoImpl @Inject() (
   }
 
   // Organization Library Repo methods
+  // TODO(ryan): I hate this method, and it's ugly code-duplication. If someone can fix it I will be so happy.
   private def visibleOrganizationLibrariesHelper(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession) = {
     if (includeOrgVisibleLibraries) {
       for {
-        lib <- rows if lib.orgId === orgId && (
+        lib <- rows if lib.state === LibraryStates.ACTIVE && lib.orgId === orgId && (
           (lib.visibility === (LibraryVisibility.ORGANIZATION: LibraryVisibility)) ||
           (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
           lib.id.inSet(viewerLibraryMemberships) // user's can see any library they are a member of
@@ -466,7 +467,7 @@ class LibraryRepoImpl @Inject() (
       } yield lib
     } else {
       for {
-        lib <- rows if lib.orgId === orgId && (
+        lib <- rows if lib.state === LibraryStates.ACTIVE && lib.orgId === orgId && (
           (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
           lib.id.inSet(viewerLibraryMemberships)
         )
