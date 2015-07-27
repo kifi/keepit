@@ -162,7 +162,7 @@ class PageCommander @Inject() (
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getLibraries(libraryIds.toSet).filter(_._2.state == LibraryStates.ACTIVE)
-    libraryIds.map(libraryMap)
+    libraryIds.flatMap(libraryMap.get)
   }
 
   def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
