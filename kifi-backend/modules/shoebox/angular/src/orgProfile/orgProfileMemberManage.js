@@ -5,7 +5,7 @@ angular.module('kifi')
 .controller('OrgProfileMemberManageCtrl', [
   '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
   function($scope, profile, profileService, orgProfileService, modalService) {
-    var organization = profile;
+    var organization = profile.organization;
 
     function handleErrorResponse(response) {
       var err = response.data.error;
