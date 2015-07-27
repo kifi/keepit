@@ -19,6 +19,7 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
     }
     "landing page routing" in {
       running(new ShoeboxApplication(modules: _*)) {
+        FakeRequest().withHeaders("X-Forwarded-For" -> "8.8.8.8")
         val request = FakeRequest().withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
         landing === "index.6"
@@ -50,6 +51,27 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
         val request = FakeRequest("GET", "?v=4").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
         landing === "index.4"
+      }
+    }
+    "landing page routing v5" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val request = FakeRequest("GET", "?v=5").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
+        val landing = MarketingSiteRouter.landing(request)
+        landing === "index.5"
+      }
+    }
+    "landing page routing v6" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val request = FakeRequest("GET", "?v=6").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
+        val landing = MarketingSiteRouter.landing(request)
+        landing === "index.6"
+      }
+    }
+    "landing page routing v7" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val request = FakeRequest("GET", "?v=7").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
+        val landing = MarketingSiteRouter.landing(request)
+        landing === "index.7"
       }
     }
 
