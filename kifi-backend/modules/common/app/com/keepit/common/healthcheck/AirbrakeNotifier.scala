@@ -43,7 +43,6 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
           val json: JsValue = formatter.format(error)
           airbrakeSender.sendError(json)
           val toLog = error.message.getOrElse(error.exception.toString)
-          println(s"[airbrake] $toLog")
           log.error(s"[airbrake] $toLog")
         }
       } catch {
