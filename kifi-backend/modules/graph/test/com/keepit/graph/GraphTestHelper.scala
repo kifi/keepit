@@ -82,7 +82,7 @@ trait GraphTestHelper {
   val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
-  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
+  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, t1, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
   val orgMemCandidateUpdates = List(orgMemCandidateUpdate1)
 
   val emailAccountUpdate1 = EmailAccountGraphUpdate(emailAccountId1, Some(userid1), Some(domainId1), verified = true, emailSeq = SequenceNumber(1))
