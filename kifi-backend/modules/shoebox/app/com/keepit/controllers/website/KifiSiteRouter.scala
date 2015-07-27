@@ -90,7 +90,7 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
-  def serveWebAppIfOrganizationFound(handle: Handle) = WebAppPage { implicit request =>
+  def serveWebAppIfOrganizationFound(handle: OrganizationHandle) = WebAppPage { implicit request =>
     lookupHandle(handle) map {
       case (Right(user), _) => notFound(request)
       case (Left(org), redirectStatusOpt) =>
