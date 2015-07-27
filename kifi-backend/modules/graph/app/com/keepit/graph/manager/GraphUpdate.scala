@@ -181,7 +181,7 @@ case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpd
   def apply(org: IngestableOrganization): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
 }
 
-case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
+case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
   type U = OrganizationMembershipGraphUpdate
   def kind = OrganizationMembershipGraphUpdate
   def seq = kind.seq(orgMemSeq.value)
@@ -189,10 +189,10 @@ case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id
 
 case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
   val code = "organization_membership_graph_update"
-  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.state, orgMem.seq)
 }
 
-case class OrganizationMembershipCandidateGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembershipCandidate], orgMemSeq: SequenceNumber[OrganizationMembershipCandidate]) extends GraphUpdate {
+case class OrganizationMembershipCandidateGraphUpdate(orgId: Id[Organization], userId: Id[User], state: State[OrganizationMembershipCandidate], orgMemSeq: SequenceNumber[OrganizationMembershipCandidate]) extends GraphUpdate {
   type U = OrganizationMembershipCandidateGraphUpdate
   def kind = OrganizationMembershipCandidateGraphUpdate
   def seq = kind.seq(orgMemSeq.value)
@@ -200,7 +200,7 @@ case class OrganizationMembershipCandidateGraphUpdate(orgId: Id[Organization], u
 
 case object OrganizationMembershipCandidateGraphUpdate extends GraphUpdateKind[OrganizationMembershipCandidateGraphUpdate] {
   val code = "organization_membership_candidate_graph_update"
-  def apply(orgMemCandidate: IngestableOrganizationMembershipCandidate): OrganizationMembershipCandidateGraphUpdate = OrganizationMembershipCandidateGraphUpdate(orgMemCandidate.orgId, orgMemCandidate.userId, orgMemCandidate.createdAt, orgMemCandidate.state, orgMemCandidate.seq)
+  def apply(orgMemCandidate: IngestableOrganizationMembershipCandidate): OrganizationMembershipCandidateGraphUpdate = OrganizationMembershipCandidateGraphUpdate(orgMemCandidate.orgId, orgMemCandidate.userId, orgMemCandidate.state, orgMemCandidate.seq)
 }
 
 case class UserIpAddressGraphUpdate(userId: Id[User], ipAddress: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {

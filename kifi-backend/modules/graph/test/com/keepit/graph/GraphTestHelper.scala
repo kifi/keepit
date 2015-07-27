@@ -78,11 +78,11 @@ trait GraphTestHelper {
   val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
   val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
 
-  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
-  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
+  val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
+  val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
-  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, t1, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
+  val orgMemCandidateUpdate1 = OrganizationMembershipCandidateGraphUpdate(orgId1, userid3, OrganizationMembershipCandidateStates.ACTIVE, SequenceNumber(1))
   val orgMemCandidateUpdates = List(orgMemCandidateUpdate1)
 
   val emailAccountUpdate1 = EmailAccountGraphUpdate(emailAccountId1, Some(userid1), Some(domainId1), verified = true, emailSeq = SequenceNumber(1))

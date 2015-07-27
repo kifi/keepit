@@ -230,26 +230,27 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       writer.saveVertex(OrganizationData(update.orgId))
   }
 
+  // todo(Cam / Léo): this is dangerous, there's a race condition here as the two following updates are touching the same edges. We need clear semantics re: the state of OrganizationMembershipCandidate
   private def processOrganizationMembershipGraphUpdate(update: OrganizationMembershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
     case OrganizationMembershipStates.INACTIVE =>
-      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
-      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.userId, update.orgId, EmptyEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, EmptyEdgeReader)
     case OrganizationMembershipStates.ACTIVE =>
       writer.saveVertex(OrganizationData(update.orgId))
       writer.saveVertex(UserData(update.userId))
-      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
-      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.userId, update.orgId, EmptyEdgeData)
+      writer.saveEdge(update.orgId, update.userId, EmptyEdgeData)
   }
 
   private def processOrganizationMembershipCandidateUpdate(update: OrganizationMembershipCandidateGraphUpdate)(implicit writer: GraphWriter) = update.state match {
     case OrganizationMembershipCandidateStates.INACTIVE =>
-      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
-      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.userId, update.orgId, EmptyEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, EmptyEdgeReader)
     case OrganizationMembershipCandidateStates.ACTIVE =>
       writer.saveVertex(OrganizationData(update.orgId))
       writer.saveVertex(UserData(update.userId))
-      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
-      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.userId, update.orgId, EmptyEdgeData)
+      writer.saveEdge(update.orgId, update.userId, EmptyEdgeData)
   }
 
   private def processUserIpAddressGraphUpdate(update: UserIpAddressGraphUpdate)(implicit writer: GraphWriter) = {

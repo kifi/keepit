@@ -199,8 +199,8 @@ object SocialWanderlust {
     Component(DomainReader, EmailAccountReader, EmptyEdgeReader),
 
     // Organizations Graph
-    Component(UserReader, OrganizationReader, TimestampEdgeReader),
-    Component(OrganizationReader, UserReader, TimestampEdgeReader),
+    Component(UserReader, OrganizationReader, EmptyEdgeReader),
+    Component(OrganizationReader, UserReader, EmptyEdgeReader),
 
     // Ip Address Graph
     Component(UserReader, IpAddressReader, TimestampEdgeReader),
