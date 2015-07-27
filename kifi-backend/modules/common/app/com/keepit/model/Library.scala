@@ -19,7 +19,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.QueryStringBindable
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.concurrent.duration.Duration
 
@@ -271,6 +271,11 @@ object LibrarySlug {
 
   private def compile(pair: (String, String)): (Pattern, String) = Pattern.compile(pair._1) -> pair._2
   private def replaceAll(s: String, op: (Pattern, String)): String = op._1.matcher(s).replaceAll(op._2)
+
+  implicit def pathBinder = new PathBindable[LibrarySlug] {
+    override def bind(key: String, value: String): Either[String, LibrarySlug] = Right(LibrarySlug(value))
+    override def unbind(key: String, slug: LibrarySlug): String = slug.value
+  }
 }
 
 sealed abstract class LibraryVisibility(val value: String)

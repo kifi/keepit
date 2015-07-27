@@ -50,6 +50,7 @@ class SeedAttributionHelper @Inject() (
           Future.successful(ret)
         } else {
           val uriIds = uriId2Idx.keys.toSeq
+          // call below uses showPublishedLibraries = false
           search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
             timer.stopAndReport()
             (uriIds zip infos).foreach {
