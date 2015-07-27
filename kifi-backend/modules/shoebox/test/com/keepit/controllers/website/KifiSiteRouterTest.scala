@@ -249,6 +249,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
         route(FakeRequest("GET", "/kifiorghandle")) must beWebApp
+        route(FakeRequest("GET", "/kifiorghandle/members")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
 
