@@ -11,14 +11,15 @@
       </a>
     </div>
     <div class="kf-org-member-upper-right">
-      <button class="kf-org-member-action-button" ng-click="toggleControls()" ng-if="shouldShowMakeAdmin() || shouldShowInvite() || shouldShowRemove()">
+      <button class="kf-org-member-action-button" ng-click="toggleControls()" ng-if="shouldShowDemote() || shouldShowPromote() || shouldShowInvite() || shouldShowRemove()">
         <svg kf-symbol-sprite icon="dropdown-arrow" class="{{ 'kf-dropdown-arrow-icon' + (isOpen() ? ' kf-dropdown-arrow-icon-inverted' : '') }}"></svg>
       </button>
     </div>
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button ng-if="shouldShowMakeAdmin()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerMakeAdmin(member)">Make admin</button>
+      <button ng-if="shouldShowDemote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerDemote(member)">Demote</button>
+      <button ng-if="shouldShowPromote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerPromote(member)">Make admin</button>
     </div>
     <div class="kf-org-member-lower-right">
       <button ng-if="shouldShowAcceptInvite()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerAcceptInvite(member)">accept invite</button>

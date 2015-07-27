@@ -19,9 +19,22 @@ angular.module('kifi')
       return !$scope.member.lastInvitedAt;
     }
 
-    function _shouldShowMakeAdmin() {
+    function _shouldShowPromote() {
       var $scope = this;
-      return $scope.me.role === 'admin' && $scope.member.role !== 'admin' && $scope.hasAcceptedInvite();
+      return (
+        $scope.me.role === 'admin' &&
+        $scope.member.role !== 'admin' &&
+        $scope.hasAcceptedInvite()
+      );
+    }
+
+    function _shouldShowDemote() {
+      var $scope = this;
+      return (
+        $scope.me.id === $scope.organization.ownerId &&
+        $scope.member.role !== 'member' &&
+        $scope.hasAcceptedInvite()
+      );
     }
 
     function _shouldShowRemove() {
@@ -60,17 +73,24 @@ angular.module('kifi')
       $scope.$emit('removeMember', $scope.member);
     }
 
-    function _triggerMakeAdmin() {
+    function _triggerPromote() {
       var $scope = this;
       $scope.$emit('promoteMember', $scope.member);
     }
+
+    function _triggerDemote() {
+      var $scope = this;
+      $scope.$emit('demoteMember', $scope.member);
+    }
+
 
     return {
       restrict: 'A',
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
       $scope: {
         member: '=',
-        me: '='
+        me: '=',
+        organization: '='
       },
       replace: true,
       link: function ($scope) {
@@ -110,14 +130,16 @@ angular.module('kifi')
         $scope.resentInvite = _resentInvite;
 
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
-        $scope.shouldShowMakeAdmin = _shouldShowMakeAdmin;
+        $scope.shouldShowPromote = _shouldShowPromote;
+        $scope.shouldShowDemote = _shouldShowDemote;
         $scope.shouldShowRemove = _shouldShowRemove;
         $scope.shouldShowInvite = _shouldShowInvite;
         $scope.shouldShowAcceptInvite = _shouldShowAcceptInvite;
         $scope.triggerInvite = _triggerInvite;
         $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;
-        $scope.triggerMakeAdmin = _triggerMakeAdmin;
+        $scope.triggerPromote = _triggerPromote;
+        $scope.triggerDemote = _triggerDemote;
       }
     };
   }
