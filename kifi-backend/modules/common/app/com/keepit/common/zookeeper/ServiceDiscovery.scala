@@ -119,12 +119,14 @@ class ServiceDiscoveryImpl(
         }
         return true
       case Some(instance) =>
-        require(myCluster.size > 1)
-        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        val msg = s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance"
+        if (logMe) logLeader(msg)
+        require(myCluster.size > 1, s"$msg; cluster size is ${myCluster.size}")
         return false
       case None =>
-        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
-        require(myCluster.size == 0)
+        val msg = s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is"
+        if (logMe) logLeader(msg)
+        require(myCluster.size == 0, s"$msg; cluster size is ${myCluster.size}")
         return false
     }
   }
