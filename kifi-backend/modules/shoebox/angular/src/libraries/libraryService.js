@@ -146,12 +146,7 @@ angular.module('kifi')
           }
         }
 
-        var owner = null;
-        debugger;
-
-        return net.createLibrary({
-          space: owner
-        });
+        return net.createLibrary(opts);
       },
 
       modifyLibrary: function (opts, checkMissingFields) {
