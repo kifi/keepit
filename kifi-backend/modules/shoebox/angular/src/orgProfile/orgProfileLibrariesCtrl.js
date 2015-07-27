@@ -5,7 +5,7 @@ angular.module('kifi')
 .controller('OrgProfileLibrariesCtrl', [
   '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
   function ($scope, profile, profileService, orgProfileService, modalService) {
-    var organization = profile.organizationInfo;
+    var organization = profile;
 
     $scope.libraries = [];
 
