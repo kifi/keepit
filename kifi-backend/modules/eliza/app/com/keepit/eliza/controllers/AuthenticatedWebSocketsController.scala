@@ -281,10 +281,15 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   private def endSession(streamSession: StreamSession, socketInfo: SocketInfo) = {
     val timer = accessLog.timer(WS_IN)
-    socketInfo.channel.push(Json.arr("bye", "session"))
-    socketInfo.channel.eofAndEnd()
-    onDisconnect(socketInfo)
-    accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "Session ended"))
+    try {
+      socketInfo.channel.push(Json.arr("bye", "session"))
+      socketInfo.channel.eofAndEnd()
+    } catch {
+      case ex: java.nio.channels.ClosedChannelException =>
+    } finally {
+      onDisconnect(socketInfo)
+      accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "Session ended"))
+    }
   }
 
   protected def authenticatedWebSocketsContextBuilder(socketInfo: SocketInfo, request: Option[RequestHeader] = None) = {
