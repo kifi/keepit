@@ -12,7 +12,7 @@ import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ GetResult, SetParameter }
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
-import com.keepit.classify.DomainTagName
+import com.keepit.classify.{ DomainHash, DomainTagName }
 import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
@@ -62,6 +62,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
     case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }
   })
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
+  implicit val domainHashMapper = MappedColumnType.base[DomainHash, String](_.hash, DomainHash.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[KeepSource, String](_.value, KeepSource.apply)

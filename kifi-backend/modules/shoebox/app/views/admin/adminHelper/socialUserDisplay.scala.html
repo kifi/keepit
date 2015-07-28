@@ -1,10 +1,5 @@
 @(socialUserInfo: SocialUserBasicInfo, socialOnly: Boolean = false)
 
-@networkLogo = {
-  <img src="/assets/securesocial/images/providers/@{socialUserInfo.networkType}.png"
-    alt="@{socialUserInfo.networkType}" width="16" height="16">
-}
-
 @avatar = {
   @for(img <- socialUserInfo.getPictureUrl(75, 75)) {
     <img class="user-avatar" src="@img"/>
@@ -15,12 +10,12 @@
 @if(socialUserInfo.userId.isDefined && !socialOnly) {
   <a data-hover="tooltip" title="@socialUserInfo.fullName"
      class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(socialUserInfo.userId.get)">
-    @avatar <b>@socialUserInfo.fullName</b> @networkLogo
+    @avatar <b>@socialUserInfo.fullName</b> (@socialUserInfo.networkType)
   </a>
 } else {
   <a data-hover="tooltip" title="@socialUserInfo.fullName"
      class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id)">
-    @avatar @socialUserInfo.fullName @networkLogo
+    @avatar @socialUserInfo.fullName (@socialUserInfo.networkType)
   </a>
 }
 </span>

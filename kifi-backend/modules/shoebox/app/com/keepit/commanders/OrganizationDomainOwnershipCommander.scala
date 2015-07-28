@@ -5,7 +5,11 @@ import com.keepit.classify.{ Domain, DomainRepo }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.model._
+import org.joda.time.DateTime
+
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
 trait OrganizationDomainOwnershipCommander {
@@ -34,7 +38,8 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
-    domainRepo: DomainRepo) extends OrganizationDomainOwnershipCommander {
+    domainRepo: DomainRepo,
+    implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
   override def getDomainsOwned(orgId: Id[Organization]): Set[Domain] = {
     val domains = db.readOnlyMaster { implicit session =>

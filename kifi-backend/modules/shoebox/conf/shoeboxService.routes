@@ -597,6 +597,7 @@ GET     /admin/domains/tags            @com.keepit.controllers.admin.UrlControll
 POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlController.saveDomainTags
 GET     /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.getDomainOverrides
 POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.saveDomainOverrides
+GET     /admin/domains/updateAllDomainHashes    @com.keepit.controllers.admin.UrlController.updateAllDomainHashes
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -721,6 +722,7 @@ GET     /admin/findOrganizationByNameJson             @com.keepit.controllers.ad
 POST    /admin/organizations/create             @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId             @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
+
 
 GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
@@ -1034,6 +1036,7 @@ GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRoute
 GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)

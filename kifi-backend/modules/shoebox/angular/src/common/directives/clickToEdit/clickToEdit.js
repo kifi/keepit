@@ -11,7 +11,8 @@ angular.module('kifi')
         value: '=',
         inputPlaceholder: '=',
         textarea: '=',
-        onSave: '='
+        onSave: '=',
+        readonly: '='
       },
       replace: true,
       link: function ($scope, $element) {

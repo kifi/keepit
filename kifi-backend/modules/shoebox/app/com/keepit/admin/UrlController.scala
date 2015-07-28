@@ -1,7 +1,8 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.classify.{ DomainHash, SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -11,6 +12,7 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.article.content.ArticleContentExtractor
 import com.keepit.rover.model.{ ArticleVersion }
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
@@ -459,7 +461,7 @@ class UrlController @Inject() (
       domainSensitiveMap.foreach {
         case (domainName, sensitive) if Domain.isValid(domainName) =>
           val domain = domainRepo.get(domainName)
-            .getOrElse(Domain(hostname = domainName))
+            .getOrElse(Domain.fromHostname(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)
         case (domainName, _) =>
@@ -470,5 +472,24 @@ class UrlController @Inject() (
       }
     }
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
+  }
+
+  def updateAllDomainHashes() = AdminUserAction { implicit request =>
+    val BATCH_SIZE = 10000
+    val numBatches = db.readOnlyReplica { implicit session => domainRepo.count / BATCH_SIZE }
+
+    def processBatch(batch: Int): Future[Unit] = {
+      db.readWriteAsync { implicit session =>
+        val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
+        val updatedDomains = domainBatch.map(domain => Domain.fromHostname(domain.hostname).copy(id = domain.id, state = domain.state))
+        updatedDomains.foreach(domainRepo.save)
+        log.info(s"[hashMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
+        ()
+      }
+    }
+
+    FutureHelpers.sequentialExec(1 to numBatches)(processBatch)
+
+    Ok
   }
 }

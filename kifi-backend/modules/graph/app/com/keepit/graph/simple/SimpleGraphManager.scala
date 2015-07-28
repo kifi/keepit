@@ -38,7 +38,9 @@ class SimpleGraphManager(
         graphDirectory.scheduleBackup()
         graphDirectory.doBackup()
         graphDirectory.asFile.foreach { dir =>
-          statsd.gauge("graph.directory.size", FileUtils.sizeOfDirectory(dir))
+          val directorySize = FileUtils.sizeOfDirectory(dir)
+          log.info(s"Reporting directory size ($directorySize), running heap size ($runningHeapSize) and persisting heap size ($persistingHeapSize).")
+          statsd.gauge("graph.directory.size", directorySize)
           statsd.gauge("graph.heap.running", runningHeapSize)
           statsd.gauge("graph.heap.persisting", persistingHeapSize)
         }

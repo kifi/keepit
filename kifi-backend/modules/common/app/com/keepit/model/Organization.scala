@@ -14,6 +14,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.{ QueryStringBindable, PathBindable }
 
 import scala.concurrent.duration.Duration
 
@@ -151,6 +152,13 @@ object OrganizationStates extends States[Organization]
 @json
 case class OrganizationHandle(value: String) extends AnyVal {
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
+}
+
+object OrganizationHandle {
+  implicit def pathBinder = new PathBindable[OrganizationHandle] {
+    override def bind(key: String, value: String): Either[String, OrganizationHandle] = Right(OrganizationHandle(value))
+    override def unbind(key: String, handle: OrganizationHandle): String = handle.value
+  }
 }
 
 @json

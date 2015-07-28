@@ -15,25 +15,20 @@ angular.module('kifi')
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
 
-      scope.editing = false;
-      scope.notification = null;
       var lastSavedInfo = {};
+      scope.notification = null;
 
+      scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
 
-      scope.toggleEditing = function () {
-        scope.editing = !scope.editing;
-        lastSavedInfo = angular.extend(lastSavedInfo, scope.profile);
-      };
-
       scope.undo = function () {
         scope.profile = angular.extend(scope.profile, lastSavedInfo);
-        scope.toggleEditing();
       };
 
       var updateMe = function(data) {
-        angular.extend(scope.profile, data);
+        scope.profile = angular.extend(scope.profile, data);
+        lastSavedInfo = angular.extend(lastSavedInfo, scope.profile);
       };
 
       scope.save = function () {
@@ -50,14 +45,17 @@ angular.module('kifi')
               'action': 'updateOrgProfile',
               'path': $location.path()
             });
-            // TODO (Adam): Should validate.
-            // Success: sets last value to current one, shows success.
-            // Error: Sets current value to last one, shows error.
             scope.notification = 'save';
             $timeout(function() {
               scope.notification = null;
             }, 1500);
             return updateMe(res.data);
+          })['catch'](function() {
+            scope.notification = 'error';
+            scope.undo();
+            $timeout(function() {
+              scope.notification = null;
+            }, 1500);
           });
       };
 
