@@ -114,6 +114,17 @@ angular.module('kifi')
         });
       },
 
+      getLibraryByHandleAndSlug: function (handle, slug, authToken, invalidateCache) {
+        if (invalidateCache) {
+          net.getLibraryByHandleAndSlug.clearCache();
+        }
+        return net.getLibraryByHandleAndSlug(handle, slug, {authToken: authToken}).then(function (res) {
+          res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
+          res.data.library.subscriptions = res.data.subscriptions;
+          return augment(res.data.library);
+        });
+      },
+
       getKeepsInLibrary: function (libraryId, offset, authToken) {
         return net.getKeepsInLibrary(libraryId, {count: 10, offset: offset, authToken: authToken || []}).then(function (res) {
           return res.data;
@@ -159,7 +170,7 @@ angular.module('kifi')
             return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
           }
         }
-        return $http.post(routeService.modifyLibrary(opts.id), opts);
+        return net.modifyLibrary(opts.id, opts);
       },
 
       getLibraryShareContacts: function (libId, query) {

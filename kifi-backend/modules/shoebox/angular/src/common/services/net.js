@@ -18,9 +18,11 @@ angular.module('kifi')
       getLibraryInfos: get(shoebox, '/libraries', 30),
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
       getLibraryByUserSlug: get(shoebox, '/users/:username/libraries/:slug?showPublishedLibraries=1', 30),
+      getLibraryByHandleAndSlug: get(shoebox, '/user-or-org/:handle/libraries/:slug?showPublishedLibraries=1', 30),
       getLibraryById: get(shoebox, '/libraries/:id', 30),
 
       createLibrary: post(shoebox, '/libraries/add'),
+      modifyLibrary: post(shoebox, '/libraries/:id/modify'),
 
       userOrOrg: get(shoebox, '/user-or-org/:handle', 30),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),

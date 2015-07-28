@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        debugger;
         scope.handle = 'organization' in scope.modalData ? scope.modalData.organization.handle : profileService.me.username;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
