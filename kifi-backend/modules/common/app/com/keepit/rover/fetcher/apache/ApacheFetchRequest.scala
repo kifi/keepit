@@ -47,11 +47,10 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
       executedAt.set(System.currentTimeMillis)
       thread.set(Thread.currentThread())
       timingWithResult[ApacheFetchResponse](s"fetch(${url}).execute", { r: ApacheFetchResponse => r.getStatusLine.toString }) {
-        println(s"[fetch-start] ${url}")
         System.out.flush()
         new ApacheFetchResponse(httpClient.execute(httpGet, httpContext))
       }
-    } tap { _ => println(s"[fetch-end] ${url}") } tap {
+    } tap {
       case Success(httpResponse) => respStatusRef.set(httpResponse.getStatusLine)
       case Failure(e @ (_: IOException | _: GeneralSecurityException | _: NullPointerException)) => logAndSetError(e, notify = false) // NullPointerException can happen on BrowserCompatSpec.formatCookies
       case Failure(t) => logAndSetError(t, notify = true)
