@@ -138,16 +138,16 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryByPathV1(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    getLibraryByPath(request, userStr, slugStr, imageSize, true)
+  def getLibraryByPathV1(handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, handle, slug, imageSize, true)
   }
-  def getLibraryByPathV2(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    getLibraryByPath(request, userStr, slugStr, imageSize, false)
+  def getLibraryByPathV2(handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, handle, slug, imageSize, false)
   }
 
-  private def getLibraryByPath(request: MaybeUserRequest[AnyContent], userStr: String, slugStr: String, imageSize: Option[String] = None, v1: Boolean) = {
+  private def getLibraryByPath(request: MaybeUserRequest[AnyContent], handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
+    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }

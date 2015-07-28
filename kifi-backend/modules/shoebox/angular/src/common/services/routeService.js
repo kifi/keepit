@@ -139,9 +139,6 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      modifyLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/modify');
-      },
       shareLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/invite');
       },

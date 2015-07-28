@@ -163,7 +163,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
 
-        val result1 = getLibraryByPath(user1, "spongebob", "krabby-patty")
+        val result1 = getLibraryByHandleAndSlug(user1, Handle("spongebob"), LibrarySlug("krabby-patty"))
         val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -918,9 +918,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.leaveLibrary(libId)(request(routes.MobileLibraryController.leaveLibrary(libId)))
   }
 
-  private def getLibraryByPath(user: User, userStr: String, slugStr: String)(implicit injector: Injector): Future[Result] = {
+  private def getLibraryByHandleAndSlug(user: User, handle: Handle, slug: LibrarySlug)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibraryByPathV1(userStr, slugStr)(request(routes.MobileLibraryController.getLibraryByPathV1(userStr, slugStr)))
+    controller.getLibraryByPathV1(handle, slug)(request(routes.MobileLibraryController.getLibraryByPathV1(handle, slug)))
   }
 
   private def getLibraryById(user: User, libId: PublicId[Library])(implicit injector: Injector): Future[Result] = {

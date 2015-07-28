@@ -248,8 +248,8 @@ GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.M
 POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
 
 
-GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(userStr:String, slug: String, is: Option[String] ?= None)
-GET     /m/2/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(userStr:String, slug: String, is: Option[String] ?= None)
+GET     /m/1/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
+GET     /m/2/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
@@ -391,7 +391,7 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsCont
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 #### Deprecated: use /site/user-or-org/:handle/libraries/:slug
-GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String, showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None, authToken: Option[String] ?= None)
+GET     /site/users/:handle/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 # Profile pages
 GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
@@ -531,6 +531,8 @@ POST          /site/organizations/:id/avatar/upload             @com.keepit.cont
 
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
+GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 ##########################################
 # Email-Link API
