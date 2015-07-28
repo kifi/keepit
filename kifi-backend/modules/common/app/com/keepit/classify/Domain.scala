@@ -2,7 +2,7 @@ package com.keepit.classify
 
 import java.security.MessageDigest
 
-import com.google.common.net.InternetDomainName
+import java.net.IDN
 import com.keepit.common.strings._
 import com.kifi.macros.json
 import org.apache.commons.codec.binary.Base64
@@ -25,7 +25,7 @@ case class Domain(
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
-  require(hostname == InternetDomainName.from(hostname).toString, "")
+  require(hostname == IDN.toASCII(hostname), "Invalid hostname: use Domain.fromHostname(hostname)")
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)
@@ -53,7 +53,7 @@ object Domain {
 
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length <= MaxLength
 
-  def fromHostname(hostname: String): Domain = Domain(hostname = InternetDomainName.from(hostname).toString) // throws an exception is !isValid(hostname)
+  def fromHostname(hostname: String): Domain = Domain(hostname = IDN.toASCII(hostname)) // throws an exception if !isValid(hostname)
 }
 
 @json
