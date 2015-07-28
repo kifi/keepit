@@ -39,13 +39,12 @@ class AttributionCommander @Inject() (
             keep.keepId -> getReKeepsByDegree(userId, keep.keepId, n).map { case (userIdsByDeg, _) => userIdsByDeg }
           }
       }.flatten.toMap
-      log.info(s"getUserReKeepsByDegree res=$res")
       res
     }
   }
 
   // potentially expensive -- admin only for now; will be called infrequently (cron job) later
-  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep], n: Int = 3): Seq[(Seq[Id[User]], Seq[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep], n: Int = 3): Seq[(Seq[Id[User]], Seq[Id[Keep]])] = {
     require(n > 1 && n < 5, s"getReKeepsByDegree($keeperId, $keepId) illegal argument (degree=$n)")
     val rekeepsByDeg = new Array[Set[Id[Keep]]](n)
     rekeepsByDeg(0) = Set(keepId)
@@ -62,7 +61,6 @@ class AttributionCommander @Inject() (
         rekeepsByDeg(i) = Set.empty[Id[Keep]]
         usersByDeg(i) = Set.empty[Id[User]]
       } else {
-        log.info(s"getRKBD($keeperId,$keepId,$n) rekeepsByDeg(${i - 1})=${rekeepsByDeg(i - 1)}")
         val currRekeeps = db.readOnlyReplica { implicit r => rekeepRepo.getReKeeps(rekeepsByDeg(i - 1)) }
         val mergedKeepIds = currRekeeps.valuesIterator.foldLeft(Set.empty[Id[Keep]]) { (a, c) => a ++ c.map(_.srcKeepId) }
         val mergedUserIds = currRekeeps.valuesIterator.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c.map(_.srcUserId) }
@@ -70,7 +68,6 @@ class AttributionCommander @Inject() (
         usersByDeg(i) = mergedUserIds -- accUserIds
         accKeepIds ++= mergedKeepIds
         accUserIds ++= mergedUserIds
-        log.info(s"getRKBD($keeperId,$keepId,$n) mergedKeepIds=$mergedKeepIds mergedUserIds=$mergedUserIds accKeepIds=$accKeepIds accUserIds=$accUserIds")
       }
     }
 
@@ -89,14 +86,12 @@ class AttributionCommander @Inject() (
         case ((keepId, uriId), rekeepCount) =>
           (keepId, uriId) -> (rekeepCount, getReKeepsByDegree(userId, keepId, n).map(_._1).flatten.length - 1) // exclude self
       }
-      log.info(s"[updateReKeepStats($userId)] rekeepStats=${rekeepStats.mkString(",")}")
 
       val res = db.readWrite { implicit rw =>
         rekeepStats.map {
           case ((keepId, uriId), (rkCount, aggCount)) =>
             userBookmarkClicksRepo.getByUserUri(userId, uriId) match {
               case None =>
-                log.error(s"[updateReKeepStats($userId)] couldn't find bookmarkClick entry for uriId=$uriId")
                 userBookmarkClicksRepo.save(UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0, rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
               case Some(bookmarkClick) =>
                 userBookmarkClicksRepo.save(bookmarkClick.copy(rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
@@ -104,7 +99,6 @@ class AttributionCommander @Inject() (
         }.toSeq
       }
 
-      log.info(s"[updateReKeepStats($userId)] updated #${res.length} bookmarkClick entries: ${res.mkString(",")}")
       res
     }
   }
@@ -112,7 +106,7 @@ class AttributionCommander @Inject() (
   def updateUsersReKeepStats(keepers: Seq[Id[User]], n: Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val promise = Promise[Seq[Seq[UserBookmarkClicks]]]
     val builder = mutable.ArrayBuilder.make[Seq[UserBookmarkClicks]]
-    val chunkCB: Int => Unit = { idx => log.info(s"[updateUsersReKeepStats] done with batch#$idx") }
+    val chunkCB: Int => Unit = { idx => () }
     val execF = FutureHelpers.chunkySequentialExec(keepers, 50, chunkCB) { keeperId: Id[User] =>
       updateUserReKeepStats(keeperId, n) map { res =>
         builder += res
