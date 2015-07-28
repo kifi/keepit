@@ -148,6 +148,8 @@ class OrganizationAvatarCommanderImpl @Inject() (
 }
 
 object OrganizationAvatarConfiguration {
+  val defaultSize = ScaledImageSize.Medium.idealSize
+
   val scaleSizes = Seq(ScaledImageSize.Small, ScaledImageSize.Medium)
   val cropSizes = Seq(CroppedImageSize.Small)
   val numSizes = scaleSizes.length + cropSizes.length

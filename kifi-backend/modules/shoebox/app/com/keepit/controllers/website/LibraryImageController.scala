@@ -12,10 +12,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.json.Json
-
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class LibraryImageController @Inject() (
@@ -31,7 +28,8 @@ class LibraryImageController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val libraryCommander: LibraryCommander,
   val publicIdConfig: PublicIdConfiguration,
-  implicit val config: PublicIdConfiguration)
+  implicit val config: PublicIdConfiguration,
+  private implicit val executionContext: ExecutionContext)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryOwnerAction(pubId)).async(parse.temporaryFile) { request =>
