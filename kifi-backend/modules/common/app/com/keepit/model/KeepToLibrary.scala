@@ -17,11 +17,9 @@ case class KeepToLibrary(
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepToLibrary = this.copy(updatedAt = now)
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
-  def sanitizeForDelete: KeepToLibrary = this.copy(
-    state = KeepToLibraryStates.INACTIVE
-  )
 
   def isActive = state == KeepToLibraryStates.ACTIVE
+  def isInactive = state == KeepToLibraryStates.INACTIVE
 }
 
 object KeepToLibraryStates extends States[KeepToLibrary]

@@ -13,11 +13,12 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
   def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
+  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 }
 
@@ -60,7 +61,7 @@ class KeepToLibraryRepoImpl @Inject() (
   def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
     getByLibraryIdHelper(libraryId, excludeStateOpt).run.length
   }
-  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
     getByLibraryIdHelper(libraryId, excludeStateOpt).drop(offset.value).take(limit.value).list
   }
   def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
@@ -74,7 +75,10 @@ class KeepToLibraryRepoImpl @Inject() (
     getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStateOpt).firstOption
   }
 
+  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary = {
+    save(model.withState(KeepToLibraryStates.ACTIVE))
+  }
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {
-    save(model.sanitizeForDelete)
+    save(model.withState(KeepToLibraryStates.INACTIVE))
   }
 }
