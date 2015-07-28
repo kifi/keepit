@@ -9,6 +9,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
@@ -103,7 +104,8 @@ class UserStatisticsCommander @Inject() (
     userValueRepo: UserValueRepo,
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     domainRepo: DomainRepo,
-    abook: ABookServiceClient) {
+    abook: ABookServiceClient,
+    airbrake: AirbrakeNotifier) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -179,7 +181,11 @@ class UserStatisticsCommander @Inject() (
       (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains)
     }
 
-    val fMemberRecommendations = abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
+    val fMemberRecommendations = try {
+      abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
+    } catch {
+      case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
+    }
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
       reco.identifier.isLeft &&
