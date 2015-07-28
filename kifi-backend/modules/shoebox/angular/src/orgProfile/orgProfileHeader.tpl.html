@@ -19,10 +19,7 @@
     variation="'kf-generic-banner-error'"
   ></div>
   <div class="kf-oph-top">
-    <div class="kf-oph-pic-wrapper" ng-click="onOrgProfileImageClick($event)">
-      <img class="kf-oph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.name}}" itemprop="image">
-      <input style="display: none;" class="kf-oph-pic-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onOrgProfileImageFileChosen">
-    </div>
+    <div kf-profile-image upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
         <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" readonly="readonly"></div>
