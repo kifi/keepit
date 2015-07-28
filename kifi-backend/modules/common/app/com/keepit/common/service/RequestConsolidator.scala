@@ -36,7 +36,6 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
                 if (futureRefMap.remove(ref.key, ref)) cnt += 1
                 ref = referenceQueue.poll().asInstanceOf[FutureRef[T]]
               }
-              log.info(s"$cnt entries cleaned in ${System.currentTimeMillis - now}ms")
             } finally {
               cleanerRef.compareAndSet(promise.future, null)
             }
