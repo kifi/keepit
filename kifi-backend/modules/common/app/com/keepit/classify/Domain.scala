@@ -2,6 +2,7 @@ package com.keepit.classify
 
 import java.security.MessageDigest
 
+import com.google.common.net.InternetDomainName
 import com.keepit.common.strings._
 import com.kifi.macros.json
 import org.apache.commons.codec.binary.Base64
@@ -21,11 +22,10 @@ case class Domain(
     autoSensitive: Option[Boolean] = None,
     manualSensitive: Option[Boolean] = None,
     isEmailProvider: Boolean = false,
-    hash: Option[DomainHash],
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
-  //require(this.hostname.toLowerCase == this.hostname, "Domain.hostname must be lowercase")
+  require(hostname == InternetDomainName.from(hostname).toString, "")
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)
@@ -43,7 +43,6 @@ object Domain {
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \ 'isEmailProvider).format[Boolean] and
-    (__ \ 'hash).formatNullable[DomainHash] and
     (__ \ 'state).format(State.format[Domain]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime]
@@ -54,27 +53,7 @@ object Domain {
 
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length <= MaxLength
 
-  def fromHostname(hostname: String): Domain = {
-    val lowerCasedHostname = hostname.toLowerCase
-    Domain(hostname = lowerCasedHostname, hash = Some(DomainHash.hashHostname(lowerCasedHostname)))
-  }
-}
-
-case class DomainHash(hash: String) extends AnyVal {
-  override def toString: String = hash
-  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
-}
-
-object DomainHash {
-  def hashHostname(hostname: String): DomainHash = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(hostname)
-    DomainHash(new String(new Base64().encode(binaryHash), UTF8))
-  }
-
-  implicit val format: Format[DomainHash] = new Format[DomainHash] {
-    def reads(json: JsValue): JsResult[DomainHash] = json.validate[String].map(DomainHash.apply)
-    def writes(o: DomainHash): JsValue = JsString(o.hash)
-  }
+  def fromHostname(hostname: String): Domain = Domain(hostname = InternetDomainName.from(hostname).toString) // throws an exception is !isValid(hostname)
 }
 
 @json
@@ -91,16 +70,6 @@ case class DomainKey(hostname: String) extends Key[Domain] {
   def toKey(): String = hostname
 }
 
-case class DomainHashKey(domainHash: DomainHash) extends Key[Domain] {
-  override val version = 1
-  val namespace = "domain_by_hash"
-  def toKey(): String = domainHash.hash
-}
-
 class DomainCache(stats: CacheStatistics, accessLog: AccessLog,
   innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[DomainKey, Domain](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-class DomainHashCache(stats: CacheStatistics, accessLog: AccessLog,
-  innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[DomainHashKey, Domain](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

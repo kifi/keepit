@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{ DomainHash, SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db._
