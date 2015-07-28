@@ -37,8 +37,9 @@ class KeepToLibraryRepoImpl @Inject() (
   class KeepToLibraryTable(tag: Tag) extends RepoTable[KeepToLibrary](db, tag, "keep_to_library") {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
+    def keeperId = column[Id[User]]("keeper_id", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId) <> ((KeepToLibrary.apply _).tupled, KeepToLibrary.unapply)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, keeperId) <> ((KeepToLibrary.apply _).tupled, KeepToLibrary.unapply)
   }
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
@@ -81,4 +82,3 @@ class KeepToLibraryRepoImpl @Inject() (
     save(model.sanitizeForDelete)
   }
 }
-

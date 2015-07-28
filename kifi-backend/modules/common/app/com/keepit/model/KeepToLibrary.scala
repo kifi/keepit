@@ -10,7 +10,8 @@ case class KeepToLibrary(
   updatedAt: DateTime = currentDateTime,
   state: State[KeepToLibrary] = KeepToLibraryStates.ACTIVE,
   keepId: Id[Keep],
-  libraryId: Id[Library])
+  libraryId: Id[Library],
+  keeperId: Id[User])
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
