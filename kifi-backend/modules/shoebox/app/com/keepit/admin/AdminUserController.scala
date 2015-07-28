@@ -39,8 +39,8 @@ import play.api.mvc.{ Action, AnyContent, Result }
 
 import views.html
 import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahead }
-import com.keepit.common.healthcheck.SystemAdminMailSender
-import com.keepit.abook.model.RichContact
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
+import com.keepit.abook.model.{ OrganizationUserMayKnow, RichContact }
 
 case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
@@ -118,7 +118,8 @@ class AdminUserController @Inject() (
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander,
-    userStatisticsCommander: UserStatisticsCommander) extends AdminUserActions with PaginationActions {
+    userStatisticsCommander: UserStatisticsCommander,
+    airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
@@ -254,7 +255,11 @@ class AdminUserController @Inject() (
     val userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val fOrgRecos = abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
+    val fOrgRecos = try {
+      abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
+    } catch {
+      case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
+    }
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>

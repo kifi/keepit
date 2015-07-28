@@ -107,10 +107,9 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def organizationViewById(orgId: Id[Organization]) = AdminUserPage.async { implicit request =>
-    val numMemberRecommendations = request.queryString.get("numMemberRecos").map(_.head.toInt).getOrElse(60)
+  def organizationViewById(orgId: Id[Organization], numMemberRecos: Int = 60) = AdminUserPage.async { implicit request =>
     val adminId = request.userId
-    val orgStats = statsCommander.organizationStatistics(orgId, adminId, numMemberRecommendations)
+    val orgStats = statsCommander.organizationStatistics(orgId, adminId, numMemberRecos)
     orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
