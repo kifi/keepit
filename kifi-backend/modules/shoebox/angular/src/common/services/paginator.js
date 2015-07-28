@@ -32,7 +32,7 @@ angular.module('kifi')
 
       var fetchPromise = sourceFunction(pageNumber, pageSize)
         .then(function (items) {
-          this.hasMoreItems = (items.length === this.fetchPageSize);  // important to do before filtering below
+          this.hasMoreItems = (items.length === this.fetchPageSize);
           this.fetchPageNumber++;
           this.loading = false;
 
