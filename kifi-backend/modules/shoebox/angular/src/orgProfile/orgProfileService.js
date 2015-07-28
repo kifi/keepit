@@ -39,8 +39,11 @@ angular.module('kifi')
           return response.data;
         });
       },
-      getOrgMembers: function (orgId) {
-        return net.getOrgMembers(orgId).then(function (response) {
+      getOrgMembers: function (orgId, page, size) {
+        return net.getOrgMembers(orgId, {
+          offset: page,
+          limit: size
+        }).then(function (response) {
           return response.data;
         });
       },
