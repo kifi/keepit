@@ -43,7 +43,7 @@ angular.module('kifi')
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
-        .fetch(librarySource)
+        .fetch()
         .then(function (libs) {
           if (!_.isEmpty(newLibraryIds)) {
             _.remove(libs, function (lib) {

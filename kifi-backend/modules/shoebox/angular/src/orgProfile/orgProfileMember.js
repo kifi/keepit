@@ -3,10 +3,11 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  function () {
+  'profileService',
+  function (profileService) {
     function _isMe() {
       var $scope = this;
-      return $scope.member.id === $scope.me.id;
+      return $scope.member.id === profileService.me.id;
     }
 
     function _resentInvite() {
@@ -22,7 +23,7 @@ angular.module('kifi')
     function _shouldShowPromote() {
       var $scope = this;
       return (
-        $scope.me.role === 'admin' &&
+        $scope.myMembership.role === 'admin' &&
         $scope.member.role !== 'admin' &&
         $scope.hasAcceptedInvite()
       );
@@ -31,7 +32,7 @@ angular.module('kifi')
     function _shouldShowDemote() {
       var $scope = this;
       return (
-        $scope.me.id === $scope.organization.ownerId &&
+        profileService.me.id === $scope.organization.ownerId &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
@@ -39,7 +40,7 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      var hasCorrectPermission = ($scope.me.role === 'admin' && $scope.member.role !== 'admin') || ($scope.me.id === $scope.profile.ownerId);
+      var hasCorrectPermission = ($scope.myMembership.role === 'admin' && $scope.member.role !== 'admin') || (profileService.me.id === $scope.profile.ownerId);
       return $scope.hasAcceptedInvite() && (hasCorrectPermission || $scope.isMe());
     }
 
@@ -89,7 +90,7 @@ angular.module('kifi')
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
       $scope: {
         member: '=',
-        me: '=',
+        myMembership: '=',
         organization: '='
       },
       replace: true,
