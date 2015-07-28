@@ -1463,23 +1463,18 @@ class LibraryCommanderImpl @Inject() (
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val ownerOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
 
-    ownerOpt match {
-      case None => Left(LibraryFail(BAD_REQUEST, "invalid_handle"))
-      case Some((Left(org), _)) => {
-        getLibraryBySlugOrAlias(org.id.get, slug) match {
-          case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
-          case Some((library, isLibraryAlias)) =>
-            Right(library)
-        }
-      }
-      case Some((Right(user), _)) => {
-        getLibraryBySlugOrAlias(user.id.get, slug) match {
-          case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
-          case Some((library, isLibraryAlias)) =>
-            Right(library)
-        }
-      }
+    val librarySpaceOpt = ownerOpt match {
+      case None => None // "invalid_handle"
+      case Some((Left(org), _)) => Some(LibrarySpace.fromOrganizationId(org.id.get))
+      case Some((Right(user), _)) => Some(LibrarySpace.fromUserId(user.id.get))
     }
+    librarySpaceOpt.map { librarySpace =>
+      getLibraryBySlugOrAlias(librarySpace, slug) match {
+        case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
+        case Some((library, isLibraryAlias)) =>
+          Right(library)
+      }
+    }.getOrElse(Left(LibraryFail(BAD_REQUEST, "invalid_handle")))
   }
 
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit = {
