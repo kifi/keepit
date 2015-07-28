@@ -14,6 +14,7 @@ angular.module('kifi')
       replace: true,
       scope: {
         library: '=',
+        profile: '=',
         username: '=',
         librarySlug: '=',
         imageLoaded: '=',
@@ -573,7 +574,7 @@ angular.module('kifi')
 
         scope.manageLibrary = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
-          modalService.open({
+          var opts = {
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
               pane: 'manage',
@@ -593,7 +594,11 @@ angular.module('kifi')
                 })['catch'](modalService.openGenericErrorModal);
               }
             }
-          });
+          }
+          if (scope.profile.type === "org") {
+            opts.modalData.organization = scope.profile.result.organization;
+          }
+          modalService.open(opts);
         };
 
         scope.toggleEditKeeps = function () {

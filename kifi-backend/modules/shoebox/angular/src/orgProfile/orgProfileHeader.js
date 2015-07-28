@@ -45,9 +45,6 @@ angular.module('kifi')
               'action': 'updateOrgProfile',
               'path': $location.path()
             });
-            // TODO (Adam): Should validate.
-            // Success: sets last value to current one, shows success.
-            // Error: Sets current value to last one, shows error.
             scope.notification = 'save';
             $timeout(function() {
               scope.notification = null;
