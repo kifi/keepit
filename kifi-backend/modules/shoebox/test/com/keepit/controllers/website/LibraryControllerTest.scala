@@ -545,7 +545,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request2 = FakeRequest("GET", testPath2)
         val result2 = libraryController.getLibraryByHandleAndSlug(Handle(extInput), slug)(request2)
         val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
-        status(result2) must equalTo(400) // sending external ids to this endpoint are deprecated
+        status(result2) must equalTo(BAD_REQUEST) // sending external ids to this endpoint are deprecated
         contentType(result2) must beSome("application/json")
 
         val testPath3 = com.keepit.controllers.website.routes.LibraryController.getLibraryByHandleAndSlug(username, slug).url
@@ -614,8 +614,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             handleCommander.setUsername(saved, Username("camhash")).get
           }
           val org = {
-            val saved = OrganizationFactory.organization().withName("CamCo").withOwner(user).saved
-            handleCommander.setOrganizationHandle(saved, OrganizationHandle("camco")).get
+            OrganizationFactory.organization().withName("CamCo").withHandle(OrganizationHandle("camco")).withOwner(user).saved
           }
           val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET, organizationId = org.id))
           libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, listed = false))
