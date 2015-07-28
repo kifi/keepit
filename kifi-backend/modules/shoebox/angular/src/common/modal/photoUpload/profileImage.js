@@ -9,16 +9,17 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        picUrl: '='
+        picUrl: '=',
+        uploadUrl: '@'
       },
-      templateUrl: 'profile/profileImage.tpl.html',
+      templateUrl: 'common/modal/photoUpload/profileImage.tpl.html',
       link: function (scope, element) {
         var maskOffset = 40, maskSize;
         var positioning = {};
         var dragging = {};
         var isImageLoaded = false;
-        var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
-            PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
+        var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + (scope.uploadUrl ||  '/user/pic/upload');
+        var PHOTO_CROP_UPLOAD_URL = env.xhrBase + (scope.uploadUrl || '/user/pic');
         var photoXhr2;
 
         function refreshZoom() {
@@ -169,7 +170,7 @@ angular.module('kifi')
 
         function showImageEditingTool(imageUrl) {
           modalService.open({
-            template: 'profile/imageEditModal.tpl.html',
+            template: 'common/modal/photoUpload/imageEditModal.tpl.html',
             scope: scope
           });
 
@@ -228,7 +229,7 @@ angular.module('kifi')
             scope.forceClose = false;
 
             modalService.open({
-              template: 'profile/imageUploadFailedModal.tpl.html'
+              template: 'common/modal/photoUpload/imageUploadFailedModal.tpl.html'
             });
             scope.resetChooseImage();
           }, 0);
@@ -236,7 +237,7 @@ angular.module('kifi')
 
         scope.uploadImage = function () {
           modalService.open({
-            template: 'profile/imageUploadingModal.tpl.html',
+            template: 'common/modal/photoUpload/imageUploadingModal.tpl.html',
             scope: scope
           });
 
