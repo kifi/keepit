@@ -80,6 +80,7 @@ trait LibraryCommander {
   def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
+  def createReadItLaterLibrary(userId: Id[User]): Library
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
@@ -919,6 +920,13 @@ class LibraryCommanderImpl @Inject() (
         case _ => None
       }
     }
+  }
+
+  def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>
+    val readItLaterLib = libraryRepo.save(Library(name = "Read It Later", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("read_id_later"), kind = LibraryKind.SYSTEM_READ_IT_LATER, memberCount = 1, keepCount = 0))
+    libraryMembershipRepo.save(LibraryMembership(libraryId = readItLaterLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+    searchClient.updateLibraryIndex()
+    readItLaterLib
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
