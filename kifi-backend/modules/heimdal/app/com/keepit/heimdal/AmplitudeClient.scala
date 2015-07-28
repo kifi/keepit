@@ -27,10 +27,11 @@ class AmplitudeClientImpl(apiKey: String) extends AmplitudeClient {
   val amplitudeApiEndpoint = "https://api.amplitude.com/httpapi"
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
-    new SafeFuture({
-      val payload = buildEventPayload(event)
-      sendData(payload) map (_ => ())
-    })
+    Future.successful(Unit)
+    // new SafeFuture({
+    //   val payload = buildEventPayload(event)
+    //   sendData(payload) map (_ => ())
+    // })
   }
 
   private def buildEventPayload[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): JsObject = {
