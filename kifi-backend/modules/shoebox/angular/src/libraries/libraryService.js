@@ -103,17 +103,6 @@ angular.module('kifi')
         });
       },
 
-      getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
-        if (invalidateCache) {
-          net.getLibraryByUserSlug.clearCache();
-        }
-        return net.getLibraryByUserSlug(username, slug, {authToken: authToken}).then(function (res) {
-          res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
-          res.data.library.subscriptions = res.data.subscriptions;
-          return augment(res.data.library);
-        });
-      },
-
       getLibraryByHandleAndSlug: function (handle, slug, authToken, invalidateCache) {
         if (invalidateCache) {
           net.getLibraryByHandleAndSlug.clearCache();
@@ -133,7 +122,7 @@ angular.module('kifi')
 
       expireKeepsInLibraries: function () {
         net.getKeepsInLibrary.clearCache();
-        net.getLibraryByUserSlug.clearCache();  // contains keeps too
+        net.getLibraryByHandleAndSlug.clearCache();  // contains keeps too
       },
 
       addToLibraryCount: function (libraryId, val) {

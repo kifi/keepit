@@ -199,7 +199,7 @@ angular.module('kifi')
 
             if (profile.type === 'user') {
               // User library
-              return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
+              return libraryService.getLibraryByHandleAndSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
             } else {
               // Org Library
               return orgProfileService

@@ -17,7 +17,6 @@ angular.module('kifi')
 
       getLibraryInfos: get(shoebox, '/libraries', 30),
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
-      getLibraryByUserSlug: get(shoebox, '/users/:username/libraries/:slug?showPublishedLibraries=1', 30),
       getLibraryByHandleAndSlug: get(shoebox, '/user-or-org/:handle/libraries/:slug?showPublishedLibraries=1', 30),
       getLibraryById: get(shoebox, '/libraries/:id', 30),
 
