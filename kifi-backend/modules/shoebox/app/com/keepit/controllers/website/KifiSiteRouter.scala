@@ -1,20 +1,17 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.cache.TransactionalCaching.Implicits._
-import com.google.inject.{ Provider, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.core._
+import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.controller._
+import com.keepit.common.core._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
-import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import play.api.Play
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.{ ActionFilter, Result }
 import securesocial.core.SecureSocial
 
@@ -45,6 +42,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def redirectUserToOwnProfile(subpath: String) = WebAppPage(implicit request => redirUserToOwnProfile(subpath, request))
+
   private def redirUserToOwnProfile(subpath: String, request: MaybeUserRequest[_]): Result = request match {
     case r: UserRequest[_] => Redirect(s"/${r.user.username.urlEncoded}$subpath")
     case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
@@ -53,10 +51,13 @@ class KifiSiteRouter @Inject() (
   def redirectFromFriends(friend: Option[String]) = WebAppPage { implicit request => // for old emails
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
   }
+
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
     redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2
   }
-  private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = { // for old emails
+
+  private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = {
+    // for old emails
     friend.flatMap(ExternalId.asOpt[User]) flatMap { userExtId =>
       db.readOnlyMaster { implicit session =>
         userRepo.getOpt(userExtId)
@@ -71,6 +72,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2)
+
   private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
     case ur: UserRequest[_] => {
       userIpAddressCommander.logUserByRequest(ur)
@@ -80,7 +82,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfUserFound(username: Username) = WebAppPage { implicit request =>
-    lookupUsername(username) map {
+    lookupUser(Handle.fromUsername(username)) map {
       case (user, redirectStatusOpt) =>
         redirectStatusOpt map { status =>
           Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
@@ -91,47 +93,28 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfOrganizationFound(handle: OrganizationHandle) = WebAppPage { implicit request =>
-    lookupHandle(handle) map {
-      case (Right(user), _) => notFound(request)
-      case (Left(org), redirectStatusOpt) =>
-        // TODO(ryan): once orgs are live, stop checking for the org experiment
-        val hasOrgExperiment = request match {
-          case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
-          case _ => false
-        }
-        if (!hasOrgExperiment) {
-          notFound(request)
-        } else {
-          redirectStatusOpt map { status =>
-            val foundHandle = Handle.fromOrganizationHandle(org.getHandle)
-            Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
-          } getOrElse {
-            AngularApp.app()
-          }
+    lookupOrganization(handle) map {
+      case (org, redirectStatusOpt) =>
+        redirectStatusOpt map { status =>
+          val foundHandle = Handle.fromOrganizationHandle(org.getHandle)
+          Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
+        } getOrElse {
+          AngularApp.app()
         }
     } getOrElse notFound(request)
   }
 
   def serveWebAppIfHandleFound(handle: Handle) = WebAppPage { implicit request =>
-    lookupHandle(handle) map {
+    lookupByHandle(handle) map {
       case (handleOwner, redirectStatusOpt) =>
-        // TODO(ryan): once orgs are live, remove everything up to the "else" below
-        val hasOrgExperiment = request match {
-          case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
-          case _ => false
-        }
-        if (handleOwner.isLeft && !hasOrgExperiment) {
-          notFound(request)
-        } else {
-          redirectStatusOpt map { status =>
-            val foundHandle = handleOwner match {
-              case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
-              case Right(user) => Handle.fromUsername(user.username)
-            }
-            Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
-          } getOrElse {
-            AngularApp.app()
+        redirectStatusOpt map { status =>
+          val foundHandle = handleOwner match {
+            case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+            case Right(user) => Handle.fromUsername(user.username)
           }
+          Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
+        } getOrElse {
+          AngularApp.app()
         }
     } getOrElse notFound(request)
   }
@@ -139,7 +122,7 @@ class KifiSiteRouter @Inject() (
   def serveWebAppIfUserIsSelf(username: Username) = WebAppPage { implicit request =>
     request match {
       case r: UserRequest[_] =>
-        lookupUsername(username).filter { case (user, _) => user.id == r.user.id } map {
+        lookupUser(Handle.fromUsername(username)).filter { case (user, _) => user.id == r.user.id } map {
           case (user, redirectStatusOpt) =>
             redirectStatusOpt map { status =>
               Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
@@ -151,23 +134,13 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfLibraryFound(handle: Handle, slug: String) = WebAppPage { implicit request =>
-    lookupHandle(handle) flatMap {
+    lookupByHandle(handle) flatMap {
       case (handleOwner, spaceRedirectStatusOpt) =>
         val handleSpace: LibrarySpace = handleOwner match {
           case Left(org) => org.id.get
           case Right(user) => user.id.get
         }
-        val libraryOpt = handleOwner match {
-          case Left(org) => // TODO(ryan): once orgs are live, get rid of the experiment validation
-            request match {
-              case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) =>
-                libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
-              case _ =>
-                None
-            }
-          case Right(user) =>
-            libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
-        }
+        val libraryOpt = libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
         libraryOpt map {
           case (library, isLibraryAlias) =>
             val libraryHasBeenMoved = isLibraryAlias
@@ -192,29 +165,60 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
-  private def lookupHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
+  private def lookupUser(handle: Handle) = {
+    // TODO(ryan)[ORG-EXPERIMENT]: when orgs are live, kill the below code and use this commented code
+    /*
+    lookupByHandle(handle) flatMap {
+      case (Left(org), _) => None
+      case (Right(user), redirectStatusOpt) => Some((user, redirectStatusOpt))
+    }
+    */
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
-    handleOwnerOpt map {
+    handleOwnerOpt.flatMap {
+      case (Left(org), _) => None
+      case (Right(user), isPrimary) =>
+        val foundHandle = Handle.fromUsername(user.username)
+        if (foundHandle != handle) {
+          // owner moved or handle normalization
+          Some((user, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER)))
+        } else {
+          Some((user, None))
+        }
+    }
+  }
+
+  // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
+  private def lookupOrganization(handle: Handle)(implicit request: MaybeUserRequest[_]) = {
+    lookupByHandle(handle) flatMap {
+      case (Right(user), _) => None
+      case (Left(org), redirectStatusOpt) => Some((org, redirectStatusOpt))
+    }
+  }
+
+  // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
+  private def lookupByHandle(handle: Handle)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
+    val userHasOrgExperiment = request match {
+      case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
+      case _ => false
+    }
+    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
+    handleOwnerOpt.flatMap {
+      // TODO(ryan): when orgs go live, drop this flatmap
+      // This flatmap serves to hide orgs from everyone except users WITH the org experiment
+      case (Left(org), redirectStatusOpt) if !userHasOrgExperiment => None
+      case other => Some(other)
+    } map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {
           case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
           case Right(user) => Handle.fromUsername(user.username)
         }
 
-        if (foundHandle != handle) { // owner moved or handle normalization
-          (handleOwner, Some(if (!isPrimary) 301 else 303))
+        if (foundHandle != handle) {
+          // owner moved or handle normalization
+          (handleOwner, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER))
         } else {
           (handleOwner, None)
-        }
-    }
-  }
-  private def lookupUsername(username: Username): Option[(User, Option[Int])] = {
-    userCommander.getUserByUsername(username) map {
-      case (user, isPrimary) =>
-        if (user.username != username) { // user moved or username normalization
-          (user, Some(if (!isPrimary) 301 else 303))
-        } else {
-          (user, None)
         }
     }
   }
@@ -235,7 +239,7 @@ class KifiSiteRouter @Inject() (
         request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
         val uri = Some(request).filter(r => r.path.length > 1 && r.path.indexOf('/', 1) == -1 && r.queryString.get("intent").exists(_.contains("connect"))) flatMap { req =>
           req.queryString.get("id").flatMap(_.headOption).flatMap(ExternalId.asOpt[User]) orElse {
-            lookupUsername(Username(request.path.drop(1))) map { case (u, _) => u.externalId }
+            lookupUser(Username(request.path.drop(1))) map { case (u, _) => u.externalId }
           } map { userExtId: ExternalId[User] =>
             req.queryString.get("invited") match {
               case Some(_) => s"/friends?friend=${userExtId.id}"
