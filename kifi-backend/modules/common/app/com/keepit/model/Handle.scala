@@ -6,11 +6,10 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
 import com.keepit.common.strings._
-import com.kifi.macros.json
-import play.api.libs.json.Reads
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.api.mvc.{ QueryStringBindable, PathBindable }
 
-@json
 case class Handle(value: String) extends AnyVal {
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
   override def toString = value
@@ -36,6 +35,8 @@ object Handle {
     override def bind(key: String, value: String): Either[String, Handle] = Right(Handle(value))
     override def unbind(key: String, handle: Handle): String = handle.value
   }
+
+  implicit def format = Format(__.read[String].map(Handle(_)), new Writes[Handle] { def writes(o: Handle) = JsString(o.value) })
 }
 
 sealed trait LibrarySpace // todo(Léo): *Currently* equivalent to HandleOwner, unsure whether they should be merged.
