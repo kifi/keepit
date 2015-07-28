@@ -196,7 +196,7 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, true, library, idealSize, showKeepCreateTime = true).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
