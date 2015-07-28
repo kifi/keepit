@@ -10,12 +10,11 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getByKeepId(keepId: Id[Keep], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary]
-  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary]
+  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
   def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary]
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary]
+  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
@@ -51,11 +50,8 @@ class KeepToLibraryRepoImpl @Inject() (
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
     getByKeepIdHelper(keepId, excludeStateOpt).run.length
   }
-  def getByKeepId(keepId: Id[Keep], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary] = {
-    getByKeepIdHelper(keepId, excludeStateOpt).drop(offset.value).take(limit.value).list.toSet
-  }
-  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary] = {
-    getByKeepIdHelper(keepId, excludeStateOpt).list.toSet
+  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByKeepIdHelper(keepId, excludeStateOpt).list
   }
 
   private def getByLibraryIdHelper(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
@@ -64,11 +60,11 @@ class KeepToLibraryRepoImpl @Inject() (
   def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
     getByLibraryIdHelper(libraryId, excludeStateOpt).run.length
   }
-  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).drop(offset.value).take(limit.value).list.toSet
+  def getByLibraryId(libraryId: Id[Library], limit: Limit, offset: Offset, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByLibraryIdHelper(libraryId, excludeStateOpt).drop(offset.value).take(limit.value).list
   }
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).list.toSet
+  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByLibraryIdHelper(libraryId, excludeStateOpt).list
   }
 
   private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
