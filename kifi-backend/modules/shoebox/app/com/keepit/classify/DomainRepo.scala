@@ -75,7 +75,7 @@ class DomainRepoImpl @Inject() (
     val existingHostnames = existingDomains.map(_.hostname)
 
     val toBeInserted = (lowerCasedHostnamesToIntern -- existingHostnames).filter(Domain.isValid).map(Domain.fromHostname)
-it's
+
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
         case DomainStates.INACTIVE => domain.hostname -> save(Domain.fromHostname(domain.hostname).copy(id = domain.id))
