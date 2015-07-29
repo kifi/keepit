@@ -49,7 +49,8 @@ object Domain {
   )(Domain.apply, unlift(Domain.unapply))
 
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
-  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && Try(IDN.toASCII(s)).isSuccess
+  private val MaxLength = 256
+  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
   def fromHostname(hostname: String) = Domain(hostname = NormalizedHostname.fromHostname(hostname))
 }
 
