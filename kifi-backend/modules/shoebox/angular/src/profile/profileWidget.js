@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileWidget', [
-  '$analytics', 'profileService', 'modalService', 'net',
-  function ($analytics, profileService, modalService, net) {
+  '$analytics', 'profileService', 'modalService',
+  function ($analytics, profileService, modalService) {
     return {
       replace: true,
       restrict: 'A',
