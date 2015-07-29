@@ -6,8 +6,8 @@ angular.module('kifi')
   '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
   function ($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator) {
     var organization = profile.organization;
-    var newLibraryIds = {};
     var libraryLazyLoader = new Paginator(librarySource);
+    var newLibraryIds = {};
 
     function librarySource(pageNumber, pageSize) {
       return orgProfileService
@@ -18,6 +18,7 @@ angular.module('kifi')
     }
 
     function resetAndFetchLibraries() {
+      newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }
