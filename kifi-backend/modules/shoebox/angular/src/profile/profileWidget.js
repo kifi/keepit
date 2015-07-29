@@ -19,8 +19,8 @@ angular.module('kifi')
           });
         };
 
-        scope.organizations = net.getOrgsForUser(scope.me.id).then(function(result) {
-          return result.data.organizations;
+        net.getOrgsForUser(scope.me.id).then(function(result) {
+          scope.organizations = result.data.organizations;
         });
 
         scope.bioClick = function() {
