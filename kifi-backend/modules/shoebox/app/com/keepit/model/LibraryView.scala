@@ -183,7 +183,8 @@ case class LibraryCardInfo(
   modifiedAt: DateTime,
   kind: LibraryKind,
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
-  path: String)
+  path: String,
+  org: Option[OrganizationCard])
 
 object LibraryCardInfo {
   implicit val format: Format[LibraryCardInfo] = (
@@ -207,7 +208,8 @@ object LibraryCardInfo {
     (__ \ 'modifiedAt).format[DateTime] and
     (__ \ 'kind).format[LibraryKind] and
     (__ \ 'invite).formatNullable[LibraryInviteInfo] and
-    (__ \ 'path).format[String]
+    (__ \ 'path).format[String] and
+    (__ \ 'org).formatNullable[OrganizationCard]
   )(LibraryCardInfo.apply, unlift(LibraryCardInfo.unapply))
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
@@ -264,7 +266,8 @@ case class FullLibraryInfo(
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
-  path: String)
+  path: String,
+  org: Option[OrganizationCard])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
