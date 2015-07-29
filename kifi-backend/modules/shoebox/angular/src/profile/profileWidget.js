@@ -11,7 +11,7 @@ angular.module('kifi')
       templateUrl: 'profile/profileWidget.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
-        scope.organizations = profileService.me.organizations;
+        scope.organizations = profileService.me.orgs;
 
         scope.registerEvent = function(action) {
           $analytics.eventTrack('user_clicked_page', {
