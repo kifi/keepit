@@ -177,41 +177,8 @@ angular.module('kifi')
               });
           }],
           libraryService: 'libraryService',
-          library: ['libraryService', 'orgProfileService', '$stateParams', 'profile', function (libraryService, orgProfileService, $stateParams, profile) {
-            function getOrgId(response) {
-              return response.result.organization.id;
-            }
-
-            function getLibraryIdBySlug(libraryData) {
-              var libraries = libraryData.libraries;
-              var slug = $stateParams.librarySlug;
-
-              var library = libraries.filter(function (l) {
-                return l.slug === slug;
-              }).pop();
-
-              if (library) {
-                return library.id;
-              } else {
-                throw new Error('could not find library in org with slug ' + slug);
-              }
-            }
-
-            if (profile.type === 'user') {
-              // User library
-              return libraryService.getLibraryByHandleAndSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
-            } else {
-              // Org Library
-              return orgProfileService
-                .userOrOrg($stateParams.handle)
-                .then(getOrgId)
-                .then(orgProfileService.getOrgLibraries)
-                .then(getLibraryIdBySlug)
-                .then(libraryService.getLibraryById.bind(libraryService))
-                .then(function (response) {
-                  return response.library;
-                });
-            }
+          library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
+            return libraryService.getLibraryByHandleAndSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
           }],
           libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
             if (library.image) {
