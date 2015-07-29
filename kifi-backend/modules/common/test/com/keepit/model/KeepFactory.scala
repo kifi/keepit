@@ -46,6 +46,7 @@ object KeepFactory {
     def withNote(note: Option[String]) = new PartialKeep(keep.copy(note = note))
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
     def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
+    def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))
     def get: Keep = keep
   }
 
