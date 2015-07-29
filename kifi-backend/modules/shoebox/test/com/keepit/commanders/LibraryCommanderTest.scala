@@ -192,7 +192,20 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   }
 
   "LibraryCommander" should {
+
     "create libraries correctly" in {
+
+      "create read it later libs" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user1, user2, user3, user4) = setupUsers()
+          val libraryCommander = inject[LibraryCommander]
+          val lib = libraryCommander.createReadItLaterLibrary(user1.id.get)
+          lib.name === "Read It Later"
+          lib.ownerId === user1.id.get
+          lib.id.isEmpty === false
+        }
+      }
+
       "create libraries, memberships & invites" in {
         withDb(modules: _*) { implicit injector =>
           val (userIron, userCaptain, userAgent, userHulk) = setupUsers()

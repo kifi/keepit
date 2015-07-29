@@ -75,6 +75,7 @@ object UserExperimentType {
   val APPLY_RECO_FEEDBACK = UserExperimentType("apply_reco_feedback")
   val ORGANIZATION = UserExperimentType("organization")
   val SEARCH_LAB = UserExperimentType("search_lab")
+  val READ_IT_LATER = UserExperimentType("read_id_later")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
