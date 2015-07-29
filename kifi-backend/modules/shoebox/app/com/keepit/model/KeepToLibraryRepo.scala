@@ -75,7 +75,11 @@ class KeepToLibraryRepoImpl @Inject() (
     getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStateOpt).firstOption
   }
 
-  def getVisibileFirstOrderKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {
+  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {
+    // An implicit keep is one that you have access to indirectly (e.g., through a library you follow, or an org you are a member of,
+    // or the keep is published so anyone can access it.
+    // A first-order implicit keep is one that only takes a single step to get to: this only happens if you are a member of a library
+    // where that keep exists
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select ktl.keep_id from bookmark bm, library_membership lm, keep_to_library ktl
                   where bm.uri_id = $uriId and lm.user_id = $userId
