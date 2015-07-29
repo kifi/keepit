@@ -739,7 +739,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result3 = getWriteableLibrariesV2(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
-        (response3 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
+        (response3 \ "libraries").as[Seq[JsObject]].length === 2
         (response3 \ "error").asOpt[String] === None
         val keepData = (response3 \ "alreadyKept")
         keepData === Json.parse(s"""
