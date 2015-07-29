@@ -30,7 +30,8 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.handle = 'organization' in scope.modalData ? scope.modalData.organization.handle : profileService.me.username;
+        scope.space = 'organization' in scope.modalData ? scope.modalData.organization : profileService.me;
+
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,6 +41,8 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+        scope.spaces = profileService.me.organizations ? [profileService.me].concat(profileService.organizations) : profileService.me;
+        scope.selectedSpace = { name: profileService.me.name };
 
         //
         // Scope methods.
