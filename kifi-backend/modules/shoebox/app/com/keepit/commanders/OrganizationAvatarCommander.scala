@@ -130,13 +130,8 @@ class OrganizationAvatarCommanderImpl @Inject() (
 
   // What ProcessImageRequests are necessary to perform on an image, given that we have some existing avatars already
   def determineRequiredProcessImageRequests(imageSize: ImageSize, existingAvatars: Seq[OrganizationAvatar]) = {
-    val required = {
-      val scaleRequests = scaleSizes.map(scale => ScaleImageRequest(scale.idealSize))
-      val cropRequests = cropSizes.map(crop => CropImageRequest(crop.idealSize))
-      scaleRequests ++ cropRequests
-    }.toSet
-    val existing = existingAvatars.collect {
-      case scaledImage if scaledImage.kind == ProcessImageOperation.Scale => ScaleImageRequest(scaledImage.imageSize)
+    val required: Set[ProcessImageRequest] = cropSizes.map(crop => CropImageRequest(crop.idealSize)).toSet
+    val existing: Set[ProcessImageRequest] = existingAvatars.collect { // currently we only crop org avatars, but it's possible we may later do other things
       case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
     }.toSet
 
@@ -148,10 +143,8 @@ class OrganizationAvatarCommanderImpl @Inject() (
 }
 
 object OrganizationAvatarConfiguration {
-  val defaultSize = ScaledImageSize.Medium.idealSize
-
-  val scaleSizes = Seq(ScaledImageSize.Small, ScaledImageSize.Medium)
-  val cropSizes = Seq(CroppedImageSize.Small)
-  val numSizes = scaleSizes.length + cropSizes.length
+  val cropSizes = Seq(CroppedImageSize.Tiny, CroppedImageSize.Medium)
+  val defaultSize = cropSizes.last.idealSize
+  val numSizes = cropSizes.length
   val imagePathPrefix = "oa"
 }
