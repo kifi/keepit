@@ -57,7 +57,7 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
           val result = inject[OrganizationAvatarController].uploadAvatar(pubId)(request)
 
           status(result) === OK
-          Json.parse(contentAsString(result)) === Json.parse("""{"uploaded": "oa/26dbdc56d54dbc94830f7cfc85031481_400x230_s.png"}""")
+          Json.parse(contentAsString(result)) === Json.parse("""{"uploaded": "oa/26dbdc56d54dbc94830f7cfc85031481_200x200_c.png"}""")
 
           inject[OrganizationAvatarCommander].getBestImage(org.id.get, OrganizationAvatarConfiguration.defaultSize) must haveClass[Some[OrganizationAvatar]]
         }

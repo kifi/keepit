@@ -418,7 +418,9 @@ object ScaledImageSize {
 }
 
 object CroppedImageSize {
-  case object Small extends CroppedImageSize("small", ImageSize(150, 150))
+  case object Tiny extends CroppedImageSize("small", ImageSize(100, 100))
+  case object Small extends CroppedImageSize("medium", ImageSize(150, 150))
+  case object Medium extends CroppedImageSize("medium", ImageSize(200, 200))
 
   val allSizes: Seq[CroppedImageSize] = Seq(Small)
 }
