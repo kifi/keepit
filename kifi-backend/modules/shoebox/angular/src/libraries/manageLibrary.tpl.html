@@ -13,6 +13,13 @@
       <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
+            <span class="manage-lib-heading">Space</span>
+            <select class="manage-lib-input">
+              <option value="1">One</option>
+            </select>
+          </div>
+
+          <div class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Name</span>
             <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
             <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
