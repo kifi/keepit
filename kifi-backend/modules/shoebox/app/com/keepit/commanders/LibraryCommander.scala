@@ -246,7 +246,7 @@ class LibraryCommanderImpl @Inject() (
   }
   private def countMemberInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], LibMembersAndCounts] = libraries.map { library =>
     val info: LibMembersAndCounts = library.kind match {
-      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
+      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA | LibraryKind.SYSTEM_READ_IT_LATER =>
         val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
         val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
           db.readOnlyReplica { implicit session =>
@@ -305,7 +305,7 @@ class LibraryCommanderImpl @Inject() (
 
     val futureCountsByLibraryId = {
       val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
-        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA }.map(_.id.get).toSet
+        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA || lib.kind == LibraryKind.SYSTEM_READ_IT_LATER }.map(_.id.get).toSet
         var userLibCounts: Map[Id[Library], Int] = libraries.map(lib => lib.id.get -> lib.keepCount).toMap
         if (userLibs.size < libraries.size) {
           val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
