@@ -77,7 +77,7 @@ class OrganizationCommanderImpl @Inject() (
     }
 
     val org = orgRepo.get(orgId)
-    val orgHandle = org.getHandle
+    val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
     val site = org.site
@@ -118,7 +118,7 @@ class OrganizationCommanderImpl @Inject() (
       airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
     val org = orgRepo.get(orgId)
-    val orgHandle = org.getHandle
+    val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
 
@@ -209,7 +209,7 @@ class OrganizationCommanderImpl @Inject() (
         getValidationError(request) match {
           case Some(fail) => Left(fail)
           case None =>
-            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None, description = None, site = None)
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)

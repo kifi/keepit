@@ -79,7 +79,6 @@ class MobileOrganizationController @Inject() (
       val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
       val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-      implicit val writes = OrganizationCard.mobileWrites
       Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
     }
   }
