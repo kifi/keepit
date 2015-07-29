@@ -1,4 +1,4 @@
-package com.keepit.common.store
+package com.keepit.rover
 
 import com.keepit.rover.sensitivity.{ PornWordLikelihood, PornWordLikelihoodStore }
 

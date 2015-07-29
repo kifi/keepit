@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.{ AtomicLong, AtomicReference, AtomicInteger 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URISanitizer, URI }
-import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect, FetchRequest }
+import com.keepit.rover.fetcher.{ HttpRedirect, FetchRequestInfo, FetchRequest }
 import com.keepit.rover.model.{ HttpProxy, ProxyScheme }
 import org.apache.http.HttpHeaders._
 import org.apache.http.{ StatusLine, HttpHost }
