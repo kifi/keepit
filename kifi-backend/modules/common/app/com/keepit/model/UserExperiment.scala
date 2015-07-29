@@ -83,6 +83,9 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: GRATIFICATION_EMAIL :: ORGANIZATION :: SEARCH_LAB :: Nil
 
+  // only the ExperimentTypes in this list will be tracked as user properties in analytics
+  val _TRACK_FOR_ANALYTICS = Set(ORGANIZATION, EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, GRATIFICATION_EMAIL, ACTIVITY_EMAIL)
+
   private val _ALL_MAP: Map[String, UserExperimentType] = _ALL.map(e => e.value -> e).toMap
 
   def get(str: String): UserExperimentType = UserExperimentType(str.toLowerCase.trim)
