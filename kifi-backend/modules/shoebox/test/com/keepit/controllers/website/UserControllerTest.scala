@@ -12,6 +12,8 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 
 import org.joda.time.DateTime
@@ -65,7 +67,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numLibraries":0,
               "numConnections":0,
               "numFollowers":0,
-              "pendingFriendRequests":0
+              "pendingFriendRequests":0,
+              "orgs": []
             }
           """)
 

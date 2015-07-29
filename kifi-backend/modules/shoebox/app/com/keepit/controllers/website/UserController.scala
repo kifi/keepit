@@ -316,7 +316,8 @@ class UserController @Inject() (
         "numConnections" -> pimpedUser.numConnections,
         "numFollowers" -> pimpedUser.numFollowers,
         "experiments" -> experiments.map(_.value),
-        "pendingFriendRequests" -> pendingFriendRequests
+        "pendingFriendRequests" -> pendingFriendRequests,
+        "orgs" -> pimpedUser.orgs.map(Json.toJson(_)(OrganizationCard.websiteWrites))
       )
     Ok(json)
   }
