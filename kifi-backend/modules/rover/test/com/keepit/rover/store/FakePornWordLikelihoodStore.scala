@@ -1,6 +1,6 @@
-package com.keepit.rover
+package com.keepit.rover.store
 
-import com.keepit.rover.sensitivity.{ PornWordLikelihood, PornWordLikelihoodStore }
+import com.keepit.rover.sensitivity.{PornWordLikelihood, PornWordLikelihoodStore}
 
 case class FakePornWordLikelihoodStore() extends PornWordLikelihoodStore {
   override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
