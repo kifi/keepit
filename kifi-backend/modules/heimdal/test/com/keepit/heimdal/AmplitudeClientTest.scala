@@ -48,10 +48,14 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val visitorEvent: VisitorEvent = new VisitorEvent(heimdalContext, VisitorEventTypes.VIEWED_LIBRARY)
       val track4 = amplitudeClient.track(visitorEvent)
 
+      val anonEvent: AnonymousEvent = new AnonymousEvent(heimdalContext, AnonymousEventTypes.KEPT)
+      val track5 = amplitudeClient.track(anonEvent)
+
       Await.result(track1, Duration("5 seconds"))
       Await.result(track2, Duration("5 seconds"))
       Await.result(track3, Duration("5 seconds"))
       Await.result(track4, Duration("5 seconds"))
+      Await.result(track5, Duration("5 seconds"))
 
       1 === 1
     }
