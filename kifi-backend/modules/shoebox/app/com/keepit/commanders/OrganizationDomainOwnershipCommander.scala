@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ Domain, DomainRepo }
-import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -29,7 +29,7 @@ object OrganizationDomainOwnershipCommander {
     override def humanString = s"Domain '$domainName' did not exist!"
   }
 
-  case class DomainAlreadyClaimed(domainName: String) extends OwnDomainFailure {
+  case class DomainAlreadyOwned(domainName: String) extends OwnDomainFailure {
     override def humanString = s"Domain $domainName is already owned by an organization!"
   }
 
@@ -72,12 +72,16 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
         case None => Left(DomainDidNotExist(domainName))
         case Some(domain) =>
           val domainHostname = domain.hostname
-          val ownership = orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname, onlyState = None) match {
-            case Some(own) if own.state == OrganizationDomainOwnershipStates.ACTIVE => own
-            case Some(own) => orgDomainOwnershipRepo.save(own.copy(state = OrganizationDomainOwnershipStates.ACTIVE))
-            case None => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, domainHostname = domainHostname))
+          orgDomainOwnershipRepo.getOwnershipForDomain(domainHostname) match {
+            case Some(own) if own.organizationId != orgId => Left(DomainAlreadyOwned(domainHostname))
+            case _ =>
+              val ownership = orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname, onlyState = None) match {
+                case Some(own) if own.state == OrganizationDomainOwnershipStates.ACTIVE => own
+                case Some(own) => orgDomainOwnershipRepo.save(own.copy(state = OrganizationDomainOwnershipStates.ACTIVE))
+                case None => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, domainHostname = domainHostname))
+              }
+              Right(OwnDomainSuccess(domain, ownership))
           }
-          Right(OwnDomainSuccess(domain, ownership))
       }
     }
   }
