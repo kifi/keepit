@@ -62,13 +62,10 @@ trait ProcessedImageHelper {
 
     formatOpt match {
       case Some(format) =>
-        log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-            log.info(s"[pih] Hashed: ${hash.hash}")
             Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
           case Success(hash) => // blacklisted hash
-            log.info(s"[pih] Blacklisted: ${hash.hash}")
             Future.successful(Left(ImageProcessState.BlacklistedImage))
           case Failure(ex) =>
             Future.successful(Left(ImageProcessState.HashFailed(ex)))
@@ -85,13 +82,10 @@ trait ProcessedImageHelper {
     } else {
       val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
         case (format, file) =>
-          log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
           hashImageFile(file.file) match {
             case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-              log.info(s"[pih] Hashed: ${hash.hash}")
               Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
             case Success(hash) => // blacklisted hash
-              log.info(s"[pih] Blacklisted: $imageUrl / ${hash.hash}")
               Left(ImageProcessState.BlacklistedImage)
             case Failure(ex) =>
               Left(ImageProcessState.HashFailed(ex))
@@ -201,7 +195,6 @@ trait ProcessedImageHelper {
     val imgHeight = imageSize.height
     val imgWidth = imageSize.width
 
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropCandidates=$cropCandidates")
     val cropImageRequests = cropCandidates.filterNot { cropSize =>
       val size = cropSize.idealSize
       def isAlmostSameAspectRatio = Math.abs(imgWidth.toFloat / imgHeight - cropSize.aspectRatio) < 0.01
@@ -221,7 +214,6 @@ trait ProcessedImageHelper {
         })
     }.map { c => CropImageRequest(c.idealSize) }
 
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropRequests=$cropImageRequests")
     (scaleImageRequests ++ cropImageRequests).toSet
   }
 

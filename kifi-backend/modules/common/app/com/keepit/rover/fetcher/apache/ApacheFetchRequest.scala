@@ -67,7 +67,6 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
   private def formatErr(t: Throwable, tag: String, ctx: String) = s"[$tag] ($ctx) Caught exception (${t}); cause:${t.getCause}"
   private def logErr(t: Throwable, tag: String, ctx: String, notify: Boolean = false)(implicit log: Logger): Unit = {
     val msg = formatErr(t, tag, ctx)
-    log.error(msg, t)
     if (notify) airbrake.notify(msg, t)
   }
 }
