@@ -83,11 +83,11 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       "time" -> event.time.getMillis / 1000,
       "event_properties" -> Json.toJson(eventProperties),
       "user_properties" -> Json.toJson(userProperties),
-      "app_version" -> eventProperties.get("client_version"),
-      "platform" -> eventProperties.get("client"),
-      "os_name" -> eventProperties.get("os"),
-      "os_version" -> eventProperties.get("os_version"),
-      "device_type" -> eventProperties.get("device"),
+      "app_version" -> heimdalContext.get[String]("clientVersion"),
+      "platform" -> heimdalContext.get[String]("client"),
+      "os_name" -> heimdalContext.get[String]("os"),
+      "os_version" -> heimdalContext.get[String]("osVersion"),
+      "device_type" -> heimdalContext.get[String]("device"),
       "language" -> heimdalContext.get[String]("language"),
       "ip" -> getIpAddress()
     )

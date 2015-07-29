@@ -189,12 +189,13 @@
   function getAgentProperties() {
     var amplitude = $window.amplitude;
     var ua = amplitude && amplitude._ua;
+
+    // since most of these properties depend on the amplitude SDK, additional
+    // checks are made to ensure we're not referencing undefined/null objects
     return {
-      language: amplitude && amplitude.options.language || null,
-      platform: amplitude && amplitude.options.platform || null,
-      os_name: ua && ua.browser.name || null,
-      os_version: ua && ua.browser.major || null,
-      device_model: ua && ua.os.name || null
+      os_name: ua && ua.browser && ua.browser.name || null,
+      os_version: ua && ua.browser && ua.browser.major || null,
+      device_model: ua && ua.os && ua.os.name || null
     };
   }
 
