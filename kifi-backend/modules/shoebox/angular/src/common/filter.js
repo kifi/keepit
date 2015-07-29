@@ -34,7 +34,7 @@ angular.module('kifi')
 .filter('profileUrl', function () {
   return function (userOrOrg, sub) {
     if (userOrOrg) {
-      var handle = 'username' in userOrOrg ? userOrOrg.username : userOrOrg.handle;
+      var handle = userOrOrg.username || userOrOrg.handle;
       return '/' + handle + (sub && sub !== 'libraries' ? '/' + sub : '');
     }
   };
