@@ -850,7 +850,6 @@ GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controlle
 GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5, version: Option[Int] ?= None)
 POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
 POST    /admin/cortex/lda/userLibraryScore                 @com.keepit.controllers.admin.AdminLDAController.userLibraryScore
-GET     /admin/cortex/lda/similarURIs                      @com.keepit.controllers.admin.AdminLDAController.similarURIs(uriId: Id[NormalizedURI])
 GET     /adimin/cortex/lda/persona                         @com.keepit.controllers.admin.AdminLDAController.persona
 GET     /adimin/cortex/lda/persona/version                 @com.keepit.controllers.admin.AdminLDAController.personaVersioned(version: ModelVersion[DenseLDA])
 POST    /admin/cortex/lda/persona/generate                 @com.keepit.controllers.admin.AdminLDAController.generateLDAPersonaFeature

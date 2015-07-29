@@ -195,12 +195,6 @@ class LDAController @Inject() (
     Ok(lda.dumpFeature(dataType, id))
   }
 
-  def getSimilarURIs(uriId: Id[NormalizedURI], version: Option[Int]) = Action { request =>
-    implicit val ver = toVersion(version)
-    val uris = lda.getSimilarURIs(uriId)
-    Ok(Json.toJson(uris))
-  }
-
   def getSimilarLibraries(libId: Id[Library], limit: Int, version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     val libs = statsd.time("ldaController.getSimilarLibraries", 1.0) { _ => lda.getSimilarLibraries(libId, limit)(ver) }
