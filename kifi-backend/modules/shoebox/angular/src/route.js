@@ -169,49 +169,16 @@ angular.module('kifi')
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
-          type: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
+          profile: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
             return orgProfileService
               .userOrOrg($stateParams.handle)
               .then(function (userOrOrgData) {
-                return userOrOrgData.type;
+                return userOrOrgData;
               });
           }],
           libraryService: 'libraryService',
-          library: ['libraryService', 'orgProfileService', '$stateParams', 'type', function (libraryService, orgProfileService, $stateParams, type) {
-            function getOrgId(response) {
-              return response.result.organization.id;
-            }
-
-            function getLibraryIdBySlug(libraryData) {
-              var libraries = libraryData.libraries;
-              var slug = $stateParams.librarySlug;
-
-              var library = libraries.filter(function (l) {
-                return l.slug === slug;
-              }).pop();
-
-              if (library) {
-                return library.id;
-              } else {
-                throw new Error('could not find library in org with slug ' + slug);
-              }
-            }
-
-            if (type === 'user') {
-              // User library
-              return libraryService.getLibraryByUserSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
-            } else {
-              // Org Library
-              return orgProfileService
-                .userOrOrg($stateParams.handle)
-                .then(getOrgId)
-                .then(orgProfileService.getOrgLibraries)
-                .then(getLibraryIdBySlug)
-                .then(libraryService.getLibraryById.bind(libraryService))
-                .then(function (response) {
-                  return response.library;
-                });
-            }
+          library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
+            return libraryService.getLibraryByHandleAndSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
           }],
           libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
             if (library.image) {

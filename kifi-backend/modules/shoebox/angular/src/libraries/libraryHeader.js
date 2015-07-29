@@ -14,6 +14,7 @@ angular.module('kifi')
       replace: true,
       scope: {
         library: '=',
+        profile: '=',
         username: '=',
         librarySlug: '=',
         imageLoaded: '=',
@@ -573,7 +574,7 @@ angular.module('kifi')
 
         scope.manageLibrary = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
-          modalService.open({
+          var opts = {
             template: 'libraries/manageLibraryModal.tpl.html',
             modalData: {
               pane: 'manage',
@@ -581,7 +582,8 @@ angular.module('kifi')
               currentPageOrigin: 'libraryPage',
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
+                  var handle = scope.profile.type === 'org' ? scope.profile.result.organization.handle : scope.username;
+                  return libraryService.getLibraryByHandleAndSlug(handle, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     scope.library.subscriptions = data.subscriptions;
                     augmentData();
@@ -593,7 +595,11 @@ angular.module('kifi')
                 })['catch'](modalService.openGenericErrorModal);
               }
             }
-          });
+          };
+          if (scope.profile.type === 'org') {
+            opts.modalData.organization = scope.profile.result.organization;
+          }
+          modalService.open(opts);
         };
 
         scope.toggleEditKeeps = function () {

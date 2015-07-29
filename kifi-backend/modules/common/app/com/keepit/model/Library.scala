@@ -19,7 +19,7 @@ import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.QueryStringBindable
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.concurrent.duration.Duration
 
@@ -271,6 +271,11 @@ object LibrarySlug {
 
   private def compile(pair: (String, String)): (Pattern, String) = Pattern.compile(pair._1) -> pair._2
   private def replaceAll(s: String, op: (Pattern, String)): String = op._1.matcher(s).replaceAll(op._2)
+
+  implicit def pathBinder = new PathBindable[LibrarySlug] {
+    override def bind(key: String, value: String): Either[String, LibrarySlug] = Right(LibrarySlug(value))
+    override def unbind(key: String, slug: LibrarySlug): String = slug.value
+  }
 }
 
 sealed abstract class LibraryVisibility(val value: String)
@@ -302,6 +307,7 @@ object LibraryKind {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_PERSONA extends LibraryKind("system_persona", 2)
+  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_id_later", 2)
   case object USER_CREATED extends LibraryKind("user_created", 2)
 
   implicit def format[T]: Format[LibraryKind] =
@@ -312,6 +318,7 @@ object LibraryKind {
       case SYSTEM_MAIN.value => SYSTEM_MAIN
       case SYSTEM_SECRET.value => SYSTEM_SECRET
       case SYSTEM_PERSONA.value => SYSTEM_PERSONA
+      case SYSTEM_READ_IT_LATER.value => SYSTEM_READ_IT_LATER
       case USER_CREATED.value => USER_CREATED
     }
   }

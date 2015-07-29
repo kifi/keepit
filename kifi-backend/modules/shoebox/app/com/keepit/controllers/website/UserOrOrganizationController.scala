@@ -14,7 +14,7 @@ import play.api.libs.json.{ JsValue, Json }
 import play.api.mvc.Result
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Either, Success, Failure, Try }
 
 @Singleton
 class UserOrOrganizationController @Inject() (
@@ -23,6 +23,7 @@ class UserOrOrganizationController @Inject() (
     orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
     userCommander: UserCommander,
+    libraryController: LibraryController,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     userProfileController: UserProfileController,
     orgController: OrganizationController,
@@ -37,8 +38,10 @@ class UserOrOrganizationController @Inject() (
     }
   }
 
+  def getHandleOwnerObjectOpt(handle: Handle): Option[(Either[Organization, User], Boolean)] = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+
   def getByHandle(handle: Handle) = MaybeUserAction.async { request =>
-    val handleOwnerObjectOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+    val handleOwnerObjectOpt = getHandleOwnerObjectOpt(handle)
     handleOwnerObjectOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
       case Some(handleOwnerObject) =>
@@ -53,6 +56,28 @@ class UserOrOrganizationController @Inject() (
             case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
             case Failure(ex) =>
               airbrake.notify("Could not parse the body in getByHandle: " + ex)
+              BadRequest
+          }
+        }
+    }
+  }
+
+  def getLibrariesByHandle(handle: Handle, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
+    val handleOwnerObjectOpt = getHandleOwnerObjectOpt(handle)
+    handleOwnerObjectOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
+      case Some(handleOwnerObject) =>
+        val (action, actionType) = handleOwnerObject match {
+          case (Left(org), _) =>
+            (orgController.getOrganizationLibraries(Organization.publicId(org.id.get), offset = page * pageSize, limit = pageSize), "org")
+          case (Right(user), _) =>
+            (userProfileController.getProfileLibraries(user.username, page, pageSize, filter), "user")
+        }
+        for (result <- action(request); bodyTry <- extractBody(result)) yield {
+          bodyTry match {
+            case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
+            case Failure(ex) =>
+              airbrake.notify("Could not parse the body in getLibrariesByHandle: " + ex)
               BadRequest
           }
         }

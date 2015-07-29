@@ -3,9 +3,19 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService',
-  function($scope, profile, profileService, orgProfileService, modalService) {
+  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
+  function($scope, profile, profileService, orgProfileService, modalService, Paginator) {
     var organization = profile.organization;
+
+    var memberLazyLoader = new Paginator(memberSource);
+
+    function memberSource(pageNumber, pageSize) {
+      return orgProfileService
+        .getOrgMembers(organization.id, pageNumber * pageSize, pageSize) // TODO: Waiting on a fix. I shouldn't have to multiply.
+        .then(function (memberData) {
+          return memberData.members;
+        });
+    }
 
     function handleErrorResponse(response) {
       var err = response.data.error;
@@ -32,18 +42,26 @@ angular.module('kifi')
     }
 
     $scope.members = [];
-    $scope.me = null;
+    $scope.myMembership = $scope.membership;
     $scope.organization = organization;
 
-    orgProfileService
-      .getOrgMembers(organization.id)
-      .then(function success(memberData) {
-        $scope.members = memberData.members;
-        $scope.me = $scope.members.filter(function (m) {
-          return m.username === profileService.me.username;
-        }).pop() || profileService.me;
-      })
-      ['catch'](handleErrorResponse);
+    function resetAndFetch() {
+      memberLazyLoader.reset();
+      $scope.fetchMembers();
+    }
+
+    $scope.hasMoreMembers = function () {
+      return memberLazyLoader.hasMore();
+    };
+
+    $scope.fetchMembers = function () {
+      memberLazyLoader
+        .fetch()
+        .then(function (members) {
+          $scope.members = members;
+        })
+        ['catch'](handleErrorResponse);
+    };
 
     // Let the other member lines know to close
     $scope.$on('openedMember', function (e, member) {
@@ -121,5 +139,7 @@ angular.module('kifi')
         }
       });
     };
+
+    resetAndFetch();
   }
 ]);

@@ -1,4 +1,4 @@
-<ul class="kf-org-member-manage">
-  <li ng-if="me.role === 'admin'"><button class="kf-org-member-invite" ng-click="openInviteModal()">Invite new member</button></li>
-  <li ng-repeat="member in members" kf-org-member member="member" me="me" organization="organization"></li>
+<ul class="kf-org-member-manage" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreMembers()" scroll-next="fetchMembers()">
+  <li ng-if="myMembership.role === 'admin'"><button class="kf-org-member-invite" ng-click="openInviteModal()">Invite new member</button></li>
+  <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
 </ul>

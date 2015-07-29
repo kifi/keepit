@@ -80,6 +80,7 @@ trait LibraryCommander {
   def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
+  def createReadItLaterLibrary(userId: Id[User]): Library
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
@@ -91,7 +92,7 @@ trait LibraryCommander {
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
@@ -117,6 +118,7 @@ class LibraryCommanderImpl @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo,
     orgRepo: OrganizationRepo,
     organizationMembershipCommander: OrganizationMembershipCommander,
+    handleCommander: HandleCommander,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -921,6 +923,13 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>
+    val readItLaterLib = libraryRepo.save(Library(name = "Read It Later", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("read_id_later"), kind = LibraryKind.SYSTEM_READ_IT_LATER, memberCount = 1, keepCount = 0))
+    libraryMembershipRepo.save(LibraryMembership(libraryId = readItLaterLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+    searchClient.updateLibraryIndex()
+    readItLaterLib
+  }
+
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
     db.readWrite(attempts = 3) { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
@@ -1459,21 +1468,19 @@ class LibraryCommanderImpl @Inject() (
     (main, secret)
   }
 
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-    val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
-    val ownerOpt = ownerIdentifier match {
-      case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
-      case Right(username) => userCommander.get.getUserByUsername(username)
-    }
-    ownerOpt match {
-      case None => Left(LibraryFail(BAD_REQUEST, "invalid_username"))
-      case Some((owner, _)) =>
-        getLibraryBySlugOrAlias(owner.id.get, slug) match {
-          case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
-          case Some((library, isLibraryAlias)) =>
-            Right(library)
-        }
-    }
+  def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+    val ownerOpt = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+
+    ownerOpt.map {
+      case (Left(org), _) => LibrarySpace.fromOrganizationId(org.id.get)
+      case (Right(user), _) => LibrarySpace.fromUserId(user.id.get)
+    }.map { librarySpace =>
+      getLibraryBySlugOrAlias(librarySpace, slug) match {
+        case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
+        case Some((library, isLibraryAlias)) =>
+          Right(library)
+      }
+    }.getOrElse(Left(LibraryFail(BAD_REQUEST, "invalid_handle")))
   }
 
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit = {

@@ -31,13 +31,19 @@ angular.module('kifi')
       removeOrgMember: function (orgId, removeFields) {
         return net.removeOrgMember(orgId, removeFields);
       },
-      getOrgLibraries: function (orgId) {
-        return net.getOrgLibraries(orgId).then(function (response) {
+      getOrgLibraries: function (orgId, page, size) {
+        return net.getOrgLibraries(orgId, {
+          offset: page,
+          limit: size
+        }).then(function (response) {
           return response.data;
         });
       },
-      getOrgMembers: function (orgId) {
-        return net.getOrgMembers(orgId).then(function (response) {
+      getOrgMembers: function (orgId, page, size) {
+        return net.getOrgMembers(orgId, {
+          offset: page,
+          limit: size
+        }).then(function (response) {
           return response.data;
         });
       },
