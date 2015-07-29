@@ -11,6 +11,7 @@ angular.module('kifi')
       templateUrl: 'profile/profileWidget.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
+        scope.organizations = profileService.me.orgs;
 
         scope.registerEvent = function(action) {
           $analytics.eventTrack('user_clicked_page', {
@@ -18,10 +19,6 @@ angular.module('kifi')
             'type': 'yourKeeps'
           });
         };
-
-        net.getOrgsForUser(scope.me.id).then(function(result) {
-          scope.organizations = result.data.organizations;
-        });
 
         scope.bioClick = function() {
           if (typeof(scope.me.biography) === 'undefined') {
