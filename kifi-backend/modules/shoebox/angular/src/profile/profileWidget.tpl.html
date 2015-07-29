@@ -24,33 +24,43 @@
 
   <div class="stats">
     <a href="{{me|profileUrl}}" ng-click="registerEvent('Libraries')" class="stat">
-      <h2>Libraries</h1>
+      <h2>Libraries</h2>
       <h3>{{me.numLibraries}}</h3>
     </a>
     <a href="{{me|profileUrl:'connections'}}" ng-click="registerEvent('Connections')" class="stat">
-      <h2>Connections</h1>
+      <h2>Connections</h2>
       <h3>
         {{me.numConnections}}
         <span ng-if="me.pendingFriendRequests > 0" >+{{me.pendingFriendRequests}}</span>
       </h3>
     </a>
     <a href="{{me|profileUrl:'followers'}}" ng-click="registerEvent('Followers')" class="stat">
-      <h2>Followers</h1>
+      <h2>Followers</h2>
       <h3>{{me.numFollowers}}</h3>
     </a>
   </div>
 
   <div class="kf-pw-orgs" ng-if="organizations">
     <div ng-repeat="org in organizations" class="kf-pw-org">
-      <a href="{{org.handle}}">
-        <figure class="kf-pw-org-img">
-          <img src="" />
-        </figure>
-        <section class="kf-pw-org-bio">
+      <a class="kf-pw-org-link" href="{{org.handle}}">
+        <img class="kf-pw-org-img" ng-src="{{ org | pic:200 }}" />
+        <div class="kf-pw-org-bio">
           <h1>{{ org.name }}</h1>
           <p>{{ org.description }}</p>
-        </section>
+        </div>
       </a>
+      <div class="stats">
+        <a href="{{ org | profileUrl }}" class="stat">
+          <h2>Libraries</h2>
+          <h3>{{org.numLibraries}}</h3>
+        </a>
+        <a href="{{ org | profileUrl:'members' }}" class="stat">
+          <h2>Members</h2>
+          <h3>
+            {{org.numMembers}}
+          </h3>
+        </a>
+      </div>
     </div>
   </div>
 </div>
