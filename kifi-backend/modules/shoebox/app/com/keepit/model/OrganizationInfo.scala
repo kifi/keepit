@@ -73,7 +73,7 @@ case class OrganizationCard(
   numMembers: Int,
   numLibraries: Int)
 object OrganizationCard {
-  private val defaultWrites: Writes[OrganizationCard] = (
+  implicit val defaultWrites: Writes[OrganizationCard] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and

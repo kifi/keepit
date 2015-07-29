@@ -38,10 +38,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
+        val (user, org) = inject[Database].readWrite { implicit session =>
           val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
-          user
+          val org = OrganizationFactory.organization().withName("CamCo").saved
+          (user, org)
         }
 
         val path = routes.UserController.currentUser().url
