@@ -15,17 +15,17 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 case class Domain(
     id: Option[Id[Domain]] = None,
-    hostname: String,
+    hostname: NormalizedHostname,
     autoSensitive: Option[Boolean] = None,
     manualSensitive: Option[Boolean] = None,
     isEmailProvider: Boolean = false,
     state: State[Domain] = DomainStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[Domain] {
-  require(hostname == IDN.toASCII(hostname), "Invalid hostname: use Domain.fromHostname(hostname)")
   def withId(id: Id[Domain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAutoSensitive(sensitive: Option[Boolean]) = this.copy(autoSensitive = sensitive)
@@ -39,7 +39,7 @@ case class Domain(
 object Domain {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[Domain]) and
-    (__ \ 'hostname).format[String] and
+    (__ \ 'hostname).format[NormalizedHostname] and
     (__ \ 'autoSensitive).formatNullable[Boolean] and
     (__ \ 'manualSensitive).formatNullable[Boolean] and
     (__ \ 'isEmailProvider).format[Boolean] and
@@ -49,25 +49,31 @@ object Domain {
   )(Domain.apply, unlift(Domain.unapply))
 
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
-  private val MaxLength = 256
-
-  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length <= MaxLength
-
-  def fromHostname(hostname: String): Domain = Domain(hostname = IDN.toASCII(hostname)) // throws an exception if !isValid(hostname)
+  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && Try(IDN.toASCII(s)).isSuccess
+  def fromHostname(hostname: String) = Domain(hostname = NormalizedHostname.fromHostname(hostname))
 }
 
 @json
 case class DomainInfo(
   id: Option[Id[Domain]],
-  hostname: String,
+  hostname: NormalizedHostname,
   isEmailProvider: Boolean)
+
+case class NormalizedHostname(value: String) {
+  require(value == IDN.toASCII(value.toLowerCase), "Invalid hostname, use NormalizedHostname.fromHostname")
+}
+object NormalizedHostname {
+  def fromHostname(hostname: String) = NormalizedHostname(IDN.toASCII(hostname.toLowerCase))
+  implicit def format: Format[NormalizedHostname] =
+    Format(__.read[String].map(NormalizedHostname(_)), new Writes[NormalizedHostname] { def writes(o: NormalizedHostname) = JsString(o.value) })
+}
 
 object DomainStates extends States[Domain]
 
-case class DomainKey(hostname: String) extends Key[Domain] {
+case class DomainKey(hostname: NormalizedHostname) extends Key[Domain] {
   override val version = 3
   val namespace = "domain_by_hostname"
-  def toKey(): String = hostname
+  def toKey(): String = hostname.value
 }
 
 class DomainCache(stats: CacheStatistics, accessLog: AccessLog,

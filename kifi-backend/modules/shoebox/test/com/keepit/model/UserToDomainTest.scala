@@ -2,7 +2,7 @@ package com.keepit.model
 
 import org.specs2.mutable._
 
-import com.keepit.classify.{ DomainHash, Domain, DomainRepo }
+import com.keepit.classify.{ Domain, DomainRepo }
 import com.keepit.common.db.slick._
 import com.keepit.test._
 import com.keepit.model.UserFactoryHelper._

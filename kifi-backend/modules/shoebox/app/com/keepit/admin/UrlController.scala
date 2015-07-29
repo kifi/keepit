@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{ SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.classify.{ NormalizedHostname, SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db._
@@ -451,7 +451,7 @@ class UrlController @Inject() (
 
   def saveDomainOverrides = AdminUserAction { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
-      case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
+      case (k, vs) => NormalizedHostname.fromHostname(k) -> (vs.head.toLowerCase == "true")
     }.toMap
     val domainsToRemove = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
@@ -459,9 +459,9 @@ class UrlController @Inject() (
 
     db.readWrite { implicit s =>
       domainSensitiveMap.foreach {
-        case (domainName, sensitive) if Domain.isValid(domainName) =>
-          val domain = domainRepo.get(domainName)
-            .getOrElse(Domain.fromHostname(hostname = domainName))
+        case (domainName, sensitive) =>
+          val domain = domainRepo.getNormalized(domainName)
+            .getOrElse(Domain(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)
         case (domainName, _) =>
@@ -471,19 +471,19 @@ class UrlController @Inject() (
         domainRepo.save(domain.withManualSensitive(None))
       }
     }
-    Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
+    Ok(JsObject(domainSensitiveMap map { case (s, b) => s.value -> JsBoolean(b) } toSeq))
   }
 
-  def updateAllDomainHashes() = AdminUserAction { implicit request =>
+  def updateAllDomainHostnames() = AdminUserAction { implicit request =>
     val BATCH_SIZE = 10000
     val numBatches = db.readOnlyReplica { implicit session => domainRepo.count / BATCH_SIZE }
 
     def processBatch(batch: Int): Future[Unit] = {
       db.readWriteAsync { implicit session =>
         val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
-        val updatedDomains = domainBatch.map(domain => Domain.fromHostname(domain.hostname).copy(id = domain.id, state = domain.state))
+        val updatedDomains = domainBatch.map(domain => Domain(hostname = NormalizedHostname.fromHostname(domain.hostname.value)).copy(id = domain.id, state = domain.state))
         updatedDomains.foreach(domainRepo.save)
-        log.info(s"[hashMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
+        log.info(s"[hostnameMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
         ()
       }
     }

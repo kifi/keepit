@@ -1,6 +1,6 @@
 package com.keepit.search.engine.parser
 
-import com.keepit.classify.Domain
+import com.keepit.classify.{ NormalizedHostname, Domain }
 import com.keepit.search.Lang
 import com.keepit.search.engine.query.KPrefixQuery
 import com.keepit.search.engine.query.core._
