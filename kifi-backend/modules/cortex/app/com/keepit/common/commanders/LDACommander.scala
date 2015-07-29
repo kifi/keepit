@@ -32,7 +32,6 @@ trait LDACommander {
   def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Option[LDAUserURIInterestScore]
   def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: ModelVersion[DenseLDA]): (Seq[Id[User]], Seq[Float])
   def userSimilairty(userId1: Id[User], userId2: Id[User])(implicit version: ModelVersion[DenseLDA]): Option[Float]
-  def getSimilarURIs(uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Seq[Id[NormalizedURI]]
   def dumpFeature(dataType: String, id: Long)(implicit version: ModelVersion[DenseLDA]): JsValue
   def recomputeUserLDAStats(implicit version: ModelVersion[DenseLDA]): Unit
   def sampleURIs(topicId: Int)(implicit version: ModelVersion[DenseLDA]): Seq[(Id[NormalizedURI], Float)]
@@ -450,18 +449,6 @@ class LDACommanderImpl @Inject() (
       }
 
       case _ => JsString("unknown data type")
-    }
-  }
-
-  def getSimilarURIs(uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Seq[Id[NormalizedURI]] = {
-
-    db.readOnlyReplica { implicit s =>
-      uriTopicRepo.getActiveByURI(uriId, version) match {
-        case Some(uriFeat) =>
-          val (first, second, third) = (uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get)
-          uriTopicRepo.getURIsByTopics(first, second, third, version, limit = 50)
-        case None => Seq()
-      }
     }
   }
 
