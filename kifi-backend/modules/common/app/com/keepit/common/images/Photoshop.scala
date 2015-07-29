@@ -13,6 +13,7 @@ trait Photoshop {
   def imageInfo(image: File): Try[RawImageInfo]
   def resizeImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File]
   def cropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File]
+  def cropscaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): Try[File]
 }
 
 case class RawImageInfo(format: String, width: Int, height: Int)

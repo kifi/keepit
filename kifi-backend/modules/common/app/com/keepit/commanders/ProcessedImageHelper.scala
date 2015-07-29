@@ -11,7 +11,7 @@ import com.keepit.common.core.File
 import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.store.{ ImagePath, ImageSize }
+import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
 import com.keepit.model._
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -38,6 +38,7 @@ object ProcessImageRequest {
 sealed abstract case class ProcessImageRequest(operation: ProcessImageOperation, size: ImageSize)
 class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Scale, size)
 class CropImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Crop, size)
+class CropscaleImageRequest(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Cropscale, scaledSize)
 
 object ScaleImageRequest {
   def apply(boundingBox: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(boundingBox, boundingBox))
@@ -48,6 +49,10 @@ object ScaleImageRequest {
 object CropImageRequest {
   def apply(imageSize: ImageSize): CropImageRequest = new CropImageRequest(imageSize)
   def apply(width: Int, height: Int): CropImageRequest = new CropImageRequest(ImageSize(width, height))
+}
+
+object CropScaleImageRequest {
+  def apply(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize): CropscaleImageRequest = new CropscaleImageRequest(offset, cropSize, scaledSize)
 }
 
 trait ProcessedImageHelper {
@@ -399,6 +404,7 @@ sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageS
 
 sealed abstract class ScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name, idealSize, ProcessImageOperation.Scale)
 sealed abstract class CroppedImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-crop", idealSize, ProcessImageOperation.Crop)
+sealed abstract class CropscaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-cropscale", idealSize, ProcessImageOperation.Cropscale)
 
 object ScaledImageSize {
   case object Small extends ScaledImageSize("small", ImageSize(150, 150))
@@ -410,11 +416,9 @@ object ScaledImageSize {
 }
 
 object CroppedImageSize {
-  case object Tiny extends CroppedImageSize("small", ImageSize(100, 100))
-  case object Small extends CroppedImageSize("medium", ImageSize(150, 150))
+  case object Tiny extends CroppedImageSize("tiny", ImageSize(100, 100))
+  case object Small extends CroppedImageSize("small", ImageSize(150, 150))
   case object Medium extends CroppedImageSize("medium", ImageSize(200, 200))
-
-  val allSizes: Seq[CroppedImageSize] = Seq(Small)
 }
 
 object ProcessedImageSize {

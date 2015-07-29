@@ -45,7 +45,7 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
-          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, CroppedImageSize.allSizes)
+          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, Seq(CroppedImageSize.Small))
           calcSizes(100, 100).toSeq.sorted === Seq()
           calcSizes(300, 100).toSeq.sorted === scaleRequest(150) // no crop, image not wide enough
           calcSizes(100, 700).toSeq.sorted === scaleRequest(150, 400) // no crop, image not wide enough

@@ -29,7 +29,7 @@ import scala.util.{ Failure, Success, Try }
 
 object KeepImageSizes {
   val scaleSizes = ScaledImageSize.allSizes
-  val cropSizes = CroppedImageSize.allSizes
+  val cropSizes = Seq(CroppedImageSize.Small)
 }
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])

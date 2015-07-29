@@ -63,11 +63,20 @@ class Image4javaWrapper @Inject() (
   }
 
   def cropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
-    if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
+    if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't crop format $format")
     if (format == ImageFormat.GIF) {
       safeCropImage(gifToPng(image), ImageFormat.PNG, width, height)
     } else {
       safeCropImage(image, format, width, height)
+    }
+  }
+
+  def cropscaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): Try[File] = Try {
+    if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't cropscale format $format")
+    if (format == ImageFormat.GIF) {
+      safeCropscaleImage(gifToPng(image), ImageFormat.PNG, x, y, width, height, finalWidth, finalHeight)
+    } else {
+      safeCropscaleImage(image, format, x, y, width, height, finalWidth, finalHeight)
     }
   }
 
@@ -135,6 +144,30 @@ class Image4javaWrapper @Inject() (
     handleExceptions(convert, operation)
 
     log.info(s"[safeCropImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
+    outputFile
+  }
+
+  private def safeCropscaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): File = {
+    log.info(s"[safeCropscaleImage] START format=$format crop=${width}x${height}+${x}+${y}, scale=${finalWidth}x${finalHeight}")
+    val operation = new IMOperation
+
+    val outputFile = TemporaryFile(prefix = "ImageMagicCropscaleImage", suffix = s".${format.value}").file
+    val filePath = outputFile.getAbsolutePath
+    outputFile.deleteOnExit()
+
+    operation.addImage(image.getAbsolutePath)
+
+    operation.crop(width, height, x, y)
+
+    operation.resize(finalWidth, finalHeight, '!')
+
+    addOptions(format, operation)
+    operation.addImage(filePath)
+
+    val convert = command()
+    handleExceptions(convert, operation)
+
+    log.info(s"[safeCropscaleImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${finalWidth}x$finalHeight at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
