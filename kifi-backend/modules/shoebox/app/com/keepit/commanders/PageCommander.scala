@@ -11,17 +11,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social._
-import com.keepit.common.store.S3ImageConfig
-import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.rover.RoverServiceClient
-import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
-import com.kifi.macros.json
 import org.joda.time.DateTime
 
 import play.api.libs.json._
@@ -47,7 +42,6 @@ class PageCommander @Inject() (
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
     airbrake: AirbrakeNotifier,
-    relatedPageCommander: RelatedPageCommander,
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
@@ -124,23 +118,9 @@ class PageCommander @Inject() (
       (nUri, nUriStr)
     }
 
-    val relatedPagesF = uriInfoF.flatMap {
-      case (uri, _) =>
-        if (uri.isDefined && experiments.contains(UserExperimentType.RELATED_PAGE_INFO)) {
-          relatedPageCommander.getRelatedPageInfo(uri.get.id.get).recover {
-            case _ =>
-              airbrake.notify(s"error in getting related page info for uri: ${uri.get.id.get}")
-              Seq()
-          }
-        } else {
-          Future.successful(Seq[RelatedPageInfo]())
-        }
-    }
-
     val infoF = for {
       (position, neverOnSite) <- domainF
       (nUriOpt, nUriStr) <- uriInfoF
-      relatedPages <- relatedPagesF
     } yield {
       val shown = nUriOpt.exists { normUri =>
         historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
@@ -148,10 +128,10 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, relatedPages)
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], Seq.empty[RelatedPageInfo]))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
       }
     }
     infoF.flatten
@@ -257,56 +237,3 @@ case class KeeperPagePartialInfo(
   keepersTotal: Int,
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
-
-case class RelatedPageInfo(title: String, url: String, image: String, width: Int, height: Int)
-object RelatedPageInfo {
-  implicit val writes = Json.writes[RelatedPageInfo]
-}
-
-class RelatedPageCommander @Inject() (
-    db: Database,
-    uriRepo: NormalizedURIRepo,
-    implicit val executionContext: ExecutionContext,
-    cortex: CortexServiceClient,
-    rover: RoverServiceClient,
-    implicit val s3ImageConfig: S3ImageConfig) {
-
-  private val MAX_LOOKUP_SIZE = 25
-  private val MIN_POOL_SIZE = 5
-  private val RETURN_SIZE = 5
-
-  def getRelatedPageInfo(uriId: Id[NormalizedURI]): Future[Seq[RelatedPageInfo]] = {
-    val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
-      val current = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-      val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
-      val filtered = uris.filter { x => x.title.isDefined && x.shouldHaveContent && x.restriction.isEmpty }
-      val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray.filter(_.title.get.toLowerCase != current.title.getOrElse("n/a"))
-      uniqueUris
-    }
-
-    val imagesF: Future[Map[Id[NormalizedURI], BasicImages]] = urisF.flatMap { uris =>
-      rover.getImagesByUris(uris.map(_.id.get).toSet)
-    }
-
-    for {
-      uris <- urisF
-      imagesByUriId <- imagesF
-    } yield {
-      val relatedPages = uris.flatMap { uri =>
-        imagesByUriId.get(uri.id.get).flatMap { images =>
-          images.get(ProcessedImageSize.Medium.idealSize).map { image =>
-            RelatedPageInfo(uri.title.get, uri.url, image.path.getUrl, image.size.width, image.size.height)
-          }
-        }
-      }
-
-      if (relatedPages.size >= MIN_POOL_SIZE) {
-        scala.util.Random.shuffle(relatedPages.toSeq).take(RETURN_SIZE)
-      } else {
-        // pool size too small. Don't show anything
-        Seq()
-      }
-    }
-
-  }
-}
