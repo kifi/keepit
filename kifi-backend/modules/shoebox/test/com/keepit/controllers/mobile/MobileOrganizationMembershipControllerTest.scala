@@ -68,14 +68,14 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
           (json \ "members" \\ "id").length == n
-          (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
+
+          (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.sortBy(_.firstName).toList).take(n).map(_.externalId)
         }
       }
       "list an organization's invitees, if the requester can invite members" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val n = 10
           val (org, owner, members, invitedUsers, _) = setup(numMembers = n - 1, numInvitedUsers = n)
-
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
           inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
