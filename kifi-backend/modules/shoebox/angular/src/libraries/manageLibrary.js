@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.space = 'organization' in scope.modalData ? scope.modalData.organization : profileService.me;
 
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
@@ -41,8 +40,20 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
-        scope.spaces = profileService.me.organizations ? [profileService.me].concat(profileService.organizations) : profileService.me;
-        scope.selectedSpace = { name: profileService.me.name };
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.thisSpace = profileService.me; // Default
+
+        // Find out where we're opening this from
+        if ('organization' in scope.modalData) { 
+          var thisSpace = scope.modalData.organization;
+          // Angular is very picky about the object you're using.
+          scope.thisSpace = scope.spaces.filter(function(space) {
+            return (space.id === thisSpace.id);
+          })[0];
+        }
+        scope.setSpace = function(thisSpace) {
+          scope.thisSpace = thisSpace;
+        };
 
         //
         // Scope methods.
