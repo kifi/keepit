@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileWidget', [
-  '$analytics', 'profileService', 'modalService',
-  function ($analytics, profileService, modalService) {
+  '$analytics', 'profileService', 'modalService', 'net',
+  function ($analytics, profileService, modalService, net) {
     return {
       replace: true,
       restrict: 'A',
@@ -18,6 +18,10 @@ angular.module('kifi')
             'type': 'yourKeeps'
           });
         };
+
+        scope.organizations = net.getOrgsForUser(scope.me.id).then(function(result) {
+          return result.data.organizations;
+        });
 
         scope.bioClick = function() {
           if (typeof(scope.me.biography) === 'undefined') {
