@@ -45,6 +45,8 @@ angular.module('kifi')
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),
 
+      getOrgsForUser: get(shoebox, '/user/:id/organizations'),
+
       search: {
         search: get(search, '/search'),
         searched: post(search, '/search/events/searched'),
