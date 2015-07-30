@@ -8,7 +8,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       replace: true,
-      templateUrl: 'libraries/libraryVisibilityCheckbox.tpl.html',
+      templateUrl: 'libraries/libraryVisibilitySelector.tpl.html',
       scope: {
         library: '='
       },
