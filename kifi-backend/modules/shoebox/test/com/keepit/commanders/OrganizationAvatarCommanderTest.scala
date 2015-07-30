@@ -38,8 +38,8 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     db.readWrite { implicit session =>
       val user1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abe").saved
       val user2 = UserFactory.user().withName("Bob", "Dole").withUsername("bob").saved
-      val org1 = inject[OrganizationRepo].save(Organization(name = "Abe's Hardware", ownerId = user1.id.get, handle = None, description = None, site = None))
-      val org2 = inject[OrganizationRepo].save(Organization(name = "Bob's Tools", ownerId = user2.id.get, handle = None, description = None, site = None))
+      val org1 = inject[OrganizationRepo].save(Organization(name = "Abe's Hardware", ownerId = user1.id.get, primaryHandle = None, description = None, site = None))
+      val org2 = inject[OrganizationRepo].save(Organization(name = "Bob's Tools", ownerId = user2.id.get, primaryHandle = None, description = None, site = None))
       inject[OrganizationMembershipRepo].save(org1.newMembership(userId = user1.id.get, role = OrganizationRole.ADMIN))
       inject[OrganizationMembershipRepo].save(org2.newMembership(userId = user2.id.get, role = OrganizationRole.ADMIN))
       (user1, user2, org1, org2)

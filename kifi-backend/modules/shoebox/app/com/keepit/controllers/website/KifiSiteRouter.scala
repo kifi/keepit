@@ -96,7 +96,7 @@ class KifiSiteRouter @Inject() (
     lookupOrganization(handle) map {
       case (org, redirectStatusOpt) =>
         redirectStatusOpt map { status =>
-          val foundHandle = Handle.fromOrganizationHandle(org.getHandle)
+          val foundHandle = Handle.fromOrganizationHandle(org.handle)
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
           AngularApp.app()
@@ -109,7 +109,7 @@ class KifiSiteRouter @Inject() (
       case (handleOwner, redirectStatusOpt) =>
         redirectStatusOpt map { status =>
           val foundHandle = handleOwner match {
-            case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+            case Left(org) => Handle.fromOrganizationHandle(org.handle)
             case Right(user) => Handle.fromUsername(user.username)
           }
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
@@ -210,7 +210,7 @@ class KifiSiteRouter @Inject() (
     } map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {
-          case Left(org) => Handle.fromOrganizationHandle(org.getHandle)
+          case Left(org) => Handle.fromOrganizationHandle(org.handle)
           case Right(user) => Handle.fromUsername(user.username)
         }
 

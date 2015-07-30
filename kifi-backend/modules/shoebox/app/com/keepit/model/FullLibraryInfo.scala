@@ -39,7 +39,7 @@ case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 case class ExternalLibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
-  slug: String,
+  slug: Option[String],
   kind: Option[LibraryKind] = None,
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
@@ -52,7 +52,7 @@ object ExternalLibraryAddRequest {
   implicit val reads: Reads[ExternalLibraryAddRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
-    (__ \ 'slug).read[String] and
+    (__ \ 'slug).readNullable[String] and
     (__ \ 'kind).readNullable[LibraryKind] and
     (__ \ 'description).readNullable[String] and
     (__ \ 'color).readNullable[LibraryColor] and
@@ -149,7 +149,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = LibraryPathHelper.formatLibraryPath(owner, org, lib.slug),
+      url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
@@ -183,32 +183,36 @@ case class LibraryCardInfo(
   modifiedAt: DateTime,
   kind: LibraryKind,
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
-  path: String)
+  path: String,
+  org: Option[OrganizationCard])
 
 object LibraryCardInfo {
-  implicit val format: Format[LibraryCardInfo] = (
-    (__ \ 'id).format[PublicId[Library]] and
-    (__ \ 'name).format[String] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'color).formatNullable[LibraryColor] and
-    (__ \ 'image).formatNullable[LibraryImageInfo] and
-    (__ \ 'slug).format[LibrarySlug] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'owner).format[BasicUser] and
-    (__ \ 'numKeeps).format[Int] and
-    (__ \ 'numFollowers).format[Int] and
-    (__ \ 'followers).format[Seq[BasicUser]] and
-    (__ \ 'numCollaborators).format[Int] and
-    (__ \ 'collaborators).format[Seq[BasicUser]] and
-    (__ \ 'lastKept).format[DateTime] and
-    (__ \ 'following).formatNullable[Boolean] and
-    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
-    (__ \ 'caption).formatNullable[String] and
-    (__ \ 'modifiedAt).format[DateTime] and
-    (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'invite).formatNullable[LibraryInviteInfo] and
-    (__ \ 'path).format[String]
-  )(LibraryCardInfo.apply, unlift(LibraryCardInfo.unapply))
+  implicit val writes = new Writes[LibraryCardInfo] {
+    import com.keepit.common.core._
+    def writes(o: LibraryCardInfo) = Json.obj(
+      "id" -> o.id,
+      "name" -> o.name,
+      "description" -> o.description,
+      "color" -> o.color,
+      "image" -> o.image,
+      "slug" -> o.slug,
+      "visibility" -> o.visibility,
+      "owner" -> o.owner,
+      "numKeeps" -> o.numKeeps,
+      "numFollowers" -> o.numFollowers,
+      "followers" -> o.followers,
+      "numCollaborators" -> o.numCollaborators,
+      "collaborators" -> o.collaborators,
+      "lastKept" -> o.lastKept,
+      "following" -> o.following,
+      "membership" -> o.membership,
+      "caption" -> o.caption,
+      "modifiedAt" -> o.modifiedAt,
+      "kind" -> o.kind,
+      "invite" -> o.invite,
+      "path" -> o.path,
+      "org" -> o.org).nonNullFields
+  }
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
   }
@@ -264,11 +268,38 @@ case class FullLibraryInfo(
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
-  path: String)
+  path: String,
+  org: Option[OrganizationCard])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
-  implicit val writes = Json.writes[FullLibraryInfo]
+  implicit val writes = new Writes[FullLibraryInfo] {
+    import com.keepit.common.core._
+    def writes(o: FullLibraryInfo) = Json.obj(
+      "id" -> o.id,
+      "name" -> o.name,
+      "visibility" -> o.visibility,
+      "description" -> o.description,
+      "slug" -> o.slug,
+      "url" -> o.url,
+      "color" -> o.color,
+      "image" -> o.image,
+      "kind" -> o.kind,
+      "lastKept" -> o.lastKept,
+      "owner" -> o.owner,
+      "followers" -> o.followers,
+      "collaborators" -> o.collaborators,
+      "keeps" -> o.keeps,
+      "numKeeps" -> o.numKeeps,
+      "numCollaborators" -> o.numCollaborators,
+      "numFollowers" -> o.numFollowers,
+      "attr" -> o.attr,
+      "whoCanInvite" -> o.whoCanInvite,
+      "modifiedAt" -> o.modifiedAt,
+      "path" -> o.path,
+      "org" -> o.org
+    ).nonNullFields
+  }
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
