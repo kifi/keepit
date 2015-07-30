@@ -53,9 +53,9 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
             val user = UserFactory.user().saved
             val handle = OrganizationHandle("kifi")
             val org = OrganizationFactory.organization().withHandle(handle).withOwner(user).withName("Forty Two Kifis").saved
-            LibraryFactory.libraries(10).map(_.published().withOrganization(org.id)).saved
-            LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(org.id)).saved
-            LibraryFactory.libraries(20).map(_.secret().withOrganization(org.id)).saved
+            LibraryFactory.libraries(10).map(_.published().withOrganizationIdOpt(org.id)).saved
+            LibraryFactory.libraries(15).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(org.id)).saved
+            LibraryFactory.libraries(20).map(_.secret().withOrganizationIdOpt(org.id)).saved
             (user, org)
           }
 
@@ -79,7 +79,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
             val user = UserFactory.user().saved
             for (i <- 1 to 10) {
               val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").saved
-              LibraryFactory.libraries(i).map(_.published().withOrganization(org.id)).saved
+              LibraryFactory.libraries(i).map(_.published().withOrganizationIdOpt(org.id)).saved
             }
             user
           }

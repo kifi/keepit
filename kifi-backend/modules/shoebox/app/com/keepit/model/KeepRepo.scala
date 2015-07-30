@@ -42,6 +42,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
+  def deactivate(model: Keep)(implicit session: RWSession): Unit
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
@@ -146,6 +147,10 @@ class KeepRepoImpl @Inject() (
       model.copy(seq = sequence.incrementAndGet())
     }
     super.save(newModel.clean())
+  }
+
+  def deactivate(model: Keep)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
