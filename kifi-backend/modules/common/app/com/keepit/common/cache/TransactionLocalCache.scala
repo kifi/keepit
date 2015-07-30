@@ -67,12 +67,8 @@ class TransactionLocalCache[K <: Key[T], T] private (
       case (key, state) =>
         state match {
           case LFound(serialized) => {
-            val v = timing(s"TLCache-reads($key,${state.toString.take(500)})", 50) {
-              localSerializer.localReads(serialized)
-            }
-            timing(s"TLCache-writes($key,${state.toString.take(500)},$v)", 50) {
-              underlying.set(key, v)
-            }
+            val v = localSerializer.localReads(serialized)
+            underlying.set(key, v)
           }
           case LRemoved() => underlying.remove(key)
           case state => throw new Exception(s"this state ($state) should not be in the cache")
