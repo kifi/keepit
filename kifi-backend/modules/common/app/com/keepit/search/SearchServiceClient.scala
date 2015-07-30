@@ -75,6 +75,7 @@ trait SearchServiceClient extends ServiceClient {
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
+@Singleton
 class SearchServiceClientImpl(
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
@@ -286,8 +287,12 @@ class SearchServiceClientImpl(
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
 
-  private def debounceBroadcast(call: ServiceRoute): Unit = {
+
+  private val _debounceBroadcast = {
     def b(c: ServiceRoute) = broadcast(c)
-    extras.debounce(1.second)(b)(call)
+    extras.debounce(1.second)(b)
+  }
+  private def debounceBroadcast(call: ServiceRoute): Unit = {
+    _debounceBroadcast(call)
   }
 }
