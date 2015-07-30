@@ -1,4 +1,5 @@
 @(user: User,
+  userThreadStats: com.keepit.eliza.model.UserThreadStats,
   totalBookmarks: Int,
   organizations: Seq[Organization],
   candidateOrganizations: Seq[Organization],
@@ -53,6 +54,9 @@
       </tr>
       <tr>
         <th>Total Keeps</th><td>@totalBookmarks</td>
+      </tr>
+      <tr>
+        <th>Messages all/active/started</th><td>@{userThreadStats.all}/@{userThreadStats.active}/@{userThreadStats.started}</td>
       </tr>
       <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
       <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>

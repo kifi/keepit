@@ -253,6 +253,7 @@ class AdminUserController @Inject() (
 
   private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
     val userId = user.id.get
+    val chatStatsF = eliza.getUserThreadStats(userId)
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
     val fOrgRecos = try {
@@ -289,9 +290,10 @@ class AdminUserController @Inject() (
       econtactCount <- econtactCountF
       contacts <- contactsF
       orgRecos <- fOrgRecos
+      chatStats <- chatStatsF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
-      Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
+      Ok(html.admin.user(user, chatStats, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
     }
