@@ -51,7 +51,7 @@ angular.module('kifi')
             return (space.id === thisSpace.id);
           })[0];
         }
-        scope.destinationSpace = scope.thisSpace // Default
+        scope.destinationSpace = scope.thisSpace; // Default
 
         scope.setSpace = function(space) {
           scope.destinationSpace = space;
