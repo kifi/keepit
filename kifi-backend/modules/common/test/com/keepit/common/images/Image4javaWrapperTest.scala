@@ -193,7 +193,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       val resizedInfo = im.imageInfo(cropscaled).get
       resizedInfo.width === 250
       resizedInfo.height === 20
-      range(imageByteSize(cropscaled), 2331)
+      range(imageByteSize(cropscaled), 4181)
     }
 
     "optimize jpg" in {
