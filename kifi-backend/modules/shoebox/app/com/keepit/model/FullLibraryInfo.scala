@@ -188,6 +188,7 @@ case class LibraryCardInfo(
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
+    import com.keepit.common.core._
     def writes(o: LibraryCardInfo) = Json.obj(
       "id" -> o.id,
       "name" -> o.name,
@@ -199,6 +200,8 @@ object LibraryCardInfo {
       "owner" -> o.owner,
       "numKeeps" -> o.numKeeps,
       "numFollowers" -> o.numFollowers,
+      "followers" -> o.followers,
+      "numCollaborators" -> o.numCollaborators,
       "collaborators" -> o.collaborators,
       "lastKept" -> o.lastKept,
       "following" -> o.following,
@@ -208,7 +211,7 @@ object LibraryCardInfo {
       "kind" -> o.kind,
       "invite" -> o.invite,
       "path" -> o.path,
-      "org" -> o.org)
+      "org" -> o.org).nonNullFields
   }
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
@@ -271,6 +274,7 @@ case class FullLibraryInfo(
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
   implicit val writes = new Writes[FullLibraryInfo] {
+    import com.keepit.common.core._
     def writes(o: FullLibraryInfo) = Json.obj(
       "id" -> o.id,
       "name" -> o.name,
@@ -293,7 +297,8 @@ object FullLibraryInfo {
       "whoCanInvite" -> o.whoCanInvite,
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
-      "org" -> o.org)
+      "org" -> o.org
+    ).nonNullFields
   }
 }
 

@@ -203,7 +203,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "listed" : true,
                   "subscribed" : false
                 },
-                "invite":null
+                "invite": null
               },
               "membership" : "owner"
             }""")
@@ -757,7 +757,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result4 = getWriteableLibrariesV2(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
-        (response4 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
+        (response4 \ "libraries").as[Seq[JsObject]].length === 2
         (response4 \ "error").asOpt[String] === None
         (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }

@@ -687,8 +687,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                },
                "invite": null,
                "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
-               "org" :
-             },
+               "org": {"id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user1.externalId}","handle":"${org1.handle.value}","name":"${org1.name}","numMembers":1,"numLibraries":1}
+              },
              "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
             }
@@ -1662,14 +1662,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val libInfos = contentAsJson(result).as[Seq[JsObject]]
           libInfos.size === 2
-          (libInfos(0) \ "name") === "Java"
-          (libInfos(0) \ "numFollowers") === 1
-          (libInfos(0) \ "id" \ "id") must beMatching("^l.+") // tests public id
-          (libInfos(0) \ "caption") must beNone
-          (libInfos(1) \ "name") === "Scala"
-          (libInfos(1) \ "numFollowers") === 2
-          (libInfos(1) \ "owner" \ "fullName") === "John Doe"
-          (libInfos(1) \ "caption") === Some("yo dawg")
+          (libInfos(0) \ "name").as[String] === "Java"
+          (libInfos(0) \ "numFollowers").as[Int] === 1
+          (libInfos(0) \ "id").as[String] must beMatching("^l.+") // tests public id
+          (libInfos(0) \ "caption").as[Option[String]] must beNone
+          (libInfos(1) \ "name").as[String] === "Scala"
+          (libInfos(1) \ "numFollowers").as[Int] === 2
+          (libInfos(1) \ "owner" \ "firstName").as[String] === "John"
+          (libInfos(1) \ "owner" \ "lastName").as[String] === "Doe"
+          (libInfos(1) \ "caption").as[String] === "yo dawg"
         }
       }
     }
