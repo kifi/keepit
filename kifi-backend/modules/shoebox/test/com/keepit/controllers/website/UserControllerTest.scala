@@ -3,9 +3,10 @@ package com.keepit.controllers.website
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserConnectionsCommander
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.time._
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress /*, FakeMailModule*/ }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -39,9 +40,10 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, org) = inject[Database].readWrite { implicit session =>
-          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").withId(Id[User](1)).withId("ae5d159c-5935-4ad5-b979-ea280cb6c7ba").saved
+
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
-          val org = OrganizationFactory.organization().withName("CamCo").saved
+          val org = OrganizationFactory.organization().withName("CamCo").withOwner(user).saved
           (user, org)
         }
 
@@ -69,7 +71,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections":0,
               "numFollowers":0,
               "pendingFriendRequests":0,
-              "orgs": []
+              "orgs": [{"id":"${Organization.publicId(org.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user.externalId}","handle":"${org.getHandle.value}","name":"${org.name}","numMembers":1,"numLibraries":0}]
             }
           """)
 

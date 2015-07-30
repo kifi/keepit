@@ -743,7 +743,6 @@ GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUse
 POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
-GET     /admin/ripest_fruit @com.keepit.controllers.admin.AdminSocialUserController.ripestFruitView(uid: Long ?= 0, n: Int ?= 0)
 GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.triggerPush()
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
@@ -810,10 +809,6 @@ GET     /admin/phrases              @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
-
-GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
-POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
-POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitationController.rejectUser(id: Id[SocialUserInfo])
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.AdminClusterController.zooKeeperInspector

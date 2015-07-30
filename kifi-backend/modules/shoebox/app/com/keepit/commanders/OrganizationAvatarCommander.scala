@@ -130,9 +130,9 @@ class OrganizationAvatarCommanderImpl @Inject() (
 
   // What ProcessImageRequests are necessary to perform on an image, given that we have some existing avatars already
   def determineRequiredProcessImageRequests(imageSize: ImageSize, existingAvatars: Seq[OrganizationAvatar]) = {
-    val required: Set[ProcessImageRequest] = cropSizes.map(crop => CropImageRequest(crop.idealSize)).toSet
+    val required: Set[ProcessImageRequest] = cropSizes.map(crop => CenteredCropImageRequest(crop.idealSize)).toSet
     val existing: Set[ProcessImageRequest] = existingAvatars.collect { // currently we only crop org avatars, but it's possible we may later do other things
-      case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
+      case croppedImage if croppedImage.kind == ProcessImageOperation.CenteredCrop => CenteredCropImageRequest(croppedImage.imageSize)
     }.toSet
 
     val unnecessary = intersectProcessImageRequests(existing, required)

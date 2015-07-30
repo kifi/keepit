@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.emails.activity._
-import com.keepit.commanders.{ CropImageRequest, CroppedImageSize, KeepImageCommander, KeepsCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ CenteredCropImageRequest, CroppedImageSize, KeepImageCommander, KeepsCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -321,7 +321,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
   }
 
   private def isEnoughKeepImagesForLibRecos(s: LibraryInfoViewWithKeepImages) = s.keepImages.size >= maxKeepImagesPerLibraryReco
-  private val keepImageCropRequest = CropImageRequest(CroppedImageSize.Small.idealSize)
+  private val keepImageCropRequest = CenteredCropImageRequest(CroppedImageSize.Small.idealSize)
   private val keepImageUrlPrefix = {
     // "urls" are paths relative to the root of the CDN
     val cdn = s3Config.cdnBase
