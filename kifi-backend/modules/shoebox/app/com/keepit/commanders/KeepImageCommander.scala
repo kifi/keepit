@@ -29,7 +29,7 @@ import scala.util.{ Failure, Success, Try }
 
 object KeepImageSizes {
   val scaleSizes = ScaledImageSize.allSizes
-  val cropSizes = CroppedImageSize.allSizes
+  val cropSizes = Seq(CroppedImageSize.Small)
 }
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])
@@ -71,7 +71,7 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
-    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
+    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.CenteredCrop
     val idealImageSize = imageRequest.size
     getAllImagesForKeeps(keepIds).mapValues(ProcessedImageSize.pickBestImage(idealImageSize, _, strictAspectRatio))
   }

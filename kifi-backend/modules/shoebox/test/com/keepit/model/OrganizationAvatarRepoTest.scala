@@ -15,9 +15,9 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
       withDb() { implicit injector =>
         val orgAvatarRepo = inject[OrganizationAvatarRepo]
         val org = db.readWrite { implicit s =>
-          val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(100, 120), ProcessImageOperation.Crop, ImageFormat.JPG)
+          val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(100, 120), ProcessImageOperation.CenteredCrop, ImageFormat.JPG)
           orgAvatarRepo.save(OrganizationAvatar(organizationId = Id[Organization](1),
-            width = 100, height = 120, format = ImageFormat.JPG, kind = ProcessImageOperation.Crop,
+            width = 100, height = 120, format = ImageFormat.JPG, kind = ProcessImageOperation.CenteredCrop,
             imagePath = path, source = ImageSource.UserUpload, sourceFileHash = ImageHash("x"), sourceImageURL = Some("internets")))
         }
 
@@ -34,9 +34,9 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
         val range: Inclusive = 1 to 20
         db.readWrite { implicit session =>
           for (count <- range) {
-            val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(count, count), ProcessImageOperation.Crop, ImageFormat.JPG)
+            val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(count, count), ProcessImageOperation.CenteredCrop, ImageFormat.JPG)
             orgAvatarRepo.save(OrganizationAvatar(organizationId = orgId, width = count, height = count,
-              format = ImageFormat.JPG, kind = ProcessImageOperation.Crop, imagePath = path,
+              format = ImageFormat.JPG, kind = ProcessImageOperation.CenteredCrop, imagePath = path,
               source = ImageSource.UserUpload, sourceFileHash = ImageHash("X"), sourceImageURL = None))
           }
         }
