@@ -208,7 +208,7 @@ class LibraryCommanderImpl @Inject() (
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
         val numFollowers = counts.readOnly
-        val numCollaborators = counts.readWrite + counts.readInsert
+        val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membership = membershipsByLibraryId.get(libId).flatten
         libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
@@ -430,7 +430,7 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], CountWithLibraryIdByAccess) = {
-    val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
+    val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_WRITE)
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
@@ -443,7 +443,7 @@ class LibraryCommanderImpl @Inject() (
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess) //not cached
       val collaboratorsShown = collaborators.length
 
-      val numCollaborators = memberCount.readInsert + memberCount.readWrite
+      val numCollaborators = memberCount.readWrite
       val numMembers = numCollaborators + memberCount.readOnly
 
       // Get Followers
@@ -1433,7 +1433,7 @@ class LibraryCommanderImpl @Inject() (
               }
           }
         }
-        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY), saveKeep)
         Future {
           libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
         }
@@ -1569,7 +1569,7 @@ class LibraryCommanderImpl @Inject() (
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
 
-        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE))
         val followers = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY))
         val collabIds = collaborators.map(_.userId).toSet
         val followerIds = followers.map(_.userId).toSet
@@ -1595,7 +1595,7 @@ class LibraryCommanderImpl @Inject() (
 
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
-      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
     val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
 
     val orgCardById = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), Some(viewerId))
@@ -1608,7 +1608,7 @@ class LibraryCommanderImpl @Inject() (
         val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
         val numCollaborators = libMems.length - 1
         val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
-          .sortBy(m => (m.userId != viewerId, m.access == LibraryAccess.READ_INSERT))
+          .sortBy(_.userId != viewerId)
           .take(4).map(m => allBasicUsers(m.userId))
         (numFollowers, numCollaborators, collabsSample)
       } else {

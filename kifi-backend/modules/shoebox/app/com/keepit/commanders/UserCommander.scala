@@ -296,7 +296,7 @@ class UserCommander @Inject() (
 
       val libCounts = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, LibraryAccess.all.toSet)
       val numLibsOwned = libCounts.getOrElse(LibraryAccess.OWNER, 0)
-      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0) + libCounts.getOrElse(LibraryAccess.READ_INSERT, 0)
+      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0)
       val numLibraries = numLibsOwned + numLibsCollab
 
       val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
