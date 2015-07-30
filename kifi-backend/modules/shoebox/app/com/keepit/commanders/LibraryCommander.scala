@@ -1578,7 +1578,7 @@ class LibraryCommanderImpl @Inject() (
 
       val owner = owners(lib.ownerId)
       val orgCardOpt = lib.organizationId.map(orgCards.apply)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgCardOpt.map(_.handle), lib.slug) // @ryan, I changed this function to take in an Option[OrganizationHandle], no reason you should need the whole org
+      val path = LibraryPathHelper.formatLibraryPath(owner, orgCardOpt.map(_.handle), lib.slug)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
