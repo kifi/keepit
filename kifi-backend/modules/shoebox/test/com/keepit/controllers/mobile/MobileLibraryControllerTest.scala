@@ -203,7 +203,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "listed" : true,
                   "subscribed" : false
                 },
-                "invite": null
+                "invite":null
               },
               "membership" : "owner"
             }""")
@@ -677,14 +677,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result1 = getWriteableLibrariesV1(user1, emptyBody)
         status(result1) must equalTo(OK)
         val response1 = contentAsJson(result1)
-        (response1 \ "libraries").as[Seq[JsObject]].length === 2
+        (response1 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
 
         // unparseable url in body
         println("********* Intended ERROR parsing url! *********")
         val result2 = getWriteableLibrariesV1(user1, Json.obj("url" -> url1))
         status(result2) must equalTo(OK)
         val response2 = contentAsJson(result2)
-        (response2 \ "libraries").as[Seq[JsObject]].length === 2
+        (response2 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
         (response2 \ "error").as[String] === "parse_url_error"
         println("********* End intended ERROR! *********")
 
@@ -692,7 +692,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result3 = getWriteableLibrariesV1(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
-        (response3 \ "libraries").as[Seq[JsObject]].length === 2
+        (response3 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
         (response3 \ "error").asOpt[String] === None
         val keepData = (response3 \ "alreadyKept")
         keepData === Json.parse(s"""
@@ -715,7 +715,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result4 = getWriteableLibrariesV1(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
-        (response4 \ "libraries").as[Seq[JsObject]].length === 2
+        (response4 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
         (response4 \ "error").asOpt[String] === None
         (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }
@@ -739,7 +739,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result3 = getWriteableLibrariesV2(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
-        (response3 \ "libraries").as[Seq[JsObject]].length === 2
+        (response3 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
         (response3 \ "error").asOpt[String] === None
         val keepData = (response3 \ "alreadyKept")
         keepData === Json.parse(s"""
@@ -757,7 +757,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val result4 = getWriteableLibrariesV2(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
-        (response4 \ "libraries").as[Seq[JsObject]].length === 2
+        (response4 \ "libraries").as[Seq[LibraryCardInfo]].length === 2
         (response4 \ "error").asOpt[String] === None
         (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
       }

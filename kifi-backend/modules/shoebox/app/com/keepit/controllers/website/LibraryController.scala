@@ -653,8 +653,7 @@ class LibraryController @Inject() (
               membership = None,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
-              path = info.path,
-              org = info.org
+              path = info.path
             )
           }
           val t2 = System.currentTimeMillis()

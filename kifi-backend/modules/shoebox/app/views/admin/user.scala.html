@@ -92,7 +92,7 @@
                               <a data-hover="tooltip" title="@org.description+"
                                  class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
                                   @org.name
-                              </a> <a href="https://www.kifi.com/@{org.handle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-potential-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
+                              </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-potential-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
                           </span>
                       </form>
                     </li>
@@ -111,7 +111,7 @@
                               <a data-hover="tooltip" title="@org.description+"
                                  class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
                                   @org.name : @score
-                              </a> <a href="https://www.kifi.com/@{org.handle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-recommended-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
+                              </a> <a href="https://www.kifi.com/@{org.getHandle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-recommended-candidate-input" name="candidate-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
                           </span>
                         </form>
                         <form action="@com.keepit.controllers.admin.routes.AdminUserController.hideOrganizationRecoForUser(user.id.get, org.id.get)" method="POST" class="hide-org-reco" style="display: inline">

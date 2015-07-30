@@ -22,7 +22,6 @@ trait OrganizationCommander {
   def getAllOrganizationIds: Seq[Id[Organization]]
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
-  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard
   def getLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
@@ -78,7 +77,7 @@ class OrganizationCommanderImpl @Inject() (
     }
 
     val org = orgRepo.get(orgId)
-    val orgHandle = org.handle
+    val orgHandle = org.getHandle
     val orgName = org.name
     val description = org.description
     val site = org.site
@@ -114,12 +113,12 @@ class OrganizationCommanderImpl @Inject() (
     }.getOrElse(MembershipInfo(isInvited = false, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
-  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
+  private def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
     val org = orgRepo.get(orgId)
-    val orgHandle = org.handle
+    val orgHandle = org.getHandle
     val orgName = org.name
     val description = org.description
 
@@ -210,7 +209,7 @@ class OrganizationCommanderImpl @Inject() (
         getValidationError(request) match {
           case Some(fail) => Left(fail)
           case None =>
-            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
+            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, handle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)

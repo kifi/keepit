@@ -7,8 +7,8 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.graph.FakeGraphServiceClientImpl
@@ -248,14 +248,14 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         implicit val config = inject[PublicIdConfiguration]
 
         val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, orderedByPriority = true)
-        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[JsObject]]
+        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
 
         infos.length === 6
 
         val highPriorityPublicIds = highPriorityLibs.map { lib => Library.publicId(lib.id.get) }.toSet
-        highPriorityPublicIds === infos.take(2).map(__ => (__ \ "id").as[PublicId[Library]]).toSet
-        highPriorityPublicIds.forall { publicId => infos.take(2).map(__ => (__ \ "id").as[PublicId[Library]]).contains(publicId) } === true
-        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(__ => (__ \ "id").as[PublicId[Library]]).contains(publicId) } === true
+        highPriorityPublicIds === infos.take(2).map(_.id).toSet
+        highPriorityPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
+        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
       }
     }
 
