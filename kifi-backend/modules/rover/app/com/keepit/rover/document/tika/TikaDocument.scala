@@ -78,12 +78,12 @@ object TikaDocument extends Logging {
         if (mainHandler.isWriteLimitReached(e))
           log.warn("max number of characters reached: " + mainHandler.url)
         else
-          log.error("extraction failed: ", e)
+          log.error(s"extraction failed: {e.getMessage()}")
     } finally {
       try {
         stream.close()
       } catch {
-        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}", e)
+        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}: {e.getMessage()}")
       }
     }
   }
