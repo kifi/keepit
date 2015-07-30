@@ -256,12 +256,22 @@ class AdminUserController @Inject() (
     val chatStatsF = eliza.getUserThreadStats(userId)
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val fOrgRecos = try {
+    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
+
+    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
+      val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
+      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId) else Seq.empty
+      (
+        userExperimentRepo.getUserExperiments(user.id.get),
+        potentialOrganizationsForUser,
+        ignore4orgs)
+    }
+
+    val fOrgRecos = if (ignoreForPotentialOrganizations) Future.successful(Seq.empty) else try {
       abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
     } catch {
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
     }
-    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
@@ -276,13 +286,6 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
       (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
-    }
-
-    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
-      (
-        userExperimentRepo.getUserExperiments(user.id.get),
-        orgRepo.getPotentialOrganizationsForUser(userId),
-        userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations))
     }
 
     for {
