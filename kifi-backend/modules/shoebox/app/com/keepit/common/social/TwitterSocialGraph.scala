@@ -340,7 +340,7 @@ class TwitterSocialGraphImpl @Inject() (
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(serializedParams)
         .map { resp =>
-          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json.toString.abbreviate(400)}")
+          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json len=${resp.json.toString().length}")
           resp.status match {
             case OK => resp.json
             case _ =>
@@ -355,7 +355,7 @@ class TwitterSocialGraphImpl @Inject() (
       }
     }
     accF map { acc =>
-      log.info(s"[lookupUsers.prevAcc] prevAcc(len=${acc.value.length}):${acc.value}")
+      log.info(s"[lookupUsers.prevAcc] prevAcc(len=${acc.value.length})")
       acc
     }
   }
@@ -372,7 +372,7 @@ class TwitterSocialGraphImpl @Inject() (
         resp.status match {
           case OK =>
             val pagedIds = resp.json.as[PagedIds]
-            log.info(s"[pagedFetchIds#$page] cursor=$cursor userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
+            log.info(s"[pagedFetchIds#$page] cursor=$cursor userId=$userId endpoint=$endpoint pagedIds len=${pagedIds.ids.length}")
             val next = pagedIds.next
             if (next.id > 0) {
               pagedFetchIds(page + 1, next, count) map { seq =>

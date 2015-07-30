@@ -147,6 +147,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result5 = libraryController.addLibrary()(request5)
           status(result5) must equalTo(BAD_REQUEST)
           contentType(result5) must beSome("application/json")
+
+          // Do not need to provide a slug. Backend will autogenerate one if it is not provided
+          val inputJson6 = Json.obj(
+            "name" -> "Library6",
+            "visibility" -> "published"
+          )
+          inject[FakeUserActionsHelper].setUser(user)
+          val request6 = FakeRequest("POST", testPath).withBody(inputJson6)
+          val result6 = libraryController.addLibrary()(request6)
+          status(result6) must equalTo(OK)
+          contentType(result6) must beSome("application/json")
         }
       }
       "create a library inside of an organization" in {
