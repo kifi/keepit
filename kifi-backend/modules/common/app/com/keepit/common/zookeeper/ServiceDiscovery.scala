@@ -146,7 +146,7 @@ class ServiceDiscoveryImpl(
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
     zk.watchChildrenWithData[String](cluster.servicePath, { children: Seq[(Node, String)] =>
-      log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster under ${cluster.servicePath.name} ${children.length}""")
       cluster.update(zk, children)
     })
   }
