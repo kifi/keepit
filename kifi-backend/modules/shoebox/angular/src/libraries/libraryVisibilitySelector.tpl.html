@@ -1,0 +1,26 @@
+<div class="library-visibility-selector">
+  <label ng-if="!spaceIsOrg(space)">
+    <input class="library-visibility-checkbox-input" type="checkbox" ng-model="library.visibility" ng-false-value="'published'" ng-true-value="'secret'">
+    <div class="library-visibility-checkbox-custom-input">
+      <div class="library-visibility-checkbox-custom-input-public-background"></div>
+      <div class="library-visibility-checkbox-custom-input-secret-background svg-card-lock"></div>
+    </div>
+  </label>
+  <div ng-if="spaceIsOrg(space)" class="library-visibility-radio-settings-option clearfix">
+    <label class="library-visibility-radio-label">
+      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'published'">
+      <span class="library-visibility-radio-check"></span>
+      <span class="library-visibility-option-text">Public</span>
+    </label>
+    <label class="library-visibility-radio-label">
+      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'organization'">
+      <span class="library-visibility-radio-check"></span>
+      <span class="library-visibility-option-text">Visible to members of {{ space | name }}</span>
+    </label>
+    <label class="library-visibility-radio-label">
+      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'secret'">
+      <span class="library-visibility-radio-check"></span>
+      <span class="library-visibility-option-text">Private</span>
+    </label>
+  </div>
+</div>
