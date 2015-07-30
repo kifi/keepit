@@ -43,10 +43,10 @@
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-heading">Privacy</div>
             <div class="manage-lib-create-visibility-input-container">
-              <span kf-library-visibility-checkbox library="library"></span>
+              <span kf-library-visibility-selector library="library"></span>
             </div>
             <div ng-switch="library.visibility" class="manage-lib-visibility-description">
-              <div ng-switch-default class="manage-lib-visibility-description-content">
+              <div ng-switch-when="published" class="manage-lib-visibility-description-content">
                 Anyone can see and follow this library
                 <div class="manage-lib-listed-visibility">
                   <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.membership.listed">
@@ -55,6 +55,9 @@
                     List this library on my public profile
                   </label>
                 </div>
+              </div>
+              <div ng-switch-when="organization" class="manage-lib-visibility-description-content">
+                Only members of Org can see this library
               </div>
               <div ng-switch-when="secret" class="manage-lib-visibility-description-content">
                 Only people you invite can see this library
