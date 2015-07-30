@@ -4,7 +4,7 @@ angular.module('kifi')
 
 .directive('kfLibraryVisibilitySelector', [
   '$timeout',
-  function ($timeout) {
+  function () {
     return {
       restrict: 'A',
       replace: true,
