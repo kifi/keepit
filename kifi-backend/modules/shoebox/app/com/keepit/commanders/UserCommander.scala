@@ -26,7 +26,8 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -72,7 +73,6 @@ case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthe
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
-@json
 case class UserProfileStats(
   numLibraries: Int,
   numFollowedLibraries: Int,
@@ -82,7 +82,22 @@ case class UserProfileStats(
   numFollowers: Int,
   numTags: Int,
   numInvitedLibraries: Option[Int] = None,
-  biography: Option[String] = None)
+  biography: Option[String] = None,
+  orgs: Seq[OrganizationCard])
+object UserProfileStats {
+  implicit val writes: Writes[UserProfileStats] = (
+    (__ \ 'numLibraries).write[Int] and
+    (__ \ 'numFollowedLibraries).write[Int] and
+    (__ \ 'numCollabLibraries).write[Int] and
+    (__ \ 'numKeeps).write[Int] and
+    (__ \ 'numConnections).write[Int] and
+    (__ \ 'numFollowers).write[Int] and
+    (__ \ 'numTags).write[Int] and
+    (__ \ 'numInvitedLibraries).writeNullable[Int] and
+    (__ \ 'biography).writeNullable[String] and
+    (__ \ 'orgs).write[Seq[OrganizationCard]]
+  )(unlift(UserProfileStats.unapply))
+}
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -139,8 +154,8 @@ class UserCommander @Inject() (
       } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(user)
       db.readOnlyReplica { implicit session =>
         //not in v1
-        //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
-        //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
+        //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached // remove this?
+        //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached // remove this?
         val numKeeps = keepRepo.getCountByUser(user.id.get)
         UserProfile(userId = user.id.get, basicUserWithFriendStatus, numKeeps = numKeeps)
       }

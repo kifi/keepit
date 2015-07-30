@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -12,7 +12,7 @@ import com.keepit.common.util.Paginator
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ JsNumber, JsObject, Json, JsValue }
-import play.api.mvc.QueryStringBindable
+import play.api.mvc.{ Result, QueryStringBindable }
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -28,6 +28,8 @@ class MobileUserProfileController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   libraryRepo: LibraryRepo,
   userValueRepo: UserValueRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
+  organizationCommander: OrganizationCommander,
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
   collectionCommander: CollectionCommander,
@@ -38,48 +40,28 @@ class MobileUserProfileController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def profileFromUserId(id: ExternalId[User]) = MaybeUserAction { request =>
-    val viewer = request.userOpt
+    val viewerOpt = request.userOpt
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id)
-    }.map { user =>
-      userCommander.profile(user.username, viewer) match {
-        case None => NotFound(s"can't find username ${user.username}")
-        case Some(profile) =>
-          val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-          val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
-            val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
-            val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-            (numConnections, userBio)
-          }
-
-          val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
-          val jsonProfileInfo = Json.toJson(UserProfileStats(
-            numLibraries = numLibraries,
-            numFollowedLibraries = numFollowedLibs,
-            numCollabLibraries = numCollabLibraries,
-            numKeeps = profile.numKeeps,
-            numConnections = numConnections,
-            numFollowers = userProfileCommander.countFollowers(profile.userId, request.userOpt.map(_.id.get)),
-            numTags = collectionCommander.getCount(profile.userId),
-            numInvitedLibraries = numInvitedLibs,
-            biography = userBiography
-          )).as[JsObject]
-
-          Ok(jsonFriendInfo ++ jsonProfileInfo)
-      }
-    }.getOrElse(NotFound)
+    }.map(user => getProfileHelper(user.username, viewerOpt)).getOrElse(NotFound)
   }
 
   def profile(username: String) = MaybeUserAction { request =>
-    val viewer = request.userOpt
-    userCommander.profile(Username(username), viewer) match {
+    val viewerOpt = request.userOpt
+    getProfileHelper(Username(username), viewerOpt)
+  }
+
+  def getProfileHelper(username: Username, viewerOpt: Option[User]): Result = {
+    userCommander.profile(username, viewerOpt) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+        val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewerOpt.map(_.id.get))
+        val (numConnections, userBiography, orgCards) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-          (numConnections, userBio)
+          val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
+          val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationCardHelper(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
+          (numConnections, userBio, orgCards)
         }
 
         val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -89,10 +71,11 @@ class MobileUserProfileController @Inject() (
           numCollabLibraries = numCollabLibraries,
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
-          numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numFollowers = userProfileCommander.countFollowers(profile.userId, viewerOpt.map(_.id.get)),
           numTags = collectionCommander.getCount(profile.userId),
           numInvitedLibraries = numInvitedLibs,
-          biography = userBiography
+          biography = userBiography,
+          orgs = orgCards
         )).as[JsObject]
 
         Ok(jsonFriendInfo ++ jsonProfileInfo)
