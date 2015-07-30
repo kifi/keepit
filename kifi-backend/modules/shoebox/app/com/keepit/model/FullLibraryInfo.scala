@@ -39,7 +39,7 @@ case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 case class ExternalLibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
-  slug: String,
+  slug: Option[String],
   kind: Option[LibraryKind] = None,
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
@@ -52,7 +52,7 @@ object ExternalLibraryAddRequest {
   implicit val reads: Reads[ExternalLibraryAddRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
-    (__ \ 'slug).read[String] and
+    (__ \ 'slug).readNullable[String] and
     (__ \ 'kind).readNullable[LibraryKind] and
     (__ \ 'description).readNullable[String] and
     (__ \ 'color).readNullable[LibraryColor] and
