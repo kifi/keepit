@@ -29,7 +29,6 @@ class GratificationCommander @Inject() (
     heimdal: HeimdalServiceClient) extends Logging {
 
   private val NUM_WEEKS_BACK = 1
-  val UNDER_EXPERIMENT = false
 
   private val BATCH_SIZE = 1000
 
@@ -61,14 +60,7 @@ class GratificationCommander @Inject() (
       fGratDatas.map { gratDatas => log.info(s"[GratData] Batched data received, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
     }
 
-    if (!UNDER_EXPERIMENT) {
-      FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
-    } else {
-      val userIds = db.readOnlyReplica { implicit session => userExperimentRepo.getUserIdsByExperiment(UserExperimentType.GRATIFICATION_EMAIL) }
-      val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
-      fGratDatas.map { gratDatas => emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
-    }
-
+    FutureHelpers.foldLeft(0 to numBatches)(())(processBatch)
   }
 
   private def augmentData(gratData: GratificationData): GratificationData = {
