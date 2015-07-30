@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.google.inject.Singleton
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
@@ -286,7 +287,6 @@ class SearchServiceClientImpl(
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
-
 
   private val _debounceBroadcast = {
     def b(c: ServiceRoute) = broadcast(c)
