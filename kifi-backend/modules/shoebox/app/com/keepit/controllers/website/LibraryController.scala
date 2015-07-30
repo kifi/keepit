@@ -77,13 +77,14 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
       case JsSuccess(externalAddRequest, _) =>
         val libAddRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
           val space = externalAddRequest.space map {
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
           LibraryAddRequest(
             name = externalAddRequest.name,
-            slug = externalAddRequest.slug,
+            slug = slug,
             visibility = externalAddRequest.visibility,
             description = externalAddRequest.description,
             color = externalAddRequest.color,
