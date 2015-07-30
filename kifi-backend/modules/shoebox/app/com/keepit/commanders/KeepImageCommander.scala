@@ -129,7 +129,6 @@ class KeepImageCommanderImpl @Inject() (
     val keep = db.readOnlyMaster { implicit session =>
       keepRepo.get(keepId)
     }
-    log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
       // todo(Léo): consider using rover.getOrElseFetchUriSummary if localOnly = false?
       val remoteImageF = rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
