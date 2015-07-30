@@ -271,17 +271,18 @@ class LibraryCommanderImpl @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
+          val ownerHasAllKeepsViewExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
               case LibraryKind.SYSTEM_READ_IT_LATER | LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
             }
@@ -303,7 +304,7 @@ class LibraryCommanderImpl @Inject() (
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
         val orgMap = orgRepo.getByIds(allOrgsShown)
-        organizationCommander.getOrganizationCards(orgMap.keys.toSeq, viewerUserIdOpt)
+        orgMap.keys.map(organizationCommander.getOrganizationCardHelper(_, viewerUserIdOpt))
       }
     }
 
