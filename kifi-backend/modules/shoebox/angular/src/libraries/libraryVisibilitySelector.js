@@ -4,7 +4,7 @@ angular.module('kifi')
 
 .directive('kfLibraryVisibilitySelector', [
   '$timeout',
-  function ($timeout) {
+  function () {
     return {
       restrict: 'A',
       replace: true,
@@ -13,14 +13,10 @@ angular.module('kifi')
         library: '=',
         space: '='
       },
-      link: function (scope, element) {
+      link: function (scope) {
         scope.spaceIsOrg = function () {
           return 'numMembers' in scope.space;
         };
-
-        $timeout(function () {
-          element.find('.library-visibility-checkbox-custom-input').addClass('kf-transitions');
-        });
       }
     };
   }
