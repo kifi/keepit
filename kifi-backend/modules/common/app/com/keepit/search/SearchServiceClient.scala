@@ -21,6 +21,7 @@ import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.search.augmentation._
+import com.keepit.common.core._
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -88,11 +89,11 @@ class SearchServiceClientImpl(
   }
 
   def updateKeepIndex(): Unit = {
-    broadcast(Search.internal.updateKeepIndex())
+    debounceBroadcast(Search.internal.updateKeepIndex())
   }
 
   def updateLibraryIndex(): Unit = {
-    broadcast(Search.internal.updateLibraryIndex())
+    debounceBroadcast(Search.internal.updateLibraryIndex())
   }
 
   def index(): Unit = {
@@ -108,7 +109,7 @@ class SearchServiceClientImpl(
   }
 
   def updateUserIndex(): Unit = {
-    broadcast(Search.internal.updateUserIndex())
+    debounceBroadcast(Search.internal.updateUserIndex())
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) {
@@ -251,13 +252,13 @@ class SearchServiceClientImpl(
     call(Search.internal.versions()).map { r => r.json.as[Map[String, Int]] }
   }
 
-  def updateUserGraph() {
+  def updateUserGraph(): Unit = {
     broadcast(Search.internal.updateUserGraph())
   }
-  def updateSearchFriendGraph() {
+  def updateSearchFriendGraph(): Unit = {
     broadcast(Search.internal.updateSearchFriendGraph())
   }
-  def reindexUserGraphs() {
+  def reindexUserGraphs(): Unit = {
     broadcast(Search.internal.reindexUserGraphs())
   }
 
@@ -283,5 +284,10 @@ class SearchServiceClientImpl(
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
+  }
+
+  private def debounceBroadcast(call: ServiceRoute): Unit = {
+    def b(c: ServiceRoute) = broadcast(c)
+    extras.debounce(1.second)(b)(call)
   }
 }
