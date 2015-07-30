@@ -103,10 +103,10 @@ sealed abstract class ProcessImageOperation(val kind: String, val fileNameSuffix
 object ProcessImageOperation {
   object Original extends ProcessImageOperation("original", "_o")
   case object Scale extends ProcessImageOperation("scale", "_s")
-  case object Crop extends ProcessImageOperation("crop", "_c")
-  case object Cropscale extends ProcessImageOperation("cropscale", "_cs")
+  case object CenteredCrop extends ProcessImageOperation("crop", "_c")
+  case object CropScale extends ProcessImageOperation("cropscale", "_cs")
 
-  val all = Scale :: Crop :: Cropscale :: Original :: Nil
+  val all = Scale :: CenteredCrop :: CropScale :: Original :: Nil
 
   def apply(kind: String): ProcessImageOperation = {
     all.find(_.kind == kind) getOrElse Original

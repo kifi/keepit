@@ -71,7 +71,7 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
-    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
+    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.CenteredCrop
     val idealImageSize = imageRequest.size
     getAllImagesForKeeps(keepIds).mapValues(ProcessedImageSize.pickBestImage(idealImageSize, _, strictAspectRatio))
   }

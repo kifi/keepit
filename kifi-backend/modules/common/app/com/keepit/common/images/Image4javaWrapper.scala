@@ -62,7 +62,7 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  def cropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
+  def centeredCropImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't crop format $format")
     if (format == ImageFormat.GIF) {
       safeCropImage(gifToPng(image), ImageFormat.PNG, width, height)
@@ -71,12 +71,12 @@ class Image4javaWrapper @Inject() (
     }
   }
 
-  def cropscaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): Try[File] = Try {
+  def cropScaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): Try[File] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't cropscale format $format")
     if (format == ImageFormat.GIF) {
-      safeCropscaleImage(gifToPng(image), ImageFormat.PNG, x, y, width, height, finalWidth, finalHeight)
+      safeCropScaleImage(gifToPng(image), ImageFormat.PNG, x, y, width, height, finalWidth, finalHeight)
     } else {
-      safeCropscaleImage(image, format, x, y, width, height, finalWidth, finalHeight)
+      safeCropScaleImage(image, format, x, y, width, height, finalWidth, finalHeight)
     }
   }
 
@@ -147,8 +147,8 @@ class Image4javaWrapper @Inject() (
     outputFile
   }
 
-  private def safeCropscaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): File = {
-    log.info(s"[safeCropscaleImage] START format=$format crop=${width}x${height}+${x}+${y}, scale=${finalWidth}x${finalHeight}")
+  private def safeCropScaleImage(image: File, format: ImageFormat, x: Int, y: Int, width: Int, height: Int, finalWidth: Int, finalHeight: Int): File = {
+    log.info(s"[safeCropScaleImage] START format=$format crop=${width}x${height}+${x}+${y}, scale=${finalWidth}x${finalHeight}")
     val operation = new IMOperation
 
     val outputFile = TemporaryFile(prefix = "ImageMagicCropscaleImage", suffix = s".${format.value}").file
@@ -167,7 +167,7 @@ class Image4javaWrapper @Inject() (
     val convert = command()
     handleExceptions(convert, operation)
 
-    log.info(s"[safeCropscaleImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${finalWidth}x$finalHeight at $filePath (${imageByteSize(outputFile)} bytes)")
+    log.info(s"[safeCropScaleImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${finalWidth}x$finalHeight at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
