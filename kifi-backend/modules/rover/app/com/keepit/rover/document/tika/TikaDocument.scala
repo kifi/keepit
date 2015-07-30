@@ -85,7 +85,7 @@ object TikaDocument extends Logging {
       try {
         stream.close()
       } catch {
-        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}: {e.getMessage()}")
+        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}: ${e.getMessage()}")
       }
     }
   }
