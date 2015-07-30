@@ -149,7 +149,8 @@ angular.module('kifi')
             return sub.name !== '' && sub.info.url !== '';
           });
           
-          var owner = ('organization' in scope.modalData ? { org: scope.modalData.organization.id } : { user: profileService.me.id });
+          var owner = {};
+          owner['numMembers' in scope.thisSpace ? 'org' : 'user'] = scope.thisSpace.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
