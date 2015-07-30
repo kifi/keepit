@@ -40,22 +40,21 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+        scope.space = {
+          current: profileService.me,
+          destination: profileService.me
+        };
         scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
-        scope.thisSpace = profileService.me; // Default
 
         // Find out where we're opening this from
-        if ('organization' in scope.modalData) { 
-          var thisSpace = scope.modalData.organization;
+        if ('organization' in scope.modalData) {
+          var orgSpace = scope.modalData.organization;
           // Angular is very picky about the object you're using.
-          scope.thisSpace = scope.spaces.filter(function(space) {
-            return (space.id === thisSpace.id);
+          scope.space.current = scope.spaces.filter(function(space) {
+            return (space.id === orgSpace.id);
           })[0];
         }
-        scope.destinationSpace = scope.thisSpace; // Default
-
-        scope.setSpace = function(space) {
-          scope.destinationSpace = space;
-        };
+        scope.space.destination = scope.space.current;
 
         //
         // Scope methods.
@@ -158,9 +157,9 @@ angular.module('kifi')
           var ownerType = function(space) {
             return spaceIsOrg(space) ? 'org' : 'user';
           };
-          
+
           var owner = {};
-          owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
+          owner[ownerType(scope.space.destination)] = scope.space.destination.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -183,7 +182,7 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
-            if (scope.thisSpace.id !== scope.destinationSpace.id) {
+            if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
 
