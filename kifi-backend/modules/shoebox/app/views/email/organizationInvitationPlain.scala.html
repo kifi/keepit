@@ -6,7 +6,7 @@ authToken: String
 )
 
 @import com.keepit.common.mail.template.helpers._
-@organizationUrl = @{htmlUrl(baseUrl + "/" + organization.handle.value + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
+@organizationUrl = @{htmlUrl(baseUrl + "/" + organization.getHandle.value + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {
@@ -20,7 +20,7 @@ authToken: String
 @description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
 
 @emailMessage = {
-<p>Please join "@organization.name" on Kifi - <a href="@organizationUrl">www.kifi.com/@organization.handle.value</a>,
+<p>Please join "@organization.name" on Kifi - <a href="@organizationUrl">www.kifi.com/@organization.getHandle.value</a>,
     so we can collaborate together. It's a great way to organize the links that we find.</p>
 }
 

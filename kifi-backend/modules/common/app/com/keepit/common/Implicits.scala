@@ -1,7 +1,6 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
-import play.api.libs.json.{ JsNull, JsObject }
 
 import scala.collection.IterableLike
 import scala.collection.generic.CanBuildFrom
@@ -76,10 +75,6 @@ final class TraversableExtensionOps[A](xs: Traversable[A]) {
   def countAll: Map[A, Int] = countBy(identity)
 }
 
-final class JsObjectExtensionOps(x: JsObject) {
-  def nonNullFields: JsObject = JsObject(x.fields.filter { case (_, b) => b != JsNull })
-}
-
 trait Implicits {
   implicit def anyExtensionOps[A](x: A): AnyExtensionOps[A] = new AnyExtensionOps[A](x)
   implicit def tryExtensionOps[A](x: scala.util.Try[A]): TryExtensionOps[A] = new TryExtensionOps[A](x)
@@ -88,6 +83,5 @@ trait Implicits {
   implicit def iterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]): IterableExtensionOps[A, Repr] = new IterableExtensionOps(xs)
   implicit def traversableOnceExtensionOps[A](xs: TraversableOnce[A]): TraversableOnceExtensionOps[A] = new TraversableOnceExtensionOps(xs)
   implicit def traversableExtensionOps[A](xs: Traversable[A]): TraversableExtensionOps[A] = new TraversableExtensionOps(xs)
-  implicit def jsObjectExtensionOps[A](x: play.api.libs.json.JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
 }
 

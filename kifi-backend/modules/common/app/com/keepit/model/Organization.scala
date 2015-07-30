@@ -27,7 +27,7 @@ case class Organization(
     name: String,
     description: Option[String],
     ownerId: Id[User],
-    primaryHandle: Option[PrimaryOrganizationHandle],
+    handle: Option[PrimaryOrganizationHandle],
     site: Option[String],
     basePermissions: BasePermissions = Organization.defaultBasePermissions) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
@@ -55,14 +55,14 @@ case class Organization(
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
 
-  def handle: OrganizationHandle = {
-    primaryHandle match {
+  def getHandle: OrganizationHandle = {
+    handle match {
       case Some(h) => h.original
-      case None => throw Organization.UndefinedOrganizationHandleException(this) // rare occurrence, .handle should be safe to use
+      case None => throw Organization.UndefinedOrganizationHandleException(this)
     }
   }
 
-  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.handle)
+  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.getHandle)
 
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
@@ -132,8 +132,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.name,
       org.description,
       org.ownerId,
-      org.primaryHandle.map(_.original),
-      org.primaryHandle.map(_.normalized),
+      org.handle.map(_.original),
+      org.handle.map(_.normalized),
       org.site,
       org.basePermissions))
   }

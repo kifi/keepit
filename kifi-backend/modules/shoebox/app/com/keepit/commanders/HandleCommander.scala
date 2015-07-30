@@ -144,8 +144,8 @@ class HandleCommanderImpl @Inject() (
     val organizationId = organization.id.get
     claimOrganizationHandle(orgHandle, organizationId, lock, overrideProtection, overrideValidityCheck).map { normalizedOrgHandle =>
       val newOrgHandle = PrimaryOrganizationHandle(original = orgHandle, normalized = normalizedOrgHandle)
-      val updatedOrganization = organizationRepo.save(organization.copy(primaryHandle = Some(newOrgHandle)))
-      organization.primaryHandle.foreach { oldOrgHandle =>
+      val updatedOrganization = organizationRepo.save(organization.copy(handle = Some(newOrgHandle)))
+      organization.handle.foreach { oldOrgHandle =>
         claimOrganizationHandle(oldOrgHandle.original, organizationId, overrideValidityCheck = true).get // Claiming old handle again to reset grace protection period
         if (oldOrgHandle.original != newOrgHandle.original && organization.createdAt.isBefore(clock.now.minusHours(1))) {
           airbrake.notify(s"Handle change for organization $organizationId: ${oldOrgHandle.original} -> ${newOrgHandle.original}")
@@ -196,7 +196,7 @@ class HandleCommanderImpl @Inject() (
     }
   }
 
-  private def isPrimaryOwner(ownership: HandleOwnership, organization: Organization): Boolean = organization.primaryHandle.exists(_.normalized.value == ownership.handle.value)
+  private def isPrimaryOwner(ownership: HandleOwnership, organization: Organization): Boolean = organization.handle.exists(_.normalized.value == ownership.handle.value)
   private def isPrimaryOwner(ownership: HandleOwnership, user: User): Boolean = user.primaryUsername.exists(_.normalized.value == ownership.handle.value)
 
   private def generateHandleCandidates(rawName: Either[String, (String, String)]): Stream[Handle] = {

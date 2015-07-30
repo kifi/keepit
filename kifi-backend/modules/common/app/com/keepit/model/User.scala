@@ -41,7 +41,7 @@ case class User(
   def shortName = if (firstName.length > 0) firstName else lastName
   def username = primaryUsername.map(_.original) match {
     case Some(originalUsername) => originalUsername
-    case None => throw Username.UndefinedUsernameException(this) // rare occurence, .username should be safe to use
+    case None => throw Username.UndefinedUsernameException(this)
   }
   override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",username=$primaryUsername, state=$state]"""
 }

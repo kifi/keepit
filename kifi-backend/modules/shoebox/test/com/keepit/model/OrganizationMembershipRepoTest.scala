@@ -15,7 +15,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val (org, membership) = db.readWrite { implicit s =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
           val membership = orgMemberRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           (org, membership)
         }
@@ -34,7 +34,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val userId = Id[User](1)
 
         val (org, activeMember, inactiveMember) = db.readWrite { implicit s =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
           val active = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.ADMIN))
           val inactive = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.ADMIN).withState(OrganizationMembershipStates.INACTIVE))
           (org, active, inactive)
@@ -57,7 +57,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val orgs = db.readWrite { implicit session =>
-          val orgs = for (i <- 1 to 10) yield orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
+          val orgs = for (i <- 1 to 10) yield orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
           for (org <- orgs) orgMemberRepo.save(org.newMembership(role = OrganizationRole.ADMIN, userId = Id[User](1)))
 
           orgMemberRepo.save(orgs(0).newMembership(role = OrganizationRole.MEMBER, userId = Id[User](2)))
@@ -77,8 +77,8 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val userIds: IndexedSeq[Id[User]] = 5 to 10 map (Id[User](_))
         val (org, otherOrg) = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
-          val otherOrg = orgRepo.save(Organization(ownerId = Id[User](2), name = "Superman Corp.", primaryHandle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
+          val otherOrg = orgRepo.save(Organization(ownerId = Id[User](2), name = "Superman Corp.", handle = None, description = None, site = None))
 
           for (userId <- userIds) {
             orgMemberRepo.save(otherOrg.newMembership(role = OrganizationRole.MEMBER, userId = userId))
@@ -102,7 +102,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val userId = Id[User](1)
         val membership = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
           orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = userId))
         }
 

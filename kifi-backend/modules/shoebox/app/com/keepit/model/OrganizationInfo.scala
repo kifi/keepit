@@ -83,6 +83,9 @@ object OrganizationCard {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int]
   )(unlift(OrganizationCard.unapply))
+
+  val websiteWrites = defaultWrites
+  val mobileWrites = defaultWrites
 }
 
 // OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
@@ -100,7 +103,7 @@ case class OrganizationNotificationInfo(
   image: Option[OrganizationImageInfo])
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(OrganizationImageInfo.createInfo))
+    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo))
   }
 }
 
