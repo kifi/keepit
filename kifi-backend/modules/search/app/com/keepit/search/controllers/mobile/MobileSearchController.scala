@@ -264,7 +264,7 @@ class MobileSearchController @Inject() (
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> json.minify(Json.obj(
+                "summary" -> json.aggressiveMinify(Json.obj(
                   "title" -> summary.flatMap(_.article.title),
                   "description" -> summary.flatMap(_.article.description),
                   "imageUrl" -> image.map(_.path.getUrl),

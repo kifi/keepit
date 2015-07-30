@@ -107,7 +107,7 @@ class WebsiteSearchController @Inject() (
                   )
                 },
                 "score" -> hit.finalScore,
-                "summary" -> json.minify(Json.obj( // todo(Léo): remove deprecated summary field
+                "summary" -> json.aggressiveMinify(Json.obj( // todo(Léo): remove deprecated summary field
                   "title" -> summary.flatMap(_.article.title),
                   "description" -> summary.flatMap(_.article.description),
                   "imageUrl" -> imageOpt.map(_.path.getUrl),

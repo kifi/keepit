@@ -68,10 +68,10 @@ trait ProcessedImageHelper {
   }
 
   def fetchAndHashRemoteImage(imageUrl: String): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"[pih] Fetching $imageUrl")
     if (ProcessedImageHelper.blacklistedUrl.contains(imageUrl)) {
       Future.successful(Left(ImageProcessState.BlacklistedImage))
     } else {
+      log.info(s"[pih] Fetching $imageUrl")
       val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
         case (format, file) =>
           hashImageFile(file.file) match {
@@ -119,8 +119,6 @@ trait ProcessedImageHelper {
   protected def processAndPersistImages(image: File, baseLabel: String, hash: ImageHash,
     outFormat: ImageFormat, sizes: Set[ProcessImageRequest])(implicit photoshop: Photoshop) = {
     val resizedImages = sizes.map { processImageSize =>
-      log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat to $processImageSize")
-
       def process(): Try[File] = processImageSize match {
         case c if c.operation == ProcessImageOperation.CenteredCrop => photoshop.centeredCropImage(image, outFormat, c.size.width, c.size.height)
         case s => photoshop.resizeImage(image, outFormat, s.size.width, s.size.height)
@@ -128,7 +126,6 @@ trait ProcessedImageHelper {
 
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
-          log.info(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
           val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
           ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageSize.operation)
         }

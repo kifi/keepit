@@ -319,8 +319,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val orgMemberRepo = inject[OrganizationMembershipRepo]
 
           val (org, starkOrg) = db.readWrite { implicit session =>
-            val org = inject[OrganizationRepo].save(Organization(name = "Earth", ownerId = userAgent.id.get, handle = None, description = None, site = None))
-            val starkTowersOrg = inject[OrganizationRepo].save(Organization(name = "Stark Towers", ownerId = userIron.id.get, handle = None, description = None, site = None))
+            val org = inject[OrganizationRepo].save(Organization(name = "Earth", ownerId = userAgent.id.get, primaryHandle = None, description = None, site = None))
+            val starkTowersOrg = inject[OrganizationRepo].save(Organization(name = "Stark Towers", ownerId = userIron.id.get, primaryHandle = None, description = None, site = None))
             (org, starkTowersOrg)
           }
           // no privs on org, cannot move from personal space.
@@ -659,8 +659,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val orgOwner = UserFactory.user().withName("Bruce", "Lee").saved
           val user: User = UserFactory.user().withName("Jackie", "Chan").saved
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
-          val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None, description = None, site = None))
-          val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None, description = None, site = None))
+          val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, primaryHandle = None, description = None, site = None))
+          val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, primaryHandle = None, description = None, site = None))
           orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.ADMIN))
           (user, newLibrary, organization, otherOrg)
         }
@@ -704,7 +704,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val harrison = UserFactory.user().withName("Harrison", "Wells").withUsername("Harrison Wells").saved
 
           val barry = UserFactory.user().withName("Barry", "Allen").withUsername("The Flash").saved
-          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None, description = None, site = None))
+          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, primaryHandle = None, description = None, site = None))
           val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
 
           val membership = orgMemberRepo.save(starLabsOrg.newMembership(userId = barry.id.get, role = OrganizationRole.MEMBER))

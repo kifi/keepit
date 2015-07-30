@@ -10,9 +10,16 @@ angular.module('kifi')
 
 .filter('name', function () {
   return function (o) {
-    return o ? (o.firstName || '') + ' ' + (o.lastName || '') : '';
+    return o ? o.name || ((o.firstName || '') + ' ' + (o.lastName || '')) : '';
   };
 })
+
+.filter('slug', function () {
+  return function (o) {
+    return o.handle || o.username;
+  };
+})
+
 
 .filter('pic', [
   'routeService',

@@ -30,7 +30,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.handle = 'organization' in scope.modalData ? scope.modalData.organization.handle : profileService.me.username;
+
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,6 +40,22 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.thisSpace = profileService.me; // Default
+
+        // Find out where we're opening this from
+        if ('organization' in scope.modalData) { 
+          var thisSpace = scope.modalData.organization;
+          // Angular is very picky about the object you're using.
+          scope.thisSpace = scope.spaces.filter(function(space) {
+            return (space.id === thisSpace.id);
+          })[0];
+        }
+        scope.destinationSpace = scope.thisSpace; // Default
+
+        scope.setSpace = function(space) {
+          scope.destinationSpace = space;
+        };
 
         //
         // Scope methods.
@@ -134,8 +150,17 @@ angular.module('kifi')
           var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
             return sub.name !== '' && sub.info.url !== '';
           });
+
+          var spaceIsOrg = function(space) {
+            return 'numMembers' in space;
+          };
+
+          var ownerType = function(space) {
+            return spaceIsOrg(space) ? 'org' : 'user';
+          };
           
-          var owner = ('organization' in scope.modalData ? { org: scope.modalData.organization.id } : { user: profileService.me.id });
+          var owner = {};
+          owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -158,6 +183,9 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
+            if (scope.thisSpace.id !== scope.destinationSpace.id) {
+              returnAction = null;
+            }
 
             if (!returnAction) {
               $location.url(newLibrary.url);
