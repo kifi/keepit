@@ -239,7 +239,7 @@ object MaybeLibraryMember {
   implicit val writes = Writes[MaybeLibraryMember] { member =>
     val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
     val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
-    json.minify(identityFields ++ libraryRelatedFields)
+    json.aggressiveMinify(identityFields ++ libraryRelatedFields)
   }
 }
 

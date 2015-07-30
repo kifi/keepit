@@ -99,7 +99,9 @@ package object json {
     case _ => false
   }
 
-  def minify(fullJson: JsValue): JsValue = fullJson match {
+  // Be careful using this; only use it if the expectations on the client side coincide with what
+  // this actually does. This does not come by default or for free.
+  def aggressiveMinify(fullJson: JsValue): JsValue = fullJson match {
     case obj: JsObject => JsObject(obj.fields.filterNot { case (key, value) => canBeOmitted(value) })
     case _ => fullJson
   }

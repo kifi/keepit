@@ -599,7 +599,7 @@ class LibraryController @Inject() (
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -607,7 +607,7 @@ class LibraryController @Inject() (
   def suggestTagsSimple(pubId: PublicId[Library], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, None, None, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
