@@ -18,6 +18,8 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
+  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
+
   def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 }
@@ -73,6 +75,19 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary] = {
     getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStateOpt).firstOption
+  }
+
+  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {
+    // An implicit keep is one that you have access to indirectly (e.g., through a library you follow, or an org you are a member of,
+    // or the keep is published so anyone can access it.
+    // A first-order implicit keep is one that only takes a single step to get to: this only happens if you are a member of a library
+    // where that keep exists
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select ktl.keep_id from bookmark bm, library_membership lm, keep_to_library ktl
+                  where bm.uri_id = $uriId and bm.state = '#${KeepStates.ACTIVE}'
+                  and lm.user_id = $userId and lm.state = '#${LibraryMembershipStates.ACTIVE}'
+                  and ktl.keep_id = bm.id and ktl.library_id = lm.library_id and ktl.state = '#${KeepToLibraryStates.ACTIVE}'"""
+    q.as[Id[Keep]].list.toSet
   }
 
   def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary = {
