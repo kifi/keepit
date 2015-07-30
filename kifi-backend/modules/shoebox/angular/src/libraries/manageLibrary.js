@@ -148,9 +148,15 @@ angular.module('kifi')
           var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
             return sub.name !== '' && sub.info.url !== '';
           });
+
+          var spaceIsOrg = function(space) {
+            return 'numMembers' in space;
+          };
+
+          var ownerType = spaceIsOrg(scope.thisSpace) ? 'org' : 'user';
           
           var owner = {};
-          owner['numMembers' in scope.thisSpace ? 'org' : 'user'] = scope.thisSpace.id;
+          owner[ownerType] = scope.thisSpace.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
