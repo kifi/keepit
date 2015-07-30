@@ -26,7 +26,7 @@ object MaybeOrganizationMember {
   implicit val writes = Writes[MaybeOrganizationMember] { member =>
     val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
     val relatedFields = Json.obj("role" -> member.role, "lastInvitedAt" -> member.lastInvitedAt)
-    json.minify(identityFields ++ relatedFields)
+    json.aggressiveMinify(identityFields ++ relatedFields)
   }
 }
 
