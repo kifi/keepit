@@ -146,7 +146,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           all.length === 6
           keepImageRepo.getForKeepId(keep1.id.get).length === 1
           keepImageRepo.getForKeepId(keep2.id.get).length === 0
-          keepImageRepo.getBySourceHash(keepImage4.get.sourceFileHash).length === 2
+          keepImageRepo.getBySourceHash(keepImage4.get.sourceFileHash).length === 1
         }
 
         true === true

@@ -351,7 +351,10 @@ object ProcessedImageHelper {
     "http://assets.tumblr.com/images/og/link_200.png",
     "https://ssl.gstatic.com/accounts/ui/avatar_2x.png",
     "http://cdn.sstatic.net/askubuntu/img/apple-touch-icon@2.png",
-    "http://assets.tumblr.com/images/og/text_200.png"
+    "http://assets.tumblr.com/images/og/text_200.png",
+    "http://djty7jcqog9qu.cloudfront.net/i/7dce329f880b899a462be1c476c79291_192x192_o.png",
+    "http://djty7jcqog9qu.cloudfront.net/images/4bc601cc-05e9-48bf-aaff-9da2915626d6/0/hSPUi.jpg",
+    "http://blickwinkel-portal.de/gm-bilder/images/front_erch1.jpg"
   )
   val blacklistedHash = Set(
     "bf322fb70d88a207194c5d25f189d692", // wordpress blank image
@@ -378,7 +381,8 @@ object ProcessedImageHelper {
     "989d155fe0261a9d9938549a3c2f8168", // ebay spritesheet
     "30d57a48f6f155affd542a528dd02506", // Aa icon
     "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
-    "cb6b256050c23a71b2b4996e88f77225" // missing link logo
+    "cb6b256050c23a71b2b4996e88f77225", // missing link logo
+    "42573fffcf02644c0b5a14074afc3c64" // ghost icon
   )
 }
 
