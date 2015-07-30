@@ -1,11 +1,73 @@
+//==========================
+// Checkbox Styles
+//==========================
+
+.library-visibility-checkbox-input
+  display: none
+
+.library-visibility-checkbox-custom-input
+  position: relative
+  display: inline-block
+  margin: 0 10px 0 15px
+  border-radius: 18px
+  width: 55px
+  height: 28px
+  background-color: #6FCA72
+  vertical-align: middle
+  cursor: pointer
+
+  &.kf-transitions
+    transition: background-color 0.2s
+
+  .library-visibility-checkbox-input:checked ~ &
+    background-color: libraryRed
+
+    &::after
+      transform: translate(28px)
+
+  &::after
+    position: absolute;
+    bottom: 0
+    left: 0
+    border: 1px solid #eee
+    border-radius: 50%
+    width: 26px
+    height: 26px
+    background-color: #fff
+    box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
+    content: '';
+
+  &.kf-transitions::after
+    transition: transform 0.2s
+
+  &:focus::after
+  &:hover::after
+    background-color: #fefcf1
+
+.library-visibility-checkbox-custom-input-secret-background
+  position: absolute
+  left: 4px
+  width: 50%
+  height: 100%
+  background-position: 8px 7px
+  background-size: auto 12px
+  background-repeat: no-repeat
+
+//==========================
+// Radio Button Styles
+//==========================
+
 .library-visibility-radio-settings-option
+  width: 100px
   margin-bottom: 8px
   cursor: pointer
 
 .library-visibility-radio-label
+  position: relative // for absolute radio checks
   cursor: pointer
   float: left
   clear: both
+  margin-right: 10px
 
   &:hover
     .library-visibility-radio-check
@@ -17,7 +79,8 @@
   display: none
 
 .library-visibility-radio-check
-  display: inline-block
+  position: absolute
+  top: 2px
   width: 12px
   height: 12px
   margin-right: 5px
@@ -45,3 +108,6 @@
 .library-visibility-option-text
   position: relative
   top: -2px
+  left: 20px
+  width: calc(100% - 20px);
+  word-break: break-word

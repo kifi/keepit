@@ -98,6 +98,15 @@ angular.module('kifi')
           scope.library.subscriptions.splice(index,1);
         };
 
+
+        scope.spaceIsOrg = function (space) {
+          return 'numMembers' in space;
+        };
+
+        var ownerType = function(space) {
+          return scope.spaceIsOrg(space) ? 'org' : 'user';
+        };
+
         scope.saveLibrary = function () {
 
           if (submitting) {
@@ -149,14 +158,6 @@ angular.module('kifi')
           var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
             return sub.name !== '' && sub.info.url !== '';
           });
-
-          var spaceIsOrg = function(space) {
-            return 'numMembers' in space;
-          };
-
-          var ownerType = function(space) {
-            return spaceIsOrg(space) ? 'org' : 'user';
-          };
 
           var owner = {};
           owner[ownerType(scope.space.destination)] = scope.space.destination.id;
