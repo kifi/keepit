@@ -289,7 +289,7 @@ class KeepImageCommanderImpl @Inject() (
         case Right(loadedImage) =>
           updateRequestState(KeepImageRequestStates.PROCESSING)
           val existingSameHash = db.readOnlyReplica { implicit session =>
-            keepImageRepo.getBySourceHash(loadedImage.hash).distinctBy(_.imagePath)
+            keepImageRepo.getBySourceHash(loadedImage.hash)
           }
           if (existingSameHash.isEmpty || overwriteExistingImage) {
             // never seen this image, or we're reprocessing an image
@@ -342,7 +342,7 @@ class KeepImageCommanderImpl @Inject() (
       }
       ImageProcessState.ExistingStoredImagesFound(saved)
     } else {
-      val copiedImagesSet: Set[KeepImage] = existingSameHash.distinctBy(_.imagePath).toSet.flatMap { prev: KeepImage =>
+      val copiedImagesSet: Set[KeepImage] = existingSameHash.toSet.flatMap { prev: KeepImage =>
         if (prev.keepId == keepId) {
           if (prev.state == KeepImageStates.ACTIVE) {
             log.info(s"skipping image since its already of the same keep id: $prev")
