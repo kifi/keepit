@@ -46,11 +46,16 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         resultsPromise.failure(thrown)
     }.map(_ => ())
 
-    val fn = Await.result(injected.websocket(None, None).f(DummyRequestHeader(3, "/dummy/url")), 1 second).right.get
-
-    fn(feed, out)
-
-    resultsPromise.future
+    injected.websocket(None, None).f(DummyRequestHeader(3, "/dummy/url")).flatMap {
+      case Right(fn) => {
+        fn(feed, out)
+        resultsPromise.future
+      }
+      case Left(result) => {
+        resultsPromise.failure(new RuntimeException("Result " + result + " was not expected"))
+        resultsPromise.future
+      }
+    }
   }
 
   "SharedWsMessagingController" should {
