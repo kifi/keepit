@@ -18,6 +18,8 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
+  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
+
   def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 }
@@ -82,8 +84,9 @@ class KeepToLibraryRepoImpl @Inject() (
     // where that keep exists
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select ktl.keep_id from bookmark bm, library_membership lm, keep_to_library ktl
-                  where bm.uri_id = $uriId and lm.user_id = $userId
-                  and ktl.keep_id = bm.id and ktl.library_id = lm.library_id"""
+                  where bm.uri_id = $uriId and bm.state = '#${KeepStates.ACTIVE}'
+                  and lm.user_id = $userId and lm.state = '#${LibraryMembershipStates.ACTIVE}'
+                  and ktl.keep_id = bm.id and ktl.library_id = lm.library_id and ktl.state = '#${KeepToLibraryStates.ACTIVE}'"""
     q.as[Id[Keep]].list.toSet
   }
 

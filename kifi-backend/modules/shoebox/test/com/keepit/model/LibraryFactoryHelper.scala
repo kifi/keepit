@@ -14,6 +14,9 @@ object LibraryFactoryHelper {
     def saved(implicit injector: Injector, session: RWSession): Library = {
       val library = injector.getInstance(classOf[LibraryRepo]).save(partialLibrary.get.copy(id = None))
       membership().withLibraryOwner(library).saved
+      for (user <- partialLibrary.followers) {
+        membership().withLibraryFollower(library, user).saved
+      }
       library
     }
   }
