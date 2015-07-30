@@ -296,7 +296,7 @@ class LibraryCommanderImpl @Inject() (
 
     val usersByIdF = {
       val allUsersShown = libraries.flatMap { library => memberInfosByLibraryId(library.id.get).all :+ library.ownerId }.toSet
-      db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
+      db.readOnlyReplicaAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
     val orgCardByIdF = {
