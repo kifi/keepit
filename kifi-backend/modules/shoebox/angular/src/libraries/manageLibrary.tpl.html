@@ -48,13 +48,6 @@
             <div ng-switch="library.visibility" class="manage-lib-visibility-description">
               <div ng-switch-when="published" class="manage-lib-visibility-description-content">
                 Anyone can see and follow this library
-                <div class="manage-lib-listed-visibility">
-                  <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.membership.listed">
-                  <label for="listed-visibility-checkbox">
-                    <span></span>
-                    List this library on my public profile
-                  </label>
-                </div>
               </div>
               <div ng-switch-when="organization" class="manage-lib-visibility-description-content">
                 Only members of {{ space.destination | name }} can see this library
