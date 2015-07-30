@@ -151,7 +151,7 @@ class Image4javaWrapper @Inject() (
     log.info(s"[safeCropScaleImage] START format=$format crop=${width}x${height}+${x}+${y}, scale=${finalWidth}x${finalHeight}")
     val operation = new IMOperation
 
-    val outputFile = TemporaryFile(prefix = "ImageMagicCropscaleImage", suffix = s".${format.value}").file
+    val outputFile = TemporaryFile(prefix = "ImageMagicCropScaleImage", suffix = s".${format.value}").file
     val filePath = outputFile.getAbsolutePath
     outputFile.deleteOnExit()
 

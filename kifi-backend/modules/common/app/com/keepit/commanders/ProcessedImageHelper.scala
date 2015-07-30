@@ -25,7 +25,7 @@ import scala.util.{ Failure, Success, Try }
 sealed abstract case class ProcessImageRequest(operation: ProcessImageOperation, size: ImageSize)
 class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Scale, size)
 class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CenteredCrop, size)
-class CropscaleImageRequest(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CropScale, scaledSize)
+class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CropScale, scaledSize)
 
 object ScaleImageRequest {
   def apply(boundingBox: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(boundingBox, boundingBox))
@@ -38,8 +38,8 @@ object CenteredCropImageRequest {
   def apply(width: Int, height: Int): CenteredCropImageRequest = new CenteredCropImageRequest(ImageSize(width, height))
 }
 
-object CropscaleImageRequest {
-  def apply(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize): CropscaleImageRequest = new CropscaleImageRequest(offset, cropSize, scaledSize)
+object CropScaleImageRequest {
+  def apply(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize): CropScaleImageRequest = new CropScaleImageRequest(offset, cropSize, scaledSize)
 }
 
 trait ProcessedImageHelper {
@@ -391,7 +391,7 @@ sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageS
 
 sealed abstract class ScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name, idealSize, ProcessImageOperation.Scale)
 sealed abstract class CroppedImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-crop", idealSize, ProcessImageOperation.CenteredCrop)
-sealed abstract class CropscaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-cropscale", idealSize, ProcessImageOperation.CropScale)
+sealed abstract class CropScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-cropscale", idealSize, ProcessImageOperation.CropScale)
 
 object ScaledImageSize {
   case object Small extends ScaledImageSize("small", ImageSize(150, 150))
