@@ -94,7 +94,6 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
         case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem
       }.sorted
       val top = limit map (n => hits.take(n)) getOrElse hits
-      top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}") }
       top
     }
   }
