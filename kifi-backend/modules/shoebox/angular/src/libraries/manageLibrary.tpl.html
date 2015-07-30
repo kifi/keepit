@@ -15,10 +15,10 @@
 
           <div class="manage-lib-input-wrapper" ng-if="spaces.length > 1">
             <span class="manage-lib-heading">Space</span>&nbsp;
-            <select class="manage-lib-input" 
-              ng-options="space as (space|name) for space in spaces" 
-              ng-model="thisSpace"
-              ng-change="setSpace(thisSpace)"
+            <select class="manage-lib-input"
+              ng-options="s as (s|name) for s in spaces"
+              ng-model="space.destination"
+              ng-change="onChangeSpace()"
             >
             </select>
           </div>
@@ -28,7 +28,7 @@
             <input class="manage-lib-input manage-lib-name-input pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
             <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
             <label class="manage-lib-slug">
-              <span class="manage-lib-slug-1">kifi.com/{{destinationSpace|slug}}/</span>
+              <span class="manage-lib-slug-1">kifi.com/{{space.destination|slug}}/</span>
               <span class="manage-lib-slug-2">
                 <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
               </span>
@@ -43,10 +43,10 @@
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-heading">Privacy</div>
             <div class="manage-lib-create-visibility-input-container">
-              <span kf-library-visibility-checkbox library="library"></span>
+              <span kf-library-visibility-selector library="library" space="space.destination"></span>
             </div>
             <div ng-switch="library.visibility" class="manage-lib-visibility-description">
-              <div ng-switch-default class="manage-lib-visibility-description-content">
+              <div ng-switch-when="published" class="manage-lib-visibility-description-content">
                 Anyone can see and follow this library
                 <div class="manage-lib-listed-visibility">
                   <input type="checkbox" id="listed-visibility-checkbox" ng-model="library.membership.listed">
@@ -55,6 +55,9 @@
                     List this library on my public profile
                   </label>
                 </div>
+              </div>
+              <div ng-switch-when="organization" class="manage-lib-visibility-description-content">
+                Only members of {{ space.destination | name }} can see this library
               </div>
               <div ng-switch-when="secret" class="manage-lib-visibility-description-content">
                 Only people you invite can see this library

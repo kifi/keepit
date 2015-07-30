@@ -114,16 +114,17 @@ class ServiceDiscoveryImpl(
       case Some(instance) if instance == myInstance.get =>
         require(myCluster.size > 0)
         if (logMe) {
-          logLeader(s"I'm the leader! ${myInstance.get}")
+          logLeader(s"I'm the leader! ${myInstance.get.instanceInfo.getName}")
           statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
         }
         return true
       case Some(instance) =>
+        val msg = s"I'm not the leader since my instance is ${myInstance.get.instanceInfo.getName} and the leader is ${instance.instanceInfo.getName}"
         if (logMe) logLeader(msg)
         require(myCluster.size > 1, s"$msg; cluster size is ${myCluster.size}")
         return false
       case None =>
-        val msg = s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is"
+        val msg = s"I'm not the leader since my instance is ${myInstance.get.instanceInfo.getName} and I have no idea who the leader is"
         if (logMe) logLeader(msg)
         require(myCluster.size == 0, s"$msg; cluster size is ${myCluster.size}")
         return false
@@ -145,7 +146,7 @@ class ServiceDiscoveryImpl(
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
     zk.watchChildrenWithData[String](cluster.servicePath, { children: Seq[(Node, String)] =>
-      log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster under ${cluster.servicePath.name} ${children.length}""")
       cluster.update(zk, children)
     })
   }
@@ -203,7 +204,7 @@ class ServiceDiscoveryImpl(
       val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceType.name + "_", RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
       myInstance = Some(new ServiceInstance(myNode, true, thisRemoteService))
       myCluster.register(myInstance.get)
-      log.info(s"registered as ${myInstance.get}")
+      log.info(s"registered as ${myInstance.get.instanceInfo.getName}")
       watchServices(zk)
     }
   }

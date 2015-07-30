@@ -38,6 +38,8 @@ class UserProfileController @Inject() (
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    organizationCommander: OrganizationCommander,
     libraryRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
@@ -56,10 +58,12 @@ class UserProfileController @Inject() (
   def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
     userCommander.profile(username, viewer) map { profile =>
       val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-      val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+      val (numConnections, userBiography, orgCards) = db.readOnlyMaster { implicit s =>
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-        (numConnections, userBio)
+        val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
+        val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationCardHelper(orgMembership.organizationId, viewer.flatMap(_.id)) }
+        (numConnections, userBio, orgCards)
       }
 
       val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -72,7 +76,8 @@ class UserProfileController @Inject() (
         numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
         numTags = collectionCommander.getCount(profile.userId),
         numInvitedLibraries = numInvitedLibs,
-        biography = userBiography
+        biography = userBiography,
+        orgs = orgCards
       )).as[JsObject]
       jsonFriendInfo ++ jsonProfileInfo
     }
