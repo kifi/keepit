@@ -117,6 +117,7 @@ class LibraryCommanderImpl @Inject() (
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     orgRepo: OrganizationRepo,
+    organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     handleCommander: HandleCommander,
     userRepo: UserRepo,
@@ -270,17 +271,18 @@ class LibraryCommanderImpl @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
+          val ownerHasAllKeepsViewExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
               case LibraryKind.SYSTEM_READ_IT_LATER | LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
             }
@@ -295,12 +297,17 @@ class LibraryCommanderImpl @Inject() (
 
     val usersByIdF = {
       val allUsersShown = libraries.flatMap { library => memberInfosByLibraryId(library.id.get).all :+ library.ownerId }.toSet
-      db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
+      db.readOnlyReplicaAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
-    val orgsByIdF = {
+    val orgCardByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
-      db.readOnlyMasterAsync { implicit s => orgRepo.getByIds(allOrgsShown) }
+      db.readOnlyReplicaAsync { implicit s =>
+        val orgMap = orgRepo.getByIds(allOrgsShown)
+        orgMap.map {
+          case (id, _) => id -> organizationCommander.getOrganizationCardHelper(id, viewerUserIdOpt)
+        }
+      }
     }
 
     val futureCountsByLibraryId = {
@@ -352,12 +359,12 @@ class LibraryCommanderImpl @Inject() (
         keepInfos <- futureKeepInfosByLibraryId(libId)
         counts <- futureCountsByLibraryId(libId)
         usersById <- usersByIdF
-        orgsById <- orgsByIdF
+        orgCardById <- orgCardByIdF
         libImageOpt <- imagesF(libId)
       } yield {
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
-        val orgOpt = lib.organizationId.map(orgsById.apply)
+        val orgCardOpt = lib.organizationId.map(orgCardById.apply)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
@@ -387,7 +394,8 @@ class LibraryCommanderImpl @Inject() (
           attr = attr,
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
-          path = LibraryPathHelper.formatLibraryPath(owner = owner, org = orgOpt, slug = lib.slug)
+          path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgCardOpt.map(_.handle), slug = lib.slug),
+          org = orgCardOpt
         )
       }
     }
@@ -1541,7 +1549,8 @@ class LibraryCommanderImpl @Inject() (
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               path = info.path,
-              kind = lib.kind)
+              kind = lib.kind,
+              org = info.org)
         }.seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1552,6 +1561,7 @@ class LibraryCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerOpt.map { viewer =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
     } getOrElse Map.empty
+    val orgCards = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), viewerOpt.flatMap(_.id))
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -1570,8 +1580,8 @@ class LibraryCommanderImpl @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val orgOpt = lib.organizationId.map(orgRepo.get)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgOpt, lib.slug)
+      val orgCardOpt = lib.organizationId.map(orgCards.apply)
+      val path = LibraryPathHelper.formatLibraryPath(owner, orgCardOpt.map(_.handle), lib.slug)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
@@ -1579,7 +1589,7 @@ class LibraryCommanderImpl @Inject() (
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt, path)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt, path, orgCardOpt)
     }
   }
 
@@ -1587,6 +1597,8 @@ class LibraryCommanderImpl @Inject() (
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
       libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
     val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
+
+    val orgCardById = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), Some(viewerId))
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -1602,9 +1614,9 @@ class LibraryCommanderImpl @Inject() (
       } else {
         (0, 0, Seq.empty)
       }
-      val orgOpt = lib.organizationId.map(orgRepo.get)
+      val orgCardOpt = lib.organizationId.map(orgCardById.apply)
       val owner = basicUserRepo.load(lib.ownerId)
-      val path = LibraryPathHelper.formatLibraryPath(owner = owner, org = orgOpt, slug = lib.slug)
+      val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgCardOpt.map(_.handle), slug = lib.slug)
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
@@ -1625,13 +1637,14 @@ class LibraryCommanderImpl @Inject() (
         following = None, // not needed
         membership = None, // not needed
         path = path,
-        modifiedAt = lib.updatedAt)
+        modifiedAt = lib.updatedAt,
+        org = orgCardOpt)
       (info, viewerMem, subscriptions)
     }
   }
 
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, orgCard: Option[OrganizationCard]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1651,7 +1664,8 @@ class LibraryCommanderImpl @Inject() (
       membership = membershipOpt.map(LibraryMembershipInfo.fromMembership(_)),
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
-      path = path
+      path = path,
+      org = orgCard
     )
   }
 

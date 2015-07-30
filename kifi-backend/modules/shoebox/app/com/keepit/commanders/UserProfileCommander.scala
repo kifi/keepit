@@ -40,6 +40,7 @@ class UserProfileCommander @Inject() (
     userValueRepo: UserValueRepo,
     libraryCommander: LibraryCommander,
     graphServiceClient: GraphServiceClient,
+    organizationCommander: OrganizationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
 
@@ -78,7 +79,8 @@ class UserProfileCommander @Inject() (
           following = Some(true),
           membership = (memberships(lib.id.get)) map (LibraryMembershipInfo.fromMembership(_)),
           modifiedAt = lib.updatedAt,
-          path = info.path
+          path = info.path,
+          org = info.org
         )
     }
   }

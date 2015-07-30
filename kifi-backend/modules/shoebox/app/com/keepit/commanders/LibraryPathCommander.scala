@@ -18,7 +18,7 @@ class LibraryPathCommander @Inject() (
       val org = lib.organizationId.map(orgRepo.get(_))
       (user, org)
     }
-    LibraryPathHelper.formatLibraryPath(user, org, lib.slug)
+    LibraryPathHelper.formatLibraryPath(user, org.map(_.handle), lib.slug)
   }
 
   def getPathUrlEncoded(lib: Library): String = {
@@ -28,6 +28,6 @@ class LibraryPathCommander @Inject() (
       (user, org)
     }
 
-    LibraryPathHelper.formatLibraryPathUrlEncoded(user, org, lib.slug)
+    LibraryPathHelper.formatLibraryPathUrlEncoded(user, org.map(_.handle), lib.slug)
   }
 }
