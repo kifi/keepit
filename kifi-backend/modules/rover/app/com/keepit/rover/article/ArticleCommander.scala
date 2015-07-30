@@ -230,7 +230,7 @@ class ArticleCommander @Inject() (
         fetched recover {
           case throttled: FetchThrottlingException => // ignore
           case error: Exception =>
-            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
+            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}. ${error.getMessage}")
         }
         db.readWrite { implicit session =>
           articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched.map(_.map { case (_, version) => version }))
