@@ -65,11 +65,10 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def instanceForNode(node: Node): Option[ServiceInstance] = instances.get(node)
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, nodeData: String) = try {
-    log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
     newInstances(childNode) = newInstances.get(childNode) match {
       case Some(instance) =>
-        log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
+        log.info(s"discovered updated node $childNode: ${remoteService.amazonInstanceInfo.getName}, adding to ${newInstances.keys}")
         new ServiceInstance(childNode, instance.thisInstance, remoteService)
       case None =>
         log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")

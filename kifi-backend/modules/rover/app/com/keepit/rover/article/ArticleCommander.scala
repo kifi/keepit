@@ -219,7 +219,6 @@ class ArticleCommander @Inject() (
         Future.successful(None)
       }
       case Some(article) => {
-        log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
         articleStore.add(articleInfo.urlHash, articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
           log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
           Some((article, key.version))
