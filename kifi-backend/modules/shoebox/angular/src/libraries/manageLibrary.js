@@ -51,8 +51,10 @@ angular.module('kifi')
             return (space.id === thisSpace.id);
           })[0];
         }
-        scope.setSpace = function(thisSpace) {
-          scope.thisSpace = thisSpace;
+        scope.destinationSpace = scope.thisSpace // Default
+
+        scope.setSpace = function(space) {
+          scope.destinationSpace = space;
         };
 
         //
@@ -153,10 +155,12 @@ angular.module('kifi')
             return 'numMembers' in space;
           };
 
-          var ownerType = spaceIsOrg(scope.thisSpace) ? 'org' : 'user';
+          var ownerType = function(space) {
+            return spaceIsOrg(space) ? 'org' : 'user';
+          };
           
           var owner = {};
-          owner[ownerType] = scope.thisSpace.id;
+          owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -179,6 +183,9 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
+            if (scope.thisSpace.id !== scope.destinationSpace.id) {
+              returnAction = null;
+            }
 
             if (!returnAction) {
               $location.url(newLibrary.url);
