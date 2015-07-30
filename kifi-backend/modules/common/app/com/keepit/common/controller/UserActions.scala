@@ -104,7 +104,6 @@ trait SecureSocialHelper extends Logging {
   def getSecureSocialUserFromRequest(implicit request: Request[_]): Option[Identity] = {
     try {
       val maybeAuthenticator = SecureSocial.authenticatorFromRequest
-      log.info(s"[getSecureSocialUserFromRequest] identityId=${maybeAuthenticator.map(_.identityId)} maybeAuthenticator=$maybeAuthenticator")
       maybeAuthenticator flatMap { authenticator =>
         UserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
       }

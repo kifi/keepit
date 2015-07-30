@@ -75,10 +75,12 @@ object TikaDocument extends Logging {
     } catch {
       case e: Throwable =>
         // check if we hit our content size limit (maxContentChars)
-        if (mainHandler.isWriteLimitReached(e))
+        if (mainHandler.isWriteLimitReached(e)) {
           log.warn("max number of characters reached: " + mainHandler.url)
-        else
+        } else {
+          e.setStackTrace(new Array[StackTraceElement](0))
           log.error("extraction failed: ", e)
+        }
     } finally {
       try {
         stream.close()
