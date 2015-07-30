@@ -304,7 +304,9 @@ class LibraryCommanderImpl @Inject() (
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
         val orgMap = orgRepo.getByIds(allOrgsShown)
-        orgMap.keys.map(organizationCommander.getOrganizationCardHelper(_, viewerUserIdOpt))
+        orgMap.map {
+          case (id, _) => id -> organizationCommander.getOrganizationCardHelper(id, viewerUserIdOpt)
+        }
       }
     }
 
