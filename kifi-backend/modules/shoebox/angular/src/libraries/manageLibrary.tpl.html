@@ -18,6 +18,7 @@
             <select class="manage-lib-input"
               ng-options="s as (s|name) for s in spaces"
               ng-model="space.destination"
+              ng-change="onChangeSpace()"
             >
             </select>
           </div>

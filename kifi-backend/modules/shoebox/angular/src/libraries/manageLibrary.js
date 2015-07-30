@@ -56,6 +56,28 @@ angular.module('kifi')
         }
         scope.space.destination = scope.space.current;
 
+        scope.onChangeSpace = function () {
+          var currIsOrg = scope.spaceIsOrg(scope.space.current);
+          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
+
+          if (currIsOrg !== destIsOrg) {
+            if (currIsOrg) {
+              if (scope.library.visibility === 'organization') {
+                scope.library.visibility = 'secret';
+              }
+            } else {
+              if (scope.library.visibility === 'secret') {
+                scope.library.visibility = 'organization';
+              }
+            }
+          }
+
+          // Prevent non-org lib from having visibility === 'organization'
+          if (!destIsOrg && scope.library.visibility === 'organization') {
+            scope.library.visibility = 'secret';
+          }
+        };
+
         //
         // Scope methods.
         //
