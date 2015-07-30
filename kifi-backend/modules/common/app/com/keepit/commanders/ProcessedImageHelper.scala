@@ -137,7 +137,7 @@ trait ProcessedImageHelper {
 
     resizedImages.find(_.isLeft) match {
       case Some(error) => // failure of at least one of the images
-        log.error(s"[pih] resizedImages failure $error")
+        log.error(s"[pih] resizedImages failure ${error.toString.take(220)}")
         Left(error.left.get)
       case None =>
         Right(resizedImages.map(_.right.get))
