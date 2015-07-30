@@ -247,7 +247,6 @@ class ActivityPusher @Inject() (
       val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
       val message = {
         if (personas.isEmpty) {
-          log.warn(s"no personas user $userId")
           None
         } else if (personas.size == 1) {
           val msg = {
