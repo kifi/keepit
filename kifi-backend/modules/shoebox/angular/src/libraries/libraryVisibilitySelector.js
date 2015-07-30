@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryVisibilityCheckbox', [
+.directive('kfLibraryVisibilitySelector', [
   '$timeout',
   function ($timeout) {
     return {
