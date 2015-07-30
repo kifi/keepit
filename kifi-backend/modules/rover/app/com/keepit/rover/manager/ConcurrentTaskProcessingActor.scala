@@ -87,7 +87,6 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   private def startProcessing(tasks: Seq[T]): Unit = {
     if (!closing && tasks.nonEmpty) {
-      logger.info(s"Processing ${tasks.length} tasks...")
       processing ++= tasks
 
       val processedTasks = try {
@@ -107,7 +106,6 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   private def endProcessing(task: T): Unit = {
     processing -= task
-    logger.info(s"Processed $task.")
     if (concurrentFetchTasks < minConcurrentTasks) {
       startPulling()
     }

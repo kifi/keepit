@@ -18,7 +18,7 @@ angular.module('kifi')
     }
 
     function handleErrorResponse(response) {
-      var err = response.data.error;
+      var err = 'error' in response.data ? response.data.error : null;
       var message = null;
 
       if (err === 'insufficient_permissions') {

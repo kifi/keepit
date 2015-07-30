@@ -12,6 +12,8 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 
 import org.joda.time.DateTime
@@ -36,10 +38,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
+        val (user, org) = inject[Database].readWrite { implicit session =>
           val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
-          user
+          val org = OrganizationFactory.organization().withName("CamCo").saved
+          (user, org)
         }
 
         val path = routes.UserController.currentUser().url
@@ -65,7 +68,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numLibraries":0,
               "numConnections":0,
               "numFollowers":0,
-              "pendingFriendRequests":0
+              "pendingFriendRequests":0,
+              "orgs": []
             }
           """)
 

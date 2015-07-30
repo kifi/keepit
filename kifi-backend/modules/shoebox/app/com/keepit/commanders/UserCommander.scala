@@ -68,7 +68,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int)
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationCard])
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -97,6 +97,8 @@ class UserCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    organizationCommander: OrganizationCommander,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -270,7 +272,7 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
@@ -285,7 +287,10 @@ class UserCommander @Inject() (
       val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers)
+      val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
+      val orgCards = organizationCommander.getOrganizationCards(orgs, None).values.toSeq
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
 
     def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
@@ -297,7 +302,7 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -332,7 +337,14 @@ class UserCommander @Inject() (
       searchClient.updateUserIndex()
     }
 
-    libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
+    val userId = newUser.id.get
+    libraryCommander.internSystemGeneratedLibraries(userId)
+    if (userId.id % 2 == 0) { //for half of the users
+      libraryCommander.createReadItLaterLibrary(userId)
+      db.readWrite { implicit session =>
+        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.READ_IT_LATER))
+      }
+    }
 
     newUser
   }

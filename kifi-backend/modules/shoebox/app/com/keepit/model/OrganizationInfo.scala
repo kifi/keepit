@@ -73,16 +73,16 @@ case class OrganizationCard(
   numMembers: Int,
   numLibraries: Int)
 object OrganizationCard {
-  implicit val writes: Writes[OrganizationCard] = (
-    (__ \ 'id).format[PublicId[Organization]] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
-    (__ \ 'handle).format[OrganizationHandle] and
-    (__ \ 'name).format[String] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'avatarPath).formatNullable[ImagePath] and
-    (__ \ 'numMembers).format[Int] and
-    (__ \ 'numLibraries).format[Int]
-  )(OrganizationCard.apply, unlift(OrganizationCard.unapply))
+  implicit val defaultWrites: Writes[OrganizationCard] = (
+    (__ \ 'id).write[PublicId[Organization]] and
+    (__ \ 'ownerId).write[ExternalId[User]] and
+    (__ \ 'handle).write[OrganizationHandle] and
+    (__ \ 'name).write[String] and
+    (__ \ 'description).writeNullable[String] and
+    (__ \ 'avatarPath).writeNullable[ImagePath] and
+    (__ \ 'numMembers).write[Int] and
+    (__ \ 'numLibraries).write[Int]
+  )(unlift(OrganizationCard.unapply))
 }
 
 // OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the

@@ -407,6 +407,8 @@ class LibraryAnalytics @Inject() (
     val contextBuilder = new HeimdalContextBuilder
     if (library.kind == LibraryKind.SYSTEM_PERSONA) {
       contextBuilder += ("libraryKind", "personaCreated")
+    } else if (library.kind == LibraryKind.SYSTEM_READ_IT_LATER) {
+      contextBuilder += ("libraryKind", "readItLaterCreated")
     } else if (library.kind == LibraryKind.USER_CREATED) {
       contextBuilder += ("libraryKind", "userCreated")
     }

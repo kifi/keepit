@@ -253,14 +253,25 @@ class AdminUserController @Inject() (
 
   private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
     val userId = user.id.get
+    val chatStatsF = eliza.getUserThreadStats(userId)
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val fOrgRecos = try {
+    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
+
+    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
+      val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
+      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId) else Seq.empty
+      (
+        userExperimentRepo.getUserExperiments(user.id.get),
+        potentialOrganizationsForUser,
+        ignore4orgs)
+    }
+
+    val fOrgRecos = if (ignoreForPotentialOrganizations) Future.successful(Seq.empty) else try {
       abookClient.getOrganizationRecommendationsForUser(user.id.get, offset = 0, limit = 5)
     } catch {
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
     }
-    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
@@ -277,21 +288,15 @@ class AdminUserController @Inject() (
       (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
-    val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
-      (
-        userExperimentRepo.getUserExperiments(user.id.get),
-        orgRepo.getPotentialOrganizationsForUser(userId),
-        userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations))
-    }
-
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       contacts <- contactsF
       orgRecos <- fOrgRecos
+      chatStats <- chatStatsF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
-      Ok(html.admin.user(user, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
+      Ok(html.admin.user(user, chatStats, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
     }

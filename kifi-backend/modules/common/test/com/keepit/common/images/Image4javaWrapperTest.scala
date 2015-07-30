@@ -127,7 +127,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       imageInfo.width === 1173
       imageInfo.height === 391
 
-      val cropped = im.cropImage(image, ImageFormat.PNG, 200, 200).get
+      val cropped = im.centeredCropImage(image, ImageFormat.PNG, 200, 200).get
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       resizedInfo.height === 200
@@ -143,7 +143,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       imageInfo.width === 1173
       imageInfo.height === 391
 
-      val cropped = im.cropImage(image, ImageFormat.JPG, 200, 200).get
+      val cropped = im.centeredCropImage(image, ImageFormat.JPG, 200, 200).get
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       resizedInfo.height === 200
@@ -159,7 +159,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       imageInfo.width === 1173
       imageInfo.height === 391
 
-      val cropped = im.cropImage(image, ImageFormat.GIF, 200, 200).get
+      val cropped = im.centeredCropImage(image, ImageFormat.GIF, 200, 200).get
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       range(imageByteSize(cropped), 45071)
@@ -174,11 +174,26 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       imageInfo.width === 1564
       imageInfo.height === 391
 
-      val cropped = im.cropImage(image, ImageFormat.PNG, 200, 100).get
+      val cropped = im.centeredCropImage(image, ImageFormat.PNG, 200, 100).get
       val resizedInfo = im.imageInfo(cropped).get
       resizedInfo.width === 200
       resizedInfo.height === 100
       range(imageByteSize(cropped), 19672)
+    }
+
+    "cropscale png" in {
+      val image = getPngImage("wide_image_4x1")
+      val im = new Image4javaWrapper(Mode.Test)
+
+      val imageInfo = im.imageInfo(image).get
+      imageInfo.width === 1564
+      imageInfo.height === 391
+
+      val cropscaled = im.cropScaleImage(image, ImageFormat.PNG, x = 400, y = 100, width = 250, height = 250, finalWidth = 500, finalHeight = 150).get
+      val resizedInfo = im.imageInfo(cropscaled).get
+      resizedInfo.width === 500
+      resizedInfo.height === 150
+      range(imageByteSize(cropscaled), 69859)
     }
 
     "optimize jpg" in {

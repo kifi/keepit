@@ -80,6 +80,7 @@ trait LibraryCommander {
   def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
+  def createReadItLaterLibrary(userId: Id[User]): Library
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
@@ -246,7 +247,7 @@ class LibraryCommanderImpl @Inject() (
   }
   private def countMemberInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], LibMembersAndCounts] = libraries.map { library =>
     val info: LibMembersAndCounts = library.kind match {
-      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
+      case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA | LibraryKind.SYSTEM_READ_IT_LATER =>
         val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
         val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
           db.readOnlyReplica { implicit session =>
@@ -272,7 +273,7 @@ class LibraryCommanderImpl @Inject() (
         if (maxKeepsShown > 0) {
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
-              case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case LibraryKind.SYSTEM_READ_IT_LATER | LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
                 if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
@@ -308,7 +309,7 @@ class LibraryCommanderImpl @Inject() (
 
     val futureCountsByLibraryId = {
       val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
-        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA }.map(_.id.get).toSet
+        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA || lib.kind == LibraryKind.SYSTEM_READ_IT_LATER }.map(_.id.get).toSet
         var userLibCounts: Map[Id[Library], Int] = libraries.map(lib => lib.id.get -> lib.keepCount).toMap
         if (userLibs.size < libraries.size) {
           val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
@@ -925,6 +926,13 @@ class LibraryCommanderImpl @Inject() (
         case _ => None
       }
     }
+  }
+
+  def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>
+    val readItLaterLib = libraryRepo.save(Library(name = "Read It Later", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("read_id_later"), kind = LibraryKind.SYSTEM_READ_IT_LATER, memberCount = 1, keepCount = 0))
+    libraryMembershipRepo.save(LibraryMembership(libraryId = readItLaterLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+    searchClient.updateLibraryIndex()
+    readItLaterLib
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {

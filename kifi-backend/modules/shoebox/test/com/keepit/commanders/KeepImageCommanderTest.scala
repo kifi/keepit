@@ -207,20 +207,20 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             val images = kiRepo.getForKeepId(keepId)
             images.size === 4
 
-            val croppedKeepImage = images.find(_.kind == ProcessImageOperation.Crop).get
+            val croppedKeepImage = images.find(_.kind == ProcessImageOperation.CenteredCrop).get
             // pretend like this keep image was never created
             kiRepo.save(croppedKeepImage.copy(state = KeepImageStates.INACTIVE, keepId = Id[Keep](424242)))
           }
         }
 
         {
-          val keepImagesF = commander.getBestImagesForKeepsPatiently(Set(keepId), CropImageRequest(150, 150))
+          val keepImagesF = commander.getBestImagesForKeepsPatiently(Set(keepId), CenteredCropImageRequest(150, 150))
           val keepImages = Await.result(keepImagesF, Duration("10 seconds"))
 
           val keepImage = keepImages(keepId).get
           keepImage.width === 150
           keepImage.height === 150
-          keepImage.kind === ProcessImageOperation.Crop
+          keepImage.kind === ProcessImageOperation.CenteredCrop
         }
 
         // 2 scaled, 1 cropped, 1 original
