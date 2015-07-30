@@ -42,7 +42,7 @@
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-heading">Privacy</div>
             <div class="manage-lib-create-visibility-input-container">
-              <span kf-library-visibility-selector library="library"></span>
+              <span kf-library-visibility-selector library="library" space="space.destination"></span>
             </div>
             <div ng-switch="library.visibility" class="manage-lib-visibility-description">
               <div ng-switch-when="published" class="manage-lib-visibility-description-content">
@@ -56,7 +56,7 @@
                 </div>
               </div>
               <div ng-switch-when="organization" class="manage-lib-visibility-description-content">
-                Only members of Org can see this library
+                Only members of {{ space.destination | name }} can see this library
               </div>
               <div ng-switch-when="secret" class="manage-lib-visibility-description-content">
                 Only people you invite can see this library
