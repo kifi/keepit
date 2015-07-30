@@ -71,7 +71,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections":0,
               "numFollowers":0,
               "pendingFriendRequests":0,
-              "orgs": [{"id":"${Organization.publicId(org.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user.externalId}","handle":"${org.getHandle.value}","name":"${org.name}","numMembers":1,"numLibraries":0}]
+              "orgs": [{"id":"${Organization.publicId(org.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user.externalId}","handle":"${org.handle.value}","name":"${org.name}","numMembers":1,"numLibraries":0}]
             }
           """)
 
