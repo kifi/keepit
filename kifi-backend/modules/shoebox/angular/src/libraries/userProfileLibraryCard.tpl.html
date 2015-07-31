@@ -32,7 +32,7 @@
     </a>
     <a class="" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
       <img class="kf-upl-card-owner-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}" ng-if="::libraryType !== 'own' && !lib.org">
-      <span class="kf-upl-card-by">by</span>
+      <span class="kf-upl-card-by">{{ lib.org ? "with" : "by" }}</span>
       <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
     </a>
   </div>
