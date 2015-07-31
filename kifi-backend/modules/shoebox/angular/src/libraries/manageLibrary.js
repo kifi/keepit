@@ -252,10 +252,25 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            // If we were on the deleted library's page, return to the homepage.
+            // If we were on the deleted library's page,
+            // return to the space it was in.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === scope.library.path)) {
-              $location.url('/');
+                $state.href('library.keeps') === scope.library.path) {
+
+              var redirectToSpaceParams = {
+                handle: (
+                  scope.library.org ? scope.library.org.handle : (
+                    scope.library.owner ? scope.library.owner.username : null
+                  )
+                )
+              };
+
+              // If something went wrong, go to the main page
+              if (!redirectToSpaceParams.handle) {
+                $location.path('/');
+              }
+
+              $state.go('userOrOrg', redirectToSpaceParams);
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
