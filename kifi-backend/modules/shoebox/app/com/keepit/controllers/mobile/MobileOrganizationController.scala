@@ -67,8 +67,7 @@ class MobileOrganizationController @Inject() (
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
-    val requesterPermissions = Json.toJson(orgMembershipCommander.getPermissions(request.orgId, request.request.userIdOpt))
-    Ok(Json.obj("organization" -> Json.toJson(organizationView)(OrganizationView.mobileWrites), "viewer_permissions" -> requesterPermissions))
+    Ok(Json.toJson(organizationView)(OrganizationView.mobileWrites))
   }
 
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
