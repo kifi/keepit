@@ -15,7 +15,7 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.spaceIsOrg = function () {
-          return 'numMembers' in scope.space;
+          return !!scope.space && 'numMembers' in scope.space;
         };
       }
     };

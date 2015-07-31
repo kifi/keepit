@@ -188,7 +188,7 @@ class UserIpAddressEventLogger @Inject() (
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
       userRepo.getUsers(userIds).values.toList map { user =>
-        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
+        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
         val orgs = organizationRepo.getByIds(organizationMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
         (user, candidates, orgs)
       }
