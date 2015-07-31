@@ -52,7 +52,7 @@ case class OrganizationView(
   membershipInfo: MembershipInfo)
 
 object OrganizationView {
-  val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
+  implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
       "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
