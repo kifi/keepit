@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,20 +39,48 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
-        scope.space = {
-          current: profileService.me,
-          destination: profileService.me
-        };
-        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
 
-        // Find out where we're opening this from
-        if ('organization' in scope.modalData) {
-          var orgSpace = scope.modalData.organization;
-          // Angular is very picky about the object you're using.
-          scope.space.current = scope.spaces.filter(function(space) {
-            return (space.id === orgSpace.id);
-          })[0];
+        //
+        // On link.
+        //
+        if (scope.modalData && scope.modalData.library) {
+          scope.library = _.cloneDeep(scope.modalData.library);
+          scope.library.followers.forEach(function (follower) {
+            follower.status = 'Following';
+          });
+          scope.modifyingExistingLibrary = true;
+          scope.emptySlug = false;
+          scope.modalTitle = scope.library.name;
+          scope.library.subscriptions = scope.library.subscriptions || [];
+          if (scope.library.subscriptions.length < 3) {
+            scope.library.subscriptions.push(scope.newBlankSub());
+          }
+        } else {
+          scope.library = {
+            'name': '',
+            'description': '',
+            'slug': '',
+            'visibility': 'published'
+          };
+          scope.library.membership = {
+            access: 'owner',
+            listed: true,
+            subscribed: false
+          };
+          scope.library.subscriptions = [scope.newBlankSub()];
+          scope.modalTitle = 'Create a library';
         }
+        returnAction = scope.modalData && scope.modalData.returnAction;
+        scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
+
+        var currentSpace = (scope.library.org || profileService.me);
+
+        // Set up the spaces.
+        // The scope.space.* objects MUST BE REFERENCE-EQUAL to the scope.spaces objects
+        // to make the angular <select> binding work
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.space = {};
+        scope.space.current = scope.spaces.filter(function (s) { return s.id === currentSpace.id; }).pop();
         scope.space.destination = scope.space.current;
 
         scope.onChangeSpace = function () {
@@ -288,7 +315,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-
         //
         // Watches and listeners.
         //
@@ -305,40 +331,6 @@ angular.module('kifi')
             }
           }
         });
-
-
-        //
-        // On link.
-        //
-        if (scope.modalData && scope.modalData.library) {
-          scope.library = _.cloneDeep(scope.modalData.library);
-          scope.library.followers.forEach(function (follower) {
-            follower.status = 'Following';
-          });
-          scope.modifyingExistingLibrary = true;
-          scope.emptySlug = false;
-          scope.modalTitle = scope.library.name;
-          scope.library.subscriptions = scope.library.subscriptions || [];
-          if (scope.library.subscriptions.length < 3) {
-            scope.library.subscriptions.push(scope.newBlankSub());
-          }
-        } else {
-          scope.library = {
-            'name': '',
-            'description': '',
-            'slug': '',
-            'visibility': 'published'
-          };
-          scope.library.membership = {
-            access: 'owner',
-            listed: true,
-            subscribed: false
-          };
-          scope.library.subscriptions = [scope.newBlankSub()];
-          scope.modalTitle = 'Create a library';
-        }
-        returnAction = scope.modalData && scope.modalData.returnAction;
-        scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
         element.find('.manage-lib-name-input').focus();
       }
