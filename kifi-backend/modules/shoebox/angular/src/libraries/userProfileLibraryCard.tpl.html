@@ -32,11 +32,11 @@
     <span class="kf-upl-card-by">by</span>
     <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
   </a>
-  <!-- owner with collaborators -->
+  <!-- owner/org with collaborators -->
   <div class="kf-upl-collabs" ng-if="lib.numCollaborators > 0">
     <span class="kf-upl-card-by" ng-if="!lib.org">by</span>
     <a class="kf-upl-collab-pic-a" href="{{::lib.org|pic:100}}" ng-if="lib.org" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.org" desc="Org">
-      <img class="kf-upl-collab-pic" ng-src="{{::lib.org|pic:100}}" alt="{{::lib.org|name}}">
+      <img class="kf-upl-org-pic" ng-src="{{::lib.org|pic:100}}" alt="{{::lib.org|name}}">
     </a>
     <span class="kf-upl-card-by" ng-if="lib.org">with</span>
     <a class="kf-upl-collab-pic-a" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.owner" desc="Owner">
