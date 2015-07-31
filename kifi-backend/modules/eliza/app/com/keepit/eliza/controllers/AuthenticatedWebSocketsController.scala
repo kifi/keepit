@@ -75,11 +75,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   private def asyncIteratee(streamSession: StreamSession, kifiVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     val kifiVersion = kifiVersionOpt.getOrElse("N/A")
-    import play.api.libs.iteratee._
-    def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
-      case Input.EOF => Done(Unit, Input.EOF)
-      case Input.Empty => Cont[JsArray, Unit](i => step(i))
-      case Input.El(e) =>
+    Iteratee.foldM[JsArray, Unit](()) { (_, e) =>
+      SafeFuture {
         try {
           f(e)
         } catch {
@@ -92,9 +89,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             )
           )
         }
-        Cont[JsArray, Unit](i => step(i))
+      }
     }
-    Cont[JsArray, Unit](i => step(i))
   }
 
   implicit val jsonFrame: FrameFormatter[JsArray] = {
@@ -237,20 +233,21 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case other => other
     }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
-      Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-        val action = jsArr.value(0).as[String]
-        statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
-          val timer = accessLog.timer(WS_IN)
-          val payload = jsArr.value.tail
-          try {
-            handler(payload)
-          } finally {
-            statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_HUNDRED)
-            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
+      Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get) match {
+        case Some(handler) =>
+          val action = jsArr.value(0).as[String]
+          statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
+            val timer = accessLog.timer(WS_IN)
+            val payload = jsArr.value.tail
+            try {
+              handler(payload)
+            } finally {
+              statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_HUNDRED)
+              accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
+            }
           }
-        }
-      } getOrElse {
-        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.kifiVersion} :: ${streamSession.userAgent})")
+        case None =>
+          airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.kifiVersion} :: ${streamSession.userAgent})")
       }
     }.map(_ => endSession(streamSession, socketInfo))
   }
