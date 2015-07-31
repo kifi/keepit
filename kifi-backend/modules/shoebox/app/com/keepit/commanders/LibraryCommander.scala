@@ -826,12 +826,15 @@ class LibraryCommanderImpl @Inject() (
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)
+      searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 2) { implicit s =>
         libraryRepo.save(oldLibrary.sanitizeForDelete)
       }
-      searchClient.updateKeepIndex()
+      db.readOnlyMaster { implicit s =>
+        require(libraryRepo.get(oldLibrary.id.get).state == LibraryStates.INACTIVE, s"Library ${oldLibrary.id.get} deletion failed")
+      }
       searchClient.updateLibraryIndex()
       None
     }
