@@ -42,6 +42,8 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
+    $scope.userProfile = profileService.me;
+
     $scope.fetchLibraries = function () {
       libraryLazyLoader
         .fetch()
