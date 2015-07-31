@@ -246,7 +246,9 @@ case class HttpClientImpl(
     e.waitTime map { waitTime =>
       if (waitTime > callTimeouts.maxWaitTime.get * serviceDiscovery.thisService.loadFactor && Play.maybeApplication.map(_.mode) == Some(play.api.Mode.Prod)) {
         val initTime = request.initTime.toInt
-        val exception = request.tracer.withCause(LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
+        val ex = LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount)
+        ex.setStackTrace(new Array(0))
+        val exception = request.tracer.withCause(ex)
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,

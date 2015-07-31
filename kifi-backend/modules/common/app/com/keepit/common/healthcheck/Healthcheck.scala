@@ -57,7 +57,7 @@ class MailSender @Inject() (
     playMode: Mode) extends Logging {
   def sendMail(email: ElectronicMail): Unit = playMode match {
     case Prod => sender.sendMail(email)
-    case _ => log.info(s"skip sending email: $email because it is devo mode.")
+    case _ => log.info(s"skip sending email: $email because it is dev mode.")
   }
 }
 
@@ -192,7 +192,6 @@ class HealthcheckPluginImpl @Inject() (
   def reportErrors(): Unit = actor.ref ! ReportErrorsAction
 
   def addError(error: AirbrakeError): AirbrakeError = {
-    log.error(s"Healthcheck logged error: $error")
     actor.ref ! error
     error
   }
