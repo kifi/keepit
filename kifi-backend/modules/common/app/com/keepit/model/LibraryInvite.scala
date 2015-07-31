@@ -36,8 +36,8 @@ case class LibraryInvite(
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
   def withState(newState: State[LibraryInvite]): LibraryInvite = this.copy(state = newState)
 
-  def isCollaborator = (access == LibraryAccess.READ_WRITE) || (access == LibraryAccess.READ_INSERT)
-  def isFollower = (access == LibraryAccess.READ_ONLY)
+  def isCollaborator = access == LibraryAccess.READ_WRITE
+  def isFollower = access == LibraryAccess.READ_ONLY
 
   override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 }

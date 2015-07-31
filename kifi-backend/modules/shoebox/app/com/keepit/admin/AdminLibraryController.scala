@@ -157,7 +157,7 @@ class AdminLibraryController @Inject() (
       val keepCount = keepRepo.getCountByLibrary(libraryId)
       val members = libraryMembershipRepo.getWithLibraryId(libraryId)
 
-      val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
+      val contributors = members.filter(x => x.access == LibraryAccess.READ_WRITE).map { m => userRepo.get(m.userId) }
       val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
       val terms = suggestedSearchCommander.getSuggestedTermsForLibrary(libraryId, limit = 25, SuggestedSearchTermKind.AUTO)
       (lib, owner, keepCount, contributors, followers, terms)

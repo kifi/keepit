@@ -163,7 +163,7 @@ class UserProfileCommander @Inject() (
         db.readOnlyReplica { implicit s =>
           val counts = libraryRepo.countLibrariesForAnonymousByAccess(userId)
           val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
-          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_INSERT, 0)
+          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0)
           val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
           (numLibsOwned, numLibsCollab, numLibsFollowing, None)
         }
@@ -171,7 +171,7 @@ class UserProfileCommander @Inject() (
         val (numLibsOwned, numLibsCollab, numLibsFollowing) = db.readOnlyMaster { implicit s =>
           val counts = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, LibraryAccess.all.toSet)
           val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
-          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_INSERT, 0)
+          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0)
           val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
           (numLibsOwned, numLibsCollab, numLibsFollowing)
         }
