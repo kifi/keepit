@@ -345,9 +345,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                log.debug(s"session event, keep watching")
                 reregister
             }
         }
@@ -382,9 +382,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                log.debug(s"session event, keep watching")
                 updateChildren(getChildren(node, new ParentWatcher()))
             }
         }
@@ -423,9 +423,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                log.debug(s"session event, keep watching")
                 doWatchChildren(Seq(child))
             }
         }

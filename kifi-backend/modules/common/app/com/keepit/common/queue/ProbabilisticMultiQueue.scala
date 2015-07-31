@@ -26,9 +26,7 @@ class ProbabilisticMultiQueue[T](weights: Map[SQSQueue[T], Double]) extends Logg
         val numberOfMissingTasks = n - tasks.length
         if (numberOfMissingTasks <= 0) Future.successful((tasks, true))
         else {
-          log.info(s"Pulling up to $numberOfMissingTasks tasks from $nextQueue")
           nextQueue.nextBatchWithLock(numberOfMissingTasks, lockTimeout).imap { moreTasks =>
-            log.info(s"Pulled ${moreTasks.size}/$numberOfMissingTasks tasks from $nextQueue")
             (tasks ++ moreTasks, false)
           }
         }

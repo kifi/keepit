@@ -9,10 +9,10 @@ object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
-      val org = if (orgTemplate.handle.isEmpty) {
+      val org = if (orgTemplate.primaryHandle.isEmpty) {
         injector.getInstance(classOf[HandleCommander]).autoSetOrganizationHandle(orgTemplate).get
       } else {
-        injector.getInstance(classOf[HandleCommander]).setOrganizationHandle(orgTemplate, orgTemplate.getHandle, overrideValidityCheck = true).get
+        injector.getInstance(classOf[HandleCommander]).setOrganizationHandle(orgTemplate, orgTemplate.handle, overrideValidityCheck = true).get
       }
       injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
       for (member <- partialOrganization.members) {

@@ -426,7 +426,9 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
          * For now it seems to be harmless since we create a new session from scratch.
          * Not worth investigating more since we want to kill secure social soon.
          */
-        log.warn(s"error parsing external id[$id]", ex)
+        if (id.nonEmpty) {
+          log.warn(s"error parsing external id[$id]")
+        }
         None
     }
 

@@ -8,7 +8,7 @@ angular.module('kifi')
   function ($scope, $rootScope, $state, $stateParams, $timeout, Paginator,
             profileService, userProfileActionService, modalService, userProfilePageNames) {
     var handle = $stateParams.handle;
-    var newLibraryIds;
+    var newLibraryIds = {};
 
     $scope.libraries = null;
     $scope.libraryType = $state.current.name.split('.').pop();
@@ -16,6 +16,7 @@ angular.module('kifi')
     var libraryLazyLoader = new Paginator();
 
     function resetAndFetchLibraries() {
+      newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }

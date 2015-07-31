@@ -17,27 +17,32 @@ object LibraryFactory {
 
   def libraries(count: Int): Seq[PartialLibrary] = List.fill(count)(library())
 
-  class PartialLibrary private[LibraryFactory] (library: Library) {
-    def withId(id: Id[Library]) = new PartialLibrary(library.copy(id = Some(id)))
-    def withId(id: Int) = new PartialLibrary(library.copy(id = Some(Id[Library](id))))
-    def withUser(id: Int) = new PartialLibrary(library.copy(ownerId = Id[User](id)))
-    def withUser(id: Id[User]) = new PartialLibrary(library.copy(ownerId = id))
-    def withUser(user: User) = new PartialLibrary(library.copy(ownerId = user.id.get))
-    def withMemberCount(memberCount: Int) = new PartialLibrary(library.copy(memberCount = memberCount, lastKept = Some(currentDateTime)))
-    def withKeepCount(keepCount: Int) = new PartialLibrary(library.copy(keepCount = keepCount))
-    def withName(name: String) = new PartialLibrary(library.copy(name = name))
-    def withDesc(desc: String) = new PartialLibrary(library.copy(description = Some(desc)))
-    def withSlug(slug: String) = new PartialLibrary(library.copy(slug = LibrarySlug(slug)))
+  case class PartialLibrary private[LibraryFactory] (
+      library: Library,
+      followers: Seq[User] = Seq.empty[User]) {
+    def withId(id: Id[Library]) = this.copy(library = library.copy(id = Some(id)))
+    def withId(id: Int) = this.copy(library = library.copy(id = Some(Id[Library](id))))
+    def withUser(id: Int) = this.copy(library = library.copy(ownerId = Id[User](id)))
+    def withUser(id: Id[User]) = this.copy(library = library.copy(ownerId = id))
+    def withUser(user: User) = this.copy(library = library.copy(ownerId = user.id.get))
+    def withMemberCount(memberCount: Int) = this.copy(library = library.copy(memberCount = memberCount, lastKept = Some(currentDateTime)))
+    def withKeepCount(keepCount: Int) = this.copy(library = library.copy(keepCount = keepCount))
+    def withName(name: String) = this.copy(library = library.copy(name = name))
+    def withDesc(desc: String) = this.copy(library = library.copy(description = Some(desc)))
+    def withSlug(slug: String) = this.copy(library = library.copy(slug = LibrarySlug(slug)))
     def withColor(color: String): PartialLibrary = withColor(LibraryColor(color))
-    def withColor(color: LibraryColor) = new PartialLibrary(library.copy(color = Some(color)))
-    def withKind(kind: LibraryKind) = new PartialLibrary(library.copy(kind = kind))
-    def withState(state: State[Library]) = new PartialLibrary(library.copy(state = state))
-    def withVisibility(viz: LibraryVisibility) = new PartialLibrary(library.copy(visibility = viz))
-    def secret() = new PartialLibrary(library.copy(visibility = SECRET))
-    def published() = new PartialLibrary(library.copy(visibility = PUBLISHED))
-    def discoverable() = new PartialLibrary(library.copy(visibility = DISCOVERABLE))
-    def withLastKept() = new PartialLibrary(library.copy(lastKept = Some(currentDateTime)))
-    def withOrganization(id: Option[Id[Organization]]) = new PartialLibrary(library.copy(organizationId = id))
+    def withColor(color: LibraryColor) = this.copy(library = library.copy(color = Some(color)))
+    def withKind(kind: LibraryKind) = this.copy(library = library.copy(kind = kind))
+    def withState(state: State[Library]) = this.copy(library = library.copy(state = state))
+    def withVisibility(viz: LibraryVisibility) = this.copy(library = library.copy(visibility = viz))
+    def secret() = this.copy(library = library.copy(visibility = SECRET))
+    def published() = this.copy(library = library.copy(visibility = PUBLISHED))
+    def discoverable() = this.copy(library = library.copy(visibility = DISCOVERABLE))
+    def withLastKept() = this.copy(library = library.copy(lastKept = Some(currentDateTime)))
+    def withOrganization(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
+
+    def withFollowers(users: Seq[User]) = this.copy(followers = followers ++ users)
+
     def get: Library = library
   }
 

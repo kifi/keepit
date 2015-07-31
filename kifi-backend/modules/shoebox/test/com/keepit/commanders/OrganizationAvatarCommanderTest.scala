@@ -11,7 +11,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import com.keepit.commanders.OrganizationAvatarConfiguration.{ scaleSizes, cropSizes }
+import com.keepit.commanders.OrganizationAvatarConfiguration._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,8 +38,8 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     db.readWrite { implicit session =>
       val user1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abe").saved
       val user2 = UserFactory.user().withName("Bob", "Dole").withUsername("bob").saved
-      val org1 = inject[OrganizationRepo].save(Organization(name = "Abe's Hardware", ownerId = user1.id.get, handle = None, description = None, site = None))
-      val org2 = inject[OrganizationRepo].save(Organization(name = "Bob's Tools", ownerId = user2.id.get, handle = None, description = None, site = None))
+      val org1 = inject[OrganizationRepo].save(Organization(name = "Abe's Hardware", ownerId = user1.id.get, primaryHandle = None, description = None, site = None))
+      val org2 = inject[OrganizationRepo].save(Organization(name = "Bob's Tools", ownerId = user2.id.get, primaryHandle = None, description = None, site = None))
       inject[OrganizationMembershipRepo].save(org1.newMembership(userId = user1.id.get, role = OrganizationRole.ADMIN))
       inject[OrganizationMembershipRepo].save(org2.newMembership(userId = user2.id.get, role = OrganizationRole.ADMIN))
       (user1, user2, org1, org2)
@@ -47,7 +47,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
   }
 
   "organization avatar commander" should {
-    "upload new avatar, scaled and cropped" in {
+    "upload new avatar, and all processed derivatives" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
         val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
@@ -64,11 +64,11 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
 
         db.readOnlyMaster { implicit s =>
           val org1Avatars = repo.getByOrganization(org1.id.get)
-          org1Avatars.length === scaleSizes.length + cropSizes.length + 1
+          org1Avatars.length === OrganizationAvatarConfiguration.numSizes + 1
         }
       }
     }
@@ -87,11 +87,11 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
 
         db.readOnlyMaster { implicit s =>
           val org1Avatars =
-            repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
+            repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
         }
 
         {
@@ -103,12 +103,12 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         // All the images have been uploaded and persisted
-        store.all.keySet.size === 2 * (scaleSizes.length + cropSizes.length + 1)
+        store.all.keySet.size === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
 
         // Only the second avatars are active
         db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
-          repo.count === 2 * (scaleSizes.length + cropSizes.length + 1)
+          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
+          repo.count === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
         }
 
       }
@@ -130,11 +130,11 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
 
         db.readOnlyMaster { implicit s =>
           val org1Avatars =
-            repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
+            repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
         }
 
         {
@@ -145,13 +145,13 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         // No new images have been persisted in the image store
-        store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
 
         // But the appropriate avatars are in the DB now
         db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
-          repo.getByOrganization(org2.id.get).length === scaleSizes.length + cropSizes.length + 1
-          repo.count === 2 * (scaleSizes.length + cropSizes.length + 1)
+          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
+          repo.getByOrganization(org2.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
+          repo.count === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
         }
 
       }

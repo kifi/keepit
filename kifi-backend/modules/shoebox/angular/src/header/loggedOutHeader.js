@@ -52,7 +52,7 @@ angular.module('kifi')
 
     function reactToQueryChange() {
       if ($state.is('library.search')) {
-        $rootScope.$emit('searchTextUpdated', $scope.search.text, $scope.library.url);
+        $rootScope.$emit('searchTextUpdated', $scope.search.text, $scope.library.path || $scope.library.url);
       } else {
         $state.go('library.search', {q: $scope.search.text});
       }

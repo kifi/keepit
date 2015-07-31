@@ -209,4 +209,8 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def urlRuleAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RoverUrlRuleAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
+  @Provides @Singleton
+  def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+
 }

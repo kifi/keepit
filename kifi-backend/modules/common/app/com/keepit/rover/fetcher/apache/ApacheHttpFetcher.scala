@@ -57,9 +57,12 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           processResponse(request, apacheRequest, apacheResponse, f)
       }
     } recoverWith {
+      case ex: Throwable if Option(ex.getClass.getSimpleName).exists(_ == "FetchThrottlingException") => // Skip logging this one
+        Failure(ex)
       case ex: Throwable =>
-        val msg = s"${ex.getClass.getSimpleName} on fetching url [${request.url}}] if modified since [${request.ifModifiedSince}] using proxy [${request.proxy}]"
-        log.error(msg, ex)
+        val proxy = s" using proxy [${request.proxy}]"
+        val msg = s"${ex.getClass.getSimpleName} on fetching url [${request.url}}] if modified since [${request.ifModifiedSince}]$proxy. Cause: ${ex.getMessage}"
+        log.error(msg)
         Failure(ex)
     }
   }

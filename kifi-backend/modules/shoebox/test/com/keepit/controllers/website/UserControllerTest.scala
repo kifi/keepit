@@ -3,15 +3,18 @@ package com.keepit.controllers.website
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserConnectionsCommander
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.time._
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress /*, FakeMailModule*/ }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 
 import org.joda.time.DateTime
@@ -36,10 +39,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
-          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
+        val (user, org) = inject[Database].readWrite { implicit session =>
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").withId(Id[User](1)).withId("ae5d159c-5935-4ad5-b979-ea280cb6c7ba").saved
+
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ADMIN))
-          user
+          val org = OrganizationFactory.organization().withName("CamCo").withOwner(user).saved
+          (user, org)
         }
 
         val path = routes.UserController.currentUser().url
@@ -65,7 +70,16 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numLibraries":0,
               "numConnections":0,
               "numFollowers":0,
-              "pendingFriendRequests":0
+              "pendingFriendRequests":0,
+              "orgs":
+              [{
+                  "id":"${Organization.publicId(org.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user.externalId}",
+                  "handle":"${org.handle.value}",
+                  "name":"${org.name}",
+                  "numMembers":1,
+                  "numLibraries":0
+              }]
             }
           """)
 

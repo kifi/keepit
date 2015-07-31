@@ -28,7 +28,6 @@ trait TaskQueue[T] { self: Logging =>
       val queuedTaskCount = queuedTasks.length
       val failureCount = tasks.length - queuedTaskCount
       if (failureCount > 0) { log.error(s"Failed to add $failureCount tasks to $this") }
-      if (queuedTaskCount > 0) { log.info(s"Added $queuedTaskCount tasks to $this") }
       maybeQueuedTasks.toMap
     }
   }

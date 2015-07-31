@@ -110,7 +110,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
 
       // Ironman invites the Hulk to contribute to 'Science & Stuff'
-      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
 
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
@@ -167,13 +167,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
       val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
         uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(15), keptAt = t1.plusMinutes(15),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(30), keptAt = t1.plusMinutes(30),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
       val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
       val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
@@ -319,8 +319,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val orgMemberRepo = inject[OrganizationMembershipRepo]
 
           val (org, starkOrg) = db.readWrite { implicit session =>
-            val org = inject[OrganizationRepo].save(Organization(name = "Earth", ownerId = userAgent.id.get, handle = None, description = None, site = None))
-            val starkTowersOrg = inject[OrganizationRepo].save(Organization(name = "Stark Towers", ownerId = userIron.id.get, handle = None, description = None, site = None))
+            val org = inject[OrganizationRepo].save(Organization(name = "Earth", ownerId = userAgent.id.get, primaryHandle = None, description = None, site = None))
+            val starkTowersOrg = inject[OrganizationRepo].save(Organization(name = "Stark Towers", ownerId = userIron.id.get, primaryHandle = None, description = None, site = None))
             (org, starkTowersOrg)
           }
           // no privs on org, cannot move from personal space.
@@ -584,7 +584,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val (hulkMemberships, hulkLibs) = targetLib4._1.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
-          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_INSERT)
+          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_WRITE)
           val (hulkInvites, hulkInvitedLibs) = targetLib4._2.unzip
           hulkInvitedLibs.map(_.slug.value) === Seq("murica")
           hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
@@ -605,7 +605,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         libraryCommander.userAccess(userIron.id.get, libScience.id.get, None) === Some(LibraryAccess.OWNER) // test owner access
-        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_WRITE) // test membership accesss
         libraryCommander.userAccess(userIron.id.get, libShield.id.get, None) === None // test no membership (secret library)
         libraryCommander.userAccess(userHulk.id.get, libMurica.id.get, None) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
         libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
@@ -659,8 +659,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val orgOwner = UserFactory.user().withName("Bruce", "Lee").saved
           val user: User = UserFactory.user().withName("Jackie", "Chan").saved
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
-          val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None, description = None, site = None))
-          val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None, description = None, site = None))
+          val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, primaryHandle = None, description = None, site = None))
+          val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, primaryHandle = None, description = None, site = None))
           orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.ADMIN))
           (user, newLibrary, organization, otherOrg)
         }
@@ -704,7 +704,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val harrison = UserFactory.user().withName("Harrison", "Wells").withUsername("Harrison Wells").saved
 
           val barry = UserFactory.user().withName("Barry", "Allen").withUsername("The Flash").saved
-          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None, description = None, site = None))
+          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, primaryHandle = None, description = None, site = None))
           val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
 
           val membership = orgMemberRepo.save(starLabsOrg.newMembership(userId = barry.id.get, role = OrganizationRole.MEMBER))
@@ -908,7 +908,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Agent accepts invite to 'Murica'
           libraryInviteCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
-          libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+          libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' and gets READ_WRITE access
 
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.count === 6
@@ -919,7 +919,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
               (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
               (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
               (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
-              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED),
+              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
               (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
               (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
             )
@@ -1143,22 +1143,22 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.copyKeeps(userIron.id.get, mainLib.id.get, keeps4, None)
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2
-          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(0).uriId, userIron.id.get).nonEmpty === true
-          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(1).uriId, userIron.id.get).nonEmpty === true
+          keepRepo.getPrimaryByUriAndLibrary(keeps4(0).uriId, mainLib.id.get).nonEmpty === true
+          keepRepo.getPrimaryByUriAndLibrary(keeps4(1).uriId, mainLib.id.get).nonEmpty === true
         }
         // Copy from Main to Private Library
         libraryCommander.copyKeeps(userIron.id.get, secretLib.id.get, keeps4, None)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2 // [RPB] they are still in main; system libs are no longer disjoint!
           keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
-          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(0).uriId, userIron.id.get).nonEmpty === true
-          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(1).uriId, userIron.id.get).nonEmpty === true
+          keepRepo.getPrimaryByUriAndLibrary(keeps4(0).uriId, secretLib.id.get).nonEmpty === true
+          keepRepo.getPrimaryByUriAndLibrary(keeps4(1).uriId, secretLib.id.get).nonEmpty === true
         }
 
         // Copy from Private to User Created Library
         libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps4, None)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2 // [RPB] they are still in main; system libs are no longer disjoint!
           keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
           keepRepo.getByLibrary(libRW.id.get, 0, 20).length === 2
         }
@@ -1297,13 +1297,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // libMurica has 3 keeps
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
@@ -1379,13 +1379,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // libMurica has 3 keeps
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
@@ -1468,7 +1468,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
-          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1)
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1)
         )
 
         Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvites), Duration(10, "seconds"))
@@ -1484,7 +1484,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
-          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t2)
         )
         Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvitesAgain), Duration(10, "seconds"))
         eliza.inbox.size === 4
@@ -1500,7 +1500,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val memberCounts = libraryMembershipRepo.countWithLibraryIdByAccess(libMurica.id.get)
           memberCounts.owner === 1
           memberCounts.readOnly === 2
-          memberCounts.readInsert === 0
           memberCounts.readWrite === 0
         }
         val libraryCommander = inject[LibraryCommander]

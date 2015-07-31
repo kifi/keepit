@@ -54,10 +54,6 @@ case class Library(
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
-  val isDisjoint: Boolean = kind match {
-    case (LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET) => true
-    case _ => false
-  }
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 
@@ -213,20 +209,20 @@ object LibraryFilter {
 
 object LibraryPathHelper {
 
-  private def getHandle(owner: BasicUser, orgOpt: Option[Organization]): Handle = {
-    orgOpt match {
-      case Some(org) => org.getHandle
+  private def getHandle(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle]): Handle = {
+    orgHandleOpt match {
+      case Some(orgHandle) => orgHandle
       case None => owner.username
     }
   }
 
-  def formatLibraryPath(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
-    val handle = getHandle(owner, org)
+  def formatLibraryPath(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, orgHandleOpt)
     s"/${handle.value}/${slug.value}"
   }
 
-  def formatLibraryPathUrlEncoded(owner: BasicUser, org: Option[Organization], slug: LibrarySlug): String = {
-    val handle = getHandle(owner, org)
+  def formatLibraryPathUrlEncoded(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
+    val handle = getHandle(owner, orgHandleOpt)
     s"/${handle.urlEncoded}/${slug.urlEncoded}"
   }
 }
@@ -345,7 +341,7 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 
 object BasicLibrary {
   def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = LibraryPathHelper.formatLibraryPath(owner, org, library.slug)
+    val path = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }

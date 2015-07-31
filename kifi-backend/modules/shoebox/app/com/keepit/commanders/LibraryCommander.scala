@@ -117,6 +117,7 @@ class LibraryCommanderImpl @Inject() (
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     orgRepo: OrganizationRepo,
+    organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     handleCommander: HandleCommander,
     userRepo: UserRepo,
@@ -207,7 +208,7 @@ class LibraryCommanderImpl @Inject() (
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
         val numFollowers = counts.readOnly
-        val numCollaborators = counts.readWrite + counts.readInsert
+        val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membership = membershipsByLibraryId.get(libId).flatten
         libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
@@ -270,17 +271,18 @@ class LibraryCommanderImpl @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
+          val ownerHasAllKeepsViewExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
               case LibraryKind.SYSTEM_READ_IT_LATER | LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)) { //cached
+                if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
             }
@@ -295,12 +297,17 @@ class LibraryCommanderImpl @Inject() (
 
     val usersByIdF = {
       val allUsersShown = libraries.flatMap { library => memberInfosByLibraryId(library.id.get).all :+ library.ownerId }.toSet
-      db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
+      db.readOnlyReplicaAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
-    val orgsByIdF = {
+    val orgCardByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
-      db.readOnlyMasterAsync { implicit s => orgRepo.getByIds(allOrgsShown) }
+      db.readOnlyReplicaAsync { implicit s =>
+        val orgMap = orgRepo.getByIds(allOrgsShown)
+        orgMap.map {
+          case (id, _) => id -> organizationCommander.getOrganizationCardHelper(id, viewerUserIdOpt)
+        }
+      }
     }
 
     val futureCountsByLibraryId = {
@@ -352,12 +359,12 @@ class LibraryCommanderImpl @Inject() (
         keepInfos <- futureKeepInfosByLibraryId(libId)
         counts <- futureCountsByLibraryId(libId)
         usersById <- usersByIdF
-        orgsById <- orgsByIdF
+        orgCardById <- orgCardByIdF
         libImageOpt <- imagesF(libId)
       } yield {
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
-        val orgOpt = lib.organizationId.map(orgsById.apply)
+        val orgCardOpt = lib.organizationId.map(orgCardById.apply)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
@@ -387,7 +394,8 @@ class LibraryCommanderImpl @Inject() (
           attr = attr,
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
-          path = LibraryPathHelper.formatLibraryPath(owner = owner, org = orgOpt, slug = lib.slug)
+          path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgCardOpt.map(_.handle), slug = lib.slug),
+          org = orgCardOpt
         )
       }
     }
@@ -422,7 +430,7 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], CountWithLibraryIdByAccess) = {
-    val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
+    val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_WRITE)
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
@@ -435,7 +443,7 @@ class LibraryCommanderImpl @Inject() (
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess) //not cached
       val collaboratorsShown = collaborators.length
 
-      val numCollaborators = memberCount.readInsert + memberCount.readWrite
+      val numCollaborators = memberCount.readWrite
       val numMembers = numCollaborators + memberCount.readOnly
 
       // Get Followers
@@ -821,8 +829,11 @@ class LibraryCommanderImpl @Inject() (
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 2) { implicit s =>
         libraryRepo.save(oldLibrary.sanitizeForDelete)
+      }
+      db.readOnlyMaster { implicit s =>
+        require(libraryRepo.get(oldLibrary.id.get).state == LibraryStates.INACTIVE, s"Library ${oldLibrary.id.get} deletion failed")
       }
       searchClient.updateLibraryIndex()
       None
@@ -1346,32 +1357,22 @@ class LibraryCommanderImpl @Inject() (
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Keep] = {
           implicit val session = s
 
-          val currentKeepOpt = if (toLibrary.isDisjoint)
-            keepRepo.getPrimaryInDisjointByUriAndUser(k.uriId, userId)
-          else
-            keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+          val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
 
           currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
+                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
+                source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
-              if (existingKeep.inDisjointLib) {
-                val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                  inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-                combineTags(k.id.get, existingKeep.id.get)
-                Right(newKeep)
-              } else {
-                combineTags(k.id.get, existingKeep.id.get)
-                Left(LibraryError.AlreadyExistsInDest)
-              }
+              combineTags(k.id.get, existingKeep.id.get)
+              Left(LibraryError.AlreadyExistsInDest)
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
@@ -1395,29 +1396,22 @@ class LibraryCommanderImpl @Inject() (
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Keep] = {
           implicit val session = s
 
-          val currentKeepOpt = if (toLibrary.isDisjoint)
-            keepRepo.getPrimaryInDisjointByUriAndUser(k.uriId, userId)
-          else
-            keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+          val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
 
           currentKeepOpt match {
             case None =>
               val movedKeep = keepRepo.save(k.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
+                state = KeepStates.ACTIVE))
               Right(movedKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val movedKeep = keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
+                state = KeepStates.ACTIVE))
               keepRepo.save(k.copy(state = KeepStates.INACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>
               if (toLibraryId == k.libraryId.get) {
                 Left(LibraryError.AlreadyExistsInDest)
-              } else if (existingKeep.inDisjointLib) {
-                val newKeep = keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility, inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
-                combineTags(k.id.get, existingKeep.id.get)
-                Right(newKeep)
               } else {
                 keepRepo.save(k.copy(state = KeepStates.INACTIVE))
                 combineTags(k.id.get, existingKeep.id.get)
@@ -1425,7 +1419,7 @@ class LibraryCommanderImpl @Inject() (
               }
           }
         }
-        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY), saveKeep)
         Future {
           libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
         }
@@ -1541,7 +1535,8 @@ class LibraryCommanderImpl @Inject() (
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               path = info.path,
-              kind = lib.kind)
+              kind = lib.kind,
+              org = info.org)
         }.seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1552,6 +1547,7 @@ class LibraryCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerOpt.map { viewer =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
     } getOrElse Map.empty
+    val orgCards = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), viewerOpt.flatMap(_.id))
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -1559,7 +1555,7 @@ class LibraryCommanderImpl @Inject() (
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
 
-        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE))
         val followers = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY))
         val collabIds = collaborators.map(_.userId).toSet
         val followerIds = followers.map(_.userId).toSet
@@ -1570,8 +1566,8 @@ class LibraryCommanderImpl @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val orgOpt = lib.organizationId.map(orgRepo.get)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgOpt, lib.slug)
+      val orgCardOpt = lib.organizationId.map(orgCards.apply)
+      val path = LibraryPathHelper.formatLibraryPath(owner, orgCardOpt.map(_.handle), lib.slug)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
@@ -1579,14 +1575,16 @@ class LibraryCommanderImpl @Inject() (
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt, path)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt, path, orgCardOpt)
     }
   }
 
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
-      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
     val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
+
+    val orgCardById = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), Some(viewerId))
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -1596,15 +1594,15 @@ class LibraryCommanderImpl @Inject() (
         val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
         val numCollaborators = libMems.length - 1
         val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
-          .sortBy(m => (m.userId != viewerId, m.access == LibraryAccess.READ_INSERT))
+          .sortBy(_.userId != viewerId)
           .take(4).map(m => allBasicUsers(m.userId))
         (numFollowers, numCollaborators, collabsSample)
       } else {
         (0, 0, Seq.empty)
       }
-      val orgOpt = lib.organizationId.map(orgRepo.get)
+      val orgCardOpt = lib.organizationId.map(orgCardById.apply)
       val owner = basicUserRepo.load(lib.ownerId)
-      val path = LibraryPathHelper.formatLibraryPath(owner = owner, org = orgOpt, slug = lib.slug)
+      val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgCardOpt.map(_.handle), slug = lib.slug)
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
@@ -1625,13 +1623,14 @@ class LibraryCommanderImpl @Inject() (
         following = None, // not needed
         membership = None, // not needed
         path = path,
-        modifiedAt = lib.updatedAt)
+        modifiedAt = lib.updatedAt,
+        org = orgCardOpt)
       (info, viewerMem, subscriptions)
     }
   }
 
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, orgCard: Option[OrganizationCard]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1651,7 +1650,8 @@ class LibraryCommanderImpl @Inject() (
       membership = membershipOpt.map(LibraryMembershipInfo.fromMembership(_)),
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
-      path = path
+      path = path,
+      org = orgCard
     )
   }
 

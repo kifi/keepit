@@ -6,18 +6,19 @@ angular.module('kifi')
   '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
   function ($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator) {
     var organization = profile.organization;
-    var newLibraryIds = {};
     var libraryLazyLoader = new Paginator(librarySource);
+    var newLibraryIds = {};
 
     function librarySource(pageNumber, pageSize) {
       return orgProfileService
-        .getOrgLibraries(organization.id, pageNumber, pageSize)
+        .getOrgLibraries(organization.id, pageNumber * pageSize, pageSize)
         .then(function (libData) {
           return libData.libraries;
         });
     }
 
     function resetAndFetchLibraries() {
+      newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }

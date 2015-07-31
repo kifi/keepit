@@ -23,15 +23,15 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
   def configure() = {}
 
   @Provides @Singleton
-  def mixpanel(): MixpanelClient = {
+  def mixpanel(primaryOrgProvider: PrimaryOrgProvider): MixpanelClient = {
     val projectToken: String = current.configuration.getString("mixpanel.token").get
-    new MixpanelClientImpl(projectToken)
+    new MixpanelClientImpl(projectToken, primaryOrgProvider)
   }
 
   @Provides @Singleton
-  def amplitude(): AmplitudeClient = {
+  def amplitude(primaryOrgProvider: PrimaryOrgProvider): AmplitudeClient = {
     val apiKey: String = current.configuration.getString("amplitude.api_key").get
-    new AmplitudeClientImpl(apiKey)
+    new AmplitudeClientImpl(apiKey, primaryOrgProvider)
   }
 }
 
@@ -51,8 +51,8 @@ case class DevAnalyticsModule() extends AnalyticsModule {
   }
 
   @Provides @Singleton
-  def amplitude(): AmplitudeClient = {
+  def amplitude(primaryOrgProvider: PrimaryOrgProvider): AmplitudeClient = {
     val apiKey: String = current.configuration.getString("amplitude.api_key").get
-    new AmplitudeClientImpl(apiKey)
+    new AmplitudeClientImpl(apiKey, primaryOrgProvider)
   }
 }

@@ -32,7 +32,6 @@ case class TwitterUserInfo(
       val s = profileImageUrl.toString
       val processed = s match {
         case profileImagePattern(orig, ext) =>
-          log.info(s"[pictureUrl] matched orig=$orig ext=$ext")
           s"$orig.$ext"
         case _ => s
       }

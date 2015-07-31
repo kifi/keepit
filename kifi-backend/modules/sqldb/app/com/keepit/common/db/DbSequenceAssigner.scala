@@ -23,12 +23,13 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
     var currentBatchSize = batchSize
     while (!done && iter < MAX_ITER) {
       iter += 1
-      log.info(s"${this.getClass.getSimpleName} going to assignSeqNum, iter = $iter")
       try {
         done = (db.readWrite { implicit session => repo.assignSequenceNumbers(currentBatchSize) } <= 0)
         errorCount.set(0)
         currentBatchSize = batchSize
-        log.info(s"${this.getClass.getSimpleName} succeeded to assignSeqNum, iter = $iter")
+        if (iter >= MAX_ITER) {
+          log.info(s"[DbSequenceAssigner ]${this.getClass.getSimpleName} iter = $iter; falling behind?")
+        }
       } catch {
         case e: UnsupportedOperationException =>
           reportUnsupported(e)

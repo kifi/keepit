@@ -50,7 +50,7 @@ trait HttpUri {
   def service: String = ""
   def summary: String = url.abbreviate(100)
   override def equals(obj: Any) = obj.asInstanceOf[HttpUri].url == url
-  override def toString(): String = s"$url for service $serviceInstanceOpt"
+  override def toString(): String = s"$url to ${serviceInstanceOpt.map(_.remoteService.amazonInstanceInfo.getName)}"
 }
 
 case class DirectUrl(val url: String) extends HttpUri

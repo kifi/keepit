@@ -38,10 +38,10 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
           val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, note = Some("Google Note"),
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, urlId = url2.id.get, note = None,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
           (library)
         }
         val commander = inject[FeedCommander]
@@ -77,10 +77,10 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
             val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, note = Some("Google Note"),
               uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
             val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, urlId = url2.id.get, note = None,
               uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
             (library)
           }
           val commander = inject[FeedCommander]
@@ -113,10 +113,10 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
             val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, note = Some("Google Note"),
               uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
             val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, urlId = url2.id.get, note = None,
               uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
             (library)
           }
           val commander = inject[FeedCommander]
