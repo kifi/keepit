@@ -18,7 +18,7 @@ import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.WebSocket
 import play.api.test.Helpers._
 
-class ElizaWebSocketTest extends WebSocketTest with ElizaApplicationInjector with NoTimeConversions {
+class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInjector with NoTimeConversions {
 
   val modules = List(
     FakeElizaStoreModule(),
@@ -50,7 +50,8 @@ class ElizaWebSocketTest extends WebSocketTest with ElizaApplicationInjector wit
       running(new ElizaApplication(modules: _*)) {
 
         setupSocialUser
-        List() must leadToSocketOutput[JsArray](equalTo(List(Json.arr("hi"), Json.arr("bye", "session"))))
+
+        socketOutput must equalTo(List(Json.arr("hi"), Json.arr("bye", "session")))
 
       }
     }
@@ -59,7 +60,12 @@ class ElizaWebSocketTest extends WebSocketTest with ElizaApplicationInjector wit
       running(new ElizaApplication(modules: _*)) {
 
         setupSocialUser
-        List(Json.arr("ping"), Json.arr("ping")) must leadToSocketOutput[JsArray](equalTo(List(Json.arr("hi"), Json.arr("pong"), Json.arr("pong"), Json.arr("bye", "session"))))
+
+        in {
+          Json.arr("ping")
+        }
+
+        socketOutput must equalTo(List(Json.arr("hi"), Json.arr("pong"), Json.arr("bye", "session")))
 
       }
     }

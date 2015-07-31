@@ -4,17 +4,25 @@ import com.keepit.eliza.social.FakeSecureSocial
 import org.specs2.mutable.Specification
 import org.specs2.matcher.{ MatchResult, Expectable, Matcher }
 import org.specs2.time.NoTimeConversions
-import play.api.libs.iteratee.{ Iteratee, Enumerator }
+import play.api.libs.iteratee.{ Enumeratee, Iteratee, Enumerator }
 import play.api.mvc.WebSocket
 import play.api.test.FakeRequest
 
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.{ Await, Promise, Future }
 
-trait WebSocketTest extends Specification with NoTimeConversions {
+trait WebSocketTest[A] extends Specification with NoTimeConversions {
 
-  def feedToSocket[A](inputs: Seq[A], ws: WebSocket[A, A]): Future[Seq[A]] = {
-    val feed = Enumerator.enumerate(inputs) andThen Enumerator.eof // use a delayed end so that everything can process in time
+  val socketIn: mutable.MutableList[() => A] = mutable.MutableList()
+
+  def feedToSocket(ws: WebSocket[A, A]): Future[Seq[A]] = {
+    val feed = (Enumerator.enumerate(socketIn) through Enumeratee.map { fn =>
+      fn()
+    }) andThen Enumerator.eof
+
+    //    val feed = Enumerator.eof[A]
+
     val resultsPromise = Promise[Seq[A]]()
 
     val out = Iteratee.getChunks[A].map { outputs =>
@@ -34,18 +42,18 @@ trait WebSocketTest extends Specification with NoTimeConversions {
     }
   }
 
-  class WebSocketMatcher[A](m: Matcher[Seq[A]], retries: Int = 0, timeout: FiniteDuration = 60.seconds)(implicit ws: WebSocket[A, A]) extends Matcher[Seq[A]] {
-
-    override def apply[N <: Seq[A]](t: Expectable[N]): MatchResult[N] = {
-      m.await(retries, timeout).apply(t.map { value: Seq[A] =>
-        feedToSocket(value, ws)
-      }).asInstanceOf[MatchResult[N]]
-    }
-
-    def after(newRetries: Int = 0, newTimeout: FiniteDuration = 60.seconds) = new WebSocketMatcher(m, newRetries, newTimeout)
-
+  def in(that: () => A) = {
+    socketIn += that
   }
 
-  def leadToSocketOutput[A](m: Matcher[Seq[A]])(implicit ws: WebSocket[A, A]): WebSocketMatcher[A] = new WebSocketMatcher(m)
+  def in(that: A) = {
+    socketIn += { () => that }
+  }
+
+  def socketOutput(timeout: FiniteDuration = 60.seconds)(implicit ws: WebSocket[A, A]): Seq[A] = {
+    Await.result(feedToSocket(ws), timeout)
+  }
+
+  def socketOutput(implicit ws: WebSocket[A, A]): Seq[A] = socketOutput()(ws)
 
 }
