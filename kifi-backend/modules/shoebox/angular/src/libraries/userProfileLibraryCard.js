@@ -15,7 +15,7 @@ angular.module('kifi')
     }
 
     function updateCollaborators(numCollaborators, ignored, scope) {
-      var n = 3; // at most 4 circles, one spot reserved for owner
+      var n = scope.lib.org ? 2 : 3; // at most 4 circles, one spot reserved for owner
       if (canModifyCollaborators(scope.lib)) {
         n--; // one spot reserved for add collaborator button
       }
