@@ -4,6 +4,6 @@
       <span class="kf-upl-create-card-add-icon svg-create-library"></span>
       <div class="kf-upl-create-card-text">Create a Library</div>
     </button>
-    <div kf-user-profile-library-card="::library" ng-repeat="library in libraries"></div>
+    <div kf-user-profile-library-card="::library" ng-repeat="library in libraries" profile-id="{{::userProfile.id}}"></div>
   </div>
 </div>
