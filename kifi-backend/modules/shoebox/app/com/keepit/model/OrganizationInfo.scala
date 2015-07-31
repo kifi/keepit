@@ -40,7 +40,7 @@ case class MembershipInfo(
   permissions: Set[OrganizationPermission],
   role: Option[OrganizationRole])
 object MembershipInfo {
-  val defaultWrites: Writes[MembershipInfo] = (
+  implicit val defaultWrites: Writes[MembershipInfo] = (
     (__ \ 'isInvited).write[Boolean] and
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
     (__ \ 'role).writeNullable[OrganizationRole]
@@ -52,14 +52,10 @@ case class OrganizationView(
   membershipInfo: MembershipInfo)
 
 object OrganizationView {
-  val websiteWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
+  val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
       "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
-  val mobileWrites = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
-  }
-  val defaultWrites = websiteWrites
 }
 
 // OrganizationCard should ONLY contain public information. No internal ids.
