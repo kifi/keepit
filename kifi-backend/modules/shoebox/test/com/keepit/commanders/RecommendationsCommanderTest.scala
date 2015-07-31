@@ -165,7 +165,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val muricaKeeps = for (i <- 0 to muricaSites.length - 1) yield {
         keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = muricaUrls(i).url, urlId = muricaUrls(i).id.get,
           uriId = muricaUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(i),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       }
 
       // The Science keeps are all newer than the Murica keeps (see keptAt = t1...)
@@ -174,7 +174,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val scienceKeeps = for (i <- 0 to scienceSites.length - 1) yield {
         keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = scienceUrls(i).url, urlId = scienceUrls(i).id.get,
           uriId = scienceUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(muricaSites.length + i),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libScience.id.get), inDisjointLib = libScience.isDisjoint))
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libScience.id.get)))
       }
 
       val ironUris = for (site <- ironSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
@@ -182,7 +182,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val ironKeeps = for (i <- 0 to ironSites.length - 1) yield {
         keepRepo.save(Keep(title = Some("Reddit"), userId = userIron.id.get, url = ironUrls(i).url, urlId = ironUrls(i).id.get,
           uriId = ironUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(i),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libIron.id.get), inDisjointLib = libIron.isDisjoint))
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libIron.id.get)))
       }
     }
 

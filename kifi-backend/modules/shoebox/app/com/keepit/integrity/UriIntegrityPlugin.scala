@@ -68,10 +68,7 @@ class UriIntegrityActor @Inject() (
         val libId = oldBm.libraryId.get // fail if there's no library
         val userId = oldBm.userId
         val newUriId = newUri.id.get
-        val currentBookmarkOpt = if (oldBm.inDisjointLib)
-          keepRepo.getPrimaryInDisjointByUriAndUser(newUriId, userId)
-        else
-          keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
+        val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
 
         currentBookmarkOpt match {
           case None =>

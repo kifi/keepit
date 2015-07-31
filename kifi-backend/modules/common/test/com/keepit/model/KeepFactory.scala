@@ -14,7 +14,6 @@ object KeepFactory {
     val userId = Id[User](-1 * idx.incrementAndGet())
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
-      inDisjointLib = true,
       urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,

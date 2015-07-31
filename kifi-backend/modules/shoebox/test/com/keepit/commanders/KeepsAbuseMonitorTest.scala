@@ -57,13 +57,13 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
           keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           keepRepo.save(Keep(title = Some("A3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           user1
         }
 
@@ -95,13 +95,13 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
           keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           keepRepo.save(Keep(title = Some("A3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           user1
         }
         val airbrake = inject[AirbrakeNotifier].asInstanceOf[FakeAirbrakeNotifier]
