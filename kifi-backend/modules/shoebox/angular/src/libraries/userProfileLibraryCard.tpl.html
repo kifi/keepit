@@ -12,7 +12,6 @@
       </div>
     </div>
     <div class="kf-upl-count-line" ng-class="{'kf-can-write': canWrite}">
-      <span class="kf-upl-card-collab svg-collaborators-white" title="A collaborative library" ng-if="lib.numCollaborators"></span>
       <span class="kf-upl-card-private svg-card-lock" ng-class="{'kf-collab': lib.numCollaborators}" title="A private library" ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"></span>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
