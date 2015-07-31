@@ -289,45 +289,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     updatedMembership.right.map { success =>
       // on success accept invitations
       db.readWrite { implicit s =>
-        // Notify inviters on organization joined.
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
         }
       }
       success
-    }
-  }
-
-  def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
-    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
-    invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} has joined ${org.name}"
-      val inviterId = invite.inviterId
-      elizaClient.sendGlobalNotification( //push sent
-        userIds = Set(inviterId),
-        title = title,
-        body = s"You invited ${invitee.fullName} to join ${org.name}.",
-        linkText = s"See ${invitee.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
-        imageUrl = inviteeImage,
-        sticky = false,
-        category = NotificationCategory.User.ORGANIZATION_JOINED,
-        extra = Some(Json.obj(
-          "member" -> BasicUser.fromUser(invitee),
-          "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
-        ))
-      )
-      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-      if (canSendPush) {
-        elizaClient.sendUserPushNotification(
-          userId = inviterId,
-          message = title,
-          recipient = invitee,
-          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-          category = UserPushNotificationCategory.NewOrganizationMember)
-      }
     }
   }
 
