@@ -1,14 +1,21 @@
 package com.keepit.eliza.social
 
+import com.keepit.social.{ SocialId, SocialNetworkType }
 import securesocial.core.{ AuthenticationMethod, SocialUser, IdentityId }
 
 object FakeSecureSocial {
 
   val FAKE_SID = "fake_sid"
 
+  val FAKE_ID = "fake_user_id"
+
+  val FAKE_SOCIAL_ID = SocialId(FAKE_ID)
+
+  val FAKE_NETWORK_TYPE = SocialNetworkType("email") // not fake so that it doesn't barf
+
   val FAKE_IDENTITY_ID = IdentityId(
-    userId = "fake_user_id",
-    providerId = "email" // not fake so that SocialNetworkType doesn't barf
+    userId = FAKE_ID,
+    providerId = FAKE_NETWORK_TYPE.name
   )
 
   val FAKE_AUTH_METHOD = AuthenticationMethod(
