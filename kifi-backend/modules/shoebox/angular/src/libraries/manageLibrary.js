@@ -268,9 +268,9 @@ angular.module('kifi')
               // If something went wrong, go to the main page
               if (!redirectToSpaceParams.handle) {
                 $location.path('/');
+              } else {
+                $state.go('userOrOrg', redirectToSpaceParams);
               }
-
-              $state.go('userOrOrg', redirectToSpaceParams);
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
