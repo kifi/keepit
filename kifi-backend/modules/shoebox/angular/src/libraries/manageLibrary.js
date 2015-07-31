@@ -210,7 +210,7 @@ angular.module('kifi')
             }
 
             if (!returnAction) {
-              $location.url(newLibrary.url);
+              $location.url(newLibrary.url || newLibrary.path);
             } else {
               returnAction(newLibrary);
             }
@@ -254,7 +254,7 @@ angular.module('kifi')
           libraryService.deleteLibrary(scope.library.id).then(function () {
             // If we were on the deleted library's page, return to the homepage.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === scope.library.url)) {
+                ($state.href('library.keeps') === scope.library.path)) {
               $location.url('/');
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {

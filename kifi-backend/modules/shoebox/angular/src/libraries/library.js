@@ -176,7 +176,7 @@ angular.module('kifi')
       trackShareEvent('clickedShareFacebook');
       $FB.ui({
         method: 'share',
-        href: env.origin + library.url +
+        href: env.origin + (library.path || library.url) +
           '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
           '&kcid=na-vf_facebook-library_share-lid_' + library.id
       });
@@ -188,7 +188,7 @@ angular.module('kifi')
 
     $scope.shareTwitter = function (event) {
       trackShareEvent('clickedShareTwitter');
-      var absUrl = env.origin + library.url;
+      var absUrl = env.origin + (library.path || library.url);
       event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
         original_referer: absUrl,
         text: 'Discover this amazing @Kifi library about ' + library.name + '!',
