@@ -265,6 +265,11 @@ angular.module('kifi')
                 )
               };
 
+              // If something went wrong, go to the main page
+              if (!redirectToSpaceParams.handle) {
+                $location.path('/');
+              }
+
               $state.go('userOrOrg', redirectToSpaceParams);
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
