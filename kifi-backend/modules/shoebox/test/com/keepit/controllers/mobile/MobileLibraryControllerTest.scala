@@ -291,7 +291,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
 
-          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_WRITE))
           (userA, userB, libraryB1, inv1)
         }
       }

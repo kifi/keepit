@@ -45,7 +45,7 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
 
       val userIdsToBeAdded = userIds -- existingCandidates.map(_.userId).toSet
       userIdsToBeAdded.foreach { uid =>
-        orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(orgId = orgId, userId = uid))
+        orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(organizationId = orgId, userId = uid))
       }
     }
   }

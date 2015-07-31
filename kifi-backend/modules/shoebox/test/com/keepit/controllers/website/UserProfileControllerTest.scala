@@ -27,6 +27,8 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
@@ -172,12 +174,14 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
     "get profile" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, user4, user5, lib1, user5lib) = db.readWrite { implicit session =>
+        val (user1, user2, user3, user4, user5, lib1, user5lib, org1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          val org = OrganizationFactory.organization().withName("America").withOwner(user1).saved
 
           inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           connect(user1 -> user2,
@@ -187,7 +191,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           val user1secretLib = libraries(3).map(_.withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).withOrganization(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
           val user3lib = library().withUser(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
@@ -203,7 +207,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           keeps(3).map(_.withLibrary(user1lib)).saved
           keep().withLibrary(user3lib).saved
 
-          (user1, user2, user3, user4, user5, user1lib, user5lib)
+          (user1, user2, user3, user4, user5, user1lib, user5lib, org)
         }
         db.readOnlyMaster { implicit s =>
           val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
@@ -244,7 +248,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         //non existing username
         status(getProfile(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
 
-        //seeing a profile from an anonymos user
+        //seeing a profile from an anonymous user
         val anonViewer = getProfile(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
@@ -263,7 +267,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections": 3,
               "numFollowers": 2,
               "biography": "First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs": [
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
 
@@ -288,7 +302,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numFollowers": 3,
               "numInvitedLibraries": 1,
               "biography": "First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs": [
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
 
@@ -313,7 +337,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections": 3,
               "numFollowers": 3,
               "biography": "First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs": [
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
       }

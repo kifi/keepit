@@ -276,7 +276,7 @@ class AdminUserController @Inject() (
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
       val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId).toSet).values.toList
+      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -1009,7 +1009,7 @@ class AdminUserController @Inject() (
     db.readOnlyReplica { implicit s =>
       val users = userRepo.getAllUsers(userIds).values.toList
       val orgs = users map { user =>
-        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.orgId).toSet
+        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
       }

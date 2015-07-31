@@ -40,21 +40,42 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+        scope.space = {
+          current: profileService.me,
+          destination: profileService.me
+        };
         scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
-        scope.thisSpace = profileService.me; // Default
 
         // Find out where we're opening this from
         if ('organization' in scope.modalData) {
-          var thisSpace = scope.modalData.organization;
+          var orgSpace = scope.modalData.organization;
           // Angular is very picky about the object you're using.
-          scope.thisSpace = scope.spaces.filter(function(space) {
-            return (space.id === thisSpace.id);
+          scope.space.current = scope.spaces.filter(function(space) {
+            return (space.id === orgSpace.id);
           })[0];
         }
-        scope.destinationSpace = scope.thisSpace; // Default
+        scope.space.destination = scope.space.current;
 
-        scope.setSpace = function(space) {
-          scope.destinationSpace = space;
+        scope.onChangeSpace = function () {
+          var currIsOrg = scope.spaceIsOrg(scope.space.current);
+          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
+
+          if (currIsOrg !== destIsOrg) {
+            if (currIsOrg) {
+              if (scope.library.visibility === 'organization') {
+                scope.library.visibility = 'secret';
+              }
+            } else {
+              if (scope.library.visibility === 'secret') {
+                scope.library.visibility = 'organization';
+              }
+            }
+          }
+
+          // Prevent non-org lib from having visibility === 'organization'
+          if (!destIsOrg && scope.library.visibility === 'organization') {
+            scope.library.visibility = 'secret';
+          }
         };
 
         //
@@ -97,6 +118,15 @@ angular.module('kifi')
 
         scope.removeSubscription = function (index) {
           scope.library.subscriptions.splice(index,1);
+        };
+
+
+        scope.spaceIsOrg = function (space) {
+          return 'numMembers' in space;
+        };
+
+        var ownerType = function(space) {
+          return scope.spaceIsOrg(space) ? 'org' : 'user';
         };
 
         scope.saveLibrary = function () {
@@ -151,16 +181,8 @@ angular.module('kifi')
             return sub.name !== '' && sub.info.url !== '';
           });
 
-          var spaceIsOrg = function(space) {
-            return 'numMembers' in space;
-          };
-
-          var ownerType = function(space) {
-            return spaceIsOrg(space) ? 'org' : 'user';
-          };
-
           var owner = {};
-          owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
+          owner[ownerType(scope.space.destination)] = scope.space.destination.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -183,12 +205,12 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
-            if (scope.thisSpace.id !== scope.destinationSpace.id) {
+            if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
 
             if (!returnAction) {
-              $location.url(newLibrary.url);
+              $location.url(newLibrary.url || newLibrary.path);
             } else {
               returnAction(newLibrary);
             }
@@ -232,7 +254,7 @@ angular.module('kifi')
           libraryService.deleteLibrary(scope.library.id).then(function () {
             // If we were on the deleted library's page, return to the homepage.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === (scope.library.path || scope.library.url))) {
+                ($state.href('library.keeps') === scope.library.path)) {
               $location.url('/');
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {

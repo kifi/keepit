@@ -110,7 +110,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
 
       // Ironman invites the Hulk to contribute to 'Science & Stuff'
-      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
 
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
@@ -584,7 +584,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val (hulkMemberships, hulkLibs) = targetLib4._1.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
-          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_INSERT)
+          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_WRITE)
           val (hulkInvites, hulkInvitedLibs) = targetLib4._2.unzip
           hulkInvitedLibs.map(_.slug.value) === Seq("murica")
           hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
@@ -605,7 +605,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         libraryCommander.userAccess(userIron.id.get, libScience.id.get, None) === Some(LibraryAccess.OWNER) // test owner access
-        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_WRITE) // test membership accesss
         libraryCommander.userAccess(userIron.id.get, libShield.id.get, None) === None // test no membership (secret library)
         libraryCommander.userAccess(userHulk.id.get, libMurica.id.get, None) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
         libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
@@ -908,7 +908,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Agent accepts invite to 'Murica'
           libraryInviteCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
-          libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+          libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' and gets READ_WRITE access
 
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.count === 6
@@ -919,7 +919,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
               (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
               (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
               (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
-              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED),
+              (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
               (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
               (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
             )
@@ -1468,7 +1468,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1),
-          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1)
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1)
         )
 
         Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvites), Duration(10, "seconds"))
@@ -1484,7 +1484,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
-          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
+          LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t2)
         )
         Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvitesAgain), Duration(10, "seconds"))
         eliza.inbox.size === 4
@@ -1500,7 +1500,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val memberCounts = libraryMembershipRepo.countWithLibraryIdByAccess(libMurica.id.get)
           memberCounts.owner === 1
           memberCounts.readOnly === 2
-          memberCounts.readInsert === 0
           memberCounts.readWrite === 0
         }
         val libraryCommander = inject[LibraryCommander]

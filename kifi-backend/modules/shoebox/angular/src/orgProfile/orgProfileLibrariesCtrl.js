@@ -11,7 +11,7 @@ angular.module('kifi')
 
     function librarySource(pageNumber, pageSize) {
       return orgProfileService
-        .getOrgLibraries(organization.id, pageNumber, pageSize)
+        .getOrgLibraries(organization.id, pageNumber * pageSize, pageSize)
         .then(function (libData) {
           return libData.libraries;
         });
