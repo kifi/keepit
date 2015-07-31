@@ -42,8 +42,8 @@ angular.module('kifi')
           if (scope.share.message) {
             opts.message = scope.share.message;
           }
-          var cb = scope.modalData.returnAction;
-          return orgProfileService.sendOrgMemberInvite(scope.organization.id, opts).then(cb);
+
+          return orgProfileService.sendOrgMemberInvite(scope.organization.id, opts).then(scope.modalData.returnAction);
         }
 
         // function trackShareEvent(eventName, attr) {
