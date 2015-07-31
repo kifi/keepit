@@ -2,7 +2,7 @@ package com.keepit.eliza.ws
 
 import com.google.inject.Injector
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
-import com.keepit.eliza.social.FakeSecureSocialAuthenticatorPlugin
+import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialAuthenticatorPlugin }
 import com.keepit.inject.InjectorProvider
 import com.keepit.test.{ TestInjectorProvider, TestInjector }
 import org.specs2.mutable.Specification
@@ -31,7 +31,7 @@ trait WebSocketTest extends Specification with TestInjectorProvider with NoTimeC
         resultsPromise.failure(thrown)
     }.map(_ => ())
 
-    injected.websocket(None, None).f(FakeRequest("GET", "/ws?sid=" + FakeSecureSocialAuthenticatorPlugin.FAKE_SID)).flatMap {
+    injected.websocket(None, None).f(FakeRequest("GET", "/ws?sid=" + FakeSecureSocial.FAKE_SID)).flatMap {
       case Right(fn) =>
         fn(feed, out)
         resultsPromise.future

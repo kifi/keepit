@@ -4,7 +4,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.social.FakeSecureSocialAuthenticatorPluginModule
+import com.keepit.eliza.social.{ FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -23,7 +23,8 @@ class ElizaWebSocketTest extends WebSocketTest with ElizaApplicationInjector wit
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
     FakeUserActionsModule(),
-    FakeSecureSocialAuthenticatorPluginModule()
+    FakeSecureSocialAuthenticatorPluginModule(),
+    FakeSecureSocialUserPluginModule()
   )
 
   "SharedWsMessagingController" should {
