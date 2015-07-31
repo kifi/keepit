@@ -75,7 +75,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
       db.readOnlyReplica { implicit s =>
         organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
-          organizationMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId).sorted.headOption
+          organizationMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
         }
       }
     }
