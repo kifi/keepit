@@ -1066,10 +1066,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           (user1, library1, keep1, keep2)
         }
@@ -1154,10 +1154,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           val userB = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("test").saved
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
@@ -1526,7 +1526,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = lib1.visibility, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = lib1.visibility, libraryId = Some(lib1.id.get)))
 
           keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("k1"))
           (user1, lib1, keep1)

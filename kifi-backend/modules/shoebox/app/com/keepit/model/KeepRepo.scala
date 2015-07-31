@@ -22,7 +22,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
-  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getByUser(userId: Id[User], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
@@ -84,7 +83,6 @@ class KeepRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
-    def inDisjointLib = column[Option[Boolean]]("in_disjoint_lib", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
@@ -98,7 +96,7 @@ class KeepRepoImpl @Inject() (
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
@@ -118,7 +116,6 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
-      inDisjointLib = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       isPrivate = r.<<[Boolean],
@@ -201,7 +198,7 @@ class KeepRepoImpl @Inject() (
     keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
       val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
       if (keeps.length > 1) log.warn(s"[getByUriAndUser] ${keeps.length} keeps found for (uri, user) pair ${(uriId, userId)}")
-      keeps.find(_.inDisjointLib).orElse(keeps.headOption) // order: disjoint, custom
+      keeps.headOption
     }
 
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
@@ -226,10 +223,6 @@ class KeepRepoImpl @Inject() (
 
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
-  }
-
-  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.inDisjointLib && b.isPrimary === true) yield b).firstOption
   }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =

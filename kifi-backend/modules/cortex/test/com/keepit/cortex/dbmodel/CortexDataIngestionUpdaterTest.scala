@@ -40,7 +40,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         updates = Await.result(updater.updateURIRepo(100), FiniteDuration(5, SECONDS))
         updates === 1
 
-        var changed = db.readOnlyMaster { implicit s =>
+        val changed = db.readOnlyMaster { implicit s =>
           cortexURIRepo.all.size === 3
           cortexURIRepo.getSince(SequenceNumber[CortexURI](3), 100)
         }.headOption.get
@@ -52,9 +52,9 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
 
         shoebox.saveBookmarks(
           Keep(uriId = Id[NormalizedURI](1), url = "url1", urlId = Id[URL](1), source = KeepSource.keeper,
-            userId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true),
+            userId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))),
           Keep(uriId = Id[NormalizedURI](2), url = "url1", urlId = Id[URL](2), source = KeepSource.bookmarkImport,
-            userId = Id[User](2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true)
+            userId = Id[User](2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)))
         )
 
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2

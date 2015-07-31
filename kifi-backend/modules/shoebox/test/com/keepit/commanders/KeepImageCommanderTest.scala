@@ -55,11 +55,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
       val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url, urlId = url.id.get,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get), inDisjointLib = lib.isDisjoint))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
 
       val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url, urlId = url.id.get,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get), inDisjointLib = lib.isDisjoint))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
       (user, lib, uri, keep1, keep2)
     }
   }

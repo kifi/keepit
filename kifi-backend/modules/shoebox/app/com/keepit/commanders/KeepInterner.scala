@@ -212,11 +212,7 @@ class KeepInterner @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val currentBookmarkOpt = if (library.isDisjoint) {
-      keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
-    } else {
-      keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
-    }
+    val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
 
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
@@ -225,12 +221,6 @@ class KeepInterner @Inject() (
         val wasInactiveKeep = !bookmark.isActive
         val kNote = note orElse { if (wasInactiveKeep) None else bookmark.note }
         val kTitle = trimmedTitle orElse { if (wasInactiveKeep) None else bookmark.title } orElse uri.title
-
-        if (bookmark.isActive && bookmark.inDisjointLib && bookmark.libraryId.get != library.id.get) {
-          // invalidate if keep URI is active in a system library
-          countByLibraryCache.remove(CountByLibraryKey(bookmark.libraryId.get))
-          countByLibraryCache.remove(CountByLibraryKey(library.id.get))
-        }
 
         val savedKeep = bookmark.copy(
           userId = userId,
@@ -261,7 +251,6 @@ class KeepInterner @Inject() (
           source = source,
           visibility = library.visibility,
           libraryId = Some(library.id.get),
-          inDisjointLib = library.isDisjoint,
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
