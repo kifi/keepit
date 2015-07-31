@@ -91,7 +91,10 @@
   .kf-pw-org
     border-top: 1px solid borderLightGray
     margin: 15px -16px
-    margin-bottom: -15px
+    margin-bottom: -10px
+    display: flex
+    padding: 15px
+    justify-content: space-between
 
     .kf-pw-org-img
       border-radius: 50%
@@ -102,10 +105,6 @@
       display: block
 
     .kf-pw-org-link
-      padding: 15px
-      display: flex
-      justify-content: space-between
-      padding-bottom: 0
 
       &:hover
         h1
@@ -116,4 +115,25 @@
       width: calc(100% - 80px)
 
     .stats
-      margin-bottom: 15px
+      margin-top: 0px
+      margin-bottom: 0
+      display: block
+
+      tr
+        td
+          font-size: 10px
+          line-height: 16px
+
+          &:first-child
+            padding-right: 3px
+            font-weight: bold
+            font-size: 16px
+
+            a
+              color: textBlackColor
+
+          &:last-child
+            a
+              color: accentGreen
+              text-transform: uppercase
+              font-weight: bold
