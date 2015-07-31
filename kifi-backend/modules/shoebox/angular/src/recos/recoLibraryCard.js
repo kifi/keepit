@@ -34,7 +34,7 @@ angular.module('kifi')
           }
           scope.library.formattedDescription = '<p>' + linkify(description).replace(/\n+/g, '<p>');
 
-          scope.library.absUrl = env.origin + scope.library.url;
+          scope.library.absUrl = env.origin + (scope.library.path || scope.library.url);
         }
 
 

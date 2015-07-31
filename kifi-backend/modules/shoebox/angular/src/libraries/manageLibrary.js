@@ -44,7 +44,7 @@ angular.module('kifi')
         scope.thisSpace = profileService.me; // Default
 
         // Find out where we're opening this from
-        if ('organization' in scope.modalData) { 
+        if ('organization' in scope.modalData) {
           var thisSpace = scope.modalData.organization;
           // Angular is very picky about the object you're using.
           scope.thisSpace = scope.spaces.filter(function(space) {
@@ -158,7 +158,7 @@ angular.module('kifi')
           var ownerType = function(space) {
             return spaceIsOrg(space) ? 'org' : 'user';
           };
-          
+
           var owner = {};
           owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
 
@@ -232,7 +232,7 @@ angular.module('kifi')
           libraryService.deleteLibrary(scope.library.id).then(function () {
             // If we were on the deleted library's page, return to the homepage.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === scope.library.url)) {
+                ($state.href('library.keeps') === (scope.library.path || scope.library.url))) {
               $location.url('/');
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
