@@ -25,9 +25,11 @@ class MixpanelClientImpl(projectToken: String, primaryOrgProvider: PrimaryOrgPro
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
     val propertiesF: Future[HeimdalContextBuilder] = event match {
       case userEvent: UserEvent =>
-        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgId =>
+        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgIdOpt =>
           val builder = new HeimdalContextBuilder()
-          builder.data += "orgId" -> ContextStringData(orgId.toString)
+          orgIdOpt foreach { orgId =>
+            builder.data += "orgId" -> ContextStringData(orgId.toString)
+          }
           builder
         }
       case _ => Future.successful(new HeimdalContextBuilder())
