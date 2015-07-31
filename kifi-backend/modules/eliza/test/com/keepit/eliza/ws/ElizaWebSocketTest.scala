@@ -9,7 +9,7 @@ import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
-import com.keepit.eliza.model.{ MessageThread, MessageThreadRepo }
+import com.keepit.eliza.model.{ MessageThreadParticipants, MessageThread, MessageThreadRepo }
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.SocialUserInfo
@@ -94,7 +94,15 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
         val uuid = UUID.randomUUID().toString
 
         db.readWrite { implicit session =>
-          messageThreadRepo.save(MessageThread(externalId = ExternalId(uuid), uriId = None, url = None, nUrl = None, pageTitle = None, participants = None, participantsHash = None, replyable = true))
+          messageThreadRepo.save(MessageThread(
+            externalId = ExternalId(uuid),
+            uriId = None,
+            url = None,
+            nUrl = None,
+            pageTitle = None,
+            participants = Some(MessageThreadParticipants(Set(Id(1)))),
+            participantsHash = None,
+            replyable = true))
         }
 
         in {
