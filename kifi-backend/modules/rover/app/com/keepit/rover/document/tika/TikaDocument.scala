@@ -78,8 +78,8 @@ object TikaDocument extends Logging {
         if (mainHandler.isWriteLimitReached(e)) {
           log.warn("max number of characters reached: " + mainHandler.url)
         } else {
-          e.setStackTrace(new Array[StackTraceElement](0))
-          log.error("extraction failed: ", e)
+          val msg = s"${e.getMessage}: ${Option(e.getCause).map(_.getMessage).getOrElse("")}"
+          log.error(s"extraction failed: $msg")
         }
     } finally {
       try {
