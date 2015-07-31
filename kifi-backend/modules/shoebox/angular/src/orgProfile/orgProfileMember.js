@@ -84,6 +84,10 @@ angular.module('kifi')
       $scope.$emit('demoteMember', $scope.member);
     }
 
+    function _triggerClickedAvatar() {
+      var $scope = this;
+      $scope.$emit('clickedAvatar', $scope.member);
+    }
 
     return {
       restrict: 'A',
@@ -106,12 +110,15 @@ angular.module('kifi')
 
         $scope.open = function() {
           $scope.controlsOpen = true;
-          $scope.$emit('openedMember', $scope.member);
+          $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
         };
 
         $scope.close = function() {
-          $scope.controlsOpen = false;
-          $scope.resentInvite = false;
+          if ($scope.controlsOpen) {
+            $scope.controlsOpen = false;
+            $scope.resentInvite = false;
+            $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
+          }
         };
 
         $scope.isOpen = function() {
@@ -136,6 +143,7 @@ angular.module('kifi')
         $scope.shouldShowRemove = _shouldShowRemove;
         $scope.shouldShowInvite = _shouldShowInvite;
         $scope.shouldShowAcceptInvite = _shouldShowAcceptInvite;
+        $scope.triggerClickedAvatar = _triggerClickedAvatar;
         $scope.triggerInvite = _triggerInvite;
         $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;
