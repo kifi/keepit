@@ -111,7 +111,12 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
 
         val output = socketOutput
 
-        output.length === 2
+        output.length === 3
+        val threadResponse = output(1)
+        threadResponse(0).as[String] === "thread"
+        val thread = threadResponse(1)
+        (thread \ "id").as[String] === uuid
+        (thread \ "messages") === JsArray()
       }
     }
 
