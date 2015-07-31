@@ -8,7 +8,6 @@ import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
@@ -24,7 +23,6 @@ trait GraphUpdateFetcher {
 
 class GraphUpdateFetcherImpl @Inject() (
     shoebox: ShoeboxServiceClient,
-    eliza: ElizaServiceClient,
     abook: ABookServiceClient,
     cortex: CortexServiceClient) extends GraphUpdateFetcher with Logging {
 
