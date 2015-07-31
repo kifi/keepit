@@ -3,7 +3,7 @@ package com.keepit.heimdal
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
-import com.keepit.model.{ UserExperimentType, User }
+import com.keepit.model.{ Organization, UserExperimentType, User }
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -33,15 +33,16 @@ trait AmplitudeClient {
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit]
 }
 
-class AmplitudeClientImpl(apiKey: String) extends AmplitudeClient {
+class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider) extends AmplitudeClient {
 
   val amplitudeApiEndpoint = "https://api.amplitude.com/httpapi"
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
-    val eventBuilder = new AmplitudeEventBuilder(event)
+    val eventBuilder = new AmplitudeEventBuilder(event, primaryOrgProvider)
 
-    if (AmplitudeClient.killedEvents.contains(eventBuilder.getEventType())) Future.successful(Unit)
-    else new SafeFuture({
+    if (AmplitudeClient.killedEvents.contains(eventBuilder.getEventType())) {
+      Future.successful(Unit)
+    } else new SafeFuture({
       val payload = eventBuilder.buildEventPayload()
       sendData(payload) map (_ => ())
     })
@@ -60,7 +61,7 @@ class AmplitudeClientImpl(apiKey: String) extends AmplitudeClient {
   }
 }
 
-class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion: HeimdalEventCompanion[E]) {
+class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider: PrimaryOrgProvider)(implicit companion: HeimdalEventCompanion[E]) {
   import AmplitudeClient._
 
   val heimdalContext = {
@@ -107,7 +108,18 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
             key == "gender"
       }
 
-    (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+    event match {
+      case userEvent: UserEvent =>
+        primaryOrgProvider.getPrimaryOrg(userEvent.userId) match {
+          case Some(orgId) =>
+            val orgProps = "orgId" -> ContextStringData(orgId.toString)
+            (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
+          case None =>
+            (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+        }
+      case _ =>
+        (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+    }
   }
 
   private def getUserId(): Option[String] = event match {

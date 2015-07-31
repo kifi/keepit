@@ -162,4 +162,8 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 
+  @Provides @Singleton
+  def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+
 }

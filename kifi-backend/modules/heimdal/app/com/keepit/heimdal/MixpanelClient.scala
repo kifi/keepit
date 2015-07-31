@@ -19,11 +19,18 @@ trait MixpanelClient {
   def alias(userId: Id[User], externalId: ExternalId[User]): Future[Unit]
 }
 
-class MixpanelClientImpl(projectToken: String) extends MixpanelClient {
+class MixpanelClientImpl(projectToken: String, primaryOrgProvider: PrimaryOrgProvider) extends MixpanelClient {
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
     val properties = new HeimdalContextBuilder()
+    event match {
+      case userEvent: UserEvent =>
+        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgId =>
+          properties.data += "orgId" -> ContextStringData(orgId.toString)
+        }
+      case _ =>
+    }
     properties.data ++= event.context.data
     if (!properties.data.contains("ip")) { properties.data += ("ip" -> ContextStringData(getIpAddress(event) getOrElse "0")) }
     properties += ("distinct_id", getDistinctId(event))
