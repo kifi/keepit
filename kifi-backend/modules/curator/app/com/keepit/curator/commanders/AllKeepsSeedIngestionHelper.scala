@@ -124,7 +124,6 @@ class AllKeepSeedIngestionHelper @Inject() (
     val rawSeedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
     //deal correctly with the case where the item was renormalized by a previously ingested keep
     val rawSeedItems = if (rawSeedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else rawSeedItemsByOldUriId
-    log.info(s"Got seed items: ${rawSeedItems} for keepInfo ${keepInfo} and keep ${keep}")
     if (rawSeedItems.length > 0) {
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0

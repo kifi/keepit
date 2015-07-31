@@ -65,7 +65,6 @@ class ExtAuthController @Inject() (
           }
           kiId
         })
-    log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
       val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
