@@ -11,6 +11,7 @@ import org.specs2.matcher.{ MatchResult, Expectable, Matcher }
 import org.specs2.time.NoTimeConversions
 import play.api.libs.iteratee.{ Step, Input, Iteratee, Enumerator }
 import play.api.libs.json.JsArray
+import play.api.mvc.WebSocket
 import play.api.test.FakeRequest
 
 import scala.concurrent.duration._
@@ -28,21 +29,20 @@ trait WebSocketTest extends Specification with TestInjectorProvider with NoTimeC
       }(ec)
   }
 
-  def feedToSocket(inputs: Seq[JsArray])(implicit injector: Injector): Future[Seq[JsArray]] = {
-    val injected = inject[SharedWsMessagingController]
+  def feedToSocket[A](inputs: Seq[A], ws: WebSocket[A, A])(implicit injector: Injector): Future[Seq[A]] = {
     implicit val scheduler = inject[ActorSystem].scheduler
 
-    val feed = Enumerator.enumerate(inputs) andThen delayedEOF[JsArray] // use a delayed end so that everything can process in time
-    val resultsPromise = Promise[Seq[JsArray]]()
+    val feed = Enumerator.enumerate(inputs) andThen delayedEOF[A] // use a delayed end so that everything can process in time
+    val resultsPromise = Promise[Seq[A]]()
 
-    val out = Iteratee.getChunks[JsArray].map { outputs =>
+    val out = Iteratee.getChunks[A].map { outputs =>
       resultsPromise.success(outputs)
     }.recover {
       case thrown: Throwable =>
         resultsPromise.failure(thrown)
     }.map(_ => ())
 
-    injected.websocket(None, None).f(FakeRequest("GET", "/ws?sid=" + FakeSecureSocial.FAKE_SID)).flatMap {
+    ws.f(FakeRequest("GET", "/ws?sid=" + FakeSecureSocial.FAKE_SID)).flatMap {
       case Right(fn) =>
         fn(feed, out)
         resultsPromise.future
@@ -52,11 +52,11 @@ trait WebSocketTest extends Specification with TestInjectorProvider with NoTimeC
     }
   }
 
-  class WebSocketMatcher(m: Matcher[Seq[JsArray]], retries: Int = 0, timeout: FiniteDuration = 60.seconds)(implicit injector: Injector) extends Matcher[Seq[JsArray]] {
+  class WebSocketMatcher[A](m: Matcher[Seq[A]], retries: Int = 0, timeout: FiniteDuration = 60.seconds)(implicit injector: Injector, ws: WebSocket[A, A]) extends Matcher[Seq[A]] {
 
-    override def apply[N <: Seq[JsArray]](t: Expectable[N]): MatchResult[N] = {
-      m.await(retries, timeout).apply(t.map[Future[Seq[JsArray]]] { value =>
-        feedToSocket(value)
+    override def apply[N <: Seq[A]](t: Expectable[N]): MatchResult[N] = {
+      m.await(retries, timeout).apply(t.map { value: Seq[A] =>
+        feedToSocket(value, ws)
       }).asInstanceOf[MatchResult[N]]
     }
 
@@ -64,6 +64,6 @@ trait WebSocketTest extends Specification with TestInjectorProvider with NoTimeC
 
   }
 
-  def leadToSocketOutput(m: Matcher[Seq[JsArray]])(implicit injector: Injector) = new WebSocketMatcher(m)
+  def leadToSocketOutput[A](m: Matcher[Seq[A]])(implicit injector: Injector, ws: WebSocket[A, A]): WebSocketMatcher[A] = new WebSocketMatcher(m)
 
 }
