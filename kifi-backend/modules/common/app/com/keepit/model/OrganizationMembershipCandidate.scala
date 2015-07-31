@@ -12,7 +12,7 @@ case class OrganizationMembershipCandidate(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[OrganizationMembershipCandidate] = OrganizationMembershipCandidateStates.ACTIVE,
-    orgId: Id[Organization],
+    organizationId: Id[Organization],
     userId: Id[User],
     seq: SequenceNumber[OrganizationMembershipCandidate] = SequenceNumber.ZERO) extends ModelWithState[OrganizationMembershipCandidate] with ModelWithSeqNumber[OrganizationMembershipCandidate] {
 
@@ -21,7 +21,7 @@ case class OrganizationMembershipCandidate(
   def withState(newState: State[OrganizationMembershipCandidate]): OrganizationMembershipCandidate = this.copy(state = newState)
 
   def sanitizeForDelete: OrganizationMembershipCandidate = this.copy(state = OrganizationMembershipCandidateStates.INACTIVE)
-  def toIngestableOrganizationMembershipCandidate: IngestableOrganizationMembershipCandidate = IngestableOrganizationMembershipCandidate(this.id.get, this.createdAt, this.state, this.orgId, this.userId, this.seq)
+  def toIngestableOrganizationMembershipCandidate: IngestableOrganizationMembershipCandidate = IngestableOrganizationMembershipCandidate(this.id.get, this.createdAt, this.state, this.organizationId, this.userId, this.seq)
 
 }
 
