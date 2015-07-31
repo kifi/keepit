@@ -705,7 +705,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val barry = UserFactory.user().withName("Barry", "Allen").withUsername("The Flash").saved
           val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, primaryHandle = None, description = None, site = None))
-          val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
+          val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(starLabsOrg.id).saved
 
           val membership = orgMemberRepo.save(starLabsOrg.newMembership(userId = barry.id.get, role = OrganizationRole.MEMBER))
 
@@ -980,7 +980,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val owner = UserFactory.user().saved
             val member = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
-            val lib = LibraryFactory.library().withUser(owner).withOrganization(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
+            val lib = LibraryFactory.library().withUser(owner).withOrganizationIdOpt(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
             (org, owner, member, lib)
           }
 
@@ -1000,7 +1000,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val owner = UserFactory.user().saved
             val rando = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).saved
-            val lib = LibraryFactory.library().withUser(owner).withOrganization(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
+            val lib = LibraryFactory.library().withUser(owner).withOrganizationIdOpt(Some(org.id.get)).withVisibility(LibraryVisibility.ORGANIZATION).saved
             (org, owner, rando, lib)
           }
 

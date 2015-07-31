@@ -34,7 +34,7 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -60,7 +60,13 @@ case class Keep(
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
 
+  def withLibrary(lib: Library) = this.copy(
+    libraryId = Some(lib.id.get),
+    visibility = lib.visibility
+  )
+
   def isActive: Boolean = state == KeepStates.ACTIVE
+  def isInactive: Boolean = state == KeepStates.INACTIVE
 
   @deprecated("Use `visibility` instead", "2014-08-29")
   def isDiscoverable = !isPrivate

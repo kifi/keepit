@@ -73,7 +73,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
 
           val user1secretLib = libraries(3).map(_.withUser(user1).secret().withKeepCount(3)).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().withOrganization(org.id).saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).published().withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
           val user3lib = library().withUser(user3).published().withKeepCount(2).saved

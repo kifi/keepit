@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ ExternalId, Id, State }
 import com.keepit.common.time._
-import com.keepit.model.LibraryVisibility.{ PUBLISHED, SECRET, DISCOVERABLE }
+import com.keepit.model.LibraryVisibility.{ ORGANIZATION, PUBLISHED, SECRET, DISCOVERABLE }
 import org.apache.commons.lang3.RandomStringUtils.random
 
 object LibraryFactory {
@@ -19,7 +19,8 @@ object LibraryFactory {
 
   case class PartialLibrary private[LibraryFactory] (
       library: Library,
-      followers: Seq[User] = Seq.empty[User]) {
+      followers: Seq[User] = Seq.empty[User],
+      collaborators: Seq[User] = Seq.empty[User]) {
     def withId(id: Id[Library]) = this.copy(library = library.copy(id = Some(id)))
     def withId(id: Int) = this.copy(library = library.copy(id = Some(Id[Library](id))))
     def withUser(id: Int) = this.copy(library = library.copy(ownerId = Id[User](id)))
@@ -38,10 +39,13 @@ object LibraryFactory {
     def secret() = this.copy(library = library.copy(visibility = SECRET))
     def published() = this.copy(library = library.copy(visibility = PUBLISHED))
     def discoverable() = this.copy(library = library.copy(visibility = DISCOVERABLE))
+    def orgVisible() = this.copy(library = library.copy(visibility = ORGANIZATION))
     def withLastKept() = this.copy(library = library.copy(lastKept = Some(currentDateTime)))
-    def withOrganization(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
+    def withOrganizationIdOpt(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
+    def withOrganization(org: Organization) = this.copy(library = library.copy(organizationId = Some(org.id.get)))
 
     def withFollowers(users: Seq[User]) = this.copy(followers = followers ++ users)
+    def withCollaborators(users: Seq[User]) = this.copy(collaborators = collaborators ++ users)
 
     def get: Library = library
   }
