@@ -57,7 +57,7 @@ case class DomainInfo(
   hostname: NormalizedHostname,
   isEmailProvider: Boolean)
 
-case class NormalizedHostname(value: String) // don't use this: use NormalizedHostname.fromHostname instead
+case class NormalizedHostname(value: String) // use NormalizedHostname.fromHostname
 
 object NormalizedHostname {
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
