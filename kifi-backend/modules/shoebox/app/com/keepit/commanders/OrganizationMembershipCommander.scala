@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.common.cache._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -34,6 +36,7 @@ object MaybeOrganizationMember {
 trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
+  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
@@ -56,8 +59,10 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -65,6 +70,16 @@ class OrganizationMembershipCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
+
+  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
+    primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
+      db.readOnlyReplica { implicit s =>
+        organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
+          organizationMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId).sorted.headOption
+        }
+      }
+    }
+  }
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
     db.readWrite { implicit session =>

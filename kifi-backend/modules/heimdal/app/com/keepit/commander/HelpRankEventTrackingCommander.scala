@@ -63,12 +63,9 @@ class HelpRankEventTrackingCommander @Inject() (
         log.error(msg)
         Future.failed(new IllegalArgumentException(msg))
       case Some((userId, uriId, keeperIds)) =>
-        implicit val logPrefix = LogPrefix(s"userClickedFeedItem($userId,$uriId)")
         if (keeperIds.isEmpty) {
-          log.infoP("no keepers; skipped")
           Future.successful(())
         } else {
-          log.infoP(s"keepers=${keeperIds.mkString(",")}")
           val hitUUID = ExternalId[ArticleSearchResult]()
           val ts = userEvent.time
           val numKeepers = keeperIds.size
@@ -82,7 +79,6 @@ class HelpRankEventTrackingCommander @Inject() (
                 val extKeeperIds = keeperIds.collect { case id if userMap.get(id).isDefined => userMap(id).externalId }
                 val sanitizedHit = SearchHitReport(userId, uriId, false, extKeeperIds, "feed", hitUUID)
                 kifiHitCache.set(SearchHitReportKey(userId, uriId), sanitizedHit)
-                log.infoP(s"key=${SearchHitReportKey(userId, uriId)} cached=${kifiHitCache.get(SearchHitReportKey(userId, uriId))}")
                 val futures = keeperIds map { keeperId =>
                   shoebox.getBookmarkByUriAndUser(uriId, keeperId) map { keepOpt =>
                     keepOpt match {
@@ -92,7 +88,6 @@ class HelpRankEventTrackingCommander @Inject() (
                         val saved = db.readWrite { implicit rw =>
                           keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = hitUUID, numKeepers = numKeepers, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, origin = Some("feed")))
                         }
-                        log.infoP(s"saved $saved")
                     }
                   }
                 }
