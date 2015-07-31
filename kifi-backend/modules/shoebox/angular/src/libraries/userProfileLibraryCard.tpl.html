@@ -26,11 +26,16 @@
     </div>
   </a>
   <!-- owner only -->
-  <a class="kf-upl-card-owner" ng-if="!lib.numCollaborators" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
-    <img class="kf-upl-card-owner-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}" ng-if="::libraryType !== 'own'">
-    <span class="kf-upl-card-by">by</span>
-    <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
-  </a>
+  <div ng-if="!lib.numCollaborators" class="kf-upl-card-owner">
+    <a class="kf-upl-collab-pic-a" href="{{::lib.org|pic:100}}" ng-if="lib.org" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.org" desc="Org">
+      <img class="kf-upl-org-pic" ng-src="{{::lib.org|pic:100}}" alt="{{::lib.org|name}}" />
+    </a>
+    <a class="" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
+      <img class="kf-upl-card-owner-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}" ng-if="::libraryType !== 'own' && !lib.org">
+      <span class="kf-upl-card-by">by</span>
+      <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
+    </a>
+  </div>
   <!-- owner/org with collaborators -->
   <div class="kf-upl-collabs" ng-if="lib.numCollaborators > 0">
     <span class="kf-upl-card-by" ng-if="!lib.org">by</span>
