@@ -64,21 +64,17 @@ object NormalizedHostname {
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
-  def validate(hostname: String): Try[NormalizedHostname] = {
-    val trimmed = hostname.trim
-    if (isValid(trimmed)) {
-      Success(NormalizedHostname.fromHostname(trimmed))
-    } else {
-      Failure(new IllegalArgumentException(s"Invalid domain hostname: $hostname"))
-    }
-  }
   def fromHostname(hostname: String) = NormalizedHostname(IDN.toASCII(hostname.toLowerCase))
-  implicit def format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
-    def reads(json: JsValue) = for {
-      hostname <- json.validate[String]
-      normalizedHostname <- NormalizedHostname.validate(hostname).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
-    } yield normalizedHostname
 
+  implicit def format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
+    def reads(json: JsValue) = {
+      val trimmed = json.as[String].trim
+      try {
+        JsSuccess(NormalizedHostname.fromHostname(trimmed))
+      } catch {
+        case ex: Throwable => JsError(ex.getMessage)
+      }
+    }
     def writes(o: NormalizedHostname) = JsString(o.value)
   }
 }
