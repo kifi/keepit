@@ -1,12 +1,15 @@
 package com.keepit.eliza.ws
 
+import java.util.UUID
+
 import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
+import com.keepit.eliza.model.{ MessageThread, MessageThreadRepo }
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.SocialUserInfo
@@ -67,6 +70,40 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
 
         socketOutput must equalTo(List(Json.arr("hi"), Json.arr("pong"), Json.arr("bye", "session")))
 
+      }
+    }
+
+    "respond with stats" in {
+      running(new ElizaApplication(modules: _*)) {
+        setupSocialUser
+
+        in {
+          Json.arr("stats")
+        }
+
+        val output = socketOutput
+
+        output(1)(0).as[String] must startWith("id:")
+      }
+    }
+
+    "respond to thread request" in {
+      running(new ElizaApplication(modules: _*)) {
+        setupSocialUser
+        val messageThreadRepo = inject[MessageThreadRepo]
+        val uuid = UUID.randomUUID().toString
+
+        db.readWrite { implicit session =>
+          messageThreadRepo.save(MessageThread(externalId = ExternalId(uuid), uriId = None, url = None, nUrl = None, pageTitle = None, participants = None, participantsHash = None, replyable = true))
+        }
+
+        in {
+          Json.arr("get_thread", uuid)
+        }
+
+        val output = socketOutput
+
+        output.length === 2
       }
     }
 

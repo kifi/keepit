@@ -21,7 +21,7 @@ trait WebSocketTest[A] extends Specification with NoTimeConversions {
       fn()
     }) andThen Enumerator.eof
 
-    //    val feed = Enumerator.eof[A]
+    socketIn.clear()
 
     val resultsPromise = Promise[Seq[A]]()
 
