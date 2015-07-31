@@ -57,7 +57,8 @@ object OrganizationView {
       "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
   val mobileWrites = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
+    def writes(o: OrganizationView) = Json.obj("organization" -> (OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] +
+      ("membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])))
   }
   val defaultWrites = websiteWrites
 }
