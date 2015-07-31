@@ -365,32 +365,7 @@ class KeepsCommander @Inject() (
     searchClient.updateKeepIndex()
   }
 
-  def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {
-    val shouldBeUpdated = (isPrivate.isDefined && keep.isPrivate != isPrivate.get) || (title.isDefined && keep.title != title)
-    if (shouldBeUpdated) Some {
-      val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
-      searchClient.updateKeepIndex()
-      libraryAnalytics.updatedKeep(keep, updatedKeep, context)
-      updatedKeep
-    }
-    else None
-  }
-
-  private def updateKeepWithSession(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext, session: RWSession): Keep = {
-    val updatedPrivacy = isPrivate getOrElse keep.isPrivate
-    val updatedTitle = title orElse keep.title
-
-    val (mainLib, secretLib) = libraryCommander.getMainAndSecretLibrariesForUser(keep.userId)
-    def getLibFromPrivacy(isPrivate: Boolean) = {
-      if (isPrivate) Some(secretLib.id.get) else Some(mainLib.id.get)
-    }
-    if (isPrivate.isDefined && isPrivate.get != keep.isPrivate) {
-      keepRepo.save(keep.copy(visibility = Keep.isPrivateToVisibility(isPrivate.get), libraryId = getLibFromPrivacy(isPrivate.get)).withTitle(updatedTitle))
-    } else {
-      keepRepo.save(keep.withTitle(updatedTitle))
-    }
-  }
-
+  // TODO(ryan): Murder whoever decided "updateKeep" was descriptive
   def updateKeepInLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
