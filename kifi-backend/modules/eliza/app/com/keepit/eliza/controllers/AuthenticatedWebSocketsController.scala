@@ -80,19 +80,17 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case Input.EOF => Done(Unit, Input.EOF)
       case Input.Empty => Cont[JsArray, Unit](i => step(i))
       case Input.El(e) =>
-        SafeFuture {
-          try {
-            f(e)
-          } catch {
-            case ex: Throwable => airbrake.notify(
-              AirbrakeError(
-                exception = ex,
-                method = Some("ws"),
-                url = e.value.headOption.map(_.toString()),
-                message = Some(s"[WS] user ${streamSession.userId.id} using version $kifiVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
-              )
+        try {
+          f(e)
+        } catch {
+          case ex: Throwable => airbrake.notify(
+            AirbrakeError(
+              exception = ex,
+              method = Some("ws"),
+              url = e.value.headOption.map(_.toString()),
+              message = Some(s"[WS] user ${streamSession.userId.id} using version $kifiVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
             )
-          }
+          )
         }
         Cont[JsArray, Unit](i => step(i))
     }
