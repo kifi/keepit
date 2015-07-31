@@ -39,7 +39,7 @@
   <!-- owner/org with collaborators -->
   <div class="kf-upl-collabs" ng-if="lib.numCollaborators > 0">
     <span class="kf-upl-card-by" ng-if="!lib.org">by</span>
-    <a class="kf-upl-collab-pic-a" href="{{::lib.org|pic:100}}" ng-if="lib.org" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.org" desc="Org">
+    <a class="kf-upl-collab-pic-a" href="{{::lib.org|profileUrl}}" ng-if="lib.org" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.org" desc="Org">
       <img class="kf-upl-org-pic" ng-src="{{::lib.org|pic:100}}" alt="{{::lib.org|name}}">
     </a>
     <span class="kf-upl-card-by" ng-if="lib.org">with</span>
