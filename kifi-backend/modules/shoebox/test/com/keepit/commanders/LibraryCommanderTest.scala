@@ -1149,7 +1149,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Copy from Main to Private Library
         libraryCommander.copyKeeps(userIron.id.get, secretLib.id.get, keeps4, None)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2 // [RPB] they are still in main; system libs are no longer disjoint!
           keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
           keepRepo.getPrimaryByUriAndLibrary(keeps4(0).uriId, secretLib.id.get).nonEmpty === true
           keepRepo.getPrimaryByUriAndLibrary(keeps4(1).uriId, secretLib.id.get).nonEmpty === true
@@ -1158,7 +1158,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Copy from Private to User Created Library
         libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps4, None)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2 // [RPB] they are still in main; system libs are no longer disjoint!
           keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
           keepRepo.getByLibrary(libRW.id.get, 0, 20).length === 2
         }
