@@ -283,9 +283,9 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
-GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 GET     /m/1/user/:id/organizations                      @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST    /m/1/organizations/create                        @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/modify                    @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
 DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
 GET     /m/1/organizations/:id/members                   @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
@@ -512,9 +512,9 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
-GET           /site/organizations/:id                           @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
 GET           /site/user/:id/organizations                      @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
+GET           /site/organizations/:id                           @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/modify                    @com.keepit.controllers.website.OrganizationController.modifyOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/transfer                  @com.keepit.controllers.website.OrganizationController.transferOrganization(id: PublicId[Organization])
 DELETE        /site/organizations/:id/delete                    @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
