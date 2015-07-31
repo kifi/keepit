@@ -57,7 +57,6 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
   private def startPulling(): Unit = if (!closing) {
     val limit = maxConcurrentTasks - concurrentFetchTasks
     if (limit > 0) {
-      logger.info(s"Pulling up to $limit tasks.")
       pulling += limit
 
       val pulledTasks = try {
@@ -76,7 +75,6 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
     pulling -= limit
     pulled match {
       case Success(tasks) => {
-        logger.info(s"Pulled ${tasks.length} tasks.")
         startProcessing(tasks)
       }
       case Failure(error) => {
