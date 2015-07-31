@@ -15,7 +15,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import scala.concurrent.duration.Duration
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 case class Domain(
     id: Option[Id[Domain]] = None,
@@ -48,9 +48,6 @@ object Domain {
     (__ \ 'updatedAt).format[DateTime]
   )(Domain.apply, unlift(Domain.unapply))
 
-  private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
-  private val MaxLength = 256
-  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
   def fromHostname(hostname: String) = Domain(hostname = NormalizedHostname.fromHostname(hostname))
 }
 
@@ -60,13 +57,30 @@ case class DomainInfo(
   hostname: NormalizedHostname,
   isEmailProvider: Boolean)
 
-case class NormalizedHostname(value: String) {
-  require(value == IDN.toASCII(value.toLowerCase), "Invalid hostname, use NormalizedHostname.fromHostname")
-}
+case class NormalizedHostname(value: String) // don't use this: use NormalizedHostname.fromHostname instead
+
 object NormalizedHostname {
+  private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
+  private val MaxLength = 256
+  def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
+
+  def validate(hostname: String): Try[NormalizedHostname] = {
+    val trimmed = hostname.trim
+    if (isValid(trimmed)) {
+      Success(NormalizedHostname.fromHostname(trimmed))
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid domain hostname: $hostname"))
+    }
+  }
   def fromHostname(hostname: String) = NormalizedHostname(IDN.toASCII(hostname.toLowerCase))
-  implicit def format: Format[NormalizedHostname] =
-    Format(__.read[String].map(NormalizedHostname(_)), new Writes[NormalizedHostname] { def writes(o: NormalizedHostname) = JsString(o.value) })
+  implicit def format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
+    def reads(json: JsValue) = for {
+      hostname <- json.validate[String]
+      normalizedHostname <- NormalizedHostname.validate(hostname).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
+    } yield normalizedHostname
+
+    def writes(o: NormalizedHostname) = JsString(o.value)
+  }
 }
 
 object DomainStates extends States[Domain]

@@ -77,7 +77,7 @@ trait KQueryExpansion extends QueryParser {
     }
 
     def addSiteQuery(baseQuery: KTextQuery, queryText: String) {
-      if (Domain.isValid(queryText)) baseQuery.addQuery(new TermQuery(new Term("site", queryText)), siteBoost)
+      if (NormalizedHostname.isValid(queryText)) baseQuery.addQuery(new TermQuery(new Term("site", queryText)), siteBoost)
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {
