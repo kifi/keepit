@@ -76,7 +76,7 @@ class MobileOrganizationController @Inject() (
       val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
       val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-      Ok(Json.toJson(orgCards))
+      Ok(Json.obj("organizations" -> orgCards))
     }
   }
 }
