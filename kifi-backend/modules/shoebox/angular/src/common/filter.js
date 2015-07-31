@@ -10,17 +10,30 @@ angular.module('kifi')
 
 .filter('name', function () {
   return function (o) {
-    return o ? (o.firstName || '') + ' ' + (o.lastName || '') : '';
+    return o ? o.name || ((o.firstName || '') + ' ' + (o.lastName || '')) : '';
   };
 })
+
+.filter('slug', function () {
+  return function (o) {
+    return o.handle || o.username;
+  };
+})
+
 
 .filter('pic', [
   'routeService',
   function (routeService) {
     return function (entity, width) { // entity is a catchall for users and orgs
-      return entity && entity.pictureName ?
-        routeService.formatPicUrl(entity.id, entity.pictureName, width > 100 ? 200 : 100) :
-        '//www.kifi.com/assets/img/ghost.200.png';
+      if (entity) {
+        if (entity.pictureName) {
+          return routeService.formatUserPicUrl(entity.id, entity.pictureName, width > 100 ? 200 : 100);
+        } else if (entity.avatarPath) {
+          return routeService.formatOrgPicUrl(entity.avatarPath);
+        } else {
+          return '//www.kifi.com/assets/img/ghost.200.png';
+        }
+      }
     };
   }
 ])
@@ -32,9 +45,10 @@ angular.module('kifi')
 })
 
 .filter('profileUrl', function () {
-  return function (user, sub) {
-    if (user) {
-      return '/' + user.username + (sub && sub !== 'libraries' ? '/' + sub : '');
+  return function (userOrOrg, sub) {
+    if (userOrOrg) {
+      var handle = userOrOrg.username || userOrOrg.handle;
+      return '/' + handle + (sub && sub !== 'libraries' ? '/' + sub : '');
     }
   };
 })

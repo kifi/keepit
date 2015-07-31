@@ -3,6 +3,8 @@ package com.keepit.common
 import com.keepit.common.logging.Logging
 import play.api.Logger
 
+import scala.util.Random
+
 package object performance {
 
   case class Stopwatch(tag: String) extends Logging {
@@ -37,26 +39,35 @@ package object performance {
     }
   }
 
-  def timing[A](tag: String)(f: => A)(implicit logger: Logger): A = {
-    val sw = new Stopwatch(tag)
-    val res = f
-    sw.stop()
-    sw.logTime()
-    res
+  def timing[A](tag: String)(f: => A)(implicit logger: Logger): A = timing(tag, 0.01)(f)(logger)
+  def timing[A](tag: String, sampleRate: Double)(f: => A)(implicit logger: Logger): A = {
+    if (Random.nextDouble() < sampleRate) {
+      val sw = new Stopwatch(tag)
+      val res = f
+      sw.stop()
+      sw.logTime()
+      res
+    } else {
+      f
+    }
   }
 
-  def timing[A](tag: String, threshold: Long, conditionalBlock: Option[Long => Unit] = None)(f: => A)(implicit logger: Logger): A = {
-    val sw = new Stopwatch(tag)
-    val res = f
-    val elapsed = sw.stop()
-    val elapsedMili = elapsed / 1000000
-    if (elapsedMili > threshold) {
-      conditionalBlock match {
-        case Some(block) => block(elapsedMili)
-        case None => sw.logTime()
+  def timing[A](tag: String, threshold: Long, conditionalBlock: Option[Long => Unit] = None, sampleRate: Double)(f: => A)(implicit logger: Logger): A = {
+    if (Random.nextDouble() < sampleRate) {
+      val sw = new Stopwatch(tag)
+      val res = f
+      val elapsed = sw.stop()
+      val elapsedMili = elapsed / 1000000
+      if (elapsedMili > threshold) {
+        conditionalBlock match {
+          case Some(block) => block(elapsedMili)
+          case None => sw.logTime()
+        }
       }
+      res
+    } else {
+      f
     }
-    res
   }
 
   def timingWithResult[A](tag: String, r: (A => String) = { a: A => a.toString })(f: => A)(implicit logger: Logger): A = {

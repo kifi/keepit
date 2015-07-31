@@ -45,7 +45,6 @@ class RoverArticleInfoIngestionActor @Inject() (
       shoebox.getIndexableUris(seqNum, fetchSize)
     }
   } andThen {
-    case Success(uris) => log.info(s"Fetched ${uris.length} uri updates")
     case Failure(error) => log.error("Could not fetch uri updates", error)
   }
 

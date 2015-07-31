@@ -137,7 +137,8 @@ class CollectionRepoImpl @Inject() (
         } else if (model.id == None) {
           elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", tag))
         } else {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", tag))
+          //elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", tag))
+          // Do not update clients right now.
         }
       }
     }

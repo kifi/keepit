@@ -176,12 +176,8 @@ class RecommendationGenerationCommander @Inject() (
         val existing = uriRecRepo.getUriIdsForUser(userId)
         val (updateItems, newItems) = itemsForSave.partition { x => existing.contains(x.uriId) }
 
-        log.info(s"saving scored reco for user ${userId}. insertAll for ${newItems.size} items, upsert for ${updateItems.size} items. New items ratio: ${newItems.size * 1f / itemsForSave.size}")
-
         uriRecRepo.insertAll(newItems)
         updateItems.foreach { uriRecRepo.insertOrUpdate(_) }
-
-        log.info(s"saving scored reco for user ${userId} done. ${itemsForSave.size} saved in ${timer.millisSinceCreation() / 1000f} seconds. User previously had ${existing.size} reco items")
 
         genStateRepo.save(newState)
       }

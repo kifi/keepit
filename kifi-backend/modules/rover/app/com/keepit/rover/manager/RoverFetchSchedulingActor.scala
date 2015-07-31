@@ -30,7 +30,6 @@ class RoverFetchSchedulingActor @Inject() (
 
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
-      log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
       articleCommander.getRipeForFetching(maxBatchSize, maxQueuedFor)
     }
   }
@@ -46,7 +45,6 @@ class RoverFetchSchedulingActor @Inject() (
       val queuedCount = maybeQueued.count(_._2.isSuccess)
       (queuedCount, maybeQueued.size)
     } andThen {
-      case Success((queuedTaskCount, totalTaskCount)) => log.info(s"Added $queuedTaskCount / $totalTaskCount article fetch tasks.")
       case Failure(error) => log.error(s"Failed to add article fetch tasks.", error)
     }
   } imap { _ => () }

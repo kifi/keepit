@@ -219,7 +219,6 @@ class ArticleCommander @Inject() (
         Future.successful(None)
       }
       case Some(article) => {
-        log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
         articleStore.add(articleInfo.urlHash, articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
           log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
           Some((article, key.version))
@@ -230,7 +229,7 @@ class ArticleCommander @Inject() (
         fetched recover {
           case throttled: FetchThrottlingException => // ignore
           case error: Exception =>
-            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
+            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}. ${error.getMessage}")
         }
         db.readWrite { implicit session =>
           articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched.map(_.map { case (_, version) => version }))

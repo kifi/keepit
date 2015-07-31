@@ -36,7 +36,6 @@ case class LibraryMembership(
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
-  def canInsert: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE || access == LibraryAccess.READ_INSERT
   def canWrite: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE
   def isOwner: Boolean = access == LibraryAccess.OWNER
   def isCollaborator: Boolean = access == LibraryAccess.READ_WRITE
@@ -80,7 +79,6 @@ sealed abstract class LibraryAccess(val value: String, val priority: Int)
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
-  case object READ_INSERT extends LibraryAccess("read_insert", 1)
   case object READ_WRITE extends LibraryAccess("read_write", 2)
   case object OWNER extends LibraryAccess("owner", 3)
 
@@ -94,23 +92,22 @@ object LibraryAccess {
   def apply(str: String): LibraryAccess = {
     str match {
       case READ_ONLY.value => READ_ONLY
-      case READ_INSERT.value => READ_INSERT
       case READ_WRITE.value => READ_WRITE
       case OWNER.value => OWNER
     }
   }
 
-  val all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
-  val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
+  val all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_ONLY)
+  val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE)
 }
 
-case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)
+case class CountWithLibraryIdByAccess(readOnly: Int, readWrite: Int, owner: Int)
 
 object CountWithLibraryIdByAccess {
-  val empty: CountWithLibraryIdByAccess = CountWithLibraryIdByAccess(0, 0, 0, 0)
+  val empty: CountWithLibraryIdByAccess = CountWithLibraryIdByAccess(0, 0, 0)
   implicit val format = Json.format[CountWithLibraryIdByAccess]
   def fromMap(counts: Map[LibraryAccess, Int]): CountWithLibraryIdByAccess = {
-    CountWithLibraryIdByAccess(counts.getOrElse(LibraryAccess.READ_ONLY, 0), counts.getOrElse(LibraryAccess.READ_INSERT, 0), counts.getOrElse(LibraryAccess.READ_WRITE, 0), counts.getOrElse(LibraryAccess.OWNER, 0))
+    CountWithLibraryIdByAccess(counts.getOrElse(LibraryAccess.READ_ONLY, 0), counts.getOrElse(LibraryAccess.READ_WRITE, 0), counts.getOrElse(LibraryAccess.OWNER, 0))
   }
 }
 

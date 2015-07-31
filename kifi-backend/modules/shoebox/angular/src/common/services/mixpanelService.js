@@ -30,6 +30,9 @@
   var identifiedViewEventQueue = [];
   var userId;
 
+  // used for sanity check against user id
+  var uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+
   var locations = {
     yourKeeps: /^\/$/,  // TODO: this is now recommendations!
     yourFriends: /^\/connections$/,
@@ -37,32 +40,39 @@
     addFriends: /^\/invite$/
   };
 
-  function trackEventThroughProxy(event, properties)  {
-    return net.event([{
-      'event': event,
-      'properties': properties
-    }]);
+  function isAnalyticsEnabled() {
+    return $window.amplitude || $window.mixpanel;
   }
 
-  function trackPage(path, attributes) {
-    var mixpanel = $window.mixpanel;
-    if (mixpanel) { // TODO: fake implementation for tests
-      attributes = attributes || {};
-      var origin = attributes.origin || $window.location.origin;
-
-      pageTrackForVisitor(mixpanel, path, origin, attributes);
-      pageTrackForUser(mixpanel, path, origin, attributes);
+  function trackEventThroughProxy(event, properties)  {
+    if (isAnalyticsEnabled()) {
+      return net.event([{
+        'event': event,
+        'properties': properties
+      }]);
     }
   }
 
+  function trackEventDirectly(action, props) {
+    if ($window.mixpanel) { $window.mixpanel.track(action, props); }
+    if ($window.amplitude) { $window.amplitude.logEvent(action, props); }
+  }
+
+  function trackPage(path, attributes) {
+    attributes = attributes || {};
+    var origin = attributes.origin || $window.location.origin;
+
+    pageTrackForVisitor(path, origin, attributes);
+    pageTrackForUser(path, origin, attributes);
+  }
+
   function trackEvent(action, props) {
-    var mixpanel = $window.mixpanel;
-    if (mixpanel) { // TODO: fake implementation for tests
+    if (isAnalyticsEnabled()) { // TODO: fake implementation for tests
       if ('path' in props && !props.type) {
         props.type = getLocation(props.path);
         delete props.path;
       }
-      _.extend(props, {
+      props = _.extend(getAgentProperties(), props, {
         userStatus: getUserStatus(),
         experiments: getExperiments()
       });
@@ -70,8 +80,22 @@
       if (profileService.me && profileService.me.id) {
         trackEventThroughProxy(action, props);
       } else {
-        mixpanel.track(action, props);
+        trackEventDirectly(action, props);
       }
+    }
+  }
+
+  function setUser(user) {
+    if ($window.mixpanel) {
+      $window.mixpanel.identify(user);
+    }
+
+    // sanity check shouldn't be necessary, but it's to make sure user.id is
+    // valid and doesn't accidentally get set to a value that's not unique
+    // across users
+    if ($window.amplitude && user && user.id && uuidRegex.test(user.id)) {
+      // does not call amplitude.setUserId because this id is internal only and will not be known here
+      $window.amplitude.setDeviceId(user.id);
     }
   }
 
@@ -95,12 +119,21 @@
       (experiments.indexOf('admin') >= 0 ? 'admin' : 'standard');
   }
 
-  function pageTrackForUser(mixpanel, path, origin, attributes) {
+  function getDistinctId() {
+    if ($window.mixpanel && $window.mixpanel.get_distinct_id) {
+      return $window.mixpanel.get_distinct_id();
+    }
+
+    return null;
+  }
+
+  function pageTrackForUser(path, origin, attributes) {
     if (userId) {
-      var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
+
+      var oldId = getDistinctId();
       try {
         origin = origin || $window.location.origin;
-        mixpanel.identify(userId);
+        setUser(userId);
         $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
 
         attributes = _.extend({
@@ -113,9 +146,7 @@
 
         trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
-        if (!oldId) {
-          mixpanel.identify(oldId);
-        }
+        if (oldId) { setUser(oldId); }
       }
     } else {
       identifiedViewEventQueue.push(path);
@@ -131,7 +162,7 @@
         var toSend = identifiedViewEventQueue.slice();
         identifiedViewEventQueue.length = 0;
         toSend.forEach(function (path) {
-          pageTrackForUser(mixpanel, path, origin, attributes);
+          pageTrackForUser(path, origin, attributes);
         });
       };
 
@@ -143,7 +174,7 @@
     }
   }
 
-  function pageTrackForVisitor(mixpanel, path, origin, attributes) {
+  function pageTrackForVisitor(path, origin, attributes) {
     $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
 
     attributes = _.extend({
@@ -152,7 +183,20 @@
       siteVersion: 2
     }, attributes);
 
-    mixpanel.track('visitor_viewed_page', attributes);
+    trackEventDirectly('visitor_viewed_page', attributes);
+  }
+
+  function getAgentProperties() {
+    var amplitude = $window.amplitude;
+    var ua = amplitude && amplitude._ua;
+
+    // since most of these properties depend on the amplitude SDK, additional
+    // checks are made to ensure we're not referencing undefined/null objects
+    return {
+      os_name: ua && ua.browser && ua.browser.name || null,
+      os_version: ua && ua.browser && ua.browser.major || null,
+      device_model: ua && ua.os && ua.os.name || null
+    };
   }
 
 })();

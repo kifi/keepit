@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ CropImageRequest, ProcessImageRequest, ScaleImageRequest }
+import com.keepit.commanders.{ CenteredCropImageRequest, ProcessImageRequest, ScaleImageRequest }
 import com.keepit.common.db.{ Id, Model, State, States }
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
@@ -31,7 +31,7 @@ object KeepImage {
   val label = "keep"
   import com.keepit.model.ProcessImageOperation._
   def toProcessImageRequest(keepImage: KeepImage): ProcessImageRequest = keepImage.kind match {
-    case Crop => CropImageRequest(keepImage.dimensions)
+    case CenteredCrop => CenteredCropImageRequest(keepImage.dimensions)
     case ki => ScaleImageRequest(keepImage.dimensions)
   }
 }

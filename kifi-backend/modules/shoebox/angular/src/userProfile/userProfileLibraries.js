@@ -3,26 +3,21 @@
 angular.module('kifi')
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', '$timeout',
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', 'Paginator',
   'profileService', 'userProfileActionService', 'modalService', 'userProfilePageNames',
-  function ($scope, $rootScope, $state, $stateParams, $timeout,
+  function ($scope, $rootScope, $state, $stateParams, $timeout, Paginator,
             profileService, userProfileActionService, modalService, userProfilePageNames) {
     var handle = $stateParams.handle;
-    var fetchPageSize = 12;
-    var fetchPageNumber;
-    var hasMoreLibraries;
-    var loading;
-    var newLibraryIds;
+    var newLibraryIds = {};
 
     $scope.libraries = null;
     $scope.libraryType = $state.current.name.split('.').pop();
 
+    var libraryLazyLoader = new Paginator();
+
     function resetAndFetchLibraries() {
-      fetchPageNumber = 0;
-      hasMoreLibraries = true;
-      loading = false;
       newLibraryIds = {};
-      $scope.libraries = null;
+      libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }
 
@@ -44,33 +39,29 @@ angular.module('kifi')
     });
 
     $scope.fetchLibraries = function () {
-      if (loading) {
-        return;
-      }
-      loading = true;
-
       var filter = $scope.libraryType;
-      userProfileActionService.getLibraries(handle, filter, fetchPageNumber, fetchPageSize).then(function (data) {
-        if ($scope.libraryType === filter) {
-          var libs = data[filter];
-          hasMoreLibraries = libs.length === fetchPageSize;  // important to do before filtering below
 
-          if ($scope.profile.id === profileService.me.id && filter === 'own' && !_.isEmpty(newLibraryIds)) {
-            _.remove(libs, function (lib) {
-              return lib.id in newLibraryIds;
-            });
-          }
+      function librarySource(pageNumber, pageSize) {
+        return userProfileActionService
+          .getLibraries(handle, filter, pageNumber, pageSize)
+          .then(function (data) {
+            return data[filter];
+          });
+      }
 
-          $scope.libraries = ($scope.libraries || []).concat(libs);
-
-          fetchPageNumber++;
-          loading = false;
+      libraryLazyLoader.fetch(librarySource).then(function (libs) {
+        if ($scope.profile.id === profileService.me.id && filter === 'own' && !_.isEmpty(newLibraryIds)) {
+          _.remove(libs, function (lib) {
+            return lib.id in newLibraryIds;
+          });
         }
+
+        $scope.libraries = libs;
       });
     };
 
     $scope.hasMoreLibraries = function () {
-      return hasMoreLibraries;
+      return libraryLazyLoader.hasMore();
     };
 
     $scope.showInvitedLibraries = function () {

@@ -95,7 +95,9 @@ class CortexDataIngestionActor @Inject() (
           if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateLibrary)
         }.onComplete {
           case Success(_) => isUpdatingLibrary = false
-          case Failure(fail) => { isUpdatingLibrary = false; airbrake.notify(fail.getMessage) }
+          case Failure(fail) =>
+            isUpdatingLibrary = false
+            airbrake.notify(fail)
         }
       }
 
@@ -130,7 +132,7 @@ private class CortexDataIngestionUpdater @Inject() (
     val seq = db.readOnlyReplica { implicit s => uriRepo.getMaxSeq }
 
     shoebox.getIndexable(seq, fetchSize).map { uris =>
-      uris.map { CortexURI.fromURI(_) } grouped (DB_BATCH_SIZE) foreach { uris =>
+      uris.map { CortexURI.fromURI } grouped (DB_BATCH_SIZE) foreach { uris =>
         db.readWrite { implicit s =>
           uris foreach { uri =>
             uriRepo.getByURIId(uri.uriId) match {
@@ -149,7 +151,7 @@ private class CortexDataIngestionUpdater @Inject() (
     val seq = db.readOnlyReplica { implicit s => keepRepo.getMaxSeq }
 
     shoebox.getBookmarksChanged(seq, fetchSize).map { keeps =>
-      keeps.map { CortexKeep.fromKeep(_) } grouped (DB_BATCH_SIZE) foreach { keeps =>
+      keeps.map { CortexKeep.fromKeep } grouped (DB_BATCH_SIZE) foreach { keeps =>
         db.readWrite { implicit s =>
           keeps foreach { keep =>
             keepRepo.getByKeepId(keep.keepId) match {
@@ -167,7 +169,7 @@ private class CortexDataIngestionUpdater @Inject() (
     val seq = db.readOnlyReplica { implicit s => libRepo.getMaxSeq }
 
     shoebox.getLibrariesChanged(seq, fetchSize).map { libs =>
-      libs.map { CortexLibrary.fromLibraryView(_) } grouped (DB_BATCH_SIZE) foreach { libsBatch =>
+      libs.map { CortexLibrary.fromLibraryView } grouped (DB_BATCH_SIZE) foreach { libsBatch =>
         db.readWrite { implicit s =>
           libsBatch foreach { lib =>
             libRepo.getByLibraryId(lib.libraryId) match {
@@ -185,7 +187,7 @@ private class CortexDataIngestionUpdater @Inject() (
     val seq = db.readOnlyReplica { implicit s => libMemRepo.getMaxSeq }
 
     shoebox.getLibraryMembershipsChanged(seq, fetchSize).map { libMems =>
-      libMems.map { CortexLibraryMembership.fromLibraryMembershipView(_) } grouped (DB_BATCH_SIZE) foreach { libMemsBatch =>
+      libMems.map { CortexLibraryMembership.fromLibraryMembershipView } grouped (DB_BATCH_SIZE) foreach { libMemsBatch =>
         db.readWrite { implicit s =>
           libMemsBatch foreach { libMem =>
             libMemRepo.getByLibraryMembershipId(libMem.membershipId) match {

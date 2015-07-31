@@ -74,10 +74,8 @@ class RemoteSecureSocialUserPlugin @Inject() (
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
     monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {
       case None =>
-        log.info("No SocialUserInfo found for %s".format(id))
         None
       case Some(user) =>
-        log.info("User found: %s for %s".format(user, id))
         user.credentials map { UserIdentity(user.userId, _) }
     }
   }

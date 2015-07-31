@@ -63,7 +63,6 @@ class ABookCommander @Inject() (
     for {
       resp <- WS.url(OPENID_CONNECT_URL).withQueryString(("access_token", accessToken)).get
     } yield {
-      log.infoP(s"openIdConnect response=${resp.body}")
       resp.status match {
         case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
           case Some(info) => info tap { res => log.infoP(s"ownerInfo=$info") }
@@ -87,7 +86,6 @@ class ABookCommander @Inject() (
         } yield {
           addr.text
         }
-        log.infoP(s"title=$title email=$emails")
         Json.obj("name" -> title, "emails" -> Json.toJson(emails))
       }
     }
@@ -120,10 +118,9 @@ class ABookCommander @Inject() (
 
   def processUpload(userId: Id[User], origin: ABookOriginType, ownerInfoOpt: Option[ABookOwnerInfo], oauth2TokenOpt: Option[OAuth2Token], json: JsValue): Option[ABookInfo] = {
     implicit val prefix = LogPrefix(s"processUpload($userId,$origin)")
-    log.infoP(s"ownerInfo=$ownerInfoOpt; oauth2Token=$oauth2TokenOpt; json=$json")
+    log.infoP(s"ownerInfo=$ownerInfoOpt")
     val abookRawInfoRes = Json.fromJson[ABookRawInfo](json)
     val abookRawInfo = abookRawInfoRes.getOrElse(throw new Exception(s"Cannot parse ${json}"))
-    log.infoP(s"rawInfo=$abookRawInfo")
 
     val numContacts = abookRawInfo.numContacts orElse { // todo(ray): remove when ios supplies numContacts
       (json \ "contacts").asOpt[JsArray] map { _.value.length }
@@ -133,7 +130,6 @@ class ABookCommander @Inject() (
     else {
       val s3Key = toS3Key(userId, origin, ownerInfoOpt)
       s3 += (s3Key -> abookRawInfo)
-      log.infoP(s"s3Key=$s3Key rawInfo=$abookRawInfo}")
 
       val savedABookInfo = db.readWrite(attempts = 2) { implicit session =>
         val (abookInfo, dbEntryOpt) = origin match {
@@ -156,7 +152,6 @@ class ABookCommander @Inject() (
         }
         val savedEntry = dbEntryOpt match {
           case Some(currEntry) => {
-            log.infoP(s"current entry: $currEntry")
             abookInfoRepo.save(currEntry.withNumContacts(Some(numContacts)))
           }
           case None => abookInfoRepo.save(abookInfo)
@@ -209,7 +204,6 @@ class ABookCommander @Inject() (
         }
     }
     val json = Json.toJson(abookRawInfos)
-    log.info(s"[getContactsRawInfo(${userId})=$abookRawInfos json=$json")
     json
   }
 

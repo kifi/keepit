@@ -121,7 +121,7 @@ class ReKeepRepoImpl @Inject() (
     sql"select count(distinct (src_user_id)) from rekeep where uri_id=$uriId".as[Int].first
   }
 
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getReKeepCountsByURIs(sz=${uriIds.size})") {
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Int] = {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriReKeepCountCache.bulkGetOrElse(uriIds.map(UriReKeepCountKey(_)).toSet) { keys =>
@@ -134,7 +134,7 @@ class ReKeepRepoImpl @Inject() (
             case (uriId, idx) =>
               stmt.setLong(idx + 1, uriId.id)
           }
-          val res = timing(s"getReKeepCountsByURIs(sz=${ids.size};ids=$ids)") { stmt.execute() }
+          val res = { stmt.execute() }
           if (!res) throw new SQLException(s"[getReKeepCountsByURIs] ($stmt) failed to execute")
           val rs = stmt.getResultSet()
           while (rs.next()) {

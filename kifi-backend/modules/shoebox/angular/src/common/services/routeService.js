@@ -39,8 +39,12 @@ angular.module('kifi')
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       userBiography: route('/user/me/biography'),
-      formatPicUrl: function (userId, pictureName, size) {
+      formatUserPicUrl: function (userId, pictureName, size) {
         return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
+      },
+
+      formatOrgPicUrl: function (avatarPath) {
+        return env.picBase + '/' + avatarPath;
       },
 
       ////////////////////////////
@@ -139,9 +143,6 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      modifyLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/modify');
-      },
       shareLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/invite');
       },

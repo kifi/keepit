@@ -24,19 +24,60 @@
 
   <div class="stats">
     <a href="{{me|profileUrl}}" ng-click="registerEvent('Libraries')" class="stat">
-      <h2>Libraries</h1>
+      <h2>Libraries</h2>
       <h3>{{me.numLibraries}}</h3>
     </a>
     <a href="{{me|profileUrl:'connections'}}" ng-click="registerEvent('Connections')" class="stat">
-      <h2>Connections</h1>
+      <h2>Connections</h2>
       <h3>
         {{me.numConnections}}
         <span ng-if="me.pendingFriendRequests > 0" >+{{me.pendingFriendRequests}}</span>
       </h3>
     </a>
     <a href="{{me|profileUrl:'followers'}}" ng-click="registerEvent('Followers')" class="stat">
-      <h2>Followers</h1>
+      <h2>Followers</h2>
       <h3>{{me.numFollowers}}</h3>
     </a>
+  </div>
+
+  <div class="kf-pw-orgs" ng-if="organizations">
+    <div ng-repeat="org in organizations" class="kf-pw-org">
+      <a class="kf-pw-org-link" href="{{org.handle}}" ng-click="registerEvent('clickedOrgFromProfile')">
+        <img class="kf-pw-org-img" ng-src="{{ org | pic:200 }}" />
+      </a>
+      <div class="kf-pw-org-bio">
+        <h1>
+          <a class="kf-pw-org-link" href="{{org.handle}}" ng-click="registerEvent('clickedOrgFromProfile')">
+            {{ org.name }}
+          </a>
+        </h1>
+        <table class="stats">
+          <tr>
+            <td>
+              <a href="{{ org | profileUrl }}" class="stat" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
+                {{org.numLibraries}}
+              </a>
+            </td>
+            <td>
+              <a href="{{ org | profileUrl }}" class="stat" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
+                Libraries
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a href="{{ org | profileUrl:'members' }}" class="stat" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
+                {{org.numMembers}}
+              </a>
+            </td>
+            <td>
+              <a href="{{ org | profileUrl:'members' }}" class="stat" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
+                Members
+              </a>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
   </div>
 </div>

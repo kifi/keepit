@@ -3,10 +3,11 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  function () {
+  'profileService',
+  function (profileService) {
     function _isMe() {
       var $scope = this;
-      return $scope.member.id === $scope.me.id;
+      return $scope.member.id === profileService.me.id;
     }
 
     function _resentInvite() {
@@ -22,7 +23,7 @@ angular.module('kifi')
     function _shouldShowPromote() {
       var $scope = this;
       return (
-        $scope.me.role === 'admin' &&
+        $scope.myMembership.role === 'admin' &&
         $scope.member.role !== 'admin' &&
         $scope.hasAcceptedInvite()
       );
@@ -31,7 +32,7 @@ angular.module('kifi')
     function _shouldShowDemote() {
       var $scope = this;
       return (
-        $scope.me.id === $scope.organization.ownerId &&
+        profileService.me.id === $scope.organization.ownerId &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
@@ -39,7 +40,7 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      var hasCorrectPermission = ($scope.me.role === 'admin' && $scope.member.role !== 'admin') || ($scope.me.id === $scope.profile.ownerId);
+      var hasCorrectPermission = ($scope.myMembership.role === 'admin' && $scope.member.role !== 'admin') || (profileService.me.id === $scope.profile.ownerId);
       return $scope.hasAcceptedInvite() && (hasCorrectPermission || $scope.isMe());
     }
 
@@ -83,13 +84,17 @@ angular.module('kifi')
       $scope.$emit('demoteMember', $scope.member);
     }
 
+    function _triggerClickedAvatar() {
+      var $scope = this;
+      $scope.$emit('clickedAvatar', $scope.member);
+    }
 
     return {
       restrict: 'A',
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
       $scope: {
         member: '=',
-        me: '=',
+        myMembership: '=',
         organization: '='
       },
       replace: true,
@@ -105,12 +110,15 @@ angular.module('kifi')
 
         $scope.open = function() {
           $scope.controlsOpen = true;
-          $scope.$emit('openedMember', $scope.member);
+          $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
         };
 
         $scope.close = function() {
-          $scope.controlsOpen = false;
-          $scope.resentInvite = false;
+          if ($scope.controlsOpen) {
+            $scope.controlsOpen = false;
+            $scope.resentInvite = false;
+            $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
+          }
         };
 
         $scope.isOpen = function() {
@@ -135,6 +143,7 @@ angular.module('kifi')
         $scope.shouldShowRemove = _shouldShowRemove;
         $scope.shouldShowInvite = _shouldShowInvite;
         $scope.shouldShowAcceptInvite = _shouldShowAcceptInvite;
+        $scope.triggerClickedAvatar = _triggerClickedAvatar;
         $scope.triggerInvite = _triggerInvite;
         $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;

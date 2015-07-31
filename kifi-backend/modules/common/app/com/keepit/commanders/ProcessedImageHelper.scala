@@ -11,7 +11,7 @@ import com.keepit.common.core.File
 import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.store.{ ImagePath, ImageSize }
+import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
 import com.keepit.model._
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -22,22 +22,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
 
-object ProcessImageRequest {
-  implicit val ordering = new Ordering[ProcessImageRequest] {
-    override def compare(x: ProcessImageRequest, y: ProcessImageRequest): Int = {
-      (x, y) match {
-        case (c1: CropImageRequest, c2: CropImageRequest) => c1.size.width - c2.size.width
-        case (s1: ScaleImageRequest, s2: ScaleImageRequest) => s1.size.width - s2.size.width
-        case (_: CropImageRequest, _: ScaleImageRequest) => 1
-        case (_: ScaleImageRequest, _: CropImageRequest) => -1
-      }
-    }
-  }
-}
-
 sealed abstract case class ProcessImageRequest(operation: ProcessImageOperation, size: ImageSize)
 class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Scale, size)
-class CropImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Crop, size)
+class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CenteredCrop, size)
+class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CropScale, scaledSize)
 
 object ScaleImageRequest {
   def apply(boundingBox: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(boundingBox, boundingBox))
@@ -45,9 +33,13 @@ object ScaleImageRequest {
   def apply(width: Int, height: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(width, height))
 }
 
-object CropImageRequest {
-  def apply(imageSize: ImageSize): CropImageRequest = new CropImageRequest(imageSize)
-  def apply(width: Int, height: Int): CropImageRequest = new CropImageRequest(ImageSize(width, height))
+object CenteredCropImageRequest {
+  def apply(imageSize: ImageSize): CenteredCropImageRequest = new CenteredCropImageRequest(imageSize)
+  def apply(width: Int, height: Int): CenteredCropImageRequest = new CenteredCropImageRequest(ImageSize(width, height))
+}
+
+object CropScaleImageRequest {
+  def apply(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize): CropScaleImageRequest = new CropScaleImageRequest(offset, cropSize, scaledSize)
 }
 
 trait ProcessedImageHelper {
@@ -62,13 +54,10 @@ trait ProcessedImageHelper {
 
     formatOpt match {
       case Some(format) =>
-        log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-            log.info(s"[pih] Hashed: ${hash.hash}")
             Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
           case Success(hash) => // blacklisted hash
-            log.info(s"[pih] Blacklisted: ${hash.hash}")
             Future.successful(Left(ImageProcessState.BlacklistedImage))
           case Failure(ex) =>
             Future.successful(Left(ImageProcessState.HashFailed(ex)))
@@ -79,19 +68,16 @@ trait ProcessedImageHelper {
   }
 
   def fetchAndHashRemoteImage(imageUrl: String): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"[pih] Fetching $imageUrl")
     if (ProcessedImageHelper.blacklistedUrl.contains(imageUrl)) {
       Future.successful(Left(ImageProcessState.BlacklistedImage))
     } else {
+      log.info(s"[pih] Fetching $imageUrl")
       val loadedF: Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = fetchRemoteImage(imageUrl).map {
         case (format, file) =>
-          log.info(s"[pih] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
           hashImageFile(file.file) match {
             case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-              log.info(s"[pih] Hashed: ${hash.hash}")
               Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
             case Success(hash) => // blacklisted hash
-              log.info(s"[pih] Blacklisted: $imageUrl / ${hash.hash}")
               Left(ImageProcessState.BlacklistedImage)
             case Failure(ex) =>
               Left(ImageProcessState.HashFailed(ex))
@@ -133,16 +119,13 @@ trait ProcessedImageHelper {
   protected def processAndPersistImages(image: File, baseLabel: String, hash: ImageHash,
     outFormat: ImageFormat, sizes: Set[ProcessImageRequest])(implicit photoshop: Photoshop) = {
     val resizedImages = sizes.map { processImageSize =>
-      log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat to $processImageSize")
-
       def process(): Try[File] = processImageSize match {
-        case c if c.operation == ProcessImageOperation.Crop => photoshop.cropImage(image, outFormat, c.size.width, c.size.height)
+        case c if c.operation == ProcessImageOperation.CenteredCrop => photoshop.centeredCropImage(image, outFormat, c.size.width, c.size.height)
         case s => photoshop.resizeImage(image, outFormat, s.size.width, s.size.height)
       }
 
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
-          log.info(s"[pih] processAndPersistImages: resized ${imageInfo.width}x${imageInfo.height} vs $processImageSize")
           val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
           ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageSize.operation)
         }
@@ -154,7 +137,7 @@ trait ProcessedImageHelper {
 
     resizedImages.find(_.isLeft) match {
       case Some(error) => // failure of at least one of the images
-        log.error(s"[pih] resizedImages failure $error")
+        log.error(s"[pih] resizedImages failure ${error.toString.take(220)}")
         Left(error.left.get)
       case None =>
         Right(resizedImages.map(_.right.get))
@@ -201,7 +184,6 @@ trait ProcessedImageHelper {
     val imgHeight = imageSize.height
     val imgWidth = imageSize.width
 
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropCandidates=$cropCandidates")
     val cropImageRequests = cropCandidates.filterNot { cropSize =>
       val size = cropSize.idealSize
       def isAlmostSameAspectRatio = Math.abs(imgWidth.toFloat / imgHeight - cropSize.aspectRatio) < 0.01
@@ -219,9 +201,8 @@ trait ProcessedImageHelper {
           scaleWidth >= candidateCropWidth && scaleHeight >= candidateCropHeight &&
             scaleWidth - candidateCropWidth < 100 && scaleHeight - candidateCropHeight < 100
         })
-    }.map { c => CropImageRequest(c.idealSize) }
+    }.map { c => CenteredCropImageRequest(c.idealSize) }
 
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropRequests=$cropImageRequests")
     (scaleImageRequests ++ cropImageRequests).toSet
   }
 
@@ -370,7 +351,10 @@ object ProcessedImageHelper {
     "http://assets.tumblr.com/images/og/link_200.png",
     "https://ssl.gstatic.com/accounts/ui/avatar_2x.png",
     "http://cdn.sstatic.net/askubuntu/img/apple-touch-icon@2.png",
-    "http://assets.tumblr.com/images/og/text_200.png"
+    "http://assets.tumblr.com/images/og/text_200.png",
+    "http://djty7jcqog9qu.cloudfront.net/i/7dce329f880b899a462be1c476c79291_192x192_o.png",
+    "http://djty7jcqog9qu.cloudfront.net/images/4bc601cc-05e9-48bf-aaff-9da2915626d6/0/hSPUi.jpg",
+    "http://blickwinkel-portal.de/gm-bilder/images/front_erch1.jpg"
   )
   val blacklistedHash = Set(
     "bf322fb70d88a207194c5d25f189d692", // wordpress blank image
@@ -397,7 +381,8 @@ object ProcessedImageHelper {
     "989d155fe0261a9d9938549a3c2f8168", // ebay spritesheet
     "30d57a48f6f155affd542a528dd02506", // Aa icon
     "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
-    "cb6b256050c23a71b2b4996e88f77225" // missing link logo
+    "cb6b256050c23a71b2b4996e88f77225", // missing link logo
+    "42573fffcf02644c0b5a14074afc3c64" // ghost icon
   )
 }
 
@@ -406,7 +391,8 @@ sealed abstract class ProcessedImageSize(val name: String, val idealSize: ImageS
 }
 
 sealed abstract class ScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name, idealSize, ProcessImageOperation.Scale)
-sealed abstract class CroppedImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-crop", idealSize, ProcessImageOperation.Crop)
+sealed abstract class CroppedImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-crop", idealSize, ProcessImageOperation.CenteredCrop)
+sealed abstract class CropScaledImageSize(name: String, idealSize: ImageSize) extends ProcessedImageSize(name + "-cropscale", idealSize, ProcessImageOperation.CropScale)
 
 object ScaledImageSize {
   case object Small extends ScaledImageSize("small", ImageSize(150, 150))
@@ -418,9 +404,9 @@ object ScaledImageSize {
 }
 
 object CroppedImageSize {
+  case object Tiny extends CroppedImageSize("tiny", ImageSize(100, 100))
   case object Small extends CroppedImageSize("small", ImageSize(150, 150))
-
-  val allSizes: Seq[CroppedImageSize] = Seq(Small)
+  case object Medium extends CroppedImageSize("medium", ImageSize(200, 200))
 }
 
 object ProcessedImageSize {

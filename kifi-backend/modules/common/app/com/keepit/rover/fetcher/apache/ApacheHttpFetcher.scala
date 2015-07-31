@@ -58,8 +58,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       }
     } recoverWith {
       case ex: Throwable =>
-        val msg = s"${ex.getClass.getSimpleName} on fetching url [${request.url}}] if modified since [${request.ifModifiedSince}] using proxy [${request.proxy}]"
-        log.error(msg, ex)
+        val msg = s"${ex.getClass.getSimpleName} on fetching url [${request.url}}] if modified since [${request.ifModifiedSince}] using proxy [${request.proxy}]. Cause: ${ex.getMessage}"
+        log.error(msg)
         Failure(ex)
     }
   }

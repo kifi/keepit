@@ -25,7 +25,7 @@ angular.module('kifi')
               id: person.id,
               fullName: person.firstName + ' ' + person.lastName,
               // TODO: remove pictureUrl when wtiService is removed
-              pictureUrl: routeService.formatPicUrl(person.id, person.pictureName, 100),
+              pictureUrl: routeService.formatUserPicUrl(person.id, person.pictureName, 100),
               pictureName: person.pictureName,
               username: person.username,
               actionText: 'Connect',

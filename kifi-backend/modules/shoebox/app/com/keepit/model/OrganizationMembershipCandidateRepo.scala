@@ -21,9 +21,18 @@ trait OrganizationMembershipCandidateRepo extends Repo[OrganizationMembershipCan
 }
 
 @Singleton
-class OrganizationMembershipCandidateRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationMembershipCandidateRepo with DbRepo[OrganizationMembershipCandidate] with SeqNumberDbFunction[OrganizationMembershipCandidate] with Logging {
-  override def deleteCache(protoOrgMembership: OrganizationMembershipCandidate)(implicit session: RSession) {}
-  override def invalidateCache(protoOrgMembership: OrganizationMembershipCandidate)(implicit session: RSession) {}
+class OrganizationMembershipCandidateRepoImpl @Inject() (
+    primaryOrgForUserCache: PrimaryOrgForUserCache,
+    val db: DataBaseComponent,
+    val clock: Clock) extends OrganizationMembershipCandidateRepo with DbRepo[OrganizationMembershipCandidate] with SeqNumberDbFunction[OrganizationMembershipCandidate] with Logging {
+
+  override def deleteCache(protoOrgMembership: OrganizationMembershipCandidate)(implicit session: RSession) = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(protoOrgMembership.userId))
+  }
+
+  override def invalidateCache(protoOrgMembership: OrganizationMembershipCandidate)(implicit session: RSession) = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(protoOrgMembership.userId))
+  }
 
   import db.Driver.simple._
 

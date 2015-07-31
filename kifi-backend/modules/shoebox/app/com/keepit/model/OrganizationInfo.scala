@@ -40,7 +40,7 @@ case class MembershipInfo(
   permissions: Set[OrganizationPermission],
   role: Option[OrganizationRole])
 object MembershipInfo {
-  val defaultWrites: Writes[MembershipInfo] = (
+  implicit val defaultWrites: Writes[MembershipInfo] = (
     (__ \ 'isInvited).write[Boolean] and
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
     (__ \ 'role).writeNullable[OrganizationRole]
@@ -52,14 +52,10 @@ case class OrganizationView(
   membershipInfo: MembershipInfo)
 
 object OrganizationView {
-  val websiteWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
+  implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
       "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
-  val mobileWrites = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++ MembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject]
-  }
-  val defaultWrites = websiteWrites
 }
 
 // OrganizationCard should ONLY contain public information. No internal ids.
@@ -73,7 +69,7 @@ case class OrganizationCard(
   numMembers: Int,
   numLibraries: Int)
 object OrganizationCard {
-  private val defaultWrites: Writes[OrganizationCard] = (
+  implicit val defaultWrites: Writes[OrganizationCard] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
@@ -83,9 +79,6 @@ object OrganizationCard {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int]
   )(unlift(OrganizationCard.unapply))
-
-  val websiteWrites = defaultWrites
-  val mobileWrites = defaultWrites
 }
 
 // OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
@@ -103,7 +96,7 @@ case class OrganizationNotificationInfo(
   image: Option[OrganizationImageInfo])
 object OrganizationNotificationInfo {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.handle, image.map(OrganizationImageInfo.createInfo))
+    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(OrganizationImageInfo.createInfo))
   }
 }
 

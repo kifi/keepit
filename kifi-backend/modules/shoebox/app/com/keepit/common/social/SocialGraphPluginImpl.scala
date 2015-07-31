@@ -115,7 +115,6 @@ private[social] class SocialGraphActor @Inject() (
           friends.map(_.socialId)
         }.toList.flatten
 
-        log.info(s"[fetchUserInfo] calling createConnections. sui=$socialUserInfo, friendsId=$friendsSocialId")
         val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId)
 
         socialUserTypeahead.refresh(userId)

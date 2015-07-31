@@ -46,7 +46,7 @@ angular.module('kifi')
       result.network = result.networkType === 'email' ? result.socialId : friendlyNetworks[result.networkType] || result.networkType;
       result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
       if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
-        result.image = routeService.formatPicUrl(result.socialId, result.image);
+        result.image = routeService.formatUserPicUrl(result.socialId, result.image);
 
         userService.getBasicUserInfo(result.socialId, false).then(function (res) {
           result.username = res.data.username;

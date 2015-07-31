@@ -31,13 +31,19 @@ angular.module('kifi')
       removeOrgMember: function (orgId, removeFields) {
         return net.removeOrgMember(orgId, removeFields);
       },
-      getOrgLibraries: function (orgId) {
-        return net.getOrgLibraries(orgId).then(function (response) {
+      getOrgLibraries: function (orgId, page, size) {
+        return net.getOrgLibraries(orgId, {
+          offset: page,
+          limit: size
+        }).then(function (response) {
           return response.data;
         });
       },
-      getOrgMembers: function (orgId) {
-        return net.getOrgMembers(orgId).then(function (response) {
+      getOrgMembers: function (orgId, page, size) {
+        return net.getOrgMembers(orgId, {
+          offset: page,
+          limit: size
+        }).then(function (response) {
           return response.data;
         });
       },
@@ -51,8 +57,22 @@ angular.module('kifi')
         return net.userOrOrg(handle).then(function (response) {
           return response.data;
         });
-      }
+      },
 
+      getCommonTrackingAttributes: function (organization) {
+        var defaultAttributes = {
+          type: 'orgMembers',
+          orgName: organization.name,
+          orgId: organization.id
+        };
+
+        return defaultAttributes;
+      },
+      trackEvent: function (eventName, organization, attributes) {
+        var defaultAttributes = api.getCommonTrackingAttributes(organization);
+        attributes = _.extend(defaultAttributes, attributes || {});
+        $analytics.eventTrack(eventName, attributes);
+      }
     };
 
     return api;

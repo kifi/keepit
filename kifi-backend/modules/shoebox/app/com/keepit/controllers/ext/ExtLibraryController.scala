@@ -313,7 +313,7 @@ class ExtLibraryController @Inject() (
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -325,7 +325,7 @@ class ExtLibraryController @Inject() (
       } map { _ =>
         keepsCommander.searchTags(request.userId, query, limit) map { hits =>
           implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-          val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
+          val result = JsArray(hits.map { hit => json.aggressiveMinify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
           Ok(result)
         }
       } getOrElse {

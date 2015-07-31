@@ -77,13 +77,14 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
       case JsSuccess(externalAddRequest, _) =>
         val libAddRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
           val space = externalAddRequest.space map {
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
           LibraryAddRequest(
             name = externalAddRequest.name,
-            slug = externalAddRequest.slug,
+            slug = slug,
             visibility = externalAddRequest.visibility,
             description = externalAddRequest.description,
             color = externalAddRequest.color,
@@ -189,19 +190,19 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
+  def getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
+    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
-          val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
+          val idealSize = LibraryController.defaultLibraryImageSize
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
             val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
-              authTokenOpt.map { authToken =>
+              authTokenOpt.flatMap { authToken =>
                 db.readOnlyMaster { implicit s =>
                   libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
                     val inviter = basicUserRepo.load(invite.inviterId)
@@ -211,7 +212,7 @@ class LibraryController @Inject() (
                   case (invite, inviter) =>
                     LibraryInviteInfo.createInfo(invite, inviter)
                 }
-              }.flatten
+              }
             }
             val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
@@ -318,10 +319,12 @@ class LibraryController @Inject() (
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         }
 
+        println("Joining with subscribed = " + subscribedOpt)
         libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
+            println(("membership" -> LibraryMembershipInfo.fromMembership(mem)))
             Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
         }
     }
@@ -599,7 +602,7 @@ class LibraryController @Inject() (
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -607,7 +610,7 @@ class LibraryController @Inject() (
   def suggestTagsSimple(pubId: PublicId[Library], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, None, None, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -653,7 +656,8 @@ class LibraryController @Inject() (
               membership = None,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
-              path = info.path
+              path = info.path,
+              org = info.org
             )
           }
           val t2 = System.currentTimeMillis()
