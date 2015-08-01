@@ -461,7 +461,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case e: KeeperException.NoNodeException =>
             watchedChildren -= child
           case e: KeeperException =>
-            log.error(s"Failed to place watch on a child node!: ${child.path}", e)
+            log.error(s"Failed to place watch on a child node!: ${child.path}: ${e.getMessage}")
             watchedChildren -= child
         }
       }
