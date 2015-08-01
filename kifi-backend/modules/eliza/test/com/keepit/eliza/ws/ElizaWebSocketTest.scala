@@ -87,6 +87,32 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
       }
     }
 
+    "not respond to thread request without the user as a participant" in {
+      running(new ElizaApplication(modules: _*)) {
+        setupSocialUser
+        val messageThreadRepo = inject[MessageThreadRepo]
+        val uuid = UUID.randomUUID().toString
+
+        db.readWrite { implicit session =>
+          messageThreadRepo.save(MessageThread(
+            externalId = ExternalId(uuid),
+            uriId = None,
+            url = None,
+            nUrl = None,
+            pageTitle = None,
+            participants = None,
+            participantsHash = None,
+            replyable = true))
+        }
+
+        in {
+          Json.arr("get_thread", uuid)
+        }
+
+        socketOutput.length === 2
+      }
+    }
+
     "respond to thread request" in {
       running(new ElizaApplication(modules: _*)) {
         setupSocialUser
