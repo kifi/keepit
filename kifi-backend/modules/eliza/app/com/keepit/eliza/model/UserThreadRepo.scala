@@ -480,19 +480,21 @@ class UserThreadRepoImpl @Inject() (
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val users_list = users.map(_.id).mkString(",")
-    val queryStr = """
-      select thread_id, created_at, count(*) as c from user_thread
+    if (users.isEmpty) Seq.empty[GroupThreadStats]
+    else {
+      val users_list = users.map(_.id).mkString(",")
+      val queryStr = """
+        select thread_id, created_at, count(*) as c from user_thread
         where user_id in (""" + users_list + """)
         and replyable = 1
         and created_at >= '2015-1-1'
         group by thread_id
         order by week(created_at)
         desc
-    """
-    val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
-    val result = query.list
-    result.map((GroupThreadStats.apply _).tupled)
+      """
+      val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
+      query.list.map((GroupThreadStats.apply _).tupled)
+    }
   }
 
 }
