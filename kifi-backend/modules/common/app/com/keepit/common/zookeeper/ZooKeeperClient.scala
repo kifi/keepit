@@ -444,7 +444,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
                 log.info(s"session event, keep watching")
                 doWatchChildren(getChildren(node, new ParentWatcher()))
@@ -461,7 +461,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case e: KeeperException.NoNodeException =>
             watchedChildren -= child
           case e: KeeperException =>
-            log.error(s"Failed to place watch on a child node!: ${child.path}", e)
+            log.error(s"Failed to place watch on a child node!: ${child.path}: ${e.getMessage}")
             watchedChildren -= child
         }
       }
