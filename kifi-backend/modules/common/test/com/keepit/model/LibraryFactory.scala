@@ -23,7 +23,6 @@ object LibraryFactory {
       collaborators: Seq[User] = Seq.empty[User]) {
     def withId(id: Id[Library]) = this.copy(library = library.copy(id = Some(id)))
     def withId(id: Int) = this.copy(library = library.copy(id = Some(Id[Library](id))))
-    def withUser(id: Int) = this.copy(library = library.copy(ownerId = Id[User](id)))
     def withUser(id: Id[User]) = this.copy(library = library.copy(ownerId = id))
     def withUser(user: User) = this.copy(library = library.copy(ownerId = user.id.get))
     def withMemberCount(memberCount: Int) = this.copy(library = library.copy(memberCount = memberCount, lastKept = Some(currentDateTime)))
