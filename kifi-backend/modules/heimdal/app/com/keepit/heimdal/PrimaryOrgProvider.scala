@@ -9,9 +9,13 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.concurrent.Future
 
-class PrimaryOrgProvider @Inject() (
+trait PrimaryOrgProvider {
+  def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
+}
+
+class PrimaryOrgProviderImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
-    shoebox: ShoeboxServiceClient) {
+    shoebox: ShoeboxServiceClient) extends PrimaryOrgProvider {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = {
     primaryOrgForUserCache.getOrElseFutureOpt(PrimaryOrgForUserKey(userId)) {
       shoebox.getPrimaryOrg(userId)

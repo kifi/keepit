@@ -3,7 +3,7 @@ package com.keepit.heimdal
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
-import com.keepit.model.{ Organization, UserExperimentType, User }
+import com.keepit.model.{ User, UserExperimentType }
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -17,9 +17,16 @@ object AmplitudeClient {
     "kcid_9", "kcid_10", "kcid_11", "os", "osVersion", "remoteAddress", "serviceInstance", "serviceZone", "userCreatedAt",
     "userId", "userSegment")
 
-  val killedEvents = Set("user_old_slider_sliderShown", "user_expanded_keeper", "user_used_kifi", "user_reco_action",
-    "anonymous_kept", "user_logged_in", "visitor_expanded_keeper", "visitor_reco_action", "visitor_viewed_notification",
-    "visitor_clicked_notification", "anonymous_visitor_viewed_page", "anonymous_messaged")
+  private val killedEvents = Set("user_old_slider_sliderShown", "user_expanded_keeper", "user_used_kifi", "user_reco_action",
+    "user_logged_in", "visitor_expanded_keeper", "visitor_reco_action", "visitor_viewed_notification",
+    "visitor_clicked_notification")
+
+  // do not record any of the events that that return true from any of these functions
+  val skipEventFilters: Seq[AmplitudeEventBuilder[_] => Boolean] = Seq(
+    (eb: AmplitudeEventBuilder[_]) => eb.getEventType().startsWith("anonymous_"),
+    (eb: AmplitudeEventBuilder[_]) => eb.heimdalContext.get[String]("userAgent").exists(_.startsWith("Pingdom")),
+    (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.getEventType())
+  )
 
   private val experimentsToTrack: Set[String] = UserExperimentType._TRACK_FOR_ANALYTICS.map(_.value)
   val trackedPropertyFilters: Seq[(String) => Boolean] = Seq(
@@ -30,35 +37,19 @@ object AmplitudeClient {
 }
 
 trait AmplitudeClient {
-  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit]
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Boolean]
 }
 
-class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider) extends AmplitudeClient {
-
-  val amplitudeApiEndpoint = "https://api.amplitude.com/httpapi"
-
-  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
+class AmplitudeClientImpl(primaryOrgProvider: PrimaryOrgProvider, transport: AmplitudeTransport) extends AmplitudeClient {
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Boolean] = {
     val eventBuilder = new AmplitudeEventBuilder(event, primaryOrgProvider)
 
-    if (AmplitudeClient.killedEvents.contains(eventBuilder.getEventType())) {
-      Future.successful(Unit)
-    } else new SafeFuture({
-      eventBuilder.buildEventPayload() map { payload =>
-        sendData(payload) map (_ => ())
+    if (AmplitudeClient.skipEventFilters.exists(fn => fn(eventBuilder))) Future.successful(false)
+    else new SafeFuture({
+      eventBuilder.buildEventPayload() flatMap { payload =>
+        transport.deliver(payload) map (_ => true)
       }
     })
-  }
-
-  private def sendData(eventData: JsObject): Future[Unit] = {
-    val eventJson = Json.stringify(eventData)
-    val request = WS.url(amplitudeApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
-
-    request.get() map {
-      case resp if resp.status != 200 =>
-        throw new RuntimeException(s"Amplitude endpoint $amplitudeApiEndpoint refused event: " +
-          s"status=${resp.status} message=${resp.body} payload=$eventJson")
-      case _ => ()
-    }
   }
 }
 
@@ -157,4 +148,25 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider:
     CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key)
   }
 
+}
+
+trait AmplitudeTransport {
+  def deliver(eventData: JsObject): Future[JsObject]
+}
+
+class AmplitudeTransportImpl(apiKey: String) extends AmplitudeTransport {
+
+  val amplitudeApiEndpoint = "https://api.amplitude.com/httpapi"
+
+  def deliver(eventData: JsObject): Future[JsObject] = {
+    val eventJson = Json.stringify(eventData)
+    val request = WS.url(amplitudeApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
+
+    request.get() map {
+      case resp if resp.status != 200 =>
+        throw new RuntimeException(s"Amplitude endpoint $amplitudeApiEndpoint refused event: " +
+          s"status=${resp.status} message=${resp.body} payload=$eventJson")
+      case _ => eventData
+    }
+  }
 }

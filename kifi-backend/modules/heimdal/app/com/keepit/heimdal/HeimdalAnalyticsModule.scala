@@ -13,6 +13,7 @@ import com.google.inject.{ Provides, Singleton }
 
 import play.api.Play.current
 import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.json.JsObject
 
 import scala.concurrent.Future
 
@@ -29,9 +30,13 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
   }
 
   @Provides @Singleton
-  def amplitude(primaryOrgProvider: PrimaryOrgProvider): AmplitudeClient = {
-    val apiKey: String = current.configuration.getString("amplitude.api_key").get
-    new AmplitudeClientImpl(apiKey, primaryOrgProvider)
+  def amplitude(primaryOrgProvider: PrimaryOrgProvider, amplitudeTransport: AmplitudeTransport): AmplitudeClient = {
+    new AmplitudeClientImpl(primaryOrgProvider, amplitudeTransport)
+  }
+
+  @Provides @Singleton
+  def orgProvider(primaryOrgForUserCache: PrimaryOrgForUserCache, shoeboxServiceClient: ShoeboxServiceClient): PrimaryOrgProvider = {
+    new PrimaryOrgProviderImpl(primaryOrgForUserCache, shoeboxServiceClient)
   }
 }
 
@@ -51,8 +56,34 @@ case class DevAnalyticsModule() extends AnalyticsModule {
   }
 
   @Provides @Singleton
-  def amplitude(primaryOrgProvider: PrimaryOrgProvider): AmplitudeClient = {
-    val apiKey: String = current.configuration.getString("amplitude.api_key").get
-    new AmplitudeClientImpl(apiKey, primaryOrgProvider)
+  def amplitude(primaryOrgProvider: PrimaryOrgProvider, amplitudeTransport: AmplitudeTransport): AmplitudeClient = {
+    new AmplitudeClientImpl(primaryOrgProvider, amplitudeTransport)
+  }
+
+  @Provides @Singleton
+  def orgProvider(): PrimaryOrgProvider = new PrimaryOrgProvider() {
+    override def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = Future.successful(None)
   }
 }
+
+trait AmplitudeTransportModule extends ScalaModule
+
+case class ProdAmplitudeTransportModule() extends AmplitudeTransportModule {
+  def configure() = {}
+
+  @Provides @Singleton
+  def transport(): AmplitudeTransport = {
+    val apiKey: String = current.configuration.getString("amplitude.api_key").get
+    new AmplitudeTransportImpl(apiKey)
+  }
+}
+
+case class DevAmplitudeTransportModule() extends AmplitudeTransportModule {
+  def configure() = {}
+
+  @Provides @Singleton
+  def transport(): AmplitudeTransport = new AmplitudeTransport {
+    override def deliver(eventData: JsObject): Future[JsObject] = Future(eventData)
+  }
+}
+

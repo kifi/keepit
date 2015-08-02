@@ -55,7 +55,13 @@
 
   function trackEventDirectly(action, props) {
     if ($window.mixpanel) { $window.mixpanel.track(action, props); }
-    if ($window.amplitude) { $window.amplitude.logEvent(action, props); }
+    if ($window.amplitude) {
+      // filter out events we don't care about (this may duplicate some
+      // server-side logic for events sent to the proxy)
+      if (!_.str.startsWith($window.navigator.userAgent, 'Pingdom')) {
+        $window.amplitude.logEvent(action, props);
+      }
+    }
   }
 
   function trackPage(path, attributes) {
