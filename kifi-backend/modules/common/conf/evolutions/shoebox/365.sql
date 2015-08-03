@@ -15,4 +15,3 @@ ALTER TABLE organization_domain_ownership ADD CONSTRAINT unique_domain_hostname 
 insert into evolutions (name, description) values('365.sql', 'Make organization_domain_ownership reference domain hashes');
 
 # --- !Downs
-WithFilter
