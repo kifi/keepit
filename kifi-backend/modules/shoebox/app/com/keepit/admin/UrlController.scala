@@ -26,6 +26,8 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsBoolean, JsObject, Json }
 
+import scala.util.Try
+
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
@@ -385,8 +387,11 @@ class UrlController @Inject() (
 
   def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
     val hostname = request.body.get("hostname").get.head
-    val domain = db.readOnlyReplica { implicit s =>
-      domainRepo.get(hostname, None)
+    val normalizedHostnameTry = Try(NormalizedHostname.fromHostname(hostname))
+    val domain = normalizedHostnameTry.toOption.flatMap { hostname =>
+      db.readOnlyReplica { implicit s =>
+        domainRepo.get(hostname, None)
+      }
     }
 
     domain.map { domain => Redirect(routes.UrlController.getDomain(domain.id.get)) }.getOrElse(NotFound)

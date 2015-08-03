@@ -16,17 +16,17 @@ class DomainTest extends Specification with ShoeboxTestInjector {
         val d3 = Domain(hostname = NormalizedHostname.fromHostname("yahoo.com"), autoSensitive = Some(false))
 
         inject[Database].readOnlyMaster { implicit c =>
-          domainRepo.get("google.com") === None
-          domainRepo.get("facebook.com") === None
-          domainRepo.get("yahoo.com") === None
+          domainRepo.get(NormalizedHostname.fromHostname("google.com")) === None
+          domainRepo.get(NormalizedHostname.fromHostname("facebook.com")) === None
+          domainRepo.get(NormalizedHostname.fromHostname("yahoo.com")) === None
         }
         val Seq(sd1, sd2, sd3) = inject[Database].readWrite { implicit c =>
           Seq(d1, d2, d3).map(domainRepo.save(_))
         }
         inject[Database].readOnlyMaster { implicit c =>
-          domainRepo.get("google.com").get === sd1
-          domainRepo.get("facebook.com").get === sd2
-          domainRepo.get("yahoo.com").get === sd3
+          domainRepo.get(NormalizedHostname.fromHostname("google.com")).get === sd1
+          domainRepo.get(NormalizedHostname.fromHostname("facebook.com")).get === sd2
+          domainRepo.get(NormalizedHostname.fromHostname("yahoo.com")).get === sd3
         }
         inject[Database].readWrite { implicit c =>
           domainRepo.save(sd1.withAutoSensitive(Some(true)))
@@ -66,8 +66,8 @@ class DomainTest extends Specification with ShoeboxTestInjector {
           val saved = domainRepo.save(domain1)
           val inactive = domainRepo.save(domain2.copy(state = DomainStates.INACTIVE))
 
-          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com"))
-          internedDomains.keys.toSet === Set("google.com", "apple.com")
+          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com").map(NormalizedHostname.fromHostname))
+          internedDomains.keys.toSet === Set("google.com", "apple.com").map(NormalizedHostname.fromHostname)
         }
       }
     }
@@ -82,15 +82,15 @@ class DomainTest extends Specification with ShoeboxTestInjector {
           val saved = domainRepo.save(domain1)
           val saved1 = domainRepo.save(domain2)
 
-          val actual = domainRepo.get("google.com").headOption
+          val actual = domainRepo.get(NormalizedHostname.fromHostname("google.com"))
           actual.isDefined === true
           actual.get.hostname.value === "google.com"
 
-          val actual2 = domainRepo.get("Google.com").headOption
+          val actual2 = domainRepo.get(NormalizedHostname.fromHostname("Google.com"))
           actual2.isDefined === true
           actual2.get.hostname.value === "google.com"
 
-          val actual3 = domainRepo.get("Ğooğle.com").headOption
+          val actual3 = domainRepo.get(NormalizedHostname.fromHostname("Ğooğle.com"))
           actual3.isDefined === true
           actual3.get.hostname === NormalizedHostname.fromHostname("Ğooğle.com")
           actual3.get.hostname.value === "xn--oole-zwac.com"

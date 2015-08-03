@@ -8,13 +8,13 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
-  def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
+  def get(domain: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getNormalized(hostname: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
-  def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
+  def getAllByName(domains: Seq[NormalizedHostname], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
-  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain]
+  def internAllByNames(domainNames: Set[NormalizedHostname])(implicit session: RWSession): Map[NormalizedHostname, Domain]
 }
 
 @Singleton
@@ -46,10 +46,9 @@ class DomainRepoImpl @Inject() (
   def table(tag: Tag) = new DomainTable(tag)
   initTable()
 
-  def get(domain: String, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
-    val normalizedHostname = NormalizedHostname.fromHostname(domain)
-    domainCache.getOrElseOpt(DomainKey(normalizedHostname)) {
-      (for (d <- rows if d.hostname === normalizedHostname && d.state =!= excludeState.orNull) yield d).firstOption
+  def get(domain: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
+    domainCache.getOrElseOpt(DomainKey(domain)) {
+      (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
     }
   }
 
@@ -64,9 +63,8 @@ class DomainRepoImpl @Inject() (
     q.list.map { domain => domain.id.get -> domain }.toMap
   }
 
-  def getAllByName(domains: Seq[String], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
-    val normalizedHostnames = domains.map(NormalizedHostname.apply)
-    (for (d <- rows if d.hostname.inSet(normalizedHostnames) && d.state =!= excludeState.orNull) yield d).list
+  def getAllByName(domains: Seq[NormalizedHostname], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] = {
+    (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
   }
 
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
@@ -78,23 +76,22 @@ class DomainRepoImpl @Inject() (
     count
   }
 
-  def internAllByNames(domainNames: Set[String])(implicit session: RWSession): Map[String, Domain] = {
+  def internAllByNames(domainNames: Set[NormalizedHostname])(implicit session: RWSession): Map[NormalizedHostname, Domain] = {
     val existingDomains = getAllByName(domainNames.toSeq, None).toSet
 
-    val normalizedHostnames = domainNames.map(NormalizedHostname.apply)
     val existingHostnames = existingDomains.map(_.hostname)
 
-    val toBeInserted = normalizedHostnames -- existingHostnames
+    val toBeInserted = domainNames -- existingHostnames
 
     val existingDomainByName = existingDomains.map { domain =>
       domain.state match {
-        case DomainStates.INACTIVE => domain.hostname.value -> save(Domain(hostname = domain.hostname).copy(id = domain.id))
-        case DomainStates.ACTIVE => domain.hostname.value -> domain
+        case DomainStates.INACTIVE => domain.hostname -> save(Domain(hostname = domain.hostname).copy(id = domain.id))
+        case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap
 
     val newDomainByName = toBeInserted.map { hostname =>
-      hostname.value -> save(Domain(hostname = hostname))
+      hostname -> save(Domain(hostname = hostname))
     }.toMap
 
     existingDomainByName ++ newDomainByName

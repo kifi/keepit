@@ -3,6 +3,7 @@ package com.keepit.shoebox
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.util.Providers
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -650,7 +651,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = Future.successful(Seq())
 
-  def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]) = Future.successful(Map.empty)
 
   def getOrganizationInviteViews(orgId: Id[Organization]) = Future.successful(Set.empty)
 

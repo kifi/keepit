@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
 
-import com.keepit.classify.{ Domain, DomainRepo }
+import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
@@ -22,7 +22,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.search.augmentation.AugmentableItem
 
 class PageCommander @Inject() (
@@ -77,7 +77,7 @@ class PageCommander @Inject() (
         } filter (_.isActive)
       }.getOrElse(Seq())
 
-      val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)
+      val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => Try(NormalizedHostname.fromHostname(name)).toOption)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
@@ -101,7 +101,7 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
-    val host: Option[String] = uri.host.map(_.name)
+    val host: Option[NormalizedHostname] = uri.host.flatMap(host => Try(NormalizedHostname(host.name)).toOption)
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
       domainOpt.map { dom =>

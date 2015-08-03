@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
-import com.keepit.classify.{ Domain, DomainRepo }
-import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
+import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -10,19 +10,24 @@ import com.keepit.model._
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
+import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
 trait OrganizationDomainOwnershipCommander {
   def getDomainsOwned(orgId: Id[Organization]): Set[Domain]
-  def getOwningOrganization(domainHostname: String): Option[Organization]
+  def getOwningOrganization(domainHostname: NormalizedHostname): Option[Organization]
   def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess]
-  def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Unit
+  def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure]
 }
 
 object OrganizationDomainOwnershipCommander {
 
   sealed trait OwnDomainFailure {
     def humanString: String
+  }
+
+  case class InvalidDomainName(domainName: String) extends OwnDomainFailure {
+    override def humanString = s"Domain '$domainName' is invalid!"
   }
 
   case class DomainDidNotExist(domainName: String) extends OwnDomainFailure {
@@ -48,7 +53,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   override def getDomainsOwned(orgId: Id[Organization]): Set[Domain] = {
     val domains = db.readOnlyMaster { implicit session =>
       domainRepo.getByIds(
-        orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(ownership => domainRepo.get(ownership.domainHostname).flatMap(_.id)).collect {
+        orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(ownership => domainRepo.get(ownership.normalizedHostname).flatMap(_.id)).collect {
           case Some(id) => id
         }.toSet
       ).values.toSet
@@ -56,41 +61,51 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     domains
   }
 
-  override def getOwningOrganization(domainHostname: String): Option[Organization] = {
-    val org = db.readOnlyMaster { implicit session =>
+  override def getOwningOrganization(domainHostname: NormalizedHostname): Option[Organization] = {
+    db.readOnlyMaster { implicit session =>
       orgDomainOwnershipRepo.getOwnershipForDomain(domainHostname).map { ownership =>
         orgRepo.get(ownership.organizationId)
       }
     }
-    org
   }
 
   override def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess] = {
     db.readWrite { implicit session =>
-      val domainOpt = domainRepo.get(domainName)
-      domainOpt match {
-        case None => Left(DomainDidNotExist(domainName))
-        case Some(domain) =>
-          val domainHostname = domain.hostname
-          orgDomainOwnershipRepo.getOwnershipForDomain(domainHostname) match {
-            case Some(own) if own.organizationId != orgId => Left(DomainAlreadyOwned(domainHostname))
-            case _ =>
-              val ownership = orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname, onlyState = None) match {
-                case Some(own) if own.state == OrganizationDomainOwnershipStates.ACTIVE => own
-                case Some(own) => orgDomainOwnershipRepo.save(own.copy(state = OrganizationDomainOwnershipStates.ACTIVE))
-                case None => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, domainHostname = domainHostname))
+      Try { NormalizedHostname.fromHostname(domainName) } match {
+        case Failure(ex) => Left(InvalidDomainName(domainName))
+        case Success(normalizedHostname) =>
+          val domainOpt = domainRepo.get(normalizedHostname)
+          domainOpt match {
+            case None => Left(DomainDidNotExist(domainName))
+            case Some(domain) =>
+              val normalizedHostname = domain.hostname
+              orgDomainOwnershipRepo.getOwnershipForDomain(normalizedHostname) match {
+                case Some(own) if own.organizationId != orgId => Left(DomainAlreadyOwned(normalizedHostname.value))
+                case _ =>
+                  val ownership = orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, normalizedHostname, onlyState = None) match {
+                    case Some(own) if own.state == OrganizationDomainOwnershipStates.ACTIVE => own
+                    case Some(own) => orgDomainOwnershipRepo.save(own.copy(state = OrganizationDomainOwnershipStates.ACTIVE))
+                    case None => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = normalizedHostname))
+                  }
+                  Right(OwnDomainSuccess(domain, ownership))
               }
-              Right(OwnDomainSuccess(domain, ownership))
           }
       }
     }
   }
 
-  override def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Unit = {
-    db.readWrite { implicit session =>
-      orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname) foreach { ownership =>
-        orgDomainOwnershipRepo.save(ownership.copy(state = OrganizationDomainOwnershipStates.INACTIVE))
-      }
+  override def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure] = {
+    Try(NormalizedHostname.fromHostname(domainHostname)) match {
+      case Success(normalizedHostname) =>
+        db.readWrite { implicit session =>
+          orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, normalizedHostname).map { ownership =>
+            orgDomainOwnershipRepo.save(ownership.copy(state = OrganizationDomainOwnershipStates.INACTIVE))
+          } match {
+            case Some(saved) => None
+            case None => Some(DomainDidNotExist(domainHostname))
+          }
+        }
+      case Failure(ex: Throwable) => Some(InvalidDomainName(domainHostname))
     }
   }
 }

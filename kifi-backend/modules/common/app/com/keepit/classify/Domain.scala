@@ -11,6 +11,7 @@ import com.keepit.common.db.{ State, States, ModelWithState, Id }
 import com.keepit.common.time._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.{ Normalization }
+import play.api.data.{ Forms, Mapping }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
@@ -51,11 +52,18 @@ object Domain {
   def fromHostname(hostname: String) = Domain(hostname = NormalizedHostname.fromHostname(hostname))
 }
 
-@json
 case class DomainInfo(
   id: Option[Id[Domain]],
   hostname: NormalizedHostname,
   isEmailProvider: Boolean)
+
+object DomainInfo {
+  implicit val format: Format[DomainInfo] = (
+    (__ \ 'id).formatNullable[Id[Domain]] and
+    (__ \ 'hostname).format[NormalizedHostname] and
+    (__ \ 'isEmailProvider).format[Boolean]
+  )(DomainInfo.apply, unlift(DomainInfo.unapply))
+}
 
 case class NormalizedHostname(value: String) // use NormalizedHostname.fromHostname
 
@@ -66,14 +74,10 @@ object NormalizedHostname {
 
   def fromHostname(hostname: String) = NormalizedHostname(IDN.toASCII(hostname.toLowerCase))
 
-  implicit def format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
-    def reads(json: JsValue) = {
+  implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
+    def reads(json: JsValue): JsResult[NormalizedHostname] = {
       val trimmed = json.as[String].trim
-      try {
-        JsSuccess(NormalizedHostname.fromHostname(trimmed))
-      } catch {
-        case ex: Throwable => JsError(ex.getMessage)
-      }
+      Try(NormalizedHostname.fromHostname(trimmed)).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
     }
     def writes(o: NormalizedHostname) = JsString(o.value)
   }
@@ -82,7 +86,7 @@ object NormalizedHostname {
 object DomainStates extends States[Domain]
 
 case class DomainKey(hostname: NormalizedHostname) extends Key[Domain] {
-  override val version = 3
+  override val version = 4
   val namespace = "domain_by_hostname"
   def toKey(): String = hostname.value
 }
