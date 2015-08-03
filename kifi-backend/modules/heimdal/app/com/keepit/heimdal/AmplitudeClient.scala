@@ -2,7 +2,8 @@ package com.keepit.heimdal
 
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.WebService
 import com.keepit.model.{ User, UserExperimentType }
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -37,57 +38,80 @@ object AmplitudeClient {
 }
 
 trait AmplitudeClient {
-  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Boolean]
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[AmplitudeEventResult]
+  def setUserProperties(userId: Id[User], context: HeimdalContext): Future[AmplitudeEventResult]
+  def alias(userId: Id[User], externalId: ExternalId[User]): Future[AmplitudeEventResult]
 }
 
-class AmplitudeClientImpl(primaryOrgProvider: PrimaryOrgProvider, transport: AmplitudeTransport) extends AmplitudeClient {
-  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Boolean] = {
+trait AmplitudeEventResult
+case class AmplitudeEventSkipped(eventType: String) extends AmplitudeEventResult
+case class AmplitudeApiError(message: String) extends AmplitudeEventResult
+case class AmplitudeEventSent(eventData: JsObject) extends AmplitudeEventResult
+
+class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider, ws: WebService) extends AmplitudeClient {
+  val eventApiEndpoint = "https://api.amplitude.com/httpapi"
+  val identityApiEndpoint = "https://api.amplitude.com/identify"
+
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[AmplitudeEventResult] = {
     val eventBuilder = new AmplitudeEventBuilder(event, primaryOrgProvider)
 
-    if (AmplitudeClient.skipEventFilters.exists(fn => fn(eventBuilder))) Future.successful(false)
+    if (AmplitudeClient.skipEventFilters.exists(fn => fn(eventBuilder))) Future.successful(AmplitudeEventSkipped(eventBuilder.getEventType()))
     else new SafeFuture({
-      eventBuilder.buildEventPayload() flatMap { payload =>
-        transport.deliver(payload) map (_ => true)
+      eventBuilder.build() flatMap { eventData =>
+        val eventJson = Json.stringify(eventData)
+        val request = ws.url(eventApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
+
+        request.get() map {
+          case resp if resp.status != 200 =>
+            AmplitudeApiError(s"Amplitude endpoint $eventApiEndpoint refused event: " +
+              s"status=${resp.status} message=${resp.body} payload=$eventJson")
+          case _ => AmplitudeEventSent(eventData)
+        }
       }
     })
   }
-}
 
-class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider: PrimaryOrgProvider)(implicit companion: HeimdalEventCompanion[E]) {
-  import AmplitudeClient._
+  def setUserProperties(userId: Id[User], context: HeimdalContext) = {
+    val identityBuilder = new AmplitudeIdentityBuilder(userId, context, primaryOrgProvider)
+    identityBuilder.build(userId) flatMap { eventData =>
+      val identityJson = Json.stringify(eventData)
+      val request = ws.url(identityApiEndpoint).withQueryString("identification" -> identityJson, "api_key" -> apiKey)
 
-  val heimdalContext = {
-    val heimdalContextBuilder = new HeimdalContextBuilder()
-    heimdalContextBuilder.data ++= event.context.data
-    event.context
-  }
-
-  def getEventType(): String = {
-    s"${companion.typeCode}_${event.eventType.name}"
-  }
-
-  def buildEventPayload(): Future[JsObject] = {
-    getUserAndEventProperties() map {
-      case (userProperties, eventProperties) =>
-        Json.obj(
-          "user_id" -> getUserId(),
-          "device_id" -> getDistinctId(),
-          "event_type" -> getEventType(),
-          "time" -> event.time.getMillis / 1000,
-          "event_properties" -> Json.toJson(eventProperties),
-          "user_properties" -> Json.toJson(userProperties),
-          "app_version" -> heimdalContext.get[String]("clientVersion"),
-          "platform" -> heimdalContext.get[String]("client"),
-          "os_name" -> heimdalContext.get[String]("os"),
-          "os_version" -> heimdalContext.get[String]("osVersion"),
-          "device_type" -> heimdalContext.get[String]("device"),
-          "language" -> heimdalContext.get[String]("language"),
-          "ip" -> getIpAddress()
-        )
+      request.get() map {
+        case resp if resp.status != 200 =>
+          AmplitudeApiError(s"Amplitude endpoint $identityApiEndpoint refused event: " +
+            s"status=${resp.status} message=${resp.body} payload=$identityJson")
+        case _ => AmplitudeEventSent(eventData)
+      }
     }
   }
 
-  private def getUserAndEventProperties(): Future[(Map[String, ContextData], Map[String, ContextData])] = {
+  def alias(userId: Id[User], externalId: ExternalId[User]): Future[AmplitudeEventResult] = {
+    val context = new HeimdalContext(Map("distinct_id" -> ContextStringData(externalId.id)))
+    setUserProperties(userId, context)
+  }
+}
+
+// translates specific properties (originally created for MixPanel) into for amplitude
+case class AmplitudeSpecificProperties(heimdalContext: HeimdalContext) {
+  val distinctId = heimdalContext.get[String]("distinct_id")
+  val appVersion = heimdalContext.get[String]("clientVersion")
+  val platform = heimdalContext.get[String]("client")
+  val osName = heimdalContext.get[String]("os")
+  val osVersion = heimdalContext.get[String]("osVersion")
+  val deviceType = heimdalContext.get[String]("device")
+  val language = heimdalContext.get[String]("language")
+}
+
+trait AmplitudeRequestBuilder {
+  import AmplitudeClient._
+
+  def heimdalContext: HeimdalContext
+  def primaryOrgProvider: PrimaryOrgProvider
+  def userIdOpt: Option[Id[User]]
+  def specificProperties: AmplitudeSpecificProperties
+
+  def getUserAndEventProperties(): Future[(Map[String, ContextData], Map[String, ContextData])] = {
     val (userProps, eventProps) = heimdalContext.data.
       filterKeys(key => trackedPropertyFilters.forall(fn => fn(key))).
       partition {
@@ -101,42 +125,22 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider:
             key == "gender"
       }
 
-    event match {
-      case userEvent: UserEvent =>
-        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgIdOpt =>
-          orgIdOpt match {
-            case Some(orgId) =>
-              val orgProps = "orgId" -> ContextStringData(orgId.toString)
-              (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
-            case None =>
-              (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
-          }
-        }
-      case _ =>
-        Future.successful(xformToSnakeCase(userProps) -> xformToSnakeCase(eventProps))
-    }
+    userIdOpt.map { userId =>
+      primaryOrgProvider.getPrimaryOrg(userId).map {
+        case Some(orgId) =>
+          val orgProps = "orgId" -> ContextStringData(orgId.toString)
+          (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
+        case None =>
+          (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+      }
+    }.getOrElse(Future.successful((xformToSnakeCase(userProps), xformToSnakeCase(eventProps))))
   }
 
-  private def getUserId(): Option[String] = event match {
-    case userEvent: UserEvent => Some(getDistinctId(userEvent.userId))
-    case _ => None
-  }
+  def getUserId(): Option[String] = userIdOpt.map { userId => getDistinctId(userId) }
 
-  private def getIpAddress(): Option[String] =
-    heimdalContext.get[String]("ip") orElse heimdalContext.get[String]("remoteAddress")
+  protected def getDistinctId(): String
 
-  private def getDistinctId(id: Id[User]): String = s"${UserEvent.typeCode}_${id.toString}"
-
-  private def getDistinctId(): String = event match {
-    case userEvent: UserEvent => getDistinctId(userEvent.userId)
-    case nonUserEvent: NonUserEvent => nonUserEvent.identifier
-    case visitorEvent: VisitorEvent =>
-      heimdalContext.get[String]("distinct_id") orElse
-        getIpAddress() getOrElse
-        VisitorEvent.typeCode
-    case systemEvent: SystemEvent => SystemEvent.typeCode
-    case anonymousEvent: AnonymousEvent => AnonymousEvent.typeCode
-  }
+  protected def getDistinctId(id: Id[User]): String = s"${UserEvent.typeCode}_${id.toString}"
 
   private def xformToSnakeCase(data: Map[String, ContextData]): Map[String, ContextData] = {
     data.foldLeft(Map.empty[String, ContextData]) {
@@ -147,26 +151,84 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider:
   private def camelCaseToUnderscore(key: String): String = {
     CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key)
   }
-
 }
 
-trait AmplitudeTransport {
-  def deliver(eventData: JsObject): Future[JsObject]
-}
+class AmplitudeIdentityBuilder(val userId: Id[User], val heimdalContext: HeimdalContext, val primaryOrgProvider: PrimaryOrgProvider) extends AmplitudeRequestBuilder {
+  val userIdOpt = Some(userId)
 
-class AmplitudeTransportImpl(apiKey: String) extends AmplitudeTransport {
+  val specificProperties = AmplitudeSpecificProperties(heimdalContext)
 
-  val amplitudeApiEndpoint = "https://api.amplitude.com/httpapi"
-
-  def deliver(eventData: JsObject): Future[JsObject] = {
-    val eventJson = Json.stringify(eventData)
-    val request = WS.url(amplitudeApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
-
-    request.get() map {
-      case resp if resp.status != 200 =>
-        throw new RuntimeException(s"Amplitude endpoint $amplitudeApiEndpoint refused event: " +
-          s"status=${resp.status} message=${resp.body} payload=$eventJson")
-      case _ => eventData
+  def build(userId: Id[User]): Future[JsObject] = {
+    getUserAndEventProperties() map {
+      case (userProperties, _) =>
+        Json.obj(
+          "user_id" -> getUserId(),
+          "device_id" -> getDistinctId(),
+          "user_properties" -> Json.toJson(userProperties),
+          "app_version" -> specificProperties.appVersion,
+          "platform" -> specificProperties.platform,
+          "os_name" -> specificProperties.osName,
+          "os_version" -> specificProperties.osVersion,
+          "device_type" -> specificProperties.deviceType,
+          "language" -> specificProperties.language
+        )
     }
   }
+
+  protected def getDistinctId(): String = specificProperties.distinctId getOrElse getDistinctId(userId)
+}
+
+class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, val primaryOrgProvider: PrimaryOrgProvider)(implicit companion: HeimdalEventCompanion[E]) extends AmplitudeRequestBuilder {
+  val heimdalContext = {
+    val heimdalContextBuilder = new HeimdalContextBuilder()
+    heimdalContextBuilder.data ++= event.context.data
+    event.context
+  }
+
+  val specificProperties = AmplitudeSpecificProperties(heimdalContext)
+
+  val userIdOpt = event match {
+    case userEvent: UserEvent => Some(userEvent.userId)
+    case _ => None
+  }
+
+  def getEventType(): String = {
+    s"${companion.typeCode}_${event.eventType.name}"
+  }
+
+  def build(): Future[JsObject] = {
+    getUserAndEventProperties() map {
+      case (userProperties, eventProperties) =>
+        Json.obj(
+          "user_id" -> getUserId(),
+          "device_id" -> getDistinctId(),
+          "event_type" -> getEventType(),
+          "time" -> event.time.getMillis / 1000,
+          "event_properties" -> Json.toJson(eventProperties),
+          "user_properties" -> Json.toJson(userProperties),
+          "app_version" -> specificProperties.appVersion,
+          "platform" -> specificProperties.platform,
+          "os_name" -> specificProperties.osName,
+          "os_version" -> specificProperties.osVersion,
+          "device_type" -> specificProperties.deviceType,
+          "language" -> specificProperties.language,
+          "ip" -> getIpAddress()
+        )
+    }
+  }
+
+  private def getIpAddress(): Option[String] =
+    heimdalContext.get[String]("ip") orElse heimdalContext.get[String]("remoteAddress")
+
+  protected def getDistinctId(): String = event match {
+    case userEvent: UserEvent => getDistinctId(userEvent.userId)
+    case nonUserEvent: NonUserEvent => nonUserEvent.identifier
+    case visitorEvent: VisitorEvent =>
+      specificProperties.distinctId orElse
+        getIpAddress() getOrElse
+        VisitorEvent.typeCode
+    case systemEvent: SystemEvent => SystemEvent.typeCode
+    case anonymousEvent: AnonymousEvent => AnonymousEvent.typeCode
+  }
+
 }

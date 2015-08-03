@@ -10,10 +10,9 @@ import com.keepit.common.cache.HeimdalCacheModule
 case class HeimdalDevModule() extends HeimdalModule(
   userActionsModule = DevRemoteUserActionsHelperModule(),
   cacheModule = HeimdalCacheModule(HashMapMemoryCacheModule()),
-  analyticsModule = DevAnalyticsModule(),
+  analyticsModule = ProdAnalyticsModule(),
   heimdalQueueModule = HeimdalQueueDevModule(),
   rekeepStatsUpdaterModule = DevReKeepStatsUpdaterModule(),
-  delightedModule = DevDelightedModule(),
-  amplitudeTransportModule = DevAmplitudeTransportModule()
+  delightedModule = DevDelightedModule()
 ) with CommonDevModule {
 }

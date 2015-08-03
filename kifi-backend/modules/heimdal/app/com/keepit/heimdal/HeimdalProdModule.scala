@@ -13,7 +13,6 @@ case class HeimdalProdModule() extends HeimdalModule(
   analyticsModule = ProdAnalyticsModule(),
   heimdalQueueModule = HeimdalQueueProdModule(),
   rekeepStatsUpdaterModule = ProdReKeepStatsUpdaterModule(),
-  delightedModule = ProdDelightedModule(),
-  amplitudeTransportModule = ProdAmplitudeTransportModule()
+  delightedModule = ProdDelightedModule()
 ) with CommonProdModule
 

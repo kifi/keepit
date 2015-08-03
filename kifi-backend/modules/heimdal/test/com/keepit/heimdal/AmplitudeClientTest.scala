@@ -1,12 +1,12 @@
 package com.keepit.heimdal
 
 import com.google.inject.Module
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
 import com.keepit.model.{ User, UserExperimentType }
 import com.keepit.social.NonUserKinds
-import com.keepit.test.{ HeimdalApplication, HeimdalApplicationInjector }
+import com.keepit.test.{ FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 
@@ -19,20 +19,11 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
   val sendEventsToAmplitude = false
 
   val modules: Seq[Module] =
-    if (sendEventsToAmplitude) Seq(ProdHttpClientModule(), ProdAmplitudeTransportModule(), DevAnalyticsModule())
-    else Seq(FakeHttpClientModule(), DevAmplitudeTransportModule(), DevAnalyticsModule())
+    if (sendEventsToAmplitude) Seq(ProdHttpClientModule(), FakeAnalyticsModule())
+    else Seq(FakeHttpClientModule(), FakeWebServiceModule(), FakeAnalyticsModule())
 
-  // simple helpers
-  def expect(expectation: Boolean, fut: Future[Boolean], reason: String): Future[Either[String, String]] = {
-    val msg = s"$reason [expected $expectation]"
-    fut map {
-      case bool if expectation == bool => Right(msg)
-      case _ => Left(msg)
-    }
-  }
-
-  def expectT(fut: Future[Boolean], reason: String): Future[Either[String, String]] = expect(true, fut, reason)
-  def expectF(fut: Future[Boolean], reason: String): Future[Either[String, String]] = expect(false, fut, reason)
+  val testUserId = Id[User](777)
+  val testUserExternalId = ExternalId[User]("68a320e9-3c33-4b76-b577-d7cba0102745")
 
   def heimdalContext(data: (String, ContextData)*) = {
     val builder = new HeimdalContextBuilder
@@ -45,33 +36,51 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
 
   "AmplitudeClient" should {
     "send events" in running(new HeimdalApplication(modules: _*)) {
-      val amplitudeClient = inject[AmplitudeClient]
+      val amplitude = inject[AmplitudeClient]
       val now = currentDateTime
 
-      val userKept = new UserEvent(Id[User](777), heimdalContext(), UserEventTypes.KEPT, now)
-      val userRecoAction = new UserEvent(Id[User](777), heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
-      val userUsedKifi = new UserEvent(Id[User](777), heimdalContext(), UserEventTypes.USED_KIFI, now)
+      val userKept = new UserEvent(testUserId, heimdalContext(), UserEventTypes.KEPT, now)
+      val userRecoAction = new UserEvent(testUserId, heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
+      val userUsedKifi = new UserEvent(testUserId, heimdalContext(), UserEventTypes.USED_KIFI, now)
       val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", NonUserKinds.email, heimdalContext(), NonUserEventTypes.MESSAGED)
       val visitorViewedLib: VisitorEvent = new VisitorEvent(heimdalContext(), VisitorEventTypes.VIEWED_LIBRARY)
       val anonKept: AnonymousEvent = new AnonymousEvent(heimdalContext(), AnonymousEventTypes.KEPT)
       val pingdomEvent = new VisitorEvent(heimdalContext("userAgent" -> ContextStringData("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)")), VisitorEventTypes.VIEWED_LIBRARY)
 
-      val eventsWithErrorsF = Future.sequence(List(
+      // any future that doesn't return the type we expect will throw an exception
+      val eventsFList = List(
         // testing 2 events for the same user recorded at the same time
-        expectT(amplitudeClient.track(userKept), "user kept 1"),
-        expectT(amplitudeClient.track(userKept), "user kept 2"),
-        expectF(amplitudeClient.track(userRecoAction), "user_reco_action should not be sent"),
-        expectF(amplitudeClient.track(userUsedKifi), "user_used_kifi should not be sent"),
-        expectT(amplitudeClient.track(nonUserMessaged), "non user msg"),
-        expectT(amplitudeClient.track(visitorViewedLib), "visitor viewed lib"),
-        expectF(amplitudeClient.track(anonKept), "anon kept event should be skipped"),
-        expectF(amplitudeClient.track(pingdomEvent), "pingdom event should be skipped")
-      )) map { results =>
-        results.filter(_.isLeft)
-      }
+        amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(userUsedKifi) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(nonUserMessaged) map { case _: AmplitudeEventSent => () },
+        amplitude.track(visitorViewedLib) map { case _: AmplitudeEventSent => () },
+        amplitude.track(anonKept) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(pingdomEvent) map { case _: AmplitudeEventSkipped => () }
+      )
 
-      val eventsWithErrors = Await.result(eventsWithErrorsF, Duration("10 seconds"))
-      eventsWithErrors must beEmpty
+      val eventsF = Future.sequence(eventsFList)
+      val res = Await.result(eventsF, Duration("10 seconds"))
+      res.size === eventsFList.size
+    }
+
+    "set user properties" in running(new HeimdalApplication(modules: _*)) {
+      val amplitude = inject[AmplitudeClient]
+      val apiF = amplitude.setUserProperties(testUserId, heimdalContext("userLastUpdated" -> ContextDoubleData(currentDateTime.getMillis / 1000)))
+      Await.result(apiF, Duration("10 seconds")) match {
+        case _: AmplitudeEventSent => success("yey")
+        case e => failure("unexpected amplitude result: " + e.toString)
+      }
+    }
+
+    "set user alias" in running(new HeimdalApplication(modules: _*)) {
+      val amplitude = inject[AmplitudeClient]
+      val apiF = amplitude.alias(testUserId, ExternalId[User]())
+      Await.result(apiF, Duration("10 seconds")) match {
+        case _: AmplitudeEventSent => success("yey")
+        case e => failure("unexpected amplitude result: " + e.toString)
+      }
     }
   }
 }
