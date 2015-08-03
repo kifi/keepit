@@ -169,13 +169,6 @@ angular.module('kifi')
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         resolve: {
-          profile: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
-            return orgProfileService
-              .userOrOrg($stateParams.handle)
-              .then(function (userOrOrgData) {
-                return userOrOrgData;
-              });
-          }],
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
             return libraryService.getLibraryByHandleAndSlug($stateParams.handle, $stateParams.librarySlug, $stateParams.authToken);
