@@ -23,21 +23,26 @@ class MixpanelClientImpl(projectToken: String, primaryOrgProvider: PrimaryOrgPro
 
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
-    val properties = new HeimdalContextBuilder()
-    event match {
+    val propertiesF: Future[HeimdalContextBuilder] = event match {
       case userEvent: UserEvent =>
-        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgId =>
-          properties.data += "orgId" -> ContextStringData(orgId.toString)
+        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgIdOpt =>
+          val builder = new HeimdalContextBuilder()
+          orgIdOpt foreach { orgId =>
+            builder.data += "orgId" -> ContextStringData(orgId.toString)
+          }
+          builder
         }
-      case _ =>
+      case _ => Future.successful(new HeimdalContextBuilder())
     }
-    properties.data ++= event.context.data
-    if (!properties.data.contains("ip")) { properties.data += ("ip" -> ContextStringData(getIpAddress(event) getOrElse "0")) }
-    properties += ("distinct_id", getDistinctId(event))
-    properties += ("time", event.time.getMillis / 1000)
-    if (!properties.data.contains("token")) { properties += ("token", projectToken) }
-    val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
-    sendData("http://api.mixpanel.com/track", data) map (_ => ())
+    propertiesF map { properties =>
+      properties.data ++= event.context.data
+      if (!properties.data.contains("ip")) { properties.data += ("ip" -> ContextStringData(getIpAddress(event) getOrElse "0")) }
+      properties += ("distinct_id", getDistinctId(event))
+      properties += ("time", event.time.getMillis / 1000)
+      if (!properties.data.contains("token")) { properties += ("token", projectToken) }
+      val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
+      sendData("http://api.mixpanel.com/track", data) map (_ => ())
+    }
   }
 
   private def getIpAddress(event: HeimdalEvent): Option[String] = event.context.get[String]("ip") orElse event.context.get[String]("remoteAddress")

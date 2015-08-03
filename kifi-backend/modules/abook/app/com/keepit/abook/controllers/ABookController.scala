@@ -68,7 +68,6 @@ class ABookController @Inject() (
   def importContacts(userId: Id[User]) = Action.async(parse.json) { request =>
     implicit val prefix = LogPrefix(s"importContacts($userId)")
     val tokenOpt = request.body.asOpt[OAuth2Token]
-    log.infoP(s"tokenOpt=$tokenOpt")
     tokenOpt match {
       case None =>
         log.errorP(s"token is invalid body=${request.body}")
@@ -173,7 +172,6 @@ class ABookController @Inject() (
           }
         )
         val stored = s3.syncGet(key)
-        log.info(s"userId=$userId origin=$origin stored=$stored")
         Json.toJson[ABookRawInfo](stored.getOrElse(ABookRawInfo.EMPTY))
       }
     }
@@ -188,7 +186,7 @@ class ABookController @Inject() (
   }
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]) = Action { request =>
-    log.info(s"[getOAuth2Token] userId=$userId, abookId=$abookId")
+
     val tokenOpt = db.readOnlyMaster(attempts = 2) { implicit s =>
       for {
         abookInfo <- abookInfoRepo.getById(abookId)
@@ -201,7 +199,6 @@ class ABookController @Inject() (
 
   def refreshPrefixFilter(userId: Id[User]) = Action.async { request =>
     typeahead.refresh(userId) map { filter =>
-      log.info(s"[refreshPrefixFilter($userId)] updated; filter=$filter")
       Ok(Json.obj("code" -> "success"))
     }
   }
@@ -209,7 +206,6 @@ class ABookController @Inject() (
   def refreshPrefixFiltersByIds() = Action.async(parse.json) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val userIds = jsArray.value map { x => Id[User](x.as[Long]) }
-    log.info(s"[refreshPrefixFiltersByIds] ids(len=${userIds.length});${userIds.take(50).mkString(",")}")
     typeahead.refreshByIds(userIds) map { r =>
       Ok(Json.obj("code" -> "success"))
     }
@@ -235,7 +231,6 @@ class ABookController @Inject() (
 
   def internKifiContacts(userId: Id[User]) = Action(parse.json) { request =>
     val contacts = request.body.as[Seq[BasicContact]]
-    log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
 
     val eContacts = abookCommander.internKifiContacts(userId, contacts)
     val richContacts = eContacts.map(EContact.toRichContact)

@@ -13,6 +13,7 @@ import scala.collection.concurrent.TrieMap
 import akka.actor.{ Scheduler, Cancellable }
 
 import com.google.inject.Provider
+import com.keepit.common.core._
 
 class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler, forceUpdateTopology: () => Unit) extends Logging {
 
@@ -68,7 +69,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     val remoteService = RemoteService.fromJson(nodeData)
     newInstances(childNode) = newInstances.get(childNode) match {
       case Some(instance) =>
-        log.info(s"discovered updated node $childNode: ${remoteService.amazonInstanceInfo.getName}")
         new ServiceInstance(childNode, instance.thisInstance, remoteService)
       case None =>
         log.info(s"discovered new node $childNode: $remoteService")
@@ -80,6 +80,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   }
 
   private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], children: Seq[(Node, String)]) = {
+    debouncedLog(s"discovered ${children.size} new/updated nodes")
     children foreach { case (childNode, nodeData) => addNewNode(newInstances, childNode, nodeData) }
   }
 
@@ -95,7 +96,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     case false =>
       val minId = ServiceInstanceId((newInstances.values map { v => v.id.id }).min)
       val leader = newInstances.values.filter(_.id == minId).head
-      log.info(s"leader is $leader")
+      debouncedLog(s"leader is ${leader.remoteService.amazonInstanceInfo.getName}")
       Some(leader)
   }
 
@@ -188,4 +189,6 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def getCustomRouter: Option[CustomRouter] = customRouter
 
   def refresh() = forceUpdateTopology()
+
+  private val debouncedLog = extras.debounce(.1.seconds)(log.info)
 }

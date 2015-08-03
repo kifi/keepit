@@ -43,8 +43,9 @@ class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider
     if (AmplitudeClient.killedEvents.contains(eventBuilder.getEventType())) {
       Future.successful(Unit)
     } else new SafeFuture({
-      val payload = eventBuilder.buildEventPayload()
-      sendData(payload) map (_ => ())
+      eventBuilder.buildEventPayload() map { payload =>
+        sendData(payload) map (_ => ())
+      }
     })
   }
 
@@ -74,27 +75,28 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider:
     s"${companion.typeCode}_${event.eventType.name}"
   }
 
-  def buildEventPayload(): JsObject = {
-    val (userProperties, eventProperties) = getUserAndEventProperties()
-
-    Json.obj(
-      "user_id" -> getUserId(),
-      "device_id" -> getDistinctId(),
-      "event_type" -> getEventType(),
-      "time" -> event.time.getMillis / 1000,
-      "event_properties" -> Json.toJson(eventProperties),
-      "user_properties" -> Json.toJson(userProperties),
-      "app_version" -> heimdalContext.get[String]("clientVersion"),
-      "platform" -> heimdalContext.get[String]("client"),
-      "os_name" -> heimdalContext.get[String]("os"),
-      "os_version" -> heimdalContext.get[String]("osVersion"),
-      "device_type" -> heimdalContext.get[String]("device"),
-      "language" -> heimdalContext.get[String]("language"),
-      "ip" -> getIpAddress()
-    )
+  def buildEventPayload(): Future[JsObject] = {
+    getUserAndEventProperties() map {
+      case (userProperties, eventProperties) =>
+        Json.obj(
+          "user_id" -> getUserId(),
+          "device_id" -> getDistinctId(),
+          "event_type" -> getEventType(),
+          "time" -> event.time.getMillis / 1000,
+          "event_properties" -> Json.toJson(eventProperties),
+          "user_properties" -> Json.toJson(userProperties),
+          "app_version" -> heimdalContext.get[String]("clientVersion"),
+          "platform" -> heimdalContext.get[String]("client"),
+          "os_name" -> heimdalContext.get[String]("os"),
+          "os_version" -> heimdalContext.get[String]("osVersion"),
+          "device_type" -> heimdalContext.get[String]("device"),
+          "language" -> heimdalContext.get[String]("language"),
+          "ip" -> getIpAddress()
+        )
+    }
   }
 
-  private def getUserAndEventProperties() = {
+  private def getUserAndEventProperties(): Future[(Map[String, ContextData], Map[String, ContextData])] = {
     val (userProps, eventProps) = heimdalContext.data.
       filterKeys(key => trackedPropertyFilters.forall(fn => fn(key))).
       partition {
@@ -110,15 +112,17 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, primaryOrgProvider:
 
     event match {
       case userEvent: UserEvent =>
-        primaryOrgProvider.getPrimaryOrg(userEvent.userId) match {
-          case Some(orgId) =>
-            val orgProps = "orgId" -> ContextStringData(orgId.toString)
-            (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
-          case None =>
-            (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+        primaryOrgProvider.getPrimaryOrg(userEvent.userId) map { orgIdOpt =>
+          orgIdOpt match {
+            case Some(orgId) =>
+              val orgProps = "orgId" -> ContextStringData(orgId.toString)
+              (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
+            case None =>
+              (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+          }
         }
       case _ =>
-        (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+        Future.successful(xformToSnakeCase(userProps) -> xformToSnakeCase(eventProps))
     }
   }
 

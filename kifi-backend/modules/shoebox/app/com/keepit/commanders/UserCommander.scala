@@ -238,7 +238,7 @@ class UserCommander @Inject() (
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
           if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord.address.address)) {
-            updateUserPrimaryEmail(emailRecord)
+            userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
@@ -524,7 +524,7 @@ class UserCommander @Inject() (
             case emailRecord if emailRecord.userId == userId =>
               if (emailRecord.verified) {
                 if (primaryEmail.isEmpty || primaryEmail.get != emailRecord.address) {
-                  updateUserPrimaryEmail(emailRecord)
+                  userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
                 }
               } else {
                 userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, emailInfo.address)
@@ -537,20 +537,12 @@ class UserCommander @Inject() (
         emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
             if (em.verified && em.address.address == pp) {
-              updateUserPrimaryEmail(em)
+              userEmailAddressCommander.setAsPrimaryEmail(em)
             }
           case None => userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
         }
       }
     }
-  }
-
-  def updateUserPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession) = {
-    require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
-    userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
-    val currentUser = userRepo.get(primaryEmail.userId)
-    userRepo.save(currentUser.copy(primaryEmail = Some(primaryEmail.address)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {

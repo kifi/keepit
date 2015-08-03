@@ -396,8 +396,8 @@ class UrlController @Inject() (
     val domain = db.readOnlyReplica { implicit s =>
       domainRepo.get(id)
     }
-    val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(id)
-    Ok(html.admin.domain(domain, owningOrgs))
+    val owningOrg = orgDomainOwnCommander.getOwningOrganization(domain.hostname)
+    Ok(html.admin.domain(domain, owningOrg))
   }
 
   def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>

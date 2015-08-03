@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.{ AtomicLong, AtomicReference, AtomicInteger 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URISanitizer, URI }
-import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect, FetchRequest }
+import com.keepit.rover.fetcher.{ HttpRedirect, FetchRequestInfo, FetchRequest }
 import com.keepit.rover.model.{ HttpProxy, ProxyScheme }
 import org.apache.http.HttpHeaders._
 import org.apache.http.{ StatusLine, HttpHost }
@@ -46,10 +46,7 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
     Try {
       executedAt.set(System.currentTimeMillis)
       thread.set(Thread.currentThread())
-      timingWithResult[ApacheFetchResponse](s"fetch(${url}).execute", { r: ApacheFetchResponse => r.getStatusLine.toString }) {
-        System.out.flush()
-        new ApacheFetchResponse(httpClient.execute(httpGet, httpContext))
-      }
+      new ApacheFetchResponse(httpClient.execute(httpGet, httpContext))
     } tap {
       case Success(httpResponse) => respStatusRef.set(httpResponse.getStatusLine)
       case Failure(e @ (_: IOException | _: GeneralSecurityException | _: NullPointerException)) => logAndSetError(e, notify = false) // NullPointerException can happen on BrowserCompatSpec.formatCookies

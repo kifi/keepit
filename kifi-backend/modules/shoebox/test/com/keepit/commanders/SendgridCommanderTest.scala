@@ -170,48 +170,6 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           }
         }
       }
-
-      "click events ignore confirmed emails" in {
-        withDb(modules: _*) { implicit injector =>
-          val commander = inject[SendgridCommander]
-          val emailAddrRepo = inject[UserEmailAddressRepo]
-
-          val (user, emailAddr, email) = setup(db)
-          val sgEvent = mockSendgridEvent(email.externalId)
-
-          val verifiedEmail = db.readWrite { implicit session =>
-            emailAddrRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED))
-          }
-
-          commander.processNewEvents(Seq(sgEvent))
-
-          db.readOnlyMaster { implicit session =>
-            val fetchedEmailAddr = emailAddrRepo.get(emailAddr.id.get)
-            verifiedEmail.seq === fetchedEmailAddr.seq
-            verifiedEmail.updatedAt === fetchedEmailAddr.updatedAt
-          }
-        }
-      }
-
-      "click events confirm unconfirmed emails" in {
-        withDb(modules: _*) { implicit injector =>
-          val commander = inject[SendgridCommander]
-          val emailAddrRepo = inject[UserEmailAddressRepo]
-
-          val (user, emailAddr, email) = setup(db)
-          val sgEvent = mockSendgridEvent(email.externalId)
-
-          commander.processNewEvents(Seq(sgEvent))
-
-          db.readOnlyMaster { implicit session =>
-            val fetchedEmailAddr = emailAddrRepo.get(emailAddr.id.get)
-            fetchedEmailAddr.seq mustNotEqual emailAddr.seq
-            fetchedEmailAddr.verified must beTrue
-            fetchedEmailAddr.verifiedAt must beSome
-            fetchedEmailAddr.state === UserEmailAddressStates.VERIFIED
-          }
-        }
-      }
     }
   }
 }

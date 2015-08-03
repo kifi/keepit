@@ -17,6 +17,9 @@ object LibraryFactoryHelper {
       for (user <- partialLibrary.followers) {
         membership().withLibraryFollower(library, user).saved
       }
+      for (user <- partialLibrary.collaborators) {
+        membership().withLibraryCollaborator(library, user).saved
+      }
       library
     }
   }
