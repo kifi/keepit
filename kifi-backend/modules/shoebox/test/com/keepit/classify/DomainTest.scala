@@ -92,7 +92,7 @@ class DomainTest extends Specification with ShoeboxTestInjector {
 
           val actual3 = domainRepo.get(NormalizedHostname.fromHostname("Ğooğle.com").get)
           actual3.isDefined === true
-          actual3.get.hostname === NormalizedHostname.fromHostname("Ğooğle.com")
+          actual3.get.hostname === NormalizedHostname.fromHostname("Ğooğle.com").get
           actual3.get.hostname.value === "xn--oole-zwac.com"
         }
       }
