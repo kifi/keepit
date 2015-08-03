@@ -16,8 +16,7 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
+import scala.concurrent.Future
 import scala.util.Random
 
 import play.api.mvc.{ WebSocket, RequestHeader }
@@ -69,25 +68,35 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected def onConnect(socket: SocketInfo): Unit
   protected def onDisconnect(socket: SocketInfo): Unit
-  protected def websocketHandlers(socket: SocketInfo): Map[String, Seq[JsValue] => Future[Unit]]
+  protected def websocketHandlers(socket: SocketInfo): Map[String, Seq[JsValue] => Unit]
 
   protected val crypt = new RatherInsecureDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  private def asyncIteratee(streamSession: StreamSession, kifiVersionOpt: Option[String])(f: JsArray => Future[Unit]): Iteratee[JsArray, List[Future[Unit]]] = {
+  private def asyncIteratee(streamSession: StreamSession, kifiVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     val kifiVersion = kifiVersionOpt.getOrElse("N/A")
-    Iteratee.fold[JsArray, List[Future[Unit]]](Nil) { (futures, e) =>
-      (f(e) recover {
-        case ex => airbrake.notify(
-          AirbrakeError(
-            exception = ex,
-            method = Some("ws"),
-            url = e.value.headOption.map(_.toString()),
-            message = Some(s"[WS] user ${streamSession.userId.id} using version $kifiVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
-          )
-        )
-      } map (_ => ())) :: futures
+    import play.api.libs.iteratee._
+    def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
+      case Input.EOF => Done(Unit, Input.EOF)
+      case Input.Empty => Cont[JsArray, Unit](i => step(i))
+      case Input.El(e) =>
+        SafeFuture {
+          try {
+            f(e)
+          } catch {
+            case ex: Throwable => airbrake.notify(
+              AirbrakeError(
+                exception = ex,
+                method = Some("ws"),
+                url = e.value.headOption.map(_.toString()),
+                message = Some(s"[WS] user ${streamSession.userId.id} using version $kifiVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
+              )
+            )
+          }
+        }
+        Cont[JsArray, Unit](i => step(i))
     }
+    Cont[JsArray, Unit](i => step(i))
   }
 
   implicit val jsonFrame: FrameFormatter[JsArray] = {
@@ -230,36 +239,22 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case other => other
     }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
-      Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get) match {
-        case Some(handler) =>
-          val action = jsArr.value(0).as[String]
-          statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
-            val timer = accessLog.timer(WS_IN)
-            val payload = jsArr.value.tail
-            (try {
-              handler(payload)
-            } catch {
-              case e: Throwable =>
-                // do this because the handler partial function may fail
-                Future.failed(e)
-            }) andThen {
-              case _ =>
-                statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_HUNDRED)
-                accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
-            }
+      Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
+        val action = jsArr.value(0).as[String]
+        statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
+          val timer = accessLog.timer(WS_IN)
+          val payload = jsArr.value.tail
+          try {
+            handler(payload)
+          } finally {
+            statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_HUNDRED)
+            accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
-        case None =>
-          airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.kifiVersion} :: ${streamSession.userAgent})")
-          Future.successful(())
+        }
+      } getOrElse {
+        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.kifiVersion} :: ${streamSession.userAgent})")
       }
-    } map { futures =>
-      // run all the futures through before closing the socket and sending end messages
-      try {
-        Await.result(Future.sequence(futures), 5 seconds)
-      } finally {
-        endSession(streamSession, socketInfo)
-      }
-    }
+    }.map(_ => endSession(streamSession, socketInfo))
   }
 
   private def updateNeeded(versionOpt: Option[KifiVersion], userId: Id[User]): Boolean = {
