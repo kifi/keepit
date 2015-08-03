@@ -16,12 +16,13 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
+import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.WebSocket
 import play.api.test.Helpers._
 
-class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInjector with NoTimeConversions {
+class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions {
 
   val modules = List(
     FakeElizaStoreModule(),
@@ -34,6 +35,8 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
     FakeSecureSocialAuthenticatorPluginModule(),
     FakeSecureSocialUserPluginModule()
   )
+
+  val unit = ()
 
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)
 
@@ -53,8 +56,11 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
       running(new ElizaApplication(modules: _*)) {
 
         setupSocialUser
+        val socket = MockWebSocket()
 
-        socketOutput must equalTo(List(Json.arr("hi"), Json.arr("bye", "session")))
+        socket.out === Json.arr("hi")
+        socket.close
+        socket.out === Json.arr("bye", "session")
 
       }
     }
@@ -64,11 +70,16 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
 
         setupSocialUser
 
-        in {
+        val socket = MockWebSocket()
+        socket.out
+
+        socket.in {
           Json.arr("ping")
         }
 
-        socketOutput must equalTo(List(Json.arr("hi"), Json.arr("pong"), Json.arr("bye", "session")))
+        socket.out === Json.arr("pong")
+        socket.close
+        socket.out === Json.arr("bye", "session")
 
       }
     }
@@ -77,13 +88,15 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
       running(new ElizaApplication(modules: _*)) {
         setupSocialUser
 
-        in {
+        val socket = MockWebSocket()
+
+        socket.in {
           Json.arr("stats")
         }
 
-        val output = socketOutput
-
-        output(1)(0).as[String] must startWith("id:")
+        socket.out
+        socket.out(0).as[String] must startWith("id:")
+        socket.close === unit
       }
     }
 
@@ -105,11 +118,15 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
             replyable = true))
         }
 
-        in {
+        val socket = MockWebSocket()
+
+        socket.in {
           Json.arr("get_thread", uuid)
         }
 
-        socketOutput.length === 2
+        socket.out === Json.arr("hi")
+        socket.close
+        socket.out === Json.arr("bye", "session")
       }
     }
 
@@ -131,18 +148,20 @@ class ElizaWebSocketTest extends WebSocketTest[JsArray] with ElizaApplicationInj
             replyable = true))
         }
 
-        in {
+        val socket = MockWebSocket()
+
+        socket.in {
           Json.arr("get_thread", uuid)
         }
 
-        val output = socketOutput
-
-        output.length === 3
-        val threadResponse = output(1)
+        socket.out === Json.arr("hi")
+        val threadResponse = socket.out
         threadResponse(0).as[String] === "thread"
         val thread = threadResponse(1)
         (thread \ "id").as[String] === uuid
         (thread \ "messages") === JsArray()
+
+        socket.close === unit
       }
     }
 
