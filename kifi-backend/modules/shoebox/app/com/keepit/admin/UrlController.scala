@@ -465,7 +465,7 @@ class UrlController @Inject() (
     db.readWrite { implicit s =>
       domainSensitiveMap.foreach {
         case (domainName, sensitive) =>
-          val domain = domainRepo.getNormalized(domainName)
+          val domain = domainRepo.get(domainName)
             .getOrElse(Domain(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)

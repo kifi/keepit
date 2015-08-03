@@ -9,7 +9,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
   def get(domain: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
-  def getNormalized(hostname: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain]
   def getByIds(orgIds: Set[Id[Domain]])(implicit session: RSession): Map[Id[Domain], Domain]
   def getAllByName(domains: Seq[NormalizedHostname], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
@@ -49,12 +48,6 @@ class DomainRepoImpl @Inject() (
   def get(domain: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
     domainCache.getOrElseOpt(DomainKey(domain)) {
       (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
-    }
-  }
-
-  def getNormalized(hostname: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
-    domainCache.getOrElseOpt(DomainKey(hostname)) {
-      (for (d <- rows if d.hostname === hostname && d.state =!= excludeState.orNull) yield d).firstOption
     }
   }
 
