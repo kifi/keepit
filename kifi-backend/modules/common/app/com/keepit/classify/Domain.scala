@@ -49,7 +49,7 @@ object Domain {
     (__ \ 'updatedAt).format[DateTime]
   )(Domain.apply, unlift(Domain.unapply))
 
-  def fromHostname(hostname: String) = Domain(hostname = NormalizedHostname.fromHostname(hostname))
+  def fromHostname(hostname: String): Option[Domain] = NormalizedHostname.fromHostname(hostname).map(normalized => Domain(hostname = normalized))
 }
 
 case class DomainInfo(
