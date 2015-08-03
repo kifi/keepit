@@ -30,7 +30,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
   def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
-  def emailAddressRepo(implicit injector: Injector) = inject[UserEmailAddressRepo]
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
