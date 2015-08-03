@@ -222,13 +222,20 @@ orgStats: OrganizationStatistics
     };
 
     function startAdminChat() {
-      $.post("https://eliza.kifi.com/eliza/messages", {
-        "url": "http://www.kifi.com/@{orgStats.handle.value}",
-        "title": "Kifi for your organization",
-        "text": "Hello, and welcome to your organization page on Kifi",
-        "recipients": [ @{Html(orgStats.membersStatistics.values.map('"' + _.user.externalId.id + '"').mkString(", "))} ]
-      }).done(done);
-    }
+        $.ajax({
+            url: "https://eliza.kifi.com/eliza/messages",
+            type: 'POST',
+            dataType: 'json',
+            data: JSON.stringify({
+                "url": "http://www.kifi.com/@{orgStats.handle.value}",
+                "title": "Kifi for your organization",
+                "text": "Hello, and welcome to your organization page on Kifi",
+                "recipients": [ @{Html(orgStats.membersStatistics.values.map('"' + _.user.externalId.id + '"').mkString(", "))} ]
+            }),
+            contentType: 'application/json',
+            xhrFields: { withCredentials: true }
+        });
+    };
 
     function done() {
       location.reload();
