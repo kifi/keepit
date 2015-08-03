@@ -114,6 +114,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
+  val socialUserInfosByNetworkAndSocialId = MutableMap[(SocialId, SocialNetworkType), SocialUserInfo]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -391,7 +392,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] =
+    Future.successful(socialUserInfosByNetworkAndSocialId.get(id, networkType))
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }
