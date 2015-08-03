@@ -65,7 +65,7 @@ class ABookCommander @Inject() (
     } yield {
       resp.status match {
         case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
-          case Some(info) => info tap { res => log.infoP(s"ownerInfo=$info") }
+          case Some(info) => info
           case None => throw new IllegalStateException(s"$prefix cannot parse openIdConnect response: ${resp.body}")
         }
         case _ => throw new IllegalStateException(s"$prefix failed to obtain info about user/owner")
@@ -98,14 +98,13 @@ class ABookCommander @Inject() (
     } yield {
       contactsResp.status match {
         case Status.OK =>
-          val contacts = timingWithResult[Elem](s"$prefix parse-XML") { contactsResp.xml } // todo(ray): paging
+          val contacts = contactsResp.xml
 
           val totalResults = (contacts \ "totalResults").text.toInt
           val startIndex = (contacts \ "startIndex").text.toInt
           val itemsPerPage = (contacts \ "itemsPerPage").text.toInt
-          log.infoP(s"total=$totalResults start=$startIndex itemsPerPage=$itemsPerPage")
 
-          val jsSeq = timingWithResult[Seq[JsObject]](s"$prefix xml2Js") { xml2Js(contacts) }
+          val jsSeq = xml2Js(contacts)
 
           val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> userInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq) // todo(ray): removeme
           processUpload(userId, ABookOrigins.GMAIL, Some(userInfo), tokenOpt, abookUpload) getOrElse (throw new IllegalStateException(s"$prefix failed to upload contacts ($abookUpload)"))
@@ -173,7 +172,6 @@ class ABookCommander @Inject() (
 
       if (proceed) {
         abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, Some(WeakReference(json)))
-        log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
     }
