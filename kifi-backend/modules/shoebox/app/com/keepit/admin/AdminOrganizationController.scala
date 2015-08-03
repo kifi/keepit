@@ -3,13 +3,10 @@ package com.keepit.controllers.admin
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
-import com.keepit.classify.Domain
-import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import play.api.libs.json.Json
@@ -151,9 +148,9 @@ class AdminOrganizationController @Inject() (
             users.incrementAndGet()
             orgNames.foreach { orgName =>
               val org = orgRepo.getOrgByName(orgName) match {
-                case Some(org) =>
+                case Some(orgByName) =>
                   existedOrgs.incrementAndGet()
-                  org
+                  orgByName
                 case None =>
                   orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
                     case Left(fail) =>
@@ -240,6 +237,19 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  def setOwner(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val newOwnerId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
+    val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+    val oldOwnerId = org.ownerId
+    orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId))
+    val updatedOrg = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+    assume(updatedOrg.ownerId == newOwnerId)
+    if (oldOwnerId == fakeOwnerId) {
+      orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
@@ -255,6 +265,12 @@ class AdminOrganizationController @Inject() (
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
     orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def inviteMemberToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+    orgMembershipCandidateCommander.inviteCandidate(orgId, userId)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
