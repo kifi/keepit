@@ -67,7 +67,7 @@ class ExtSearchController @Inject() (
         "uuid" -> JsString(result.uuid.toString),
         "query" -> JsString(query),
         "hits" -> JsArray(result.hits.map { hit =>
-          json.minify(Json.obj(
+          json.aggressiveMinify(Json.obj(
             "title" -> hit.titleJson,
             "url" -> hit.urlJson,
             "keepId" -> hit.externalIdJson,
@@ -91,13 +91,13 @@ class ExtSearchController @Inject() (
         val librarySearcher = libraryIndexer.getSearcher
         val (augmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
-        val hitsJson = augmentationFields.map(json.minify)
+        val hitsJson = augmentationFields.map(json.aggressiveMinify)
 
         futureBasicUsersAndLibraries.imap {
           case (users, libraries) =>
 
             val librariesJson = libraries.map { library =>
-              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "secret" -> library.isSecret))
+              json.aggressiveMinify(Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "secret" -> library.isSecret))
             }
 
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)

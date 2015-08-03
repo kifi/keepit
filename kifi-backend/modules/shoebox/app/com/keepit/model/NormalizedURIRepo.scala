@@ -100,7 +100,6 @@ class NormalizedURIRepoImpl @Inject() (
     (for (f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
-    log.info(s"about to persist $uri")
 
     // setting a negative sequence number for deferred assignment
     val num = deferredSeqNum()

@@ -9,21 +9,26 @@ object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
-      val org = if (orgTemplate.handle.isEmpty) {
-        injector.getInstance(classOf[HandleCommander]).autoSetOrganizationHandle(orgTemplate).get
+      val handleCommander = injector.getInstance(classOf[HandleCommander])
+      val org = if (orgTemplate.primaryHandle.isEmpty) {
+        handleCommander.autoSetOrganizationHandle(orgTemplate).get
       } else {
-        injector.getInstance(classOf[HandleCommander]).setOrganizationHandle(orgTemplate, orgTemplate.getHandle, overrideValidityCheck = true).get
+        handleCommander.setOrganizationHandle(orgTemplate, orgTemplate.handle, overrideValidityCheck = true).get
       }
-      injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
+      val userRepo = injector.getInstance(classOf[UserRepo])
+      assume(userRepo.get(org.ownerId).id.isDefined)
+      val orgMemRepo = injector.getInstance(classOf[OrganizationMembershipRepo])
+      val admin = orgMemRepo.save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
+      assume(admin.id.isDefined)
       for (member <- partialOrganization.members) {
-        injector.getInstance(classOf[OrganizationMembershipRepo]).save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
+        orgMemRepo.save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
       }
+      val orgInvRepo = injector.getInstance(classOf[OrganizationInviteRepo])
       for (invitedUser <- partialOrganization.invitedUsers) {
-        injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, userId = Some(invitedUser.id.get), role = OrganizationRole.MEMBER))
-
+        orgInvRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, userId = Some(invitedUser.id.get), role = OrganizationRole.MEMBER))
       }
       for (invitedEmail <- partialOrganization.invitedEmails) {
-        injector.getInstance(classOf[OrganizationInviteRepo]).save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))
+        orgInvRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))
       }
       org
     }

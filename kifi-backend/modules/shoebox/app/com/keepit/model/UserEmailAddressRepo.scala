@@ -20,8 +20,6 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
@@ -83,18 +81,6 @@ class UserEmailAddressRepoImpl @Inject() (
         case Some(verifiedEmail) => verifiedEmail.address
         case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
       }
-    }
-  }
-
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] =
-    (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
-
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) = {
-    // returns (verifiedEmailOption, isFirstTimeUsed)
-    getByUserAndCode(userId, verificationCode) match {
-      case Some(verifiedAddress) if verifiedAddress.state == UserEmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
-      case Some(unverifiedAddress) if unverifiedAddress.state == UserEmailAddressStates.UNVERIFIED => (Some(save(unverifiedAddress.withState(UserEmailAddressStates.VERIFIED))), true)
-      case None => (None, false)
     }
   }
 

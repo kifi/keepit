@@ -87,7 +87,7 @@ class TwitterSyncCommander @Inject() (
   }
 
   private def persistTweets(syncState: TwitterSyncState, libraryOwner: Id[User], tweets: Seq[JsObject]) = {
-    log.info(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
+    log.debug(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
     if (tweets.nonEmpty) {
 
       importer.processDirectTwitterData(libraryOwner, syncState.libraryId, tweets)

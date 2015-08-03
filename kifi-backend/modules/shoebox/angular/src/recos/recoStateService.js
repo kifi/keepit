@@ -15,7 +15,7 @@ angular.module('kifi')
 
         for (var i = 0; i < recos.length; i++) {
           var reco = recos[i];
-          var url = (reco.recoLib || reco.recoKeep).url;
+          var url = (reco.recoLib || reco.recoKeep).url || reco.recoLib.path;
           if (!recoUrls[url]) {
             recoUrls[url] = true;
             savedRecos.push(reco);

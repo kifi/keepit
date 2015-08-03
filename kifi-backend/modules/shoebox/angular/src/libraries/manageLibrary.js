@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.handle = 'organization' in scope.modalData ? scope.modalData.organization.handle : profileService.me.username;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,6 +39,73 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+
+        //
+        // On link.
+        //
+        if (scope.modalData && scope.modalData.library) {
+          scope.library = _.cloneDeep(scope.modalData.library);
+          scope.library.followers.forEach(function (follower) {
+            follower.status = 'Following';
+          });
+          scope.modifyingExistingLibrary = true;
+          scope.emptySlug = false;
+          scope.modalTitle = scope.library.name;
+          scope.library.subscriptions = scope.library.subscriptions || [];
+          if (scope.library.subscriptions.length < 3) {
+            scope.library.subscriptions.push(scope.newBlankSub());
+          }
+        } else {
+          scope.library = {
+            'name': '',
+            'description': '',
+            'slug': '',
+            'visibility': 'published'
+          };
+          scope.library.membership = {
+            access: 'owner',
+            listed: true,
+            subscribed: false
+          };
+          scope.library.subscriptions = [scope.newBlankSub()];
+          scope.modalTitle = 'Create a library';
+        }
+        returnAction = scope.modalData && scope.modalData.returnAction;
+        scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
+
+        var currentSpace = (scope.library.org || profileService.me);
+
+        // Set up the spaces.
+        // The scope.space.* objects MUST BE REFERENCE-EQUAL to the scope.spaces objects
+        // to make the angular <select> binding work
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.space = {};
+
+        var desiredId = scope.modalData.organization ? scope.modalData.organization.id : currentSpace.id;
+        scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
+        scope.space.destination = scope.space.current;
+
+        scope.onChangeSpace = function () {
+          var currIsOrg = scope.spaceIsOrg(scope.space.current);
+          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
+
+          if (currIsOrg !== destIsOrg) {
+            if (currIsOrg) {
+              if (scope.library.visibility === 'organization') {
+                scope.library.visibility = 'secret';
+              }
+            } else {
+              if (scope.library.visibility === 'secret') {
+                scope.library.visibility = 'organization';
+              }
+            }
+          }
+
+          // Prevent non-org lib from having visibility === 'organization'
+          if (!destIsOrg && scope.library.visibility === 'organization') {
+            scope.library.visibility = 'secret';
+          }
+        };
 
         //
         // Scope methods.
@@ -81,6 +147,15 @@ angular.module('kifi')
 
         scope.removeSubscription = function (index) {
           scope.library.subscriptions.splice(index,1);
+        };
+
+
+        scope.spaceIsOrg = function (space) {
+          return 'numMembers' in space;
+        };
+
+        var ownerType = function(space) {
+          return scope.spaceIsOrg(space) ? 'org' : 'user';
         };
 
         scope.saveLibrary = function () {
@@ -134,8 +209,9 @@ angular.module('kifi')
           var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
             return sub.name !== '' && sub.info.url !== '';
           });
-          
-          var owner = ('organization' in scope.modalData ? { org: scope.modalData.organization.id } : { user: profileService.me.id });
+
+          var owner = {};
+          owner[ownerType(scope.space.destination)] = scope.space.destination.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -158,9 +234,12 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
+            if (scope.space.current.id !== scope.space.destination.id) {
+              returnAction = null;
+            }
 
             if (!returnAction) {
-              $location.url(newLibrary.url);
+              $location.url(newLibrary.url || newLibrary.path);
             } else {
               returnAction(newLibrary);
             }
@@ -202,10 +281,25 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            // If we were on the deleted library's page, return to the homepage.
+            // If we were on the deleted library's page,
+            // return to the space it was in.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === scope.library.url)) {
-              $location.url('/');
+                $state.href('library.keeps') === scope.library.path) {
+
+              var redirectToSpaceParams = {
+                handle: (
+                  scope.library.org ? scope.library.org.handle : (
+                    scope.library.owner ? scope.library.owner.username : null
+                  )
+                )
+              };
+
+              // If something went wrong, go to the main page
+              if (!redirectToSpaceParams.handle) {
+                $location.path('/');
+              } else {
+                $state.go('userOrOrg', redirectToSpaceParams);
+              }
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
@@ -223,7 +317,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-
         //
         // Watches and listeners.
         //
@@ -240,40 +333,6 @@ angular.module('kifi')
             }
           }
         });
-
-
-        //
-        // On link.
-        //
-        if (scope.modalData && scope.modalData.library) {
-          scope.library = _.cloneDeep(scope.modalData.library);
-          scope.library.followers.forEach(function (follower) {
-            follower.status = 'Following';
-          });
-          scope.modifyingExistingLibrary = true;
-          scope.emptySlug = false;
-          scope.modalTitle = scope.library.name;
-          scope.library.subscriptions = scope.library.subscriptions || [];
-          if (scope.library.subscriptions.length < 3) {
-            scope.library.subscriptions.push(scope.newBlankSub());
-          }
-        } else {
-          scope.library = {
-            'name': '',
-            'description': '',
-            'slug': '',
-            'visibility': 'published'
-          };
-          scope.library.membership = {
-            access: 'owner',
-            listed: true,
-            subscribed: false
-          };
-          scope.library.subscriptions = [scope.newBlankSub()];
-          scope.modalTitle = 'Create a library';
-        }
-        returnAction = scope.modalData && scope.modalData.returnAction;
-        scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
         element.find('.manage-lib-name-input').focus();
       }

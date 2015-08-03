@@ -13,6 +13,8 @@ import play.api.libs.json._
 import java.awt.Color
 import play.api.libs.functional.syntax._
 
+case class ImageOffset(x: Int, y: Int)
+
 case class ImageSize(width: Int, height: Int)
 object ImageSize {
   implicit val format = (

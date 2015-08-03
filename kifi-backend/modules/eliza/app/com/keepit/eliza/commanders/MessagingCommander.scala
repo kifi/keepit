@@ -2,8 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.abook.{ ABookServiceClient }
-import com.keepit.common.crypto.PublicId
+import com.keepit.abook.ABookServiceClient
 import com.keepit.common.net.URI
 import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
@@ -183,45 +182,6 @@ class MessagingCommander @Inject() (
     }
   }
 
-  val engineers = Seq(
-    "ae5d159c-5935-4ad5-b979-ea280cb6c7ba", // eishay
-    "dc6cb121-2a69-47c7-898b-bc2b9356054c", // andrew
-    "772a9c0f-d083-44cb-87ce-de564cbbfa22", // yasu
-    "d3cdb758-27df-4683-a589-e3f3d99fa47b", // jared (of the jacobs variety)
-    "6d8e337d-4199-49e1-a95c-e4aab582eeca", // yinjgie
-    "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
-    "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
-    "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
-    "fd187ca1-2921-4c60-a8c0-955065d454ab", // jared (of the petker variety)
-    "07170014-badc-4198-a462-6ba35d2ebb78", // david
-    "228cdb45-e492-47f9-a0aa-1149ae963ce3", // aaron
-    "32384833-8803-4a16-946f-fd3c59b62b1b", // josh
-    "ed43b41c-5404-4f32-8118-bd6eaab4cd03", // yiping
-    "0f8db561-978d-4470-bcb6-19e5be4221c0" // tommy
-  )
-  val product = Seq(
-    "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
-    "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
-    "c1ce2ab6-8211-40f7-8187-1522086f0c2e" // mark
-  )
-  val family = engineers ++ product ++ Seq(
-    "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
-    "f2f153db-6952-4b32-8854-8c0e452e1c64" // lydia
-  )
-
-  private def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val loadedUser = userExtIds map {
-      case ExternalId("42424242-4242-4242-4242-424242424201") => // FortyTwo Engineering
-        engineers.map(ExternalId[User])
-      case ExternalId("42424242-4242-4242-4242-424242424202") => // FortyTwo Family
-        family.map(ExternalId[User])
-      case ExternalId("42424242-4242-4242-4242-424242424203") => // FortyTwo Product
-        product.map(ExternalId[User])
-      case notAGroup => Seq(notAGroup)
-    }
-    shoebox.getUserIdsByExternalIds(loadedUser.flatten)
-  }
-
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
       richContacts.map(richContact => NonUserEmailParticipant(richContact.email))
@@ -246,7 +206,7 @@ class MessagingCommander @Inject() (
     val tStart = currentDateTime
     val uri = urlOpt.map { url: String =>
       URI.parse(url) match {
-        case Success(uri) => uri
+        case Success(parsed) => parsed
         case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
       }
     }
@@ -446,7 +406,7 @@ class MessagingCommander @Inject() (
       Some(nonUserThreadRepo.get(id))
     } catch {
       case e: Throwable =>
-        airbrake.notify(s"Could not retrieve non-user thread for id $id: ${e.getMessage()}")
+        airbrake.notify(s"Could not retrieve non-user thread for id $id: ${e.getMessage}")
         None
     }
   }
@@ -468,7 +428,7 @@ class MessagingCommander @Inject() (
   }
 
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
-    val newUserParticipantsFuture = constructUserRecipients(newParticipantsExtIds)
+    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
     val haveBeenAdded = for {
@@ -588,9 +548,9 @@ class MessagingCommander @Inject() (
 
   def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, false)
 
-  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, true)
+  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
 
-  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, false)
+  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = false)
 
   private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
     val stateChanged = db.readWrite { implicit session =>
@@ -655,7 +615,7 @@ class MessagingCommander @Inject() (
     context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
-    val userRecipientsFuture = constructUserRecipients(userExtRecipients)
+    val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients)
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val resFut = for {

@@ -170,11 +170,7 @@ angular.module('kifi')
         controller: 'LibraryCtrl',
         resolve: {
           profile: ['$stateParams', 'orgProfileService', function ($stateParams, orgProfileService) {
-            return orgProfileService
-              .userOrOrg($stateParams.handle)
-              .then(function (userOrOrgData) {
-                return userOrOrgData;
-              });
+            return orgProfileService.userOrOrg($stateParams.handle);
           }],
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {

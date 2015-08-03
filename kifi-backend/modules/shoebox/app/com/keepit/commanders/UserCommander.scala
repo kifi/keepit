@@ -26,7 +26,8 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -68,11 +69,10 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int)
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationCard])
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
-@json
 case class UserProfileStats(
   numLibraries: Int,
   numFollowedLibraries: Int,
@@ -82,7 +82,22 @@ case class UserProfileStats(
   numFollowers: Int,
   numTags: Int,
   numInvitedLibraries: Option[Int] = None,
-  biography: Option[String] = None)
+  biography: Option[String] = None,
+  orgs: Seq[OrganizationCard])
+object UserProfileStats {
+  implicit val writes: Writes[UserProfileStats] = (
+    (__ \ 'numLibraries).write[Int] and
+    (__ \ 'numFollowedLibraries).write[Int] and
+    (__ \ 'numCollabLibraries).write[Int] and
+    (__ \ 'numKeeps).write[Int] and
+    (__ \ 'numConnections).write[Int] and
+    (__ \ 'numFollowers).write[Int] and
+    (__ \ 'numTags).write[Int] and
+    (__ \ 'numInvitedLibraries).writeNullable[Int] and
+    (__ \ 'biography).writeNullable[String] and
+    (__ \ 'orgs).write[Seq[OrganizationCard]]
+  )(unlift(UserProfileStats.unapply))
+}
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -97,6 +112,8 @@ class UserCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    organizationCommander: OrganizationCommander,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -137,8 +154,8 @@ class UserCommander @Inject() (
       } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(user)
       db.readOnlyReplica { implicit session =>
         //not in v1
-        //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached
-        //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached
+        //    val friends = userConnectionRepo.getConnectionCount(user.id.get) //cached // remove this?
+        //    val numFollowers = libraryMembershipRepo.countFollowersWithOwnerId(user.id.get) //cached // remove this?
         val numKeeps = keepRepo.getCountByUser(user.id.get)
         UserProfile(userId = user.id.get, basicUserWithFriendStatus, numKeeps = numKeeps)
       }
@@ -221,7 +238,7 @@ class UserCommander @Inject() (
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
           if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord.address.address)) {
-            updateUserPrimaryEmail(emailRecord)
+            userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
@@ -270,7 +287,7 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
@@ -279,13 +296,16 @@ class UserCommander @Inject() (
 
       val libCounts = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, LibraryAccess.all.toSet)
       val numLibsOwned = libCounts.getOrElse(LibraryAccess.OWNER, 0)
-      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0) + libCounts.getOrElse(LibraryAccess.READ_INSERT, 0)
+      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0)
       val numLibraries = numLibsOwned + numLibsCollab
 
       val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers)
+      val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
+      val orgCards = organizationCommander.getOrganizationCards(orgs, user.id).values.toSeq
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
 
     def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
@@ -297,7 +317,7 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -504,7 +524,7 @@ class UserCommander @Inject() (
             case emailRecord if emailRecord.userId == userId =>
               if (emailRecord.verified) {
                 if (primaryEmail.isEmpty || primaryEmail.get != emailRecord.address) {
-                  updateUserPrimaryEmail(emailRecord)
+                  userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
                 }
               } else {
                 userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, emailInfo.address)
@@ -517,20 +537,12 @@ class UserCommander @Inject() (
         emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
             if (em.verified && em.address.address == pp) {
-              updateUserPrimaryEmail(em)
+              userEmailAddressCommander.setAsPrimaryEmail(em)
             }
           case None => userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
         }
       }
     }
-  }
-
-  def updateUserPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession) = {
-    require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
-    userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
-    val currentUser = userRepo.get(primaryEmail.userId)
-    userRepo.save(currentUser.copy(primaryEmail = Some(primaryEmail.address)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
@@ -29,7 +30,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationRepo
         val organizationRepo = inject[OrganizationRepo]
         val org = db.readWrite { implicit session =>
-          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, handle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle"))), description = None, site = None))
+          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, primaryHandle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle"))), description = None, site = None))
         }
         org.id must beSome
 
@@ -54,16 +55,16 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
         invite.id must beSome
 
-        // OrganizationLogoRepo
-        val organizationLogoRepo = inject[OrganizationAvatarRepo]
-        val logo = db.readWrite { implicit session =>
-          val orgLogo = OrganizationAvatar(organizationId = org.id.get,
+        // OrganizationAvatarRepo
+        val organizationAvatarRepo = inject[OrganizationAvatarRepo]
+        val avatar = db.readWrite { implicit session =>
+          val orgAvatar = OrganizationAvatar(organizationId = org.id.get,
             width = 100, height = 100, format = ImageFormat.JPG, kind = ProcessImageOperation.Scale,
             imagePath = ImagePath(""), source = ImageSource.UserUpload, sourceFileHash = ImageHash("X"),
             sourceImageURL = Some("NONE"))
-          organizationLogoRepo.save(orgLogo)
+          organizationAvatarRepo.save(orgAvatar)
         }
-        logo.id must beSome
+        avatar.id must beSome
 
         // HandleOwnershipRepo
         val handleOwnershipRepo = inject[HandleOwnershipRepo]
@@ -71,6 +72,13 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           val saved = handleOwnershipRepo.save(HandleOwnership(handle = Handle("leo"), ownerId = Some(Id[User](134))))
           handleOwnershipRepo.get(saved.id.get).handle.value === "leo"
         }
+
+        // PasswordResetRepo
+        val passwordResetRepo = inject[PasswordResetRepo]
+        val passwordReset = db.readWrite { implicit session =>
+          passwordResetRepo.createNewResetToken(Id(1), EmailAddress("leo@kifi.com"))
+        }
+        passwordReset.id must beSome
       }
     }
   }

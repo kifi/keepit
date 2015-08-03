@@ -590,7 +590,7 @@ function makeRequest(name, method, url, data, callbacks) {
 
 // ===== Handling messages from content scripts or other extension pages
 
-var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, Kifi Help', lastName: '', name: 'Tamila, Kifi Help', pictureName: 'tmilz.jpg'};
+var SUPPORT = {id: 'ae5d159c-5935-4ad5-b979-ea280cb6c7ba', firstName: 'Eishay', lastName: 'Smith', name: 'Eishay Smith', pictureName: 'gmAXC.jpg'};
 
 api.port.on({
   deauthenticate: deauthenticate,
@@ -626,11 +626,7 @@ api.port.on({
         tweet: data.tweet
       }, function done(keep) {
         log('[keep:done]', keep);
-        // main and secret are mutually exclusive
-        var i = mySysLibIds.indexOf(libraryId);
-        if (i >= 0) {
-          d.keeps = d.keeps.filter(libraryIdIsNot(mySysLibIds[1 - i]));
-        }
+
         var j = d.keeps.findIndex(libraryIdIs(libraryId));
         if (j >= 0) {
           d.keeps[j] = keep;

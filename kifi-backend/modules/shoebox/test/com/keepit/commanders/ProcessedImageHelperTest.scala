@@ -34,10 +34,10 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
-  def scaleRequest(ints: Int*) = ints map { s => ScaleImageRequest.apply(s) }
+  def scaleRequest(ints: Int*) = ints.map { s => ScaleImageRequest.apply(s) }.toSet
   def cropRequest(strs: String*) = strs map { str =>
     val Array(w, h) = str.split('x').map(_.toInt)
-    CropImageRequest(ImageSize(w, h))
+    CenteredCropImageRequest(ImageSize(w, h))
   }
 
   "ProcessedImageHelper" should {
@@ -45,15 +45,15 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
     "calculate resize sizes for an image" in {
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
-          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, CroppedImageSize.allSizes)
-          calcSizes(100, 100).toSeq.sorted === Seq()
-          calcSizes(300, 100).toSeq.sorted === scaleRequest(150) // no crop, image not wide enough
-          calcSizes(100, 700).toSeq.sorted === scaleRequest(150, 400) // no crop, image not wide enough
-          calcSizes(300, 300).toSeq.sorted === scaleRequest(150) // no crop, same aspect ratio
-          calcSizes(300, 310).toSeq.sorted === scaleRequest(150) ++ cropRequest("150x150")
-          calcSizes(1001, 1001).toSeq.sorted === scaleRequest(150, 400, 1000) // scales should take care of crops (same aspect ratio)
-          calcSizes(2000, 1500).toSeq.sorted === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150")
-          calcSizes(1500, 1400).toSeq.sorted === scaleRequest(150, 400, 1000) ++ cropRequest("150x150")
+          def calcSizes(w: Int, h: Int) = calcSizesForImage(ImageSize(w, h), ScaledImageSize.allSizes, Seq(CroppedImageSize.Small))
+          calcSizes(100, 100) === Set()
+          calcSizes(300, 100) === scaleRequest(150) // no crop, image not wide enough
+          calcSizes(100, 700) === scaleRequest(150, 400) // no crop, image not wide enough
+          calcSizes(300, 300) === scaleRequest(150) // no crop, same aspect ratio
+          calcSizes(300, 310) === scaleRequest(150) ++ cropRequest("150x150")
+          calcSizes(1001, 1001) === scaleRequest(150, 400, 1000) // scales should take care of crops (same aspect ratio)
+          calcSizes(2000, 1500) === scaleRequest(150, 400, 1000, 1500) ++ cropRequest("150x150")
+          calcSizes(1500, 1400) === scaleRequest(150, 400, 1000) ++ cropRequest("150x150")
         }
         1 === 1
       }

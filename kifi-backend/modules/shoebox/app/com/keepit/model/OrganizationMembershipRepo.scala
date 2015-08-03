@@ -23,12 +23,22 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
+  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]]
 }
 
 @Singleton
-class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
-  override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession) {}
-  override def invalidateCache(orgMember: OrganizationMembership)(implicit session: RSession) {}
+class OrganizationMembershipRepoImpl @Inject() (
+    primaryOrgForUserCache: PrimaryOrgForUserCache,
+    val db: DataBaseComponent,
+    val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
+
+  override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+  }
+
+  override def invalidateCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+  }
 
   import db.Driver.simple._
 
@@ -78,6 +88,10 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
 
   override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
     super.save(model.copy(seq = deferredSeqNum()))
+  }
+
+  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]] = {
+    (for (row <- rows if row.userId === userId) yield row.organizationId).firstOption
   }
 
   private val getByOrgIdAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]]) =>

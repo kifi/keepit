@@ -42,13 +42,11 @@ class EmbedlyArticleFetcher @Inject() (
   }
 
   private def doFetch(url: String)(implicit ec: ExecutionContext): Future[EmbedlyArticle] = {
-    val watch = Stopwatch(s"Fetching Embedly content for $url")
     val request = {
       val embedlyUrl = embedlyExtractAPI(url)
       ws.url(embedlyUrl).withRequestTimeout(timeout)
     }
     WebServiceUtils.getWithRetry(request, attempts).map { response =>
-      watch.logTimeWith(s"Response: $response")
       try {
         val json = Json.parse(response.body) // issues with resp.json ?
         val content = new EmbedlyContent(json)

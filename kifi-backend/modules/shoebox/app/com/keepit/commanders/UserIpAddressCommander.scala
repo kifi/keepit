@@ -112,9 +112,6 @@ class UserIpAddressEventLogger @Inject() (
       if (!userIsFake) {
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
         userIpAddressRepo.saveIfNew(model)
-        log.info(s"[IPTRACK NOTIFY] Cluster ${event.ip.ip} now should have $currentCluster and $model")
-      } else {
-        log.info(s"[IPTRACK NOTIFY] Decided to not add user ${event.userId} to the IP address repo, they seem fake")
       }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
@@ -124,8 +121,6 @@ class UserIpAddressEventLogger @Inject() (
       && !Set("108.60.110.146").contains(event.ip.ip)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
-    } else {
-      log.info(s"""[IPTRACK NOTIFY] Decided not to report cluster, conditions ${event.reportNewClusters} ${!cluster.contains(event.userId)} ${cluster.nonEmpty} ${!ignoreForPotentialOrgs} ${!userIsFake} ${!Set("108.60.110.146").contains(event.ip.ip)}""")
     }
   }
 
@@ -190,7 +185,7 @@ class UserIpAddressEventLogger @Inject() (
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
       userRepo.getUsers(userIds).values.toList map { user =>
-        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
+        val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
         val orgs = organizationRepo.getByIds(organizationMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
         (user, candidates, orgs)
       }

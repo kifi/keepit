@@ -104,7 +104,6 @@ trait SecureSocialHelper extends Logging {
   def getSecureSocialUserFromRequest(implicit request: Request[_]): Option[Identity] = {
     try {
       val maybeAuthenticator = SecureSocial.authenticatorFromRequest
-      log.info(s"[getSecureSocialUserFromRequest] identityId=${maybeAuthenticator.map(_.identityId)} maybeAuthenticator=$maybeAuthenticator")
       maybeAuthenticator flatMap { authenticator =>
         UserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
       }
@@ -233,7 +232,7 @@ trait UserActions extends Logging { self: Controller =>
       val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
-          case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
+          case None => Future.successful(Forbidden)
         }
       }
       result.map(maybeAugmentCORS(_))

@@ -1,16 +1,17 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.model.{ Restriction, User, NormalizedURIRepo }
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ LibraryFactory, User }
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactory._
-import com.keepit.model.KeepFactoryHelper._
 import play.api.libs.json.{ JsObject, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -52,7 +53,8 @@ class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
   private def setupUris()(implicit injector: Injector) = {
     val (user1, keep1) = db.readWrite { implicit s =>
       val user1 = user().withName("Katniss", "Everdeen").saved
-      val keep1 = keep().withUser(user1).saved
+      val lib1 = LibraryFactory.library().withUser(user1).saved
+      val keep1 = keep().withUser(user1).withLibrary(lib1).saved
       (user1, keep1)
     }
     inject[WatchableExecutionContext].drain()

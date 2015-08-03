@@ -449,8 +449,8 @@ class AuthHelper @Inject() (
     } yield {
       db.readWrite { implicit s =>
         passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+          case Some(pr) if passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)) =>
+            emailAddressRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
               UserService.save(UserIdentity(
@@ -496,46 +496,34 @@ class AuthHelper @Inject() (
 
   def doVerifyEmail(code: String)(implicit request: MaybeUserRequest[_]): Result = {
     db.readWrite { implicit s =>
-      emailAddressRepo.getByCode(code).map { address =>
-        lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-          pendingEmail.isDefined && address.address == pendingEmail.get
-        }
-        val user = userRepo.get(address.userId)
-        val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
-        verifiedEmailOpt.collect {
-          case verifiedEmail if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
-            userCommander.updateUserPrimaryEmail(verifiedEmail)
-        }
-
-        (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
-          case (true, _) if user.state == UserStates.PENDING =>
-            Redirect(s"/?m=1")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
-            // first time being used, not logged in OR logged in as correct user
-            authenticateUser(address.userId,
-              error => throw error,
-              authenticator => {
-                val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                  Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
-                } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
-                  // user has no installations
-                  Redirect("/install")
-                } else {
-                  Redirect(s"/?m=1")
-                }
-                resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
+      userEmailAddressCommander.verifyEmailAddress(code) map {
+        case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>
+          Redirect(s"/?m=1")
+        case (address, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
+          // first time being used, not logged in OR logged in as correct user
+          authenticateUser(address.userId,
+            error => throw error,
+            authenticator => {
+              val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+                Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
+              } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                // user has no installations
+                Redirect("/install")
+              } else {
+                Redirect(s"/?m=1")
               }
-            )
-          case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
-            Redirect(s"/?m=1")
-          case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
-        }
-      }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
+              resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                .withCookies(authenticator.toCookie)
+            }
+          )
+        case (address, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
+          Redirect(s"/?m=1")
+        case (address, _) =>
+          val user = userRepo.get(address.userId)
+          Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
       }
+    }.getOrElse {
+      BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
     }
   }
 
