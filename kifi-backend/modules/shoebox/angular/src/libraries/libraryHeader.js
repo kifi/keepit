@@ -14,7 +14,6 @@ angular.module('kifi')
       replace: true,
       scope: {
         library: '=',
-        profile: '=',
         username: '=',
         librarySlug: '=',
         imageLoaded: '=',
@@ -596,8 +595,8 @@ angular.module('kifi')
               }
             }
           };
-          if (scope.profile.type === 'org') {
-            opts.modalData.organization = scope.profile.result.organization;
+          if (scope.library.org) {
+            opts.modalData.organization = scope.library.org;
           }
           modalService.open(opts);
         };
