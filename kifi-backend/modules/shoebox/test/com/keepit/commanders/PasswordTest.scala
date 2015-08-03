@@ -11,7 +11,7 @@ import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.core.AuthController
+import com.keepit.controllers.core.{ AuthHelper, AuthController }
 import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
@@ -165,6 +165,26 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
         checkPasswordAuth(email1a.address.address, oldPwd1, false)
         checkPasswordAuth(email1a.address.address, newPwd1, true, user.id)
         checkPasswordAuth(email1b.address.address, newPwd1, true)
+      }
+    }
+
+    "verify the email address a reset link has been sent to" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (_, _, _, _, _, _, _, resetToken) = setUp()
+
+        def emailAddress = db.readOnlyMaster { implicit session =>
+          userEmailAddressRepo.getByAddressOpt(resetToken.sentTo).get
+        }
+
+        emailAddress.verified must beFalse
+
+        val path = com.keepit.controllers.website.routes.UserController.changePassword().toString()
+        val payload = Json.obj("code" -> resetToken.token, "password" -> newPwd1)
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result: Future[Result] = inject[AuthController].setPassword()(request)
+        status(result) must equalTo(OK)
+
+        emailAddress.verified must beTrue
       }
     }
   }
