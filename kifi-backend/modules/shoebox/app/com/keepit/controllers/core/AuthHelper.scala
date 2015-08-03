@@ -449,8 +449,8 @@ class AuthHelper @Inject() (
     } yield {
       db.readWrite { implicit s =>
         passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+          case Some(pr) if passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)) =>
+            emailAddressRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
               UserService.save(UserIdentity(
