@@ -12,7 +12,22 @@
       </div>
     </div>
     <div class="kf-upl-count-line" ng-class="{'kf-can-write': canWrite}">
-      <span class="kf-upl-card-private svg-card-lock" ng-class="{'kf-collab': lib.numCollaborators}" title="A private library" ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"></span>
+      <svg
+        class="kf-upl-card-private"
+        kf-symbol-sprite
+        icon="lock"
+        ng-class="{'kf-collab': lib.numCollaborators}"
+        title="A private library"
+        ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"
+      ></svg>
+      <svg
+        class="kf-upl-card-public"
+        kf-symbol-sprite
+        icon="globe"
+        ng-class="{'kf-collab': lib.numCollaborators, 'kf-upl-card-public': lib.org}"
+        title="A public library"
+        ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"
+      ></svg>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
     <div class="kf-upl-card-foot" ng-switch="footerKind" ng-if="footerKind !== 'followers'">
