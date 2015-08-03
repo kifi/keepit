@@ -72,6 +72,7 @@ angular.module('kifi')
         }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
+        scope.createOnly = scope.modalData && scope.modalData.createOnly;
 
         var currentSpace = (scope.library.org || profileService.me);
 
