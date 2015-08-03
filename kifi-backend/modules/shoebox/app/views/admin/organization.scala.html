@@ -51,6 +51,10 @@ orgStats: OrganizationStatistics
             </form>
         </td>
     </tr>
+    <tr>
+        <th>Admin Chat to all members</th>
+        <td><button type="submit" onclick="startAdminChat()" class="btn btn-default">Start Chat</button>
+    </tr>
 
 </table>
 
@@ -216,6 +220,15 @@ orgStats: OrganizationStatistics
     function addMember(orgId, memberId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
     };
+
+    function startAdminChat() {
+      $.post("https://eliza.kifi.com/eliza/messages", {
+        "url": "http://www.kifi.com/@{orgStats.handle.value}",
+        "title": "Kifi for your organization",
+        "text": "Hello, and welcome to your organization page on Kifi",
+        "recipients": [ @{Html(orgStats.membersStatistics.values.map('"' + _.user.externalId.id + '"').mkString(", "))} ]
+      }).done(done);
+    }
 
     function done() {
       location.reload();
