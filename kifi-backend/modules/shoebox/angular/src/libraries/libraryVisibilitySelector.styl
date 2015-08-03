@@ -56,58 +56,28 @@
 //==========================
 // Radio Button Styles
 //==========================
-
+//
 .library-visibility-radio-settings-option
-  width: 100px
   margin-bottom: 8px
-  cursor: pointer
 
 .library-visibility-radio-label
-  position: relative // for absolute radio checks
-  cursor: pointer
-  float: left
-  clear: both
+  display: inline-block
+  width: 120px
   margin-right: 10px
+  padding: 5px
+  background-color: whitesmoke
+  border-radius: 12px
+  vertical-align: top
+  box-sizing: border-box
+  cursor: pointer
 
   &:hover
-    .library-visibility-radio-check
-      background-color: #f5f5f5
-    .library-library-option-text
-      color: darkBlueColor
+    background-color: lightblue
 
 .library-visibility-radio-input
   display: none
 
-.library-visibility-radio-check
-  position: absolute
-  top: 2px
-  width: 12px
-  height: 12px
-  margin-right: 5px
-  background-color: #fff
-  border: 1px solid #ccc
-  border-radius: 50%
-
-  &:hover
-    background-color: #eee
-
-  &:after
-    display: none
-    position: relative
-    top: 2px
-    width: 8px
-    height: 8px
-    background-color: darkBlueColor
-    border-radius: 50%
-    content: ' '
-
-.library-visibility-radio-input.library-visibility-radio-input:checked ~ .library-visibility-radio-check:after
-  display: block
-  left: 2px
-
-.library-visibility-option-text
-  position: relative
-  top: -2px
-  left: 20px
-  width: calc(100% - 20px);
-  word-break: break-word
+.library-visibility-radio-input:checked ~ .library-visibility-option-text:after
+  content: '✓'
+  float: right
+  color: green
