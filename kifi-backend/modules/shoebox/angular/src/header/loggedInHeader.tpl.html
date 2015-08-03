@@ -48,7 +48,7 @@
               <h1>Your Profile</h1>
             </a>
             <a class="kf-dropdown-menu-item" ng-repeat="org in me.orgs" ng-href="{{org|profileUrl}}">
-              <img ng-src="{{ org|pic:100 }}" />
+              <img class="kf-lih-profiles-org" ng-src="{{ org|pic:100 }}" />
               <h1>{{org.name}}</h1>
             </a>
           </nav>
