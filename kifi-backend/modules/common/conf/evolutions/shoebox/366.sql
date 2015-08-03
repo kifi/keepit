@@ -10,6 +10,8 @@
 
 ALTER TABLE domain ALTER COLUMN hostname varchar_ignorecase(256) NOT NULL;
 
+ALTER TABLE domain DROP COLUMN hash;
+
 insert into evolutions (name, description) values('366.sql', 'change charset for domain.hostname');
 
 # --- !Downs
