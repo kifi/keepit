@@ -41,10 +41,22 @@
       <a class="kf-lih-settings" ui-sref="settings"><span class="svg-settings-gear-filled-white"></span>Settings</a>
       <div class="kf-lih-dropdown-parent" kf-click-menu>
         <button class="kf-lih-profile" style="background-image:url({{me|pic:100}})">Profile actions</button>
-        <menu class="kf-dropdown-menu">
-          <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
-          <a class="kf-dropdown-menu-item" ui-sref="settings">Settings</a>
-          <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
+        <menu class="kf-dropdown-menu" ng-class="me.orgs.length ? 'kf-dropdown-menu_split' : ''">
+          <nav class="kf-dropdown-menu-nav kf-lih-profiles" ng-if="me.orgs.length">
+            <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">
+              <img ng-src="{{ me|pic:100 }}" />
+              <h1>Your Profile</h1>
+            </a>
+            <a class="kf-dropdown-menu-item" ng-repeat="org in me.orgs" ng-href="{{org|profileUrl}}">
+              <img class="kf-lih-profiles-org" ng-src="{{ org|pic:100 }}" />
+              <h1>{{org.name}}</h1>
+            </a>
+          </nav>
+          <nav class="kf-dropdown-menu-nav">
+            <a ng-if="!me.orgs.length" class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
+            <a class="kf-dropdown-menu-item" ui-sref="settings">Settings</a>
+            <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
+          </nav>
         </menu>
       </div>
     </div>

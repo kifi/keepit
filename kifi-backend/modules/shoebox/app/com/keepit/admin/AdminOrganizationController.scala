@@ -326,8 +326,8 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def removeDomainOwnership(orgId: Id[Organization], domainId: Id[Domain]) = AdminUserAction { implicit request =>
-    orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainId)
+  def removeDomainOwnership(orgId: Id[Organization], domainHostname: String) = AdminUserAction { implicit request =>
+    orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainHostname)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 

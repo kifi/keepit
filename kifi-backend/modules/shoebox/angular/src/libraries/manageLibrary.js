@@ -80,7 +80,9 @@ angular.module('kifi')
         // to make the angular <select> binding work
         scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
         scope.space = {};
-        scope.space.current = scope.spaces.filter(function (s) { return s.id === currentSpace.id; }).pop();
+
+        var desiredId = scope.modalData.organization ? scope.modalData.organization.id : currentSpace.id;
+        scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
         scope.space.destination = scope.space.current;
 
         scope.onChangeSpace = function () {

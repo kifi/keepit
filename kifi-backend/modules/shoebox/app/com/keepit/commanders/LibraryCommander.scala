@@ -832,11 +832,16 @@ class LibraryCommanderImpl @Inject() (
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
+      log.info(s"Deleting lib: $oldLibrary")
       db.readWrite(attempts = 2) { implicit s =>
         libraryRepo.save(oldLibrary.sanitizeForDelete)
+          .tap { l => log.info(s"Deleted lib: $s") }
       }
       db.readOnlyMaster { implicit s =>
-        require(libraryRepo.get(oldLibrary.id.get).state == LibraryStates.INACTIVE, s"Library ${oldLibrary.id.get} deletion failed")
+        libraryRepo.get(oldLibrary.id.get) match {
+          case library if library.state == LibraryStates.ACTIVE => log.warn(s"removeLibrary did not delete lib: $library")
+          case _ =>
+        }
       }
       searchClient.updateLibraryIndex()
       None

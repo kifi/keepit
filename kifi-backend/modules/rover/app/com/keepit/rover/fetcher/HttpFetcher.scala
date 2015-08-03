@@ -2,7 +2,6 @@ package com.keepit.rover.fetcher
 
 import java.io.{ FilterInputStream, InputStream }
 import java.nio.charset.Charset
-
 import com.keepit.rover.model.HttpProxy
 import com.keepit.rover.article.content.HttpInfo
 import org.apache.http.HttpStatus

@@ -286,9 +286,9 @@ class ShoeboxDataPipeController @Inject() (
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val orgDomainOwnerships = db.readOnlyReplica { implicit s =>
-        orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize)
-      }.map {
-        _.toIngestableOrganizationDomainOwnership
+        orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize).map { own =>
+          own.toIngestableOrganizationDomainOwnership(domainRepo.get(own.domainHostname).flatMap(_.id).get)
+        }
       }
       Ok(Json.toJson(orgDomainOwnerships))
     }
