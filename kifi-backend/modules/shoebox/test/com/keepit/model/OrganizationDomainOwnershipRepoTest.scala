@@ -14,7 +14,7 @@ class OrganizationDomainOwnershipRepoTest extends Specification with ShoeboxTest
         val orgDomainOwnershipRepo = inject[OrganizationDomainOwnershipRepo]
 
         val orgDomainOwnership = db.readWrite { implicit s =>
-          orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = Id[Organization](1), normalizedHostname = NormalizedHostname.fromHostname("kifi.com")))
+          orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = Id[Organization](1), normalizedHostname = NormalizedHostname("kifi.com")))
         }
 
         db.readOnlyMaster { implicit s =>
@@ -34,7 +34,7 @@ class OrganizationDomainOwnershipRepoTest extends Specification with ShoeboxTest
         }
 
         db.readOnlyMaster { implicit s =>
-          orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname = NormalizedHostname.fromHostname("kifi.com")) === Some(orgDomainOwnership)
+          orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, domainHostname = NormalizedHostname("kifi.com")) === Some(orgDomainOwnership)
         }
       }
     }
@@ -47,11 +47,11 @@ class OrganizationDomainOwnershipRepoTest extends Specification with ShoeboxTest
 
         val orgDomainOwnerships = db.readWrite { implicit s =>
           List(
-            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname.fromHostname("kifi.com")),
-            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname.fromHostname("kifi1.com")),
-            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname.fromHostname("kifi2.com")),
-            OrganizationDomainOwnership(organizationId = Id[Organization](2), normalizedHostname = NormalizedHostname.fromHostname("kifi1.com")),
-            OrganizationDomainOwnership(organizationId = Id[Organization](2), normalizedHostname = NormalizedHostname.fromHostname("kifi3.com"))
+            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname("kifi.com")),
+            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname("kifi1.com")),
+            OrganizationDomainOwnership(organizationId = org1Id, normalizedHostname = NormalizedHostname("kifi2.com")),
+            OrganizationDomainOwnership(organizationId = Id[Organization](2), normalizedHostname = NormalizedHostname("kifi1.com")),
+            OrganizationDomainOwnership(organizationId = Id[Organization](2), normalizedHostname = NormalizedHostname("kifi3.com"))
           ).map(ownership => orgDomainOwnershipRepo.save(ownership))
         }
 

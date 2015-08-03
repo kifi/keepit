@@ -75,24 +75,24 @@ class DomainTest extends Specification with ShoeboxTestInjector {
     "get domains by hash" in {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
-        val domain1 = Domain(hostname = NormalizedHostname("google.com"))
-        val domain2 = Domain(hostname = NormalizedHostname("Ğooğle.com"))
+        val domain1 = Domain.fromHostname("google.com").get
+        val domain2 = Domain.fromHostname("Ğooğle.com").get
 
         inject[Database].readWrite { implicit session =>
           val saved = domainRepo.save(domain1)
           val saved1 = domainRepo.save(domain2)
 
-          val actual = domainRepo.get(NormalizedHostname("google.com"))
+          val actual = domainRepo.get(NormalizedHostname.fromHostname("google.com").get)
           actual.isDefined === true
           actual.get.hostname.value === "google.com"
 
-          val actual2 = domainRepo.get(NormalizedHostname("Google.com"))
+          val actual2 = domainRepo.get(NormalizedHostname.fromHostname("Google.com").get)
           actual2.isDefined === true
           actual2.get.hostname.value === "google.com"
 
-          val actual3 = domainRepo.get(NormalizedHostname("Ğooğle.com"))
+          val actual3 = domainRepo.get(NormalizedHostname.fromHostname("Ğooğle.com").get)
           actual3.isDefined === true
-          actual3.get.hostname === NormalizedHostname("Ğooğle.com")
+          actual3.get.hostname === NormalizedHostname.fromHostname(test - "Ğooğle.com")
           actual3.get.hostname.value === "xn--oole-zwac.com"
         }
       }
