@@ -125,6 +125,7 @@ class LibraryCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    keepToLibraryCommander: KeepToLibraryCommander,
     keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
@@ -753,6 +754,7 @@ class LibraryCommanderImpl @Inject() (
         }
 
         // Update visibility of keeps
+        // TODO(ryan): We need to find a new way of describing keep visibility. Denormalizing is no longer possible because it's different for different users
         def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
           val (keeps, curViz) = db.readOnlyMaster { implicit s =>
             val viz = libraryRepo.get(targetLib.id.get).visibility // It may have changed, re-check
@@ -813,16 +815,17 @@ class LibraryCommanderImpl @Inject() (
       Some(LibraryFail(BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
-        libraryMembershipRepo.getWithLibraryId(oldLibrary.id.get).map { m =>
+        libraryMembershipRepo.getWithLibraryId(oldLibrary.id.get).foreach { m =>
           libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
         }
-        libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).map { inv =>
+        libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).foreach { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
-      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
-        keepRepo.save(keep.sanitizeForDelete())(s)
+      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) => // TODO(ryan): Can this session be made implicit?
+        keepToLibraryCommander.detach(KeepToLibraryDetachRequest(keepId = keep.id.get, libraryId = libraryId, requesterId = userId))(s)
+        keepRepo.deactivate(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)
@@ -1214,6 +1217,10 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  // TODO(ryan): is this actually necessary anymore? Check with Léo to see if Search needs it
+  // We may not need to have this concept of "keep ownership" anymore. You can be the author of
+  // a keep, which is its own thing. You can have access to edit a keep, which is also its own
+  // thing.
   private def convertKeepOwnershipToLibraryOwner(userId: Id[User], library: Library) = {
     db.readWrite { implicit s =>
       keepRepo.getByUserIdAndLibraryId(userId, library.id.get).map { keep =>
@@ -1359,15 +1366,18 @@ class LibraryCommanderImpl @Inject() (
 
           val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
 
+          // TODO(ryan): just use a single function that creates new keeps, and handle the attachment to a library in there
           currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
+              keepToLibraryCommander.attach(KeepToLibraryAttachRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
+              keepToLibraryCommander.attach(KeepToLibraryAttachRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
@@ -1396,17 +1406,19 @@ class LibraryCommanderImpl @Inject() (
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Keep] = {
           implicit val session = s
 
-          val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+          val existingKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
 
-          currentKeepOpt match {
+          existingKeepOpt match {
             case None =>
-              val movedKeep = keepRepo.save(k.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                state = KeepStates.ACTIVE))
+              val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
+              keepToLibraryCommander.detach(KeepToLibraryDetachRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
+              keepToLibraryCommander.attach(KeepToLibraryAttachRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               Right(movedKeep)
-            case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              val movedKeep = keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                state = KeepStates.ACTIVE))
-              keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+            case Some(existingKeep) if existingKeep.isInactive =>
+              val movedKeep = keepRepo.save(k.withId(existingKeep.id.get).withLibrary(toLibrary)) // clone new keep into existing keep's place, wiping out the existing keep
+              keepRepo.deactivate(k) // deactivate the keep in the old library
+              keepToLibraryCommander.detach(KeepToLibraryDetachRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
+              keepToLibraryCommander.attach(KeepToLibraryAttachRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>

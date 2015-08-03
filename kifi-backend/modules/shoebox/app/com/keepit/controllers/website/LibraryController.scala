@@ -542,6 +542,7 @@ class LibraryController @Inject() (
     }
   }
 
+  // TODO(ryan): This seems to only update the keep title. Is it supposed to do other things?
   def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(libraryPubId).get
     val body = request.body

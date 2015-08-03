@@ -32,6 +32,7 @@ class KeepInterner @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
+  keepToLibraryCommander: KeepToLibraryCommander,
   countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -212,17 +213,17 @@ class KeepInterner @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+    val keepOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
 
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
-    val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
-      case Some(bookmark) =>
-        val wasInactiveKeep = !bookmark.isActive
-        val kNote = note orElse { if (wasInactiveKeep) None else bookmark.note }
-        val kTitle = trimmedTitle orElse { if (wasInactiveKeep) None else bookmark.title } orElse uri.title
+    val (isNewKeep, wasInactiveKeep, internedKeep) = keepOpt match {
+      case Some(keep) =>
+        val wasInactiveKeep = !keep.isActive
+        val kNote = note orElse { if (wasInactiveKeep) None else keep.note }
+        val kTitle = trimmedTitle orElse { if (wasInactiveKeep) None else keep.title } orElse uri.title
 
-        val savedKeep = bookmark.copy(
+        val savedKeep = keep.copy(
           userId = userId,
           title = kTitle,
           state = KeepStates.ACTIVE,
@@ -256,14 +257,15 @@ class KeepInterner @Inject() (
           note = note,
           originalKeeperId = Some(userId)
         )
-        val improvedKeep = integrityHelpers.improveKeepSafely(uri, keep)
-        (true, false, keepRepo.save(improvedKeep))
+        val improvedKeep = keepRepo.save(integrityHelpers.improveKeepSafely(uri, keep))
+        (true, false, improvedKeep)
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
+    keepToLibraryCommander.attach(KeepToLibraryAttachRequest(internedKeep.id.get, internedKeep.libraryId.get, internedKeep.userId))
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
