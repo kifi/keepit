@@ -12,7 +12,7 @@ ALTER TABLE organization_domain_ownership ADD CONSTRAINT organization_domain_own
 
 ALTER TABLE organization_domain_ownership ADD CONSTRAINT unique_domain_hostname UNIQUE(domain_hostname);
 
-insert into evolutions (name, description) values('363.sql', 'Make organization_domain_ownership reference domain hashes');
+insert into evolutions (name, description) values('365.sql', 'Make organization_domain_ownership reference domain hashes');
 
 # --- !Downs
 WithFilter
