@@ -36,8 +36,6 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     FakeSecureSocialUserPluginModule()
   )
 
-  val unit = ()
-
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)
 
   def setupSocialUser(implicit injector: Injector): Unit = {
@@ -61,11 +59,10 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         socket.out === Json.arr("hi")
         socket.close
         socket.out === Json.arr("bye", "session")
-
       }
     }
 
-    "respond to ping" in {
+    "respond to queries" in {
       running(new ElizaApplication(modules: _*)) {
 
         setupSocialUser
@@ -78,31 +75,13 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         }
 
         socket.out === Json.arr("pong")
-        socket.close
-        socket.out === Json.arr("bye", "session")
-
-      }
-    }
-
-    "respond with stats" in {
-      running(new ElizaApplication(modules: _*)) {
-        setupSocialUser
-
-        val socket = MockWebSocket()
 
         socket.in {
           Json.arr("stats")
         }
 
-        socket.out
         socket.out(0).as[String] must startWith("id:")
-        socket.close === unit
-      }
-    }
 
-    "not respond to thread request without the user as a participant" in {
-      running(new ElizaApplication(modules: _*)) {
-        setupSocialUser
         val messageThreadRepo = inject[MessageThreadRepo]
         val uuid = UUID.randomUUID().toString
 
@@ -118,27 +97,15 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
             replyable = true))
         }
 
-        val socket = MockWebSocket()
-
         socket.in {
           Json.arr("get_thread", uuid)
         }
 
-        socket.out === Json.arr("hi")
-        socket.close
-        socket.out === Json.arr("bye", "session")
-      }
-    }
-
-    "respond to thread request" in {
-      running(new ElizaApplication(modules: _*)) {
-        setupSocialUser
-        val messageThreadRepo = inject[MessageThreadRepo]
-        val uuid = UUID.randomUUID().toString
+        val uuid2 = UUID.randomUUID().toString
 
         db.readWrite { implicit session =>
           messageThreadRepo.save(MessageThread(
-            externalId = ExternalId(uuid),
+            externalId = ExternalId(uuid2),
             uriId = None,
             url = None,
             nUrl = None,
@@ -148,20 +115,18 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
             replyable = true))
         }
 
-        val socket = MockWebSocket()
-
         socket.in {
-          Json.arr("get_thread", uuid)
+          Json.arr("get_thread", uuid2)
         }
 
-        socket.out === Json.arr("hi")
         val threadResponse = socket.out
         threadResponse(0).as[String] === "thread"
         val thread = threadResponse(1)
-        (thread \ "id").as[String] === uuid
+        (thread \ "id").as[String] === uuid2
         (thread \ "messages") === JsArray()
 
-        socket.close === unit
+        socket.close
+        socket.out === Json.arr("bye", "session")
       }
     }
 

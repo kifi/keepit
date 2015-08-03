@@ -13,13 +13,11 @@ import scala.concurrent.ExecutionContext.global
 case class MockWebSocket[A](implicit ws: WebSocket[A, A]) {
 
   val socketOut: Stream[Promise[A]] = Stream.continually(Promise())
-  var noMoreMessages = false
-  var outIndex = 0
 
   val itOut = Iteratee.fold[A, Int](0) { (index, output) =>
     socketOut(index).success(output)
     index + 1
-  }(global).map { _ => noMoreMessages = true }(global)
+  }(global).map { _ => () }(global)
 
   val (enumOut, channel) = Concurrent.broadcast[A]
 
@@ -29,8 +27,9 @@ case class MockWebSocket[A](implicit ws: WebSocket[A, A]) {
 
   def in(block: => A): Unit = channel.push(block)
 
+  var outIndex = 0
+
   def out: A = {
-    require(!noMoreMessages, "No more messages in the socket")
     val result = Await.result(socketOut(outIndex).future, 10 seconds)
     outIndex += 1
     result
