@@ -8,4 +8,7 @@ case class RoverFakeStoreModule() extends FakeStoreModule with RoverStoreModule 
   @Provides @Singleton
   def roverArticleStore(): RoverUnderlyingArticleStore = new InMemoryRoverUnderlyingArticleStoreImpl()
 
+  @Provides @Singleton
+  def fakePornWordLikelihoodStore(): FakePornWordLikelihoodStore = new FakePornWordLikelihoodStore()
+
 }
