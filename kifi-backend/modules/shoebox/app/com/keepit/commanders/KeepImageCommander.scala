@@ -29,7 +29,7 @@ import scala.util.{ Failure, Success, Try }
 
 object KeepImageSizes {
   val scaleSizes = ScaledImageSize.allSizes
-  val cropSizes = CroppedImageSize.allSizes
+  val cropSizes = Seq(CroppedImageSize.Small)
 }
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])
@@ -71,7 +71,7 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
-    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
+    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.CenteredCrop
     val idealImageSize = imageRequest.size
     getAllImagesForKeeps(keepIds).mapValues(ProcessedImageSize.pickBestImage(idealImageSize, _, strictAspectRatio))
   }
@@ -129,7 +129,6 @@ class KeepImageCommanderImpl @Inject() (
     val keep = db.readOnlyMaster { implicit session =>
       keepRepo.get(keepId)
     }
-    log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
       // todo(Léo): consider using rover.getOrElseFetchUriSummary if localOnly = false?
       val remoteImageF = rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
@@ -305,7 +304,7 @@ class KeepImageCommanderImpl @Inject() (
             }
           } else {
             // have existing KeepImages, use those
-            log.info(s"[kic] Existing stored images (${existingSameHash.size}}) found: $existingSameHash")
+            log.info(s"[kic] Existing stored images (${existingSameHash.size}) found: $existingSameHash")
             Future.successful(copyExistingImagesAndReplace(keepId, source, existingSameHash))
           }
         case Left(failure) => Future.successful(failure)
@@ -356,7 +355,6 @@ class KeepImageCommanderImpl @Inject() (
           val image = KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format,
             width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash,
             sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal, kind = prev.kind)
-          log.info(s"saving new image [$image] derived from [$prev]")
           Some(image)
         }
       }

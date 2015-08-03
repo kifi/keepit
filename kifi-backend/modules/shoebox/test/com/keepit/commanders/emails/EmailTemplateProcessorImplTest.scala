@@ -50,7 +50,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
           val keep = keepRepo.save(Keep(title = Some("Avengers$1.org"), userId = user1.id.get, url = url.url, urlId = url.id.get,
             uriId = uri.id.get, source = KeepSource.default, createdAt = t1, keptAt = t1, visibility = LibraryVisibility.PUBLISHED,
-            libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint))
+            libraryId = Some(library.id.get)))
           (library, keep)
         }
 

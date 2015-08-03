@@ -2,9 +2,8 @@ package com.keepit.model
 
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.{ DbSequenceAssigner, Id }
+import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ Id, State, SequenceNumber }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -69,6 +68,12 @@ class OrganizationRepoImpl @Inject() (
   def allActive(implicit session: RSession): Seq[Organization] = {
     val q = for { row <- rows if row.state === OrganizationStates.ACTIVE } yield row
     q.list
+  }
+
+  override def get(id: Id[Organization])(implicit session: RSession): Organization = {
+    orgCache.getOrElse(OrganizationKey(id)) {
+      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    }
   }
 
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {

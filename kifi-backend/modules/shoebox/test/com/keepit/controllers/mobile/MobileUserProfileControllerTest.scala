@@ -7,8 +7,9 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.graph.FakeGraphServiceClientImpl
@@ -24,6 +25,8 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import org.joda.time.DateTime
@@ -51,12 +54,16 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     "get profile for self" in {
       withDb(modules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
-        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+        val (user1, user2, user3, user4, user5, lib1, org1) = inject[Database].readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          inject[UserExperimentRepo].save(UserExperiment(userId = user1.id.get, experimentType = UserExperimentType.ADMIN))
+
+          val org = OrganizationFactory.organization().withName("America").withOwner(user1).saved
 
           inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           connect(user1 -> user2,
@@ -66,7 +73,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
 
           val user1secretLib = libraries(3).map(_.withUser(user1).secret().withKeepCount(3)).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).published().withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
           val user3lib = library().withUser(user3).published().withKeepCount(2).saved
@@ -77,7 +84,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           keeps(3).map(_.withLibrary(user1lib)).saved
           keep().withLibrary(user3lib).saved
 
-          (user1, user2, user3, user4, user5, user1lib)
+          (user1, user2, user3, user4, user5, user1lib, org)
         }
 
         //non existing username
@@ -102,7 +109,17 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numConnections": 3,
               "numFollowers": 2,
               "biography":"First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs":[
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
 
@@ -126,7 +143,17 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numConnections": 3,
               "numFollowers": 3,
               "biography":"First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs":[
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
 
@@ -150,7 +177,17 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numFollowers": 3,
               "numInvitedLibraries": 0,
               "biography":"First Prez yo!",
-              "numTags":0
+              "numTags":0,
+              "orgs":[
+                {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "numMembers":1,
+                  "numLibraries":1
+                }
+              ]
             }
           """)
       }
@@ -248,14 +285,14 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         implicit val config = inject[PublicIdConfiguration]
 
         val result = getProfileLibrariesV2(user, 0, 100, LibraryFilter.OWN, None, None, orderedByPriority = true)
-        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[LibraryCardInfo]]
+        val infos = (Json.parse(contentAsString(result)) \ "own").as[Seq[JsObject]]
 
         infos.length === 6
 
         val highPriorityPublicIds = highPriorityLibs.map { lib => Library.publicId(lib.id.get) }.toSet
-        highPriorityPublicIds === infos.take(2).map(_.id).toSet
-        highPriorityPublicIds.forall { publicId => infos.take(2).map(_.id).contains(publicId) } === true
-        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(_.id).contains(publicId) } === true
+        highPriorityPublicIds === infos.take(2).map(__ => (__ \ "id").as[PublicId[Library]]).toSet
+        highPriorityPublicIds.forall { publicId => infos.take(2).map(__ => (__ \ "id").as[PublicId[Library]]).contains(publicId) } === true
+        highPriorityPublicIds.forall { publicId => !infos.drop(2).map(__ => (__ \ "id").as[PublicId[Library]]).contains(publicId) } === true
       }
     }
 

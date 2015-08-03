@@ -100,7 +100,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
         val org = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
@@ -130,7 +130,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
         val org = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None, description = None, site = None))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))

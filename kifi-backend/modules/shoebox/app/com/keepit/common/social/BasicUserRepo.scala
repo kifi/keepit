@@ -47,7 +47,9 @@ class BasicUserRepo @Inject() (
 
   private def loadInactive(userId: Id[User])(implicit session: RSession): BasicUser = {
     val user = userRepo.get(userId)
-    log.error("Loading BasicUser for inactive user.", new IllegalStateException(s"User not active: $user"))
+    val caller = new RuntimeException().getStackTrace.find(e => e.getClassName.contains("com.keepit") && !e.getClassName.contains("BasicUser")).map(l => l.getClassName + "." + l.getMethodName + "(" + l.getFileName + ":" + l.getLineNumber + ")")
+
+    log.error(s"Loading BasicUser for inactive user. $user: $caller")
     toBasicUserSafely(user)
   }
 

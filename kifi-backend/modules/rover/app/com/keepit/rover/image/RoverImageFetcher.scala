@@ -52,7 +52,7 @@ class RoverImageFetcher @Inject() (
             val requiredProcessRequests = {
               val existingImageProcessRequests = existingImageInfos.collect {
                 case scaledImage if scaledImage.kind == ProcessImageOperation.Scale => ScaleImageRequest(scaledImage.imageSize)
-                case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
+                case croppedImage if croppedImage.kind == ProcessImageOperation.CenteredCrop => CenteredCropImageRequest(croppedImage.imageSize)
               }
               val expectedProcessRequests = calcSizesForImage(sourceImageSize, requiredScaleSizes.toSeq, requiredCropSizes.toSeq)
               diffProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)

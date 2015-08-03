@@ -221,7 +221,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         Await.result(userCommander.addEmail(user.id.get, email1, false), Duration(5, "seconds")).isRight === true
         Await.result(userCommander.addEmail(user.id.get, email2, true), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit session =>
-          emailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1, email2)
+          userEmailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1, email2)
           val userId = user.id.get
           val userValueOpt = userValueRepo.getUserValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
           userValueOpt.get.value === email2.address
@@ -229,8 +229,8 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
         // verify all emails
         db.readWrite { implicit session =>
-          emailAddressRepo.getAllByUser(user.id.get).map { em =>
-            emailAddressRepo.save(em.copy(state = UserEmailAddressStates.VERIFIED))
+          userEmailAddressRepo.getAllByUser(user.id.get).map { em =>
+            userEmailAddressRepo.save(em.copy(state = UserEmailAddressStates.VERIFIED))
           }
           userRepo.save(user.copy(primaryEmail = Some(email2))) // because email2 is pending primary
           userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
@@ -246,7 +246,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.removeEmail(user.id.get, email1).isRight === false // removing primary email
         userCommander.removeEmail(user.id.get, email2).isRight === true
         db.readOnlyMaster { implicit session =>
-          emailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1)
+          userEmailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1)
         }
         userCommander.removeEmail(user.id.get, email1).isRight === false // removing last email
       }

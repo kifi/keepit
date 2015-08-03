@@ -1,11 +1,15 @@
 package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.store.ImagePath
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
+import org.joda.time.DateTime
+import com.keepit.common.core._
+
+import scala.slick.jdbc.{ PositionedResult, GetResult }
 
 @ImplementedBy(classOf[KeepImageRepoImpl])
 trait KeepImageRepo extends Repo[KeepImage] {
@@ -81,7 +85,8 @@ class KeepImageRepoImpl @Inject() (
     for (r <- rows if r.sourceFileHash === hash) yield r
   }
   def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[KeepImage] = {
-    getBySourceHashCompiled(hash).list
+    val res = getBySourceHashCompiled(hash).list
+    res.distinctBy(_.imagePath)
   }
 
 }

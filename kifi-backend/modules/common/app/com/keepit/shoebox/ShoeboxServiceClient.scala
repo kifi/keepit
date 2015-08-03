@@ -129,6 +129,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
+  def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -153,7 +154,8 @@ case class ShoeboxCacheProvider @Inject() (
   allFakeUsersCache: AllFakeUsersCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
-  keepImagesCache: KeepImagesCache)
+  keepImagesCache: KeepImagesCache,
+  primaryOrgForUserCache: PrimaryOrgForUserCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -787,5 +789,16 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]] = {
     call(Shoebox.internal.getIngestableOrganizationDomainOwnerships(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationDomainOwnership]] }
+  }
+
+  def getPrimaryOrg(id: Id[User]): Future[Option[Id[Organization]]] = {
+    cacheProvider.primaryOrgForUserCache.getOrElseFutureOpt(PrimaryOrgForUserKey(id)) {
+      call(Shoebox.internal.getPrimaryOrg(id)).map { r =>
+        r.json match {
+          case JsNull => None
+          case js: JsValue => Some(js.as[Id[Organization]])
+        }
+      }
+    }
   }
 }

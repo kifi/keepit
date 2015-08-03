@@ -10,9 +10,16 @@ angular.module('kifi')
 
 .filter('name', function () {
   return function (o) {
-    return o ? (o.firstName || '') + ' ' + (o.lastName || '') : '';
+    return o ? o.name || ((o.firstName || '') + ' ' + (o.lastName || '')) : '';
   };
 })
+
+.filter('slug', function () {
+  return function (o) {
+    return o.handle || o.username;
+  };
+})
+
 
 .filter('pic', [
   'routeService',
@@ -40,7 +47,7 @@ angular.module('kifi')
 .filter('profileUrl', function () {
   return function (userOrOrg, sub) {
     if (userOrOrg) {
-      var handle = 'username' in userOrOrg ? userOrOrg.username : userOrOrg.handle;
+      var handle = userOrOrg.username || userOrOrg.handle;
       return '/' + handle + (sub && sub !== 'libraries' ? '/' + sub : '');
     }
   };

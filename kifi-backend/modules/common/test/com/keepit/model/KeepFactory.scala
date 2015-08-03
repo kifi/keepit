@@ -14,7 +14,6 @@ object KeepFactory {
     val userId = Id[User](-1 * idx.incrementAndGet())
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
-      inDisjointLib = true,
       urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
@@ -46,6 +45,7 @@ object KeepFactory {
     def withNote(note: Option[String]) = new PartialKeep(keep.copy(note = note))
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
     def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
+    def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))
     def get: Keep = keep
   }
 

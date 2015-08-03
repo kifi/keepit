@@ -49,7 +49,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
       val builder = new PrefixFilterBuilder[E]
       allInfos.foreach { case (infoId, info) => builder.add(infoId, extractName(info)) }
       val filter = builder.build
-      log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
+      log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).map(_._1).mkString(",")}) filter.len=${filter.data.length}")
       filter
     }
   }
@@ -94,7 +94,6 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
         case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem
       }.sorted
       val top = limit map (n => hits.take(n)) getOrElse hits
-      top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}") }
       top
     }
   }

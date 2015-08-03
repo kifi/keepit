@@ -171,7 +171,7 @@ class AdminOrganizationController @Inject() (
                 case Some(cand) =>
                   existedCand.incrementAndGet()
                 case None =>
-                  orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(orgId = org.id.get, userId = userId))
+                  orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(organizationId = org.id.get, userId = userId))
               }
             }
           }

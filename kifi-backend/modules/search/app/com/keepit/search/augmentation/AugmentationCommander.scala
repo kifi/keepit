@@ -61,7 +61,6 @@ class AugmentationCommanderImpl @Inject() (
   }
 
   def augmentation(itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
-    log.info(s"Processing $itemAugmentationRequest")
     val uris = (itemAugmentationRequest.context.corpus.keySet ++ itemAugmentationRequest.items).map(_.uri)
     val restrictedPlan = getRestrictedDistributionPlan(itemAugmentationRequest.context.userId, uris)
     plannedAugmentation(restrictedPlan, itemAugmentationRequest)

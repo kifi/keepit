@@ -393,7 +393,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
         val url_ = urlRepo.save(URL(url = "http://www.kifi.com", domain = None, normalizedUriId = uri.id.get))
-        val keep = keepRepo.save(Keep(urlId = url_.id.get, url = url_.url, libraryId = lib1.id, uriId = uri.id.get, visibility = LibraryVisibility.SECRET, userId = user1.id.get, source = KeepSource.keeper, inDisjointLib = false))
+        val keep = keepRepo.save(Keep(urlId = url_.id.get, url = url_.url, libraryId = lib1.id, uriId = uri.id.get, visibility = LibraryVisibility.SECRET, userId = user1.id.get, source = KeepSource.keeper))
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 

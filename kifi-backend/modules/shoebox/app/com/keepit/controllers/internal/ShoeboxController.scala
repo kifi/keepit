@@ -105,6 +105,16 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(sui))
   }
 
+  def getPrimaryOrg(userId: Id[User]) = Action {
+    val orgIdOpt = db.readOnlyReplica { implicit session =>
+      organizationMembershipCommander.getPrimaryOrganizationForUser(userId)
+    }
+    orgIdOpt match {
+      case Some(orgId) => Ok(Json.toJson(orgId))
+      case None => Ok(JsNull)
+    }
+  }
+
   def sendMail = Action(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>

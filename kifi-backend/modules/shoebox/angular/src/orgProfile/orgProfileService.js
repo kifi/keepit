@@ -57,8 +57,22 @@ angular.module('kifi')
         return net.userOrOrg(handle).then(function (response) {
           return response.data;
         });
-      }
+      },
 
+      getCommonTrackingAttributes: function (organization) {
+        var defaultAttributes = {
+          type: 'orgMembers',
+          orgName: organization.name,
+          orgId: organization.id
+        };
+
+        return defaultAttributes;
+      },
+      trackEvent: function (eventName, organization, attributes) {
+        var defaultAttributes = api.getCommonTrackingAttributes(organization);
+        attributes = _.extend(defaultAttributes, attributes || {});
+        $analytics.eventTrack(eventName, attributes);
+      }
     };
 
     return api;

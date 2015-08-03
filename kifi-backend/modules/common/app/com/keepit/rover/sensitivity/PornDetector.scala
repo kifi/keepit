@@ -50,11 +50,9 @@ class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) ex
   override def isPorn(text: String): Boolean = posterior(text) > 0.5f
 
   override def posterior(text: String): Float = {
-    log.info(s"[SlidingWindowPornDetector]: detecting for: ${text.take(100)}")
     val (blocks, badBlocks) = detectBlocks(text)
     if (blocks == 0) return 0f
     val r = badBlocks / blocks.toFloat
-    log.info(s"[SlidingWindowPornDetector]: ratio = ${r}, num of bad blocks: ${badBlocks}")
     if (r > 0.05 || badBlocks > 10) return 1f else 0f // not smooth (for performance reason). could use more Bayesian style
   }
 }
