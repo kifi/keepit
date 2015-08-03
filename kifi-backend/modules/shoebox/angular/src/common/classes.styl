@@ -2,7 +2,7 @@
   position: absolute
   top: 100%
   background: white
-  border: 1px solid #dbdee3
+  border: 1px solid separatorColor
   z-index: 1
   display: block
   line-height: 150%
@@ -10,6 +10,21 @@
   border-radius: 4px
   transform-origin: top
   transition: opacity .12s linear, transform .12s ease-in
+
+  &.kf-dropdown-menu_split
+    display: flex
+    align-content: stretch
+    padding-top: 0
+    padding-bottom: 0
+
+    .kf-dropdown-menu-nav a
+      &:first-child
+      &:only-child
+        margin-top: 5px
+
+      &:last-child
+      &:only-child
+        margin-bottom: 5px
 
 .kf-dropdown-menu-item
   display: block
@@ -32,6 +47,10 @@
 
   &:active
     background-color: #d8d8d8
+
+.kf-dropdown-menu-nav
+  + .kf-dropdown-menu-nav
+    border-left: 1px solid separatorColor
 
 .fill-parent
   width: 100%
