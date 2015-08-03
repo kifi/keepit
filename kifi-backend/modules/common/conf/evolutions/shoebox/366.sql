@@ -3,7 +3,8 @@
 # --- !Ups
 
 --- MySQL:
----   ALTER TABLE domain MODIFY hostname varchar(256) CHARACTER SET ascii collate ascii_general_ci;
+---   ALTER TABLE domain MODIFY hostname varchar(256) CHARACTER SET ascii COLLATE ascii_general_ci;
+---   ALTER TABLE organization_domain_ownership MODIFY domain_hostname varchar(256) CHARACTER SET ascii COLLATE ascii_general_ci;
 ---   ALTER TABLE domain DROP hash;
 ---
 
