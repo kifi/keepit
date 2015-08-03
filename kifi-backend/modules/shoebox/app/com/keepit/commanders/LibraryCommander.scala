@@ -835,7 +835,10 @@ class LibraryCommanderImpl @Inject() (
           .tap { l => log.info(s"Deleted lib: $s") }
       }
       db.readOnlyMaster { implicit s =>
-        log.info(s"Confirming lib deletion: $libraryRepo.get(oldLibrary.id.get)")
+        libraryRepo.get(oldLibrary.id.get) match {
+          case library if library.state == LibraryStates.ACTIVE => log.warn(s"removeLibrary did not delete lib: $library")
+          case _ =>
+        }
       }
       searchClient.updateLibraryIndex()
       None
