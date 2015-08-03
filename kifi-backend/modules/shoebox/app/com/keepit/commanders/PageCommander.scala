@@ -77,7 +77,7 @@ class PageCommander @Inject() (
         } filter (_.isActive)
       }.getOrElse(Seq())
 
-      val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => Try(NormalizedHostname.fromHostname(name)).toOption)
+      val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => NormalizedHostname.fromHostname(name))
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
@@ -101,7 +101,7 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
-    val host: Option[NormalizedHostname] = uri.host.flatMap(host => Try(NormalizedHostname(host.name)).toOption)
+    val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name))
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
       domainOpt.map { dom =>

@@ -387,8 +387,7 @@ class UrlController @Inject() (
 
   def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
     val hostname = request.body.get("hostname").get.head
-    val normalizedHostnameTry = Try(NormalizedHostname.fromHostname(hostname))
-    val domain = normalizedHostnameTry.toOption.flatMap { hostname =>
+    val domain = NormalizedHostname.fromHostname(hostname).flatMap { hostname =>
       db.readOnlyReplica { implicit s =>
         domainRepo.get(hostname, None)
       }
@@ -457,7 +456,7 @@ class UrlController @Inject() (
   def saveDomainOverrides = AdminUserAction { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => NormalizedHostname.fromHostname(k) -> (vs.head.toLowerCase == "true")
-    }.toMap
+    }.collect { case (Some(hostname), value) => hostname -> value }
     val domainsToRemove = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }.filterNot(d => domainSensitiveMap.contains(d.hostname))
@@ -477,26 +476,5 @@ class UrlController @Inject() (
       }
     }
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s.value -> JsBoolean(b) } toSeq))
-  }
-
-  def updateAllDomainHostnames() = AdminUserAction { implicit request =>
-    val BATCH_SIZE = 10000
-    val numBatches = db.readOnlyReplica { implicit session => domainRepo.count / BATCH_SIZE }
-
-    def processBatch(batch: Int): Future[Unit] = {
-      db.readWriteAsync { implicit session =>
-        val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
-        val updatedDomains = domainBatch.map {
-          domain => Domain(hostname = NormalizedHostname.fromHostname(domain.hostname.value)).copy(id = domain.id, createdAt = domain.createdAt, state = domain.state)
-        }
-        updatedDomains.foreach(domainRepo.save)
-        log.info(s"[hostnameMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
-        ()
-      }
-    }
-
-    FutureHelpers.sequentialExec(1 to numBatches)(processBatch)
-
-    Ok
   }
 }

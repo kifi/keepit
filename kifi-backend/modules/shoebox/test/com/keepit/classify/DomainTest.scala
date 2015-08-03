@@ -11,22 +11,22 @@ class DomainTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
 
-        val d1 = Domain(hostname = NormalizedHostname.fromHostname("google.com"), autoSensitive = Some(false))
-        val d2 = Domain(hostname = NormalizedHostname.fromHostname("facebook.com"), autoSensitive = Some(false))
-        val d3 = Domain(hostname = NormalizedHostname.fromHostname("yahoo.com"), autoSensitive = Some(false))
+        val d1 = Domain(hostname = NormalizedHostname("google.com"), autoSensitive = Some(false))
+        val d2 = Domain(hostname = NormalizedHostname("facebook.com"), autoSensitive = Some(false))
+        val d3 = Domain(hostname = NormalizedHostname("yahoo.com"), autoSensitive = Some(false))
 
         inject[Database].readOnlyMaster { implicit c =>
-          domainRepo.get(NormalizedHostname.fromHostname("google.com")) === None
-          domainRepo.get(NormalizedHostname.fromHostname("facebook.com")) === None
-          domainRepo.get(NormalizedHostname.fromHostname("yahoo.com")) === None
+          domainRepo.get(NormalizedHostname("google.com")) === None
+          domainRepo.get(NormalizedHostname("facebook.com")) === None
+          domainRepo.get(NormalizedHostname("yahoo.com")) === None
         }
         val Seq(sd1, sd2, sd3) = inject[Database].readWrite { implicit c =>
           Seq(d1, d2, d3).map(domainRepo.save(_))
         }
         inject[Database].readOnlyMaster { implicit c =>
-          domainRepo.get(NormalizedHostname.fromHostname("google.com")).get === sd1
-          domainRepo.get(NormalizedHostname.fromHostname("facebook.com")).get === sd2
-          domainRepo.get(NormalizedHostname.fromHostname("yahoo.com")).get === sd3
+          domainRepo.get(NormalizedHostname("google.com")).get === sd1
+          domainRepo.get(NormalizedHostname("facebook.com")).get === sd2
+          domainRepo.get(NormalizedHostname("yahoo.com")).get === sd3
         }
         inject[Database].readWrite { implicit c =>
           domainRepo.save(sd1.withAutoSensitive(Some(true)))
@@ -41,7 +41,7 @@ class DomainTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
 
-        val d = Domain(hostname = NormalizedHostname.fromHostname("google.com"), autoSensitive = Some(false))
+        val d = Domain(hostname = NormalizedHostname("google.com"), autoSensitive = Some(false))
 
         inject[Database].readWrite { implicit c =>
           val sd = domainRepo.save(d)
@@ -59,15 +59,15 @@ class DomainTest extends Specification with ShoeboxTestInjector {
     "intern domains by hostname" in {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
-        val domain1 = Domain(hostname = NormalizedHostname.fromHostname("google.com"))
-        val domain2 = Domain(hostname = NormalizedHostname.fromHostname("apple.com"))
+        val domain1 = Domain(hostname = NormalizedHostname("google.com"))
+        val domain2 = Domain(hostname = NormalizedHostname("apple.com"))
 
         inject[Database].readWrite { implicit c =>
           val saved = domainRepo.save(domain1)
           val inactive = domainRepo.save(domain2.copy(state = DomainStates.INACTIVE))
 
-          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com").map(NormalizedHostname.fromHostname))
-          internedDomains.keys.toSet === Set("google.com", "apple.com").map(NormalizedHostname.fromHostname)
+          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com").flatMap(NormalizedHostname.fromHostname))
+          internedDomains.keys.toSet === Set("google.com", "apple.com").map(NormalizedHostname.apply)
         }
       }
     }
@@ -75,24 +75,24 @@ class DomainTest extends Specification with ShoeboxTestInjector {
     "get domains by hash" in {
       withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
-        val domain1 = Domain.fromHostname(hostname = "google.com")
-        val domain2 = Domain.fromHostname(hostname = "Ğooğle.com")
+        val domain1 = Domain(hostname = NormalizedHostname("google.com"))
+        val domain2 = Domain(hostname = NormalizedHostname("Ğooğle.com"))
 
         inject[Database].readWrite { implicit session =>
           val saved = domainRepo.save(domain1)
           val saved1 = domainRepo.save(domain2)
 
-          val actual = domainRepo.get(NormalizedHostname.fromHostname("google.com"))
+          val actual = domainRepo.get(NormalizedHostname("google.com"))
           actual.isDefined === true
           actual.get.hostname.value === "google.com"
 
-          val actual2 = domainRepo.get(NormalizedHostname.fromHostname("Google.com"))
+          val actual2 = domainRepo.get(NormalizedHostname("Google.com"))
           actual2.isDefined === true
           actual2.get.hostname.value === "google.com"
 
-          val actual3 = domainRepo.get(NormalizedHostname.fromHostname("Ğooğle.com"))
+          val actual3 = domainRepo.get(NormalizedHostname("Ğooğle.com"))
           actual3.isDefined === true
-          actual3.get.hostname === NormalizedHostname.fromHostname("Ğooğle.com")
+          actual3.get.hostname === NormalizedHostname("Ğooğle.com")
           actual3.get.hostname.value === "xn--oole-zwac.com"
         }
       }
