@@ -28,7 +28,7 @@ class OrganizationDomainOwnershipRepoTest extends Specification with ShoeboxTest
         val orgDomainOwnershipRepo = inject[OrganizationDomainOwnershipRepo]
 
         val orgId = Id[Organization](1)
-        val domainHostname = NormalizedHostname.fromHostname("kifi.com")
+        val domainHostname = NormalizedHostname("kifi.com")
         val orgDomainOwnership = db.readWrite { implicit s =>
           orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domainHostname))
         }
