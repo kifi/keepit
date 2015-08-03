@@ -4,7 +4,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.model.User
+import com.keepit.model.{ Organization, User }
 import com.keepit.common.db.Id
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.social.NonUserKind

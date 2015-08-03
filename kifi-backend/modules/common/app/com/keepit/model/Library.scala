@@ -54,10 +54,6 @@ case class Library(
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
-  val isDisjoint: Boolean = kind match {
-    case (LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET) => true
-    case _ => false
-  }
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 

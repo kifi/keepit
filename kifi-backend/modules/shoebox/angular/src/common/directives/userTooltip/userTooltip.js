@@ -38,7 +38,7 @@ angular.module('kifi')
           }, 50);
           var ready = scope.library ? libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
             scope.library = data.library;
-            scope.library.path = data.library.url;
+            scope.library.path = data.library.path || data.library.url;
           }) : timeout;
         }).on('touchstart touchend', function () {
           touchedAt = Date.now();

@@ -220,7 +220,7 @@ class ArticleCommander @Inject() (
       }
       case Some(article) => {
         articleStore.add(articleInfo.urlHash, articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
-          log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+          log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url.take(80)}")
           Some((article, key.version))
         }
       }

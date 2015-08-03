@@ -51,8 +51,16 @@ class EventTrackingController @Inject() (
   }
 
   private def clientTrackEvent[E <: HeimdalEvent](event: E)(implicit heimdalEventCompanion: HeimdalEventCompanion[E]): Unit = {
-    mixpanelClient.track(event)
-    amplitudeClient.track(event)
+    try {
+      mixpanelClient.track(event)
+    } catch {
+      case t: Throwable => airbrake.notify(s"error tracking event $event to mixpanel", t)
+    }
+    try {
+      amplitudeClient.track(event)
+    } catch {
+      case t: Throwable => airbrake.notify(s"error tracking event $event to amplitude", t)
+    }
   }
 
   private def handleUserEvent(rawUserEvent: UserEvent) = {

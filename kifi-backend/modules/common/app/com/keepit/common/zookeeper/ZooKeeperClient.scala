@@ -1,6 +1,7 @@
 package com.keepit.common.zookeeper
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.core.extras
 import com.keepit.common.logging.Logging
 import play.api.libs.json.{ JsString, JsValue, Json }
 import scala.collection.JavaConversions._
@@ -345,9 +346,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                debouncedLog(s"session event, keep watching")
                 reregister
             }
         }
@@ -382,9 +383,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                debouncedLog(s"session event, keep watching")
                 updateChildren(getChildren(node, new ParentWatcher()))
             }
         }
@@ -423,9 +424,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                debouncedLog(s"session event, keep watching")
                 doWatchChildren(Seq(child))
             }
         }
@@ -444,9 +445,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case _ =>
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
-                log.info(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
+                log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
               case _ =>
-                log.info(s"session event, keep watching")
+                debouncedLog(s"session event, keep watching")
                 doWatchChildren(getChildren(node, new ParentWatcher()))
             }
         }
@@ -461,7 +462,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case e: KeeperException.NoNodeException =>
             watchedChildren -= child
           case e: KeeperException =>
-            log.error(s"Failed to place watch on a child node!: ${child.path}", e)
+            log.error(s"Failed to place watch on a child node!: ${child.path}: ${e.getMessage}")
             watchedChildren -= child
         }
       }
@@ -490,4 +491,6 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
 
     ZooKeeperSubtree(path, data, getChildren(Node(path)).map(node => getSubtree(node.path)))
   }
+
+  private val debouncedLog = extras.debounce(.1.seconds)(log.info)
 }

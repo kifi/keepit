@@ -34,7 +34,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   "BookmarkInterner" should {
 
-    "persist bookmark" in {
+    "persist keep" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
           UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
