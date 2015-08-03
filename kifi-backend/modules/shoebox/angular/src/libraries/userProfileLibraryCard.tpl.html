@@ -24,9 +24,9 @@
         class="kf-upl-card-public"
         kf-symbol-sprite
         icon="globe"
-        ng-class="{'kf-collab': lib.numCollaborators, 'kf-upl-card-public': lib.org}"
+        ng-class="{'kf-collab': lib.numCollaborators }"
         title="A public library"
-        ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"
+        ng-if="lib.kind !== 'system_main' && lib.visibility === 'published'"
       ></svg>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
