@@ -54,13 +54,12 @@
 
       <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.org">
         <div class="kf-lh-owner-image-wrap">
-          <a class="kf-lh-owner-image-a" ng-class="library.org ? 'kf-lh-org' : ''" href="{{ (library.org || library.owner)|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator">
-            <img class="kf-lh-owner-image" ng-src="{{ (library.org || library.owner)|pic:200 }}" itemprop="image" alt="{{(library.org || library.owner).name}}">
+          <a class="kf-lh-owner-image-a kf-lh-org" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator">
+            <img class="kf-lh-owner-image" ng-src="{{ library.org|pic:200 }}" itemprop="image" alt="{{library.org|name}}">
           </a>
         </div>
         <div class="kf-lh-owner-name-wrap">
-          <a class="kf-lh-owner-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{(library.org || library.owner)|name}}</a>
-          <a class="kf-lh-owner-twitter-a svg-twitter-blue" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" target="_blank" title="@{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" ng-click="trackTwitterProfile()"></a>
+          <a class="kf-lh-owner-name" href="{{library.org|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.org|name}}</a>
         </div>
       </div>
 
@@ -68,8 +67,8 @@
       <span class="kf-lh-with" ng-if="library.org">with</span>
       <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.numCollaborators === 0">
         <div class="kf-lh-owner-image-wrap">
-          <a class="kf-lh-owner-image-a" href="{{ library.owner|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator">
-            <img class="kf-lh-owner-image" ng-src="{{ library.owner|pic:200 }}" itemprop="image" alt="{{library.owner.name}}">
+          <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
+            <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
           </a>
           <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && isOwner()" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
             <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
