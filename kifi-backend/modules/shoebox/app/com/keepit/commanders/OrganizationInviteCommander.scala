@@ -34,6 +34,8 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
+
 }
 
 @Singleton
@@ -54,6 +56,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     emailTemplateSender: EmailTemplateSender,
     kifiInstallationCommander: KifiInstallationCommander,
     organizationAvatarCommander: OrganizationAvatarCommander,
+    typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
@@ -357,6 +360,59 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
       organizationInviteRepo.getAllByOrganization(orgId)
+    }
+  }
+
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
+    val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
+      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit)))
+    }
+    val activeInvites = db.readOnlyMaster { implicit session =>
+      organizationInviteRepo.getByOrgAndInviterId(orgId, userId)
+    }
+
+    val invitedUsers = activeInvites.groupBy(_.userId).collect {
+      case (Some(userId), invites) =>
+        val access = invites.map(_.role).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        userId -> (access, lastInvitedAt)
+    }
+
+    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
+      case (Some(emailAddress), invites) =>
+        val access = invites.map(_.role).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        emailAddress -> (access, lastInvitedAt)
+    }
+
+    friendsAndContactsFut.map {
+      case (users, contacts) =>
+        val existingMembers = {
+          val userIds = users.map(_._1).toSet
+          val memberships = db.readOnlyMaster { implicit session => organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds) }
+          memberships.groupBy(_.userId).mapValues(_.head.role)
+        }
+        val suggestedUsers = users.collect {
+          case (userId, basicUser) if !existingMembers.keys.toSet.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered
+            val (role, lastInvitedAt) = invitedUsers.get(userId) match {
+              case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+              case None => invitedUsers.get(userId) match {
+                case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+                case None => (OrganizationRole.MEMBER, None) // default invite role
+              }
+            }
+            MaybeOrganizationMember(Left(basicUser), role, lastInvitedAt)
+        }
+
+        val suggestedEmailAddresses = contacts.map { contact =>
+          val (role, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
+            case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+            case None => (OrganizationRole.MEMBER, None)
+          }
+          MaybeOrganizationMember(Right(contact), role, lastInvitedAt)
+        }
+        suggestedUsers ++ suggestedEmailAddresses
     }
   }
 }
