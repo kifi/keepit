@@ -52,7 +52,12 @@ orgStats: OrganizationStatistics
     </tr>
     <tr>
         <th>Admin Chat to all members</th>
-        <td><button type="submit" onclick="startAdminChat()" class="btn btn-default">Start Chat</button>
+        <td>
+            <input type="text" width="400px" id="admin-chat-url" value="http://www.kifi.com/@{orgStats.handle.value}"><br/>
+            <input type="text" width="400px" id="admin-chat-title" value="Kifi for your organization"><br/>
+            <input type="text" width="400px" id="admin-chat-text" value="Welcome to Kifi"><br/>
+            <textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
     </tr>
 
 </table>
@@ -236,16 +241,24 @@ orgStats: OrganizationStatistics
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
     };
 
-    function startAdminChat() {
+    $(document).ready(function() {
+        $('#admin-chat-button').on('click', function() {
+            startAdminChat( $('#admin-chat-url').val(),
+                            $('#admin-chat-title').val(),
+                            $('#admin-chat-text').val(),
+                            $('#admin-chat-recipients').val().replace(/\s/g, '').split(',') )
+        });
+    });
+    function startAdminChat(url, title, text, recipients) {
         $.ajax({
             url: "https://eliza.kifi.com/eliza/messages",
             type: 'POST',
             dataType: 'json',
             data: JSON.stringify({
-                "url": "http://www.kifi.com/@{orgStats.handle.value}",
-                "title": "Kifi for your organization",
-                "text": "Hello, and welcome to your organization page on Kifi",
-                "recipients": [ @{Html(orgStats.membersStatistics.values.map('"' + _.user.externalId.id + '"').mkString(", "))} ]
+                "url": url,
+                "title": title,
+                "text": text,
+                "recipients": recipients
             }),
             contentType: 'application/json',
             xhrFields: { withCredentials: true }
