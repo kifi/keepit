@@ -220,7 +220,12 @@ class OrganizationMembershipCommanderImpl @Inject() (
             session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
             val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
             val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
-            organizationMembershipRepo.save(newMembership)
+            val savedMembership = organizationMembershipRepo.save(newMembership)
+            organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId) match {
+              case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+              case None => //whatever
+            }
+            savedMembership
           }
         }
         Right(OrganizationMembershipAddResponse(request, newMembership))
