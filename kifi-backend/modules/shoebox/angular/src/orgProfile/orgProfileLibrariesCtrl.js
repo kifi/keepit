@@ -69,7 +69,6 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           organization: organization,
-          createOnly: true,
           returnAction: function (newLibrary) {
             newLibraryIds[newLibrary.id] = true;
 
