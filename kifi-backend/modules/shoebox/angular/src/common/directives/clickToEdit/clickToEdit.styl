@@ -12,12 +12,9 @@ editButtonWidth = 40px
   vertical-align: middle
   color: white
 
-.kf-click-to-edit-editing:hover:before
-  content: 'save'
-
 .kf-click-to-edit 
-  input,
   .kf-click-to-edit-textarea
+  .kf-click-to-edit-p
     width: 'calc(100% - %s)' % editButtonWidth
     box-sizing: border-box
     padding: 2px
@@ -27,17 +24,20 @@ editButtonWidth = 40px
     line-height: normal
     min-height: 15px
     border: 1px dashed transparent
+    word-wrap: break-word
+    resize: none
 
-    &:not([readonly="readonly"])
-      &:hover
+  &.editable
+    &:hover
+      textarea
         border-color: rgba(255, 255, 255, 0.25)
 
-        &:before
-          content: 'edit'
+      &:before
+        content: 'edit'
 
-      &:focus,
-      &:hover:focus
-        border-color: #fff
+    &:focus,
+    &:hover:focus
+      border-color: #fff
 
 .kf-click-to-edit
   .kf-click-to-edit-textarea-tester
