@@ -57,8 +57,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
   def stateForTitle(title: String)(implicit injector: Injector): String = forTitle(title).state.value
 
   def forTitle(title: String)(implicit injector: Injector): Keep = {
+    // hilariously inefficient, but it's only for testing
     inject[Database].readWrite { implicit session =>
-      val keeps = inject[KeepRepo].getByTitle(title)
+      val keeps = inject[KeepRepo].all().filter(_.title == title)
       keeps.size === 1
       keeps.head
     }

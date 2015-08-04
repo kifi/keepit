@@ -44,8 +44,9 @@ class KeepToLibraryCommanderImpl @Inject() (
     getValidationError(ar) match {
       case Some(fail) => Left(fail)
       case None =>
-        keepToLibraryRepo.getByKeepIdAndLibraryId(ar.keepId, ar.libraryId, excludeStateOpt = None) match {
-          case Some(link) => // existing link guaranteed to be inactive
+        keepToLibraryRepo.getByKeepIdAndLibraryId(ar.keepId, ar.libraryId, excludeStates = Set.empty) match {
+          case Some(link) =>
+            assert(link.isInactive) // existing link guaranteed to be inactive
             val reactivatedLink = keepToLibraryRepo.activate(link.copy(keeperId = ar.requesterId))
             Right(KeepToLibraryAttachResponse(reactivatedLink))
           case None =>
