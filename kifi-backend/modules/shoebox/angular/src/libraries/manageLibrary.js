@@ -39,6 +39,11 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
+        scope.me = profileService.me;
+        scope.libraryProps = {
+          inOrg: false,
+          selectedOrgId: null
+        };
 
         scope.onChangeSpace = function () {
           var currIsOrg = scope.spaceIsOrg(scope.space.current);
@@ -102,6 +107,23 @@ angular.module('kifi')
 
         scope.removeSubscription = function (index) {
           scope.library.subscriptions.splice(index,1);
+        };
+
+        scope.setOrg = function(id) { 
+          if (scope.libraryProps.inOrg) {
+            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+            id = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            scope.libraryProps.selectedOrgId = id;
+            scope.space.destination = scope.me.orgs.filter(function(org) {
+              return org.id === id;
+            })[0];
+          }
+          else {
+            // If user unclicks "organization" their destination should be
+            // their current profile.
+            scope.space.destination = scope.me;
+          }
+          scope.onChangeSpace();
         };
 
 
@@ -301,6 +323,11 @@ angular.module('kifi')
           };
           scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
+        }
+        var libraryOrg = scope.library.org || scope.modalData.organization;
+        if (libraryOrg) {
+          scope.libraryProps.inOrg = !!libraryOrg;
+          scope.libraryProps.selectedOrgId = libraryOrg.id;
         }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
