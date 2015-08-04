@@ -220,6 +220,15 @@
           <input type="checkbox" name="doIt" value="true"> I know what I'm doing. This will remove all data for this inactive user.
         </form></td>
       </tr>
+      <tr>
+        <th>Admin Chat to with user</th>
+        <td>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{user.primaryUsername.get.original}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Hi @{user.firstName}</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Hi @{user.firstName}</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(user.externalId.id)}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
+      </tr>
     }
     </table>
     <p>
@@ -345,7 +354,28 @@
     function configSearch() {
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(user.id.get)"
     }
+    function startAdminChat(url, title, text, recipients) {
+        $.ajax({
+            url: "https://eliza.kifi.com/eliza/messages",
+            type: 'POST',
+            dataType: 'json',
+            data: JSON.stringify({
+                "url": url,
+                "title": title,
+                "text": text,
+                "recipients": recipients
+            }),
+            contentType: 'application/json',
+            xhrFields: { withCredentials: true }
+        });
+    };
     $(function() {
+      $('#admin-chat-button').on('click', function() {
+            startAdminChat( $('#admin-chat-url').val(),
+                            $('#admin-chat-title').val(),
+                            $('#admin-chat-text').val(),
+                            $('#admin-chat-recipients').val().replace(/\s/g, '').split(',') )
+      });
 
       $('.update-username').on("submit", function() {
         $.post("@com.keepit.controllers.admin.routes.AdminUserController.setUsername(user.id.get)", $('.update-username').serialize())
