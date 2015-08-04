@@ -237,13 +237,18 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def setOwner(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+  def transferOwner(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val newOwnerId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
     val oldOwnerId = org.ownerId
     orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId))
-    val updatedOrg = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+    //next two line are to check that the impossible does not happen
+    val updatedOrg = db.readOnlyMaster { implicit s => orgRepo.get(orgId) }
     assume(updatedOrg.ownerId == newOwnerId)
+    /**
+     * When we're creating orgs via the admin tool, we're setting a fake owner id as the owner to preserve data integrity.
+     * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
+     */
     if (oldOwnerId == fakeOwnerId) {
       orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
     }
