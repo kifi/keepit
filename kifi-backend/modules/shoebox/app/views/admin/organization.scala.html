@@ -31,7 +31,7 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner) (@orgStats.members.size members @orgStats.candidates.size candidates)</td></tr>
+    <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
     <tr>
     <th>Experiments</th>
     <td id="experiments" class="form-inline">
@@ -45,8 +45,7 @@ orgStats: OrganizationStatistics
     <tr>
         <th>Active</th>
         <td>
-            @orgStats.org.state
-            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
                 <button type="submit" class="btn btn-default">Set inactive</button>
             </form>
         </td>
@@ -58,6 +57,8 @@ orgStats: OrganizationStatistics
 
 </table>
 
+@orgStats.members.size members @orgStats.candidates.size candidates
+
 <table class="org-members table table-bordered" style="width:600px">
     <tr>
         <th>Member Id</th>
@@ -66,6 +67,8 @@ orgStats: OrganizationStatistics
         <th># of libraries</th>
         <th># of keeps</th>
         <th># of chats</th>
+        <th>Remove</th>
+        <th>Make an owner</th>
     </tr>
     @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
         <tr>
@@ -75,6 +78,10 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
         </tr>
     }
 </table>
@@ -86,6 +93,9 @@ orgStats: OrganizationStatistics
         <th># of libraries</th>
         <th># of keeps</th>
         <th># of chats</th>
+        <th>Remove</th>
+        <th>Make a member</th>
+        <th>Make an owner</th>
     </tr>
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
@@ -95,9 +105,11 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId">
-                <button type="submit" class="btn btn-default">Remove</button>
-            </form></td>
+                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
         </tr>
     }
 </table>
