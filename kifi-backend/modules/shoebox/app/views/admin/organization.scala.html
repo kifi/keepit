@@ -112,6 +112,7 @@ orgStats: OrganizationStatistics
         <th># of keeps</th>
         <th># of chats</th>
         <th>Remove</th>
+        <th>Invite 2ba member</th>
         <th>Make a member</th>
         <th>Make an owner</th>
     </tr>
@@ -125,6 +126,8 @@ orgStats: OrganizationStatistics
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>

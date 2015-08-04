@@ -263,14 +263,14 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
-  def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
+  def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val userId = Id[User](request.body.get("member-id").flatMap(_.headOption).get.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
     orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = org.ownerId, targetId = userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
-  def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+  def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
     orgMembershipCandidateCommander.removeCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
@@ -282,8 +282,8 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
-  def inviteMemberToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+  def inviteCandidateToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCandidateCommander.inviteCandidate(orgId, userId)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
