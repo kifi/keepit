@@ -231,7 +231,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
         }
         //remove the following experiment checks/adds once ORGANIZATION experiment is killed.
         // We need it for now since the experiment may be broken for the new members
-        if (userExperimentRepo.hasExperiment(newMembership.userId, UserExperimentType.ORGANIZATION)) {
+        if (!userExperimentRepo.hasExperiment(newMembership.userId, UserExperimentType.ORGANIZATION)) {
           userExperimentRepo.save(UserExperiment(userId = newMembership.userId, experimentType = UserExperimentType.ORGANIZATION))
         }
         Right(OrganizationMembershipAddResponse(request, newMembership))
