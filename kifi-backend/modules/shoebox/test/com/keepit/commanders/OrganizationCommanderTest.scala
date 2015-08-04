@@ -108,7 +108,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       withDb(modules: _*) { implicit injector =>
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
+
+        val users = db.readWrite { implicit session => UserFactory.users(3).saved }
 
         val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
@@ -119,7 +122,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
         }
 
-        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = Id[User](2), targetId = Id[User](42), newRole = OrganizationRole.MEMBER)
+        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = Id[User](2), targetId = Id[User](3), newRole = OrganizationRole.MEMBER)
 
         // By default, Organizations do not allow members to invite other members
         val try1 = orgMembershipCommander.addMembership(memberInviteMember)
@@ -141,7 +144,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         allMembers.size === 3
-        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](42))
+        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](3))
       }
     }
 
