@@ -254,7 +254,13 @@ angular.module('kifi')
           };
 
           if (scope.uploadUrl && scope.uploadUrl.indexOf('organization') !== -1) {
-            upload = orgProfileService.uploadOrgAvatar(scope.profile.id, data.cropX, data.cropY, data.picWidth, data.picHeight, scope.files[0]);
+            var file = Array.prototype.filter.call(scope.files, isImage)[0];
+
+            if (!file) {
+              return;
+            }
+
+            upload = orgProfileService.uploadOrgAvatar(scope.profile.id, data.cropX, data.cropY, data.cropSize, data.cropSize, file);
             upload.then(function () {
               scope.$broadcast('forceCloseModal');
 
