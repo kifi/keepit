@@ -15,7 +15,7 @@ editButtonWidth = 40px
 .kf-click-to-edit-editing:hover:before
   content: 'save'
 
-.kf-click-to-edit 
+.kf-click-to-edit
   input,
   .kf-click-to-edit-textarea
     width: 'calc(100% - %s)' % editButtonWidth
@@ -38,6 +38,9 @@ editButtonWidth = 40px
       &:focus,
       &:hover:focus
         border-color: #fff
+
+.kf-click-to-edit-readonly .kf-click-to-edit-textarea
+  resize: none
 
 .kf-click-to-edit
   .kf-click-to-edit-textarea-tester
