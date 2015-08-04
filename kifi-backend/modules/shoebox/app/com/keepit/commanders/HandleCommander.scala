@@ -59,14 +59,16 @@ class HandleCommanderImpl @Inject() (
 
   def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)] = {
     handleRepo.getByHandle(handle).flatMap { ownership =>
-      ownership.ownerId.map {
+      ownership.ownerId.flatMap {
         case HandleOwner.OrganizationOwner(organizationId) => {
           val organization = organizationRepo.get(organizationId)
-          (Left(organization), isPrimaryOwner(ownership, organization))
+          if (organization.isActive) Some((Left(organization), isPrimaryOwner(ownership, organization)))
+          else None
         }
         case HandleOwner.UserOwner(userId) => {
           val user = userRepo.get(userId)
-          (Right(user), isPrimaryOwner(ownership, user))
+          if (user.isActive) Some((Right(user), isPrimaryOwner(ownership, user)))
+          else None
         }
       }
     }
