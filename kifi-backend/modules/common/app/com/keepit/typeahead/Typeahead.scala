@@ -104,6 +104,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
     implicit val fj = ExecutionContext.fj
     consolidateRefreshReq(ownerId) { id =>
       create(id).map { typeahead =>
+        consolidateFetchReq.set(ownerId, Future.successful(typeahead))
         invalidate(typeahead)
         typeahead
       }
