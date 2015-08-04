@@ -56,7 +56,7 @@
             <div class="manage-lib-create-visibility-input-container">
               <span kf-library-visibility-selector library="library" space="space.destination"></span>
             </div>
-            <div ng-if="!spaceIsOrg(space.destination)" ng-switch="library.visibility" class="manage-lib-visibility-description">
+            <div ng-if="!libraryProps.inOrg" ng-switch="library.visibility" class="manage-lib-visibility-description">
               <div ng-switch-when="published" class="manage-lib-visibility-description-content">
                 Anyone can see and follow this library
               </div>

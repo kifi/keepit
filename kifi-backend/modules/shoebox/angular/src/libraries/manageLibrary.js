@@ -109,9 +109,17 @@ angular.module('kifi')
           scope.library.subscriptions.splice(index,1);
         };
 
-        scope.setOrg = function(id) {
+        scope.setOrg = function(id) { // defaults to first org in array.
           if (scope.libraryProps.inOrg) {
             scope.libraryProps.selectedOrgId = (id ? id : scope.me.orgs[0].id);
+            scope.space.destination = scope.me.orgs.filter(function(org) {
+              return org.id === id;
+            })[0];
+          }
+          else {
+            // If user unclicks "organization" their destination should be
+            // their current profile.
+            scope.space.destination = scope.me;
           }
         };
 
@@ -178,6 +186,8 @@ angular.module('kifi')
 
           var owner = {};
           owner[ownerType(scope.space.destination)] = scope.space.destination.id;
+
+          debugger;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -292,7 +302,6 @@ angular.module('kifi')
             follower.status = 'Following';
           });
           scope.modifyingExistingLibrary = true;
-          scope.libraryProps.inOrg = !!scope.library.org;
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
@@ -313,6 +322,11 @@ angular.module('kifi')
           };
           scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
+        }
+        var libraryOrg = scope.library.org || scope.modalData.organization;
+        if (libraryOrg) {
+          scope.libraryProps.inOrg = !!libraryOrg;
+          scope.libraryProps.selectedOrgId = libraryOrg.id;
         }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
