@@ -112,10 +112,10 @@ angular.module('kifi')
         scope.setOrg = function(id) { 
           if (scope.libraryProps.inOrg) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-            id = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
-            scope.libraryProps.selectedOrgId = id;
+            var orgId = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            scope.libraryProps.selectedOrgId = orgId;
             scope.space.destination = scope.me.orgs.filter(function(org) {
-              return org.id === id;
+              return org.id === orgId;
             })[0];
           }
           else {
