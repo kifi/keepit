@@ -581,7 +581,7 @@ angular.module('kifi')
               currentPageOrigin: 'libraryPage',
               returnAction: function () {
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
-                  var handle = scope.profile.type === 'org' ? scope.profile.result.organization.handle : scope.username;
+                  var handle = scope.library.org ? scope.library.org.handle : scope.username;
                   return libraryService.getLibraryByHandleAndSlug(handle, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
                     scope.library.subscriptions = data.subscriptions;
