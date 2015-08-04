@@ -861,11 +861,11 @@ class LibraryCommanderImpl @Inject() (
       (userIdOpt match {
         case Some(id) =>
           val userIsInLibrary = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty
-          val userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
-          val userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
-          val userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
+          def userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
+          def userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+          def userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
           val libIsOrgVisible = library.visibility == LibraryVisibility.ORGANIZATION
-          userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (libIsOrgVisible && userIsInOrg)
+          userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (userIsInOrg && libIsOrgVisible)
         case None =>
           getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
       })
