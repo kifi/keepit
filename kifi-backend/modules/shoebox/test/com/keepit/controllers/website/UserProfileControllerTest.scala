@@ -455,7 +455,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "followers":[],
                 "numCollaborators":0,
                 "collaborators":[],
-                "lastKept":${lib3.updatedAt.getMillis},
+                "lastKept":${lib3.lastKept.get.getMillis},
                 "following": true,
                 "membership": {"access":"read_only","listed":true,"subscribed":false},
                 "modifiedAt":${lib3.updatedAt.getMillis},
