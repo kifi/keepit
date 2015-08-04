@@ -13,16 +13,6 @@
       <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
 
-          <div class="manage-lib-input-wrapper" ng-if="spaces.length > 1">
-            <span class="manage-lib-heading">Space</span>&nbsp;
-            <select class="manage-lib-input"
-              ng-options="s as (s|name) for s in spaces"
-              ng-model="space.destination"
-              ng-change="onChangeSpace()"
-            >
-            </select>
-          </div>
-
           <div class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Name</span>
             <input class="manage-lib-input manage-lib-name-input pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
@@ -38,6 +28,26 @@
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Description</span><!-- for removing space between inline-block
          --><textarea class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
+          </div>
+
+          <div class="manage-lib-input-wrapper">
+            <div class="manage-lib-heading"></div>&nbsp;
+            <div class="manage-lib-body">
+              <label>
+                <input type="checkbox" ng-model="libraryProps.inOrg" />
+                Organization library
+              </label>
+              <div class="manage-lib-org-selector" ng-show="libraryProps.inOrg">
+                <div 
+                  class="manage-lib-org-selector-org" 
+                  ng-repeat="org in me.orgs"
+                  ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
+                >
+                  <img ng-src="{{ org|pic:100 }}" />
+                  <h1>{{org.name}}</h1>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="manage-lib-input-wrapper">
