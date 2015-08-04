@@ -3,14 +3,17 @@
 angular.module('kifi')
 
 .directive('kfProfileImage', [
-  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'modalService', 'profileService', '$analytics', '$location',
-  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, modalService, profileService, $analytics, $location) {
+  '$document', '$timeout', '$window', '$q', '$http', '$state', 'env', 'modalService',
+  'profileService', 'orgProfileService', '$analytics', '$location',
+  function ($document, $timeout, $window, $q, $http, $state, env, modalService,
+            profileService, orgProfileService, $analytics, $location) {
     return {
       restrict: 'A',
       replace: true,
       scope: {
         picUrl: '=',
-        uploadUrl: '@'
+        uploadUrl: '@',
+        profile: '='
       },
       templateUrl: 'common/modal/photoUpload/profileImage.tpl.html',
       link: function (scope, element) {
@@ -221,12 +224,11 @@ angular.module('kifi')
         };
 
         function imageUploadError() {
-          scope.forceClose = true;
+          scope.$broadcast('forceCloseModal');
 
           // Use $timeout to wait for forceClose to close the currently open modal before
           // opening the next modal.
           $timeout(function () {
-            scope.forceClose = false;
 
             modalService.open({
               template: 'common/modal/photoUpload/imageUploadFailedModal.tpl.html'
@@ -241,32 +243,51 @@ angular.module('kifi')
             scope: scope
           });
 
-          var upload = uploadPhotoXhr2(scope.files);
-          if (upload) {
-            upload.promise.then(function (result) {
-              var scaling = positioning.imageWidth / positioning.currentWidth;
-              var data = {
-                picToken: result && result.token,
-                picWidth: positioning.imageWidth,
-                picHeight: positioning.imageHeight,
-                cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
-                cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
-                cropSize: Math.floor(scaling * maskSize)
-              };
-              $http.post(PHOTO_CROP_UPLOAD_URL, data)
-              .then(function () {
-                profileService.fetchMe();
-                scope.forceClose = true;
+          var upload;
+          var scaling = positioning.imageWidth / positioning.currentWidth;
+          var data = {
+            picWidth: positioning.imageWidth,
+            picHeight: positioning.imageHeight,
+            cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
+            cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
+            cropSize: Math.floor(scaling * maskSize)
+          };
 
-                scope.resetChooseImage();
-                $analytics.eventTrack('user_clicked_page', {
-                  'action': 'uploadImage',
-                  'path': $location.path()
-                });
-              }, imageUploadError);
-            }, imageUploadError);
+          if (scope.uploadUrl && scope.uploadUrl.indexOf('organization') !== -1) {
+            upload = orgProfileService.uploadOrgAvatar(scope.profile.id, data.cropX, data.cropY, data.picWidth, data.picHeight, scope.files[0]);
+            upload.then(function () {
+              scope.$broadcast('forceCloseModal');
+
+              scope.resetChooseImage();
+              $analytics.eventTrack('user_clicked_page', {
+                'action': 'uploadImage',
+                'path': $location.path()
+              });
+
+              $state.reload(); // get the newest profile data
+            })
+            ['catch'](imageUploadError);
           } else {
-            imageUploadError();
+            upload = uploadPhotoXhr2(scope.files);
+            if (upload) {
+              upload.promise.then(function (result) {
+                data.picToken = result && result.token;
+
+                $http.post(PHOTO_CROP_UPLOAD_URL, data)
+                .then(function () {
+                  profileService.fetchMe();
+                  scope.$broadcast('forceCloseModal');
+
+                  scope.resetChooseImage();
+                  $analytics.eventTrack('user_clicked_page', {
+                    'action': 'uploadImage',
+                    'path': $location.path()
+                  });
+                }, imageUploadError);
+              }, imageUploadError);
+            } else {
+              imageUploadError();
+            }
           }
         };
       }
