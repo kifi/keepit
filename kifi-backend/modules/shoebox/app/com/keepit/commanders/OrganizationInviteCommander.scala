@@ -369,7 +369,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit)))
     }
     val activeInvites = db.readOnlyMaster { implicit session =>
-      organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING)) // could also add InvitationDecision.DECLINED, per a product discussion
+      organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING, InvitationDecision.DECLINED))
     }
 
     val invitedUsers = activeInvites.groupBy(_.userId).collect {
@@ -390,11 +390,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case (users, contacts) =>
         val existingMembers = {
           val userIds = users.map(_._1).toSet
-          val memberships = db.readOnlyMaster { implicit session => organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds) }
-          memberships.groupBy(_.userId).mapValues(_.head.role)
+          db.readOnlyMaster { implicit session =>
+            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds)
+          }.map(_.userId).toSet
         }
         val suggestedUsers = users.collect {
-          case (userId, basicUser) if !existingMembers.keys.toSet.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered (they may be promoted via an invite)
+          case (userId, basicUser) if !existingMembers.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered (they may be promoted via an invite)
             val (role, lastInvitedAt) = invitedUsers.get(userId) match {
               case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
               case None => invitedUsers.get(userId) match {
