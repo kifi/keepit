@@ -257,6 +257,12 @@ class AdminOrganizationController @Inject() (
         if (oldOwnerId == fakeOwnerId) {
           orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
         }
+        db.readWrite { implicit s =>
+          orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
+            case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+            case None => //whatever
+          }
+        }
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
     }
   }

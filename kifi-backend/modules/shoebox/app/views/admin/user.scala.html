@@ -202,6 +202,15 @@
           </select>
         </td>
       </tr>
+      <tr>
+        <th>Admin Chat to with user</th>
+        <td>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{user.primaryUsername.get.original}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Hi @{user.firstName}</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Hi @{user.firstName}</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(user.externalId.id)}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
+      </tr>
       @if(user.state != UserStates.ACTIVE) {
       <tr>
         <th>Merge to User ID</th>
@@ -219,15 +228,6 @@
           <input type="submit" value="Deactivate!">
           <input type="checkbox" name="doIt" value="true"> I know what I'm doing. This will remove all data for this inactive user.
         </form></td>
-      </tr>
-      <tr>
-        <th>Admin Chat to with user</th>
-        <td>
-            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{user.primaryUsername.get.original}</textarea><br/>
-            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Hi @{user.firstName}</textarea><br/>
-            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Hi @{user.firstName}</textarea><br/>
-            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(user.externalId.id)}</textarea><br/>
-            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
       </tr>
     }
     </table>
