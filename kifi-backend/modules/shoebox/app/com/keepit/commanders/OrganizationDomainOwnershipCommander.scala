@@ -78,7 +78,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
           ) {
               case ownership if ownership.state == OrganizationDomainOwnershipStates.INACTIVE =>
                 Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(ownership.copy(state = OrganizationDomainOwnershipStates.ACTIVE))))
-              case ownership if ownership.organizationId != orgId => Right(OwnDomainSuccess(domain, ownership))
+              case ownership if ownership.organizationId != orgId => Left(DomainAlreadyOwned(domainName))
               case ownership => Right(OwnDomainSuccess(domain, ownership))
             }
         }
