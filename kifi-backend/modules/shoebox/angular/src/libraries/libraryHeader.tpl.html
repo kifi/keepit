@@ -6,7 +6,18 @@
     <div class="kf-lh-cover-image" ng-class="{'kf-fade-in': !settingImage}" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image && imageLoaded"></div>
 
     <div class="kf-lh-top">
-      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
+      <div class="kf-lh-private" ng-if="library.visibility === 'secret'">
+        <svg
+          kf-symbol-sprite
+          icon="lock"
+        ></svg> 
+      </div>
+      <div class="kf-lh-public" ng-if="library.kind !== 'system_main' && library.visibility === 'published'">
+        <svg
+          kf-symbol-sprite
+          icon="globe"
+        ></svg> 
+      </div>
 
       <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isOwner() && !library.isSystem"></button>
 

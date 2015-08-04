@@ -42,7 +42,9 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.userProfile = profileService.me;
+    $scope.organization = organization;
+
+    $scope.me = profileService.me;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -67,6 +69,7 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           organization: organization,
+          createOnly: true,
           returnAction: function (newLibrary) {
             newLibraryIds[newLibrary.id] = true;
 
@@ -76,6 +79,8 @@ angular.module('kifi')
         }
       });
     };
+
+    $scope.canCreateLibraries = $scope.membership.permissions.indexOf('add_libraries') !== -1;
 
     resetAndFetchLibraries();
   }

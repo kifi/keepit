@@ -35,7 +35,7 @@
             </label>
           </div>
 
-          <div class="manage-lib-input-wrapper">
+          <div ng-if="!createOnly" class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Description</span><!-- for removing space between inline-block
          --><textarea class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
           </div>
@@ -55,7 +55,7 @@
             </div>
           </div>
 
-          <div class="manage-lib-input-wrapper kf-color">
+          <div ng-if="!createOnly" class="manage-lib-input-wrapper kf-color">
             <div class="manage-lib-heading">Color</div>
             <label ng-repeat="hex in colors" class="manage-lib-color" style="background-color:{{hex}}">
               <input type="radio" class="manage-lib-color-radio" value="{{hex}}" ng-model="library.color">
@@ -64,7 +64,7 @@
           </div>
 
 
-          <div class="manage-lib-input-wrapper">
+          <div ng-if="!createOnly" class="manage-lib-input-wrapper">
             <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
               <div class="manage-lib-integrations-arrow" ng-class="{'active':showIntegrations}"></div>
               <span class="manage-lib-integrations-title" ng-class="{'active':showIntegrations}">Integrations</span>

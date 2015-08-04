@@ -374,11 +374,13 @@ followerPicDiam = 2.2em
     visibility: hidden
 
 .kf-lh-private
+.kf-lh-public
   display: inline-block
+  vertical-align: middle
   margin-right: 1em
   line-height: 2em
-  border-radius: 1em
-  padding: 0 1em 0 2.3em
+  border-radius: 15px
+  padding: 0 15px
   background-position: .9em .46em
   background-size: .9em auto
   background-repeat: no-repeat
@@ -387,10 +389,23 @@ followerPicDiam = 2.2em
   .kf-system-secret &
     display: none
 
-  &::before
+  &::after
     content: 'Private'
     font-size: .9em
     color: #fff
+    display: inline-block
+    vertical-align: middle
+
+  svg
+    fill: white
+    margin-right: 5px
+
+.kf-lh-public
+  padding: 0
+  background: transparent
+
+  &::after
+    content: 'Public'
 
 coverPreviewDur = .6s
 

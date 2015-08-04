@@ -76,7 +76,7 @@ class GraphUpdateFetcherImpl @Inject() (
           val normalizedHostnames = emailAccounts.flatMap(email => NormalizedHostname.fromHostname(email.getDomainName)).toSet
           shoebox.internDomainsByDomainNames(normalizedHostnames).imap { domainInfoByName: Map[NormalizedHostname, DomainInfo] =>
             emailAccounts.map { email =>
-              NormalizedHostname.fromHostname(email.getDomainName).map { domainInfoByName.get } match {
+              NormalizedHostname.fromHostname(email.getDomainName).flatMap { domainInfoByName.get } match {
                 case Some(domain: DomainInfo) if !domain.isEmailProvider => EmailAccountGraphUpdate.apply(email, domain.id)
                 case _ => EmailAccountGraphUpdate(email, None)
               }
