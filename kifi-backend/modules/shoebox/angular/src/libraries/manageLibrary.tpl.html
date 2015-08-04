@@ -34,7 +34,7 @@
             <div class="manage-lib-heading"></div>&nbsp;
             <div class="manage-lib-body">
               <label>
-                <input type="checkbox" ng-model="libraryProps.inOrg" />
+                <input type="checkbox" ng-model="libraryProps.inOrg" ng-click="setOrg()" />
                 Organization library
               </label>
               <div class="manage-lib-org-selector" ng-show="libraryProps.inOrg">
@@ -42,6 +42,7 @@
                   class="manage-lib-org-selector-org" 
                   ng-repeat="org in me.orgs"
                   ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
+                  ng-click="setOrg(org.id)"
                 >
                   <img ng-src="{{ org|pic:100 }}" />
                   <h1>{{org.name}}</h1>

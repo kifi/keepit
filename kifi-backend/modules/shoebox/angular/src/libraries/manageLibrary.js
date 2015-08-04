@@ -39,11 +39,11 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
-        scope.me = profileService.me
+        scope.me = profileService.me;
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null
-        }
+        };
 
         scope.onChangeSpace = function () {
           var currIsOrg = scope.spaceIsOrg(scope.space.current);
@@ -110,7 +110,9 @@ angular.module('kifi')
         };
 
         scope.setOrg = function(id) {
-          scope.libraryProps.selectedOrgId = id;
+          if (scope.libraryProps.inOrg) {
+            scope.libraryProps.selectedOrgId = (id ? id : scope.me.orgs[0].id);
+          }
         };
 
 
