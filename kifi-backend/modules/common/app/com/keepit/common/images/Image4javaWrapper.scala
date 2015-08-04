@@ -196,7 +196,7 @@ class Image4javaWrapper @Inject() (
   private def handleExceptions(convert: ConvertCmd, operation: IMOperation): Unit = {
     if (playMode == Mode.Test) {
       // If you need the script printed in tests, uncomment this:
-      //println(getScript(convert, operation))
+      // println(getScript(convert, operation))
     }
     try {
       convert.run(operation)
