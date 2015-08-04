@@ -56,7 +56,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         // upload an image
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, offset = ImageOffset(0, 0), cropSize = ImageSize(50, 50))
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
@@ -79,7 +79,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         val (_, _, org1, _) = setup()
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, offset = ImageOffset(0, 0), cropSize = ImageSize(50, 50))
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
@@ -92,7 +92,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile2, offset = ImageOffset(0, 0), cropSize = ImageSize(50, 50))
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile2, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")

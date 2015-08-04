@@ -30,8 +30,9 @@ case class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest {
 case class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.CenteredCrop
 }
-case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, size: ImageSize) extends ProcessImageRequest {
+case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, finalSize: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.CropScale
+  def size: ImageSize = finalSize
 }
 
 object ScaleImageRequest {
