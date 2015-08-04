@@ -11,6 +11,7 @@ angular.module('kifi')
         value: '=',
         inputPlaceholder: '=',
         onSave: '=',
+        alink: '=',
         readonly: '='
       },
       replace: true,
@@ -55,7 +56,7 @@ angular.module('kifi')
         // Called only when blurring without save
         $scope.disableEditor = function() {
           $scope.saveable = false;
-          $element.find('input')[0].blur();
+          $element.find('textarea')[0].blur();
         };
 
         $scope.save = function () {

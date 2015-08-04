@@ -61,7 +61,6 @@ ophImageWidth = 200px
   text-align: left
 
 .kf-oph-name
-  margin-top: 6px
   line-height: 31px
   font-size: 21px
   font-weight: normal
@@ -92,12 +91,20 @@ ophImageWidth = 200px
       text-decoration: underline
 
 .kf-oph-url
+.kf-click-to-edit-p
   margin-top: 0
   color: lighten(accentGreen, 15%)
 
-  textarea
+  textarea, a
     font-size: 0.85rem
+    color: lighten(accentGreen, 15%)
     text-decoration: underline
+
+  a
+    text-decoration: none
+
+    &:hover
+      text-decoration: underline
 
 .kf-oph-stats
   text-align: center
