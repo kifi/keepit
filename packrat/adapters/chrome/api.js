@@ -281,14 +281,19 @@ var api = (function createApi() {
         api.tabs.on.blur.dispatch(page);
       }
     }
-    focusedWinId = winId;
+    // This is incorrect, but is a workaround for https://code.google.com/p/chromium/issues/detail?id=516740
+    // When this bug is fixed, just remove the if block wrapper below (the body stays).
+    // Behavior with this fix is to consider a window in focus if it was the last window to be in focus.
     if (winId !== chrome.windows.WINDOW_ID_NONE) {
-      if (selectedTabIds[winId]) {  // "normal" window
-        topNormalWinId = winId;
-      }
-      var page = pages[selectedTabIds[winId]];
-      if (page && httpRe.test(page.url)) {
-        api.tabs.on.focus.dispatch(page);
+      focusedWinId = winId;
+      if (focusedWinId !== chrome.windows.WINDOW_ID_NONE) {
+        if (selectedTabIds[focusedWinId]) {  // "normal" window
+          topNormalWinId = focusedWinId;
+        }
+        var page = pages[selectedTabIds[focusedWinId]];
+        if (page && httpRe.test(page.url)) {
+          api.tabs.on.focus.dispatch(page);
+        }
       }
     }
   }));

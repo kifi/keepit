@@ -107,6 +107,9 @@
   .kf-color>&
     padding-top: 8px
 
+.manage-lib-body
+  display: inline-block
+
 input.manage-lib-input
 textarea.manage-lib-input
 select.manage-lib-input
@@ -543,6 +546,64 @@ button.manage-lib-delete-button
 .manage-lib-subs-instruct
   margin-left: 42px
   color: gray
+
+.manage-lib-org-selector
+  margin-top: 15px
+
+  .manage-lib-org-selector-org
+    max-width: 100px
+    display: inline-block
+    vertical-align: top
+    margin-right: 10px
+    position: relative
+    cursor: pointer
+    padding: 5px
+    margin-left: -5px
+    border-radius: 7px
+
+    &:hover
+      background: #EEEEEE
+
+    &.selected
+      &:before
+        content: '✓'
+        color: white
+        display: block
+        position: absolute
+        top: -2px
+        right: -2px
+        background: accentGreen
+        padding: 0 5px
+        border-top-right-radius: 7px
+        border-bottom-left-radius: 5px
+        box-shadow: -2px 2px 2px 1px rgba(0, 0, 0, 0.25)
+
+    img
+      width: 60px
+      height: 60px
+      margin: 0px auto
+      display: block
+      border-radius: 15%
+      margin-bottom: 3px
+
+    h1
+      heading_sm()
+      text-align: center
+      margin-bottom: 0
+
+.manage-lib-user-selector
+  margin-top: 15px
+
+  img
+    width: 30px
+    height: 30px
+    border-radius: 50%
+    margin-right: 7px
+
+  img
+  span
+    vertical-align: middle
+    display: inline-block
 
 
 input.manage-lib-sub-input
