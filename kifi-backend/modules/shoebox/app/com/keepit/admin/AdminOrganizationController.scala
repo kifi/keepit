@@ -265,6 +265,13 @@ class AdminOrganizationController @Inject() (
 
   def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
+    val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+    orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = org.ownerId, targetId = userId))
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+  }
+
+  def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
     orgMembershipCandidateCommander.removeCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
