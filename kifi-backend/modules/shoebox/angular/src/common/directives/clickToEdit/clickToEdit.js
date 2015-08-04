@@ -10,7 +10,6 @@ angular.module('kifi')
       scope: {
         value: '=',
         inputPlaceholder: '=',
-        textarea: '=',
         onSave: '=',
         readonly: '='
       },
