@@ -510,7 +510,7 @@ class AdminUserController @Inject() (
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        userEmailAddressCommander.deactivate(removedEmail)
+        userEmailAddressCommander.deactivate(removedEmail).get
       }
     }
 
@@ -969,7 +969,7 @@ class AdminUserController @Inject() (
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      userEmailAddressCommander.deactivate(userEmail)
+      userEmailAddressCommander.deactivate(userEmail).get
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
