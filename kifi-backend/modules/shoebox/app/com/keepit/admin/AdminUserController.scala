@@ -86,6 +86,7 @@ class AdminUserController @Inject() (
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     emailRepo: UserEmailAddressRepo,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
@@ -509,7 +510,7 @@ class AdminUserController @Inject() (
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        emailRepo.save(removedEmail.withState(UserEmailAddressStates.INACTIVE))
+        userEmailAddressCommander.deactivate(removedEmail)
       }
     }
 
@@ -968,7 +969,7 @@ class AdminUserController @Inject() (
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
+      userEmailAddressCommander.deactivate(userEmail)
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
