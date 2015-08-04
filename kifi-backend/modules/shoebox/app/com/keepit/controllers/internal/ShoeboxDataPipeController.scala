@@ -1,6 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.keepit.classify.{ DomainInfo, DomainRepo, Domain }
+import com.keepit.classify.{ NormalizedHostname, DomainInfo, DomainRepo, Domain }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -274,10 +274,10 @@ class ShoeboxDataPipeController @Inject() (
 
   def internDomainsByDomainNames() = Action.async(parse.json) { request =>
     SafeFuture {
-      val domainNames = (request.body \ "domainNames").as[Set[String]]
-
+      val domainNames = (request.body \ "domainNames").as[Set[NormalizedHostname]]
+      implicit val hostnameFormat = NormalizedHostname.format
       val domainInfoByName: Map[String, DomainInfo] = db.readWrite { implicit session =>
-        domainRepo.internAllByNames(domainNames).mapValues { _.toDomainInfo }
+        domainRepo.internAllByNames(domainNames).map { case (hostname, domain) => hostname.value -> domain.toDomainInfo }
       }
       Ok(Json.toJson(domainInfoByName))
     }
@@ -287,7 +287,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val orgDomainOwnerships = db.readOnlyReplica { implicit s =>
         orgDomainOwnershipRepo.getBySequenceNumber(seqNum, fetchSize).map { own =>
-          own.toIngestableOrganizationDomainOwnership(domainRepo.get(own.domainHostname).flatMap(_.id).get)
+          own.toIngestableOrganizationDomainOwnership(domainRepo.get(own.normalizedHostname).flatMap(_.id).get)
         }
       }
       Ok(Json.toJson(orgDomainOwnerships))

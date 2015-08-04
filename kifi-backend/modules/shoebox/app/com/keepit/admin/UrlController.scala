@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{ DomainHash, SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
+import com.keepit.classify.{ NormalizedHostname, SensitivityUpdater, DomainToTagRepo, DomainTagRepo, DomainTagStates, DomainTag, DomainRepo, Domain }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db._
@@ -25,6 +25,8 @@ import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsBoolean, JsObject, Json }
+
+import scala.util.Try
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -385,8 +387,10 @@ class UrlController @Inject() (
 
   def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
     val hostname = request.body.get("hostname").get.head
-    val domain = db.readOnlyReplica { implicit s =>
-      domainRepo.get(hostname, None)
+    val domain = NormalizedHostname.fromHostname(hostname).flatMap { hostname =>
+      db.readOnlyReplica { implicit s =>
+        domainRepo.get(hostname, None)
+      }
     }
 
     domain.map { domain => Redirect(routes.UrlController.getDomain(domain.id.get)) }.getOrElse(NotFound)
@@ -451,17 +455,17 @@ class UrlController @Inject() (
 
   def saveDomainOverrides = AdminUserAction { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
-      case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
-    }.toMap
+      case (k, vs) => NormalizedHostname.fromHostname(k) -> (vs.head.toLowerCase == "true")
+    }.collect { case (Some(hostname), value) => hostname -> value }
     val domainsToRemove = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }.filterNot(d => domainSensitiveMap.contains(d.hostname))
 
     db.readWrite { implicit s =>
       domainSensitiveMap.foreach {
-        case (domainName, sensitive) if Domain.isValid(domainName) =>
+        case (domainName, sensitive) =>
           val domain = domainRepo.get(domainName)
-            .getOrElse(Domain.fromHostname(hostname = domainName))
+            .getOrElse(Domain(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)
         case (domainName, _) =>
@@ -471,25 +475,6 @@ class UrlController @Inject() (
         domainRepo.save(domain.withManualSensitive(None))
       }
     }
-    Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
-  }
-
-  def updateAllDomainHashes() = AdminUserAction { implicit request =>
-    val BATCH_SIZE = 10000
-    val numBatches = db.readOnlyReplica { implicit session => domainRepo.count / BATCH_SIZE }
-
-    def processBatch(batch: Int): Future[Unit] = {
-      db.readWriteAsync { implicit session =>
-        val domainBatch = domainRepo.pageAscending(batch, BATCH_SIZE)
-        val updatedDomains = domainBatch.map(domain => Domain.fromHostname(domain.hostname).copy(id = domain.id, state = domain.state))
-        updatedDomains.foreach(domainRepo.save)
-        log.info(s"[hashMigration] domains ${domainBatch.head.id.get.id} - ${domainBatch.last.id.get.id} updated")
-        ()
-      }
-    }
-
-    FutureHelpers.sequentialExec(1 to numBatches)(processBatch)
-
-    Ok
+    Ok(JsObject(domainSensitiveMap map { case (s, b) => s.value -> JsBoolean(b) } toSeq))
   }
 }

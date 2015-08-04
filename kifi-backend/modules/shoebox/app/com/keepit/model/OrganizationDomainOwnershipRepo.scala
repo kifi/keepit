@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.classify.Domain
+import com.keepit.classify.{ NormalizedHostname, Domain }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
@@ -16,9 +16,9 @@ import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipRepoImpl])
 trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] with SeqNumberFunction[OrganizationDomainOwnership] {
-  def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: String, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
   def getOwnershipsForOrganization(organization: Id[Organization])(implicit session: RSession): Seq[OrganizationDomainOwnership]
-  def getOwnershipForDomain(domainHostname: String)(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getOwnershipForDomain(domainHostname: NormalizedHostname)(implicit session: RSession): Option[OrganizationDomainOwnership]
 }
 
 @Singleton
@@ -37,7 +37,7 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
 
-    def domainHostname = column[String]("domain_hostname", O.NotNull)
+    def domainHostname = column[NormalizedHostname]("domain_hostname", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, state, seq, organizationId, domainHostname) <> ((OrganizationDomainOwnership.apply _).tupled, OrganizationDomainOwnership.unapply)
   }
@@ -54,7 +54,7 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
   override def deleteCache(model: OrganizationDomainOwnership)(implicit session: RSession): Unit = {}
 
-  override def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: String, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+  override def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
     val query =
       if (onlyState.isDefined) {
         for { row <- rows if row.organizationId === organization && row.domainHostname === domainHostname && row.state === onlyState } yield row
@@ -69,7 +69,7 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
     query.list
   }
 
-  override def getOwnershipForDomain(domainHostname: String)(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+  override def getOwnershipForDomain(domainHostname: NormalizedHostname)(implicit session: RSession): Option[OrganizationDomainOwnership] = {
     val query = for { row <- rows if row.domainHostname === domainHostname && row.state === OrganizationDomainOwnershipStates.ACTIVE } yield row
     query.firstOption
   }
