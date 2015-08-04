@@ -141,7 +141,7 @@ orgStats: OrganizationStatistics
 </table>
 <br/>
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-    <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
+    <input id="add-candidate-input" name="user-id" placeholder="Candidate Id goes here">
     <input type="Submit" value="Add">
 </form>
 
@@ -234,11 +234,11 @@ orgStats: OrganizationStatistics
         }
     });
     function addCandidate(orgId, candidateId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId }).done(done);
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "user-id":  candidateId }).done(done);
     };
 
     function addMember(orgId, memberId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "user-id": memberId }).done(done);
     };
 
     $(document).ready(function() {
