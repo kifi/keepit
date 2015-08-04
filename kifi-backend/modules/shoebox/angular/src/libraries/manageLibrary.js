@@ -109,9 +109,11 @@ angular.module('kifi')
           scope.library.subscriptions.splice(index,1);
         };
 
-        scope.setOrg = function(id) { // defaults to first org in array.
+        scope.setOrg = function(id) { 
           if (scope.libraryProps.inOrg) {
-            scope.libraryProps.selectedOrgId = (id ? id : scope.me.orgs[0].id);
+            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+            id = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            scope.libraryProps.selectedOrgId = id;
             scope.space.destination = scope.me.orgs.filter(function(org) {
               return org.id === id;
             })[0];
@@ -121,6 +123,7 @@ angular.module('kifi')
             // their current profile.
             scope.space.destination = scope.me;
           }
+          scope.onChangeSpace();
         };
 
 
@@ -186,8 +189,6 @@ angular.module('kifi')
 
           var owner = {};
           owner[ownerType(scope.space.destination)] = scope.space.destination.id;
-
-          debugger;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
