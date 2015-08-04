@@ -52,7 +52,12 @@ orgStats: OrganizationStatistics
     </tr>
     <tr>
         <th>Admin Chat to all members</th>
-        <td><button type="submit" onclick="startAdminChat()" class="btn btn-default">Start Chat</button>
+        <td>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
     </tr>
 
 </table>
@@ -97,9 +102,9 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(membership.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
         </tr>
     }
 </table>
@@ -112,8 +117,8 @@ orgStats: OrganizationStatistics
         <th># of keeps</th>
         <th># of chats</th>
         <th>Remove</th>
-        <th>Invite 2ba member</th>
         <th>Make a member</th>
+        <th>Invite 2ba member</th>
         <th>Make an owner</th>
     </tr>
     @for(candidate <- orgStats.candidates.toSeq) {
@@ -124,13 +129,13 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
         </tr>
     }
 </table>
@@ -236,16 +241,24 @@ orgStats: OrganizationStatistics
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
     };
 
-    function startAdminChat() {
+    $(document).ready(function() {
+        $('#admin-chat-button').on('click', function() {
+            startAdminChat( $('#admin-chat-url').val(),
+                            $('#admin-chat-title').val(),
+                            $('#admin-chat-text').val(),
+                            $('#admin-chat-recipients').val().replace(/\s/g, '').split(',') )
+        });
+    });
+    function startAdminChat(url, title, text, recipients) {
         $.ajax({
             url: "https://eliza.kifi.com/eliza/messages",
             type: 'POST',
             dataType: 'json',
             data: JSON.stringify({
-                "url": "http://www.kifi.com/@{orgStats.handle.value}",
-                "title": "Kifi for your organization",
-                "text": "Hello, and welcome to your organization page on Kifi",
-                "recipients": [ @{Html(orgStats.membersStatistics.values.map('"' + _.user.externalId.id + '"').mkString(", "))} ]
+                "url": url,
+                "title": title,
+                "text": text,
+                "recipients": recipients
             }),
             contentType: 'application/json',
             xhrFields: { withCredentials: true }
