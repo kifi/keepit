@@ -29,7 +29,9 @@ case class UserEmailAddress(
       lastVerificationSent = Some(now),
       verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   }
-  def verified: Boolean = state == UserEmailAddressStates.VERIFIED
+  def clearVerificationCode = copy(lastVerificationSent = None, verificationCode = None)
+  def verificationSent: Boolean = lastVerificationSent.isDefined && verificationCode.isDefined
+  def verified: Boolean = state == UserEmailAddressStates.VERIFIED || (state != UserEmailAddressStates.INACTIVE && verifiedAt.isDefined)
 }
 
 object UserEmailAddress {

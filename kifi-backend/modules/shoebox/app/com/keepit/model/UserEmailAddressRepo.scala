@@ -14,6 +14,8 @@ import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.duration._
 
+// todo(Léo): replace several occurences of getByAddressOpt with getByAddressAndUserId
+
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
   def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress]
