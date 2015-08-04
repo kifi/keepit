@@ -11,7 +11,7 @@ angular.module('kifi')
         value: '=',
         inputPlaceholder: '=',
         onSave: '=',
-        alink: '=',
+        linkable: '=',
         readonly: '='
       },
       replace: true,
