@@ -497,18 +497,15 @@ class AdminUserController @Inject() (
 
     db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
-      val newEmails = (emailList map { address =>
-        val email = emailRepo.getByAddressOpt(address)
-        email match {
-          case Some(addr) => addr // We're good! It already exists
-          case None => // Create a new one
-            log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            emailRepo.save(UserEmailAddress(address = address, userId = userId))
-        }
-      }).toSet
 
-      // Set state of removed email addresses to INACTIVE
-      (oldEmails -- newEmails) map { removedEmail =>
+      // Intern required emails
+      emailList map { address =>
+        log.info("Interning email address %s to userId %s".format(address, userId.toString))
+        userEmailAddressCommander.intern(userId, address).get
+      }
+
+      // Deactivate other emails
+      oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
         userEmailAddressCommander.deactivate(removedEmail).get
       }
