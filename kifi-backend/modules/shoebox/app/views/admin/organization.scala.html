@@ -53,10 +53,10 @@ orgStats: OrganizationStatistics
     <tr>
         <th>Admin Chat to all members</th>
         <td>
-            <input type="text" width="400px" id="admin-chat-url" value="http://www.kifi.com/@{orgStats.handle.value}"><br/>
-            <input type="text" width="400px" id="admin-chat-title" value="Kifi for your organization"><br/>
-            <input type="text" width="400px" id="admin-chat-text" value="Welcome to Kifi"><br/>
-            <textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
             <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
     </tr>
 
