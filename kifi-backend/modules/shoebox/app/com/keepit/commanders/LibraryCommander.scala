@@ -888,7 +888,9 @@ class LibraryCommanderImpl @Inject() (
       val userOwnsLibrary = library.ownerId == userId
       val canMoveFromSpace = from match {
         case OrganizationSpace(fromOrg) =>
-          organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
+          library.ownerId == userId
+        // TODO(ryan): when the frontend has UI for this, add it in
+        // organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
         case UserSpace(fromUser) => fromUser == userId // Can move libraries from Personal space to Organization Space.
       }
       val canMoveToSpace = to match {
