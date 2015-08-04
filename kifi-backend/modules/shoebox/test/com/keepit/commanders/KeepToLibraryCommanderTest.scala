@@ -77,7 +77,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val randoLib = LibraryFactory.library().withUser(rando).withCollaborators(Seq(user)).saved
 
             ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, randoLib.id.get, user.id.get)) must beRight
-            ktlRepo.countByLibraryId(randoLib.id.get) === 1
+            ktlRepo.getCountByLibraryId(randoLib.id.get) === 1
 
             (user, keep, randoLib)
           }
