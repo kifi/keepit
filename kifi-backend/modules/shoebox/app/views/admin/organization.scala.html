@@ -128,7 +128,7 @@ orgStats: OrganizationStatistics
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+                <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="candidate-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
         </tr>

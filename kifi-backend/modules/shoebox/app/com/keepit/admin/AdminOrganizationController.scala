@@ -277,7 +277,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
     orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
