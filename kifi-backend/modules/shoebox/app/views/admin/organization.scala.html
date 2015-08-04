@@ -7,7 +7,7 @@ orgStats: OrganizationStatistics
 
 @admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
 <table class="org-summary table table-bordered" style="width:600px">
-    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
+    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId, @adminHelper.orgDisplay(orgStats.org)</td></tr>
     <tr><td>Name</td>
         <td>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
@@ -31,7 +31,7 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+    <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner) (@orgStats.members.size members @orgStats.candidates.size candidates)</td></tr>
     <tr>
     <th>Experiments</th>
     <td id="experiments" class="form-inline">
