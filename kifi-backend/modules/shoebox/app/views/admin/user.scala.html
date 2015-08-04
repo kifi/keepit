@@ -205,7 +205,7 @@
       <tr>
         <th>Admin Chat to with user</th>
         <td>
-            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{user.primaryUsername.get.original}</textarea><br/>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{user.primaryUsername.get.original.value}</textarea><br/>
             Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Hi @{user.firstName}</textarea><br/>
             Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Hi @{user.firstName}</textarea><br/>
             Recipients:<br/><textarea id="admin-chat-recipients">@{Html(user.externalId.id)}</textarea><br/>
