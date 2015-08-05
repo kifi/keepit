@@ -36,7 +36,7 @@ case class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest
 case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, finalSize: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.CropScale
   def size: ImageSize = finalSize
-  val pathFragment = s"${cropSize.width}x${cropSize.height}+${offset.x}+${offset.y}->${finalSize.width}x${finalSize.height}" + operation.fileNameSuffix
+  val pathFragment = s"${cropSize.width}x${cropSize.height}+${offset.x}+${offset.y}-${finalSize.width}x${finalSize.height}" + operation.fileNameSuffix
 }
 
 object ScaleImageRequest {
