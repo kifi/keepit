@@ -20,11 +20,12 @@ class NewCollaboratorLinkGenerator @Inject() (
     db: Database,
     userRepo: UserRepo) extends LinkGenerator[NewFollower] {
 
-  val userLinkable = Linkable[User]
-
-  override def getLinks(actions: Set[NewFollower]): Set[String] = db.readOnlyReplica { implicit session =>
-    actions.map { action =>
-      userLinkable.getLink(userRepo.get(action.followerId))
+  override def getLinks(actions: Set[NewFollower]): Set[String] = {
+    import Linkable._
+    db.readOnlyReplica { implicit session =>
+      actions.map { action =>
+        userRepo.get(action.followerId).link
+      }
     }
   }
 
