@@ -526,7 +526,7 @@ POST          /site/organizations/:id/members/invites/decline   @com.keepit.cont
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
-GET           /site/organization/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
+GET           /site/organizations/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, width: Int, height: Int)
 
