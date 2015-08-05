@@ -33,10 +33,7 @@ object HandleCommander {
 trait HandleCommander {
   def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)]
   def canBeClaimed(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RSession): Boolean
-  def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle]
-  def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]]
-
-  def deactivateAll(ownerId: HandleOwner)(implicit session: RWSession): Unit
+  def reclaimAll(ownerId: HandleOwner)(implicit session: RWSession): Seq[Handle]
 
   def autoSetUsername(user: User)(implicit session: RWSession): Option[User]
   def setUsername(user: User, username: Username, lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[User]
@@ -82,29 +79,9 @@ class HandleCommanderImpl @Inject() (
     getValidOwnership(handle, ownerId, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).isSuccess
   }
 
-  def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle] = {
-    getAvailableOwnership(handle, ownerId = None, overrideProtection = overrideProtection).map(claimOwnership(_).handle) recoverWith {
-      case LockedHandleException(_) if overrideLock => {
-        handleRepo.unlock(handle)
-        reclaim(handle, overrideProtection, overrideLock = false) tap { _ =>
-          handleRepo.lock(handle) // Whether the handle was successfully reclaimed or not, make sure the lock is preserved
-        }
-      }
-    }
-  }
-
-  def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
-    val handles = handleRepo.getByOwnerId(Some(ownerId)).map(_.handle)
-    handles.map(reclaim(_, overrideProtection = overrideProtection, overrideLock = overrideLock))
-  }
-
-  def deactivateAll(ownerId: HandleOwner)(implicit session: RWSession): Unit = {
-    handleRepo.getByOwnerId(Some(ownerId)).map(_.handle).foreach { handle =>
-      val normalizedHandle = HandleOps.normalizeHandle(handle)
-      handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None).foreach { ownership =>
-        handleRepo.save(ownership.copy(state = HandleOwnershipStates.INACTIVE))
-      }
-    }
+  def reclaimAll(ownerId: HandleOwner)(implicit session: RWSession): Seq[Handle] = {
+    val handleOwnerships = handleRepo.getByOwnerId(Some(ownerId))
+    handleOwnerships.map(own => handleRepo.save(own.copy(ownerId = None)).handle)
   }
 
   def autoSetUsername(user: User)(implicit session: RWSession): Option[User] = {

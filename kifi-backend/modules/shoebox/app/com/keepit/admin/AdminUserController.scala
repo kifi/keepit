@@ -960,8 +960,7 @@ class AdminUserController @Inject() (
     val user = userRepo.get(userId)
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-    // TODO(léo): question from Ryan --> Is this actually correct? reclaimAll does not seem like it actually deactivates handle ownerships
-    handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
+    handleCommander.reclaimAll(userId)
   }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>

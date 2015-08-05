@@ -2,7 +2,6 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.controller.{ FakeUserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule

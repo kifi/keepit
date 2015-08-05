@@ -267,10 +267,9 @@ class OrganizationCommanderImpl @Inject() (
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
-          handleCommander.reclaimAll(HandleOwner.fromOrganizationId(org.id.get))
+          handleCommander.reclaimAll(org.id.get)
 
           orgRepo.save(org.sanitizeForDelete)
-          handleCommander.deactivateAll(org.id.get)
 
           Right(OrganizationDeleteResponse(request))
         case Some(orgFail) => Left(orgFail)
