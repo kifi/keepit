@@ -89,7 +89,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     libraryInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
     organizationInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
-    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(currentDateTime)))
+    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(state = UserEmailAddressStates.ACTIVE, verifiedAt = Some(currentDateTime))) // todo(Léo): remove state change when UNVERIFIED no longer appears in the DB
 
     lazy val isPendingPrimaryEmail = {
       val pendingEmail = userValueRepo.getValueStringOpt(verifiedEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))

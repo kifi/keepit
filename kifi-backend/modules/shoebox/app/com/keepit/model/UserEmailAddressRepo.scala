@@ -41,10 +41,10 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
-    def verifiedAt = column[DateTime]("verified_at", O.Nullable)
-    def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
+    def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
+    def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt.?, lastVerificationSent.?,
+    def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.apply _).tupled, UserEmailAddress.unapply _)
   }
 
@@ -94,7 +94,7 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
-    (for (e <- rows if e.state === UserEmailAddressStates.UNVERIFIED && e.createdAt > from && e.createdAt < to) yield e).list
+    (for (e <- rows if (e.state === UserEmailAddressStates.UNVERIFIED || (e.state =!= UserEmailAddressStates.INACTIVE) && e.verifiedAt.isEmpty) && e.createdAt > from && e.createdAt < to) yield e).list
   }
 
 }
