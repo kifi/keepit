@@ -13,7 +13,8 @@ angular.module('kifi')
       scope: {
         picUrl: '=',
         uploadUrl: '@',
-        profile: '='
+        profile: '=',
+        readonly: '='
       },
       templateUrl: 'common/modal/photoUpload/profileImage.tpl.html',
       link: function (scope, element) {
