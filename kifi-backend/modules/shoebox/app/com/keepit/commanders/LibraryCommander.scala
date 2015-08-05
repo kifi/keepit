@@ -835,7 +835,7 @@ class LibraryCommanderImpl @Inject() (
       log.info(s"Deleting lib: $oldLibrary")
       db.readWrite(attempts = 2) { implicit s =>
         libraryRepo.save(oldLibrary.sanitizeForDelete)
-          .tap { l => log.info(s"Deleted lib: $s") }
+          .tap { l => log.info(s"Deleted lib: $l") }
       }
       db.readOnlyMaster { implicit s =>
         libraryRepo.get(oldLibrary.id.get) match {
