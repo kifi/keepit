@@ -19,6 +19,8 @@ import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.util.Try
+
 case class LibraryStatistic(
   library: Library,
   owner: User,
@@ -289,17 +291,17 @@ class AdminLibraryController @Inject() (
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
-    val newOrg = Id[Organization](body.get("org-id").get.toLong)
+    val newOrgOpt = body.get("org-id").map(id => Try(id.toLong).toOption).flatten.map(id => Id[Organization](id))
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libId)
-      val org = orgRepo.get(newOrg) //checking the id is valid
+      val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id, visibility = LibraryVisibility.ORGANIZATION))
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = LibraryVisibility.ORGANIZATION))
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
       libraryMembershipRepo.save(membership.copy(userId = newOwner))
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
-        keepRepo.save(keep.copy(id = None, visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
+        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
       }
     }
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
