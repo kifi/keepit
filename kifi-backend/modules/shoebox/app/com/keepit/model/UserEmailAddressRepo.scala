@@ -18,8 +18,8 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress]
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
@@ -64,12 +64,11 @@ class UserEmailAddressRepoImpl @Inject() (
     deleteCache(emailAddress)
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress] =
-    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] =
+    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
 
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
-    val allAddresses = getByAddress(address, excludeState)
-    allAddresses.find(_.state == UserEmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == UserEmailAddressStates.UNVERIFIED).headOption)
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    (for (f <- rows if f.address === address && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =

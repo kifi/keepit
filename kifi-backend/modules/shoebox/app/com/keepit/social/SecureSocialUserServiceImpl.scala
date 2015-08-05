@@ -63,7 +63,7 @@ class SecureSocialUserPluginImpl @Inject() (
         // find a SUI with the correct email address, we go searching.
         val email = EmailAddress(id.userId)
         db.readOnlyMaster { implicit session =>
-          emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
+          emailRepo.getByAddress(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
               sui.credentials map { creds =>

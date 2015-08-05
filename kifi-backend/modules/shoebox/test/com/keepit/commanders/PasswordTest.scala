@@ -173,7 +173,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
         val (_, _, _, _, _, _, _, resetToken) = setUp()
 
         def emailAddress = db.readOnlyMaster { implicit session =>
-          userEmailAddressRepo.getByAddressOpt(resetToken.sentTo).get
+          userEmailAddressRepo.getByAddress(resetToken.sentTo).get
         }
 
         emailAddress.verified must beFalse
