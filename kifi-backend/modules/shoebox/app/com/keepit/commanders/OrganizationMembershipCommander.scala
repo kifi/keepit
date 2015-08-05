@@ -34,7 +34,7 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
@@ -103,24 +103,15 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
-      val org = organizationRepo.get(orgId)
-      val (ownerSeq, members) = organizationMembershipRepo.getByOrgId(orgId, limit, offset).partition(_.userId == org.ownerId)
-      val ownerOpt = ownerSeq.headOption
+      val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId)
       val invitees = includeInvitees match {
         case true =>
-          val leftOverCount = Limit(Math.max(limit.value - members.length + 1, 0))
-          val leftOverOffset = if (members.isEmpty) {
-            val totalCountForOrg = organizationMembershipRepo.countByOrgId(orgId)
-            Offset(offset.value - totalCountForOrg)
-          } else {
-            Offset(0)
-          }
-          organizationInviteRepo.getByOrganization(orgId, leftOverCount, leftOverOffset)
+          organizationInviteRepo.getAllByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING).toSeq // includes resends, needs to be deduped
         case false => Seq.empty[OrganizationInvite]
       }
-      buildMaybeMembers(ownerOpt, members, invitees)
+      buildMaybeMembers(members, invitees).drop(offset.value.toInt).take(limit.value.toInt)
     }
   }
 
@@ -148,15 +139,14 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def buildMaybeMembers(owner: Option[OrganizationMembership], members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
-    val invitedUserIds = invitees.filter(_.userId.isDefined)
-    val invitedEmailAddresses = invitees.filter(_.emailAddress.isDefined)
-    val usersMap = db.readOnlyMaster { implicit session =>
-      basicUserRepo.loadAllActive((owner.map(owner => Seq(owner.userId)).getOrElse(Seq.empty) ++ members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
-    }
+  private def buildMaybeMembers(members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
+    import com.keepit.common.time.dateTimeOrdering
 
-    val ownerInfo = owner.map { owner =>
-      MaybeOrganizationMember(member = Left(usersMap.get(owner.userId).get), role = owner.role, lastInvitedAt = None)
+    val (userInvites, emailInvites) = invitees.partition(_.userId.isDefined)
+    val invitedUserIds = userInvites.groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values
+    val invitedEmailAddresses = emailInvites.groupBy(_.emailAddress.get).mapValues(_.maxBy(_.updatedAt)).values // assumes that if no userId is defined, an email address must be
+    val usersMap = db.readOnlyMaster { implicit session =>
+      basicUserRepo.loadAllActive((members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
     }
 
     val membersInfo = members.flatMap { member =>
@@ -176,7 +166,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       MaybeOrganizationMember(member = Right(contact), role = invitedByAddress.role, lastInvitedAt = Some(invitedByAddress.updatedAt))
     }
 
-    ownerInfo.toSeq ++ membersInfo.sortBy(_.member.left.get.firstName) ++ invitedByUserIdInfo ++ invitedByEmailAddressInfo
+    membersInfo ++ invitedByUserIdInfo ++ invitedByEmailAddressInfo
   }
 
   def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
