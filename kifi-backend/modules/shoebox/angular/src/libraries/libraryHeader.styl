@@ -621,14 +621,15 @@ coverDragShadeHeight = 3em
 
 .kf-lh-owner
   display: inline-block
-  vertical-align: middle
+  vertical-align: top
   margin-right: 1em
+  max-width: 100px
 
 .kf-lh-owner
 .kf-lh-collabs
   margin-top: 2em
   display: inline-block
-  vertical-align: middle
+  vertical-align: top
 
   @media (min-width: 480px)
     margin-top: 1.8em
@@ -717,11 +718,16 @@ collabImageDiam2 = 3.6em
   display: block
   position: relative
 
+.kf-lh-owner-name-wrap
+.kf-lh-collab-name-wrap
+  line-height: 15px
+
 .kf-lh-owner-name
 .kf-lh-collab-name
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.2)
   font-smoothing: auto
+  font-size: 13px
 
   &:hover
     text-decoration: underline
