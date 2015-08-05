@@ -11,7 +11,7 @@ case class Notification(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    lastCheck: DateTime = START_OF_TIME,
+    lastChecked: DateTime = START_OF_TIME,
     kind: NotificationKind) extends Model[Notification] {
 
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
