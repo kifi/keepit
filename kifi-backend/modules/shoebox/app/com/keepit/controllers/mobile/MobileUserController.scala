@@ -353,7 +353,6 @@ class MobileUserController @Inject() (
       val response = contactSearchResult.collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-        case a: AliasContactResult if request.experiments.contains(UserExperimentType.ADMIN) => Json.toJson(a)
       }
       Ok(Json.toJson(response))
     }
