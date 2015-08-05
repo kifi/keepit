@@ -24,6 +24,7 @@ class OrganizationInviteController @Inject() (
     val orgMembershipCommander: OrganizationMembershipCommander,
     organizationInviteCommander: OrganizationInviteCommander,
     orgInviteCommander: OrganizationInviteCommander,
+    typeaheadCommander: TypeaheadCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     airbrake: AirbrakeNotifier,
@@ -122,5 +123,10 @@ class OrganizationInviteController @Inject() (
         NoContent
       case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
+  }
+
+  def suggestMembers(pubId: PublicId[Organization], query: Option[String], limit: Int) = OrganizationUserAction(pubId).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit).map { members => Ok(Json.obj("members" -> members)) }
   }
 }

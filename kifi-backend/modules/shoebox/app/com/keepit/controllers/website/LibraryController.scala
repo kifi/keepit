@@ -627,7 +627,6 @@ class LibraryController @Inject() (
       }
       case _ => Future.successful(Forbidden)
     }
-
   }
 
   def relatedLibraries(pubId: PublicId[Library]) = MaybeUserAction.async { request =>

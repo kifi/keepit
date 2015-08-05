@@ -113,7 +113,7 @@ private[mail] class MailSenderActor @Inject() (
 
   def addressHasOptedOut(address: EmailAddress, category: ElectronicMailCategory)(implicit session: RSession) = {
     emailOptOutRepo.hasOptedOut(address, category) || {
-      emailAddressRepo.getByAddressOpt(address).map(_.userId) match {
+      emailAddressRepo.getByAddress(address).map(_.userId) match {
         case None => // Email isn't owned by any user, send away!
           false
         case Some(userId) =>
@@ -123,7 +123,7 @@ private[mail] class MailSenderActor @Inject() (
   }
 
   def userIsInactive(address: EmailAddress)(implicit session: RSession): Boolean = {
-    val userEmailAddressOpt = emailAddressRepo.getByAddressOpt(address, None)
+    val userEmailAddressOpt = emailAddressRepo.getByAddress(address)
     userEmailAddressOpt match {
       case Some(emailAddress) =>
         val userId = emailAddress.userId

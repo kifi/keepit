@@ -139,12 +139,6 @@ class SendgridCommander @Inject() (
 
     eventName.filter(unsubscribeEvents contains _).foreach(_ => handleUnsubscribeEvent(event, emailOpt))
 
-    eventName.filter(CLICK == _).foreach { _ =>
-      emailOpt.foreach { email =>
-        verifyEmailAddress(event, email)
-      }
-    }
-
     sendHeimdalEvent(event, emailOpt)
   }
 
@@ -154,17 +148,6 @@ class SendgridCommander @Inject() (
     case twitter if twitter.contains("twitter.com/kifi") => "Kifi Twitter Page"
     case linkedin if linkedin.contains("linkedin.com/company/fortytwo") => "Kifi LinkedIn Page"
     case _ => "External Page"
-  }
-
-  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit = db.readWrite { implicit rw =>
-    for {
-      userEmail <- email.to.headOption
-      emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
-      if !emailAddr.verified
-    } {
-      log.info(s"verifying email($userEmail) from SendGrid event($event)")
-      userEmailAddressCommander.saveAsVerified(emailAddr)
-    }
   }
 
   private def handleUnsubscribeEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =

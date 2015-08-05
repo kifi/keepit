@@ -8,7 +8,7 @@ import com.keepit.rover.article.DefaultArticle
 import com.keepit.rover.article.content.DefaultContent
 import com.keepit.rover.document.RoverDocumentFetcher
 import com.keepit.rover.document.tika.TikaDocument
-import com.keepit.rover.fetcher.{ FetchContext, HttpRedirect, FetchResult }
+import com.keepit.rover.fetcher.{ HttpRedirect, FetchContext, FetchResult }
 import com.keepit.rover.store.RoverArticleStore
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime

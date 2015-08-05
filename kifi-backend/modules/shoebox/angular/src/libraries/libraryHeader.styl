@@ -374,11 +374,13 @@ followerPicDiam = 2.2em
     visibility: hidden
 
 .kf-lh-private
+.kf-lh-public
   display: inline-block
+  vertical-align: middle
   margin-right: 1em
   line-height: 2em
-  border-radius: 1em
-  padding: 0 1em 0 2.3em
+  border-radius: 15px
+  padding: 0 15px
   background-position: .9em .46em
   background-size: .9em auto
   background-repeat: no-repeat
@@ -387,10 +389,23 @@ followerPicDiam = 2.2em
   .kf-system-secret &
     display: none
 
-  &::before
+  &::after
     content: 'Private'
     font-size: .9em
     color: #fff
+    display: inline-block
+    vertical-align: middle
+
+  svg
+    fill: white
+    margin-right: 5px
+
+.kf-lh-public
+  padding: 0
+  background: transparent
+
+  &::after
+    content: 'Public'
 
 coverPreviewDur = .6s
 
@@ -605,8 +620,16 @@ coverDragShadeHeight = 3em
       margin: 0 1em 0 1.5em
 
 .kf-lh-owner
+  display: inline-block
+  vertical-align: top
+  margin-right: 1em
+  max-width: 100px
+
+.kf-lh-owner
 .kf-lh-collabs
   margin-top: 2em
+  display: inline-block
+  vertical-align: top
 
   @media (min-width: 480px)
     margin-top: 1.8em
@@ -614,6 +637,13 @@ coverDragShadeHeight = 3em
     .kf-system-main &
     .kf-system-secret &
       display: none
+
+.kf-lh-with
+  display: inline-block
+  vertical-align: middle
+  color: white
+  margin-right: 1em
+  font-style: italic
 
 .kf-lh-owner-image-wrap
   position: relative
@@ -641,6 +671,10 @@ collabImageDiam2 = 3.6em
   @media (min-width: 480px)
     width: ownerImageDiam2
     margin-bottom: .4em
+
+  &.kf-lh-org
+    img
+      border-radius: 15%
 
 .kf-lh-collab-image-a
   display: block
@@ -684,11 +718,19 @@ collabImageDiam2 = 3.6em
   display: block
   position: relative
 
+.kf-lh-org-name
+  visibility: hidden
+
+.kf-lh-owner-name-wrap
+.kf-lh-collab-name-wrap
+  line-height: 15px
+
 .kf-lh-owner-name
 .kf-lh-collab-name
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.2)
   font-smoothing: auto
+  font-size: 13px
 
   &:hover
     text-decoration: underline

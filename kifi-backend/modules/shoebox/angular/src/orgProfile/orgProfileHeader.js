@@ -3,7 +3,7 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout',
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 
   function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout) {
 
   return {

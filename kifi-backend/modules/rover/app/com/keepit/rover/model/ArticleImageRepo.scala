@@ -17,7 +17,7 @@ trait ArticleImageRepo extends Repo[ArticleImage] {
   def getByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleImage]]
-  def getByArticleInfo(articleInfo: ArticleInfo)(implicit session: RSession): Set[ArticleImage]
+  def getByArticleInfo(articleInfo: ArticleInfo, excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def intern[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage
 }
 
@@ -75,8 +75,8 @@ class ArticleImageRepoImpl @Inject() (
     existingByUriId ++ missingUriIds.map(_ -> Set.empty[ArticleImage])
   }
 
-  def getByArticleInfo(articleInfo: ArticleInfo)(implicit session: RSession): Set[ArticleImage] = {
-    getByUrlAndKind(articleInfo.url, articleInfo.articleKind)
+  def getByArticleInfo(articleInfo: ArticleInfo, excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage] = {
+    getByUrlAndKind(articleInfo.url, articleInfo.articleKind, excludeState)
   }
 
   private def getByUrlAndKindAndImageHash[A <: Article](url: String, kind: ArticleKind[A], imageHash: ImageHash)(implicit session: RSession): Option[ArticleImage] = {

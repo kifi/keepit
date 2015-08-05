@@ -7,12 +7,18 @@ orgStats: OrganizationStatistics
 
 @admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
 <table class="org-summary table table-bordered" style="width:600px">
-    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId</td></tr>
+    <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId, @adminHelper.orgDisplay(orgStats.org)</td></tr>
     <tr><td>Name</td>
         <td>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setName(orgStats.orgId)" method="POST" class="form-inline set-name">
             <input id="set-name-input" type="text" name="name" value="@orgStats.name">
             <input type="Submit" value="Change">
+        </form>
+        </td></tr>
+    <tr><td>Clone Guide Lib</td>
+        <td>
+        <form action="@com.keepit.controllers.admin.routes.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgStats.orgId)" method="POST" class="form-inline">
+            <input type="Submit" value="Clone">
         </form>
         </td></tr>
     <tr><td>Created At</td>
@@ -31,7 +37,7 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Owner</td><td>@adminHelper.orgDisplay(orgStats.org)</td></tr>
+    <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
     <tr>
     <th>Experiments</th>
     <td id="experiments" class="form-inline">
@@ -45,14 +51,42 @@ orgStats: OrganizationStatistics
     <tr>
         <th>Active</th>
         <td>
-            @orgStats.org.state
-            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
                 <button type="submit" class="btn btn-default">Set inactive</button>
             </form>
         </td>
     </tr>
+    <tr>
+        <th>Admin Chat to all members</th>
+        <td>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
+    </tr>
 
 </table>
+
+<table class="org-domains table table-bordered" style="width:800px">
+    <tr>
+        <th>Owned Domain</th>
+    </tr>
+    @for(domain <- orgStats.domains) {
+    <tr>
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.id.get)">@{domain.hostname.value}</a><td>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.hostname.value)"
+               class="btn btn-small">Remove </a></td>
+    </tr>
+    }
+</table>
+
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
+    <input type="text" name="domainName" placeholder="Domain name">
+    <button type="submit" class="btn btn-default">Add Ownership</button>
+</form>
+
+@orgStats.members.size members @orgStats.candidates.size candidates
 
 <table class="org-members table table-bordered" style="width:600px">
     <tr>
@@ -62,6 +96,8 @@ orgStats: OrganizationStatistics
         <th># of libraries</th>
         <th># of keeps</th>
         <th># of chats</th>
+        <th>Remove</th>
+        <th>Make an owner</th>
     </tr>
     @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
         <tr>
@@ -71,6 +107,10 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
         </tr>
     }
 </table>
@@ -82,6 +122,10 @@ orgStats: OrganizationStatistics
         <th># of libraries</th>
         <th># of keeps</th>
         <th># of chats</th>
+        <th>Remove</th>
+        <th>Make a member</th>
+        <th>Invite 2ba member</th>
+        <th>Make an owner</th>
     </tr>
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
@@ -91,15 +135,19 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="candidate-id" value="@candidate.userId">
-                <button type="submit" class="btn btn-default">Remove</button>
-            </form></td>
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
+            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
         </tr>
     }
 </table>
 <br/>
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-    <input id="add-candidate-input" name="candidate-id" placeholder="Candidate Id goes here">
+    <input id="add-candidate-input" name="user-id" placeholder="Candidate Id goes here">
     <input type="Submit" value="Add">
 </form>
 
@@ -126,24 +174,6 @@ orgStats: OrganizationStatistics
         </tr>
     }
 </table>
-
-<table class="org-domains table table-bordered" style="width:800px">
-    <tr>
-        <th>Owned Domain</th>
-    </tr>
-    @for(domain <- orgStats.domains) {
-        <tr>
-            <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.id.get)">@domain.hostname</a><td>
-            <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.id.get)"
-                class="btn btn-small">Remove </a></td>
-        </tr>
-    }
-</table>
-
-    <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
-        <input type="text" name="domainName" placeholder="Domain name">
-        <button type="submit" class="btn btn-default">Add Ownership</button>
-    </form>
 
 <h3>Chat Engagement</h3>
  
@@ -210,11 +240,35 @@ orgStats: OrganizationStatistics
         }
     });
     function addCandidate(orgId, candidateId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "candidate-id":  candidateId }).done(done);
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "user-id":  candidateId }).done(done);
     };
 
     function addMember(orgId, memberId) {
-      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "member-id": memberId }).done(done);
+      $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)", { "user-id": memberId }).done(done);
+    };
+
+    $(document).ready(function() {
+        $('#admin-chat-button').on('click', function() {
+            startAdminChat( $('#admin-chat-url').val(),
+                            $('#admin-chat-title').val(),
+                            $('#admin-chat-text').val(),
+                            $('#admin-chat-recipients').val().replace(/\s/g, '').split(',') )
+        });
+    });
+    function startAdminChat(url, title, text, recipients) {
+        $.ajax({
+            url: "https://eliza.kifi.com/eliza/messages",
+            type: 'POST',
+            dataType: 'json',
+            data: JSON.stringify({
+                "url": url,
+                "title": title,
+                "text": text,
+                "recipients": recipients
+            }),
+            contentType: 'application/json',
+            xhrFields: { withCredentials: true }
+        });
     };
 
     function done() {

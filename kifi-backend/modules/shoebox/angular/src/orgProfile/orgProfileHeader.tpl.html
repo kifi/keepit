@@ -19,13 +19,13 @@
     variation="'kf-generic-banner-error'"
   ></div>
   <div class="kf-oph-top">
-    <div kf-profile-image upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
+    <div kf-profile-image readonly="readonly" profile="profile" upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
         <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" readonly="readonly"></div>
-        <div class="kf-oph-description" kf-click-to-edit on-save="save" value="profile.description" readonly="readonly" textarea="true"></div>
+        <div class="kf-oph-description" kf-click-to-edit on-save="save" value="profile.description" readonly="readonly"></div>
         <p class="kf-oph-url">
-          <span kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'e.g. http://example.com'" value="profile.site"></span>
+          <span kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'e.g. http://example.com'" linkable="true" value="profile.site"></span>
         </p>
       </div>
       <nav class="kf-oph-stats">

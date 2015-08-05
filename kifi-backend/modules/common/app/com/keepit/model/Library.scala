@@ -228,7 +228,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 6
+  override val version = 7
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -303,7 +303,8 @@ object LibraryKind {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_PERSONA extends LibraryKind("system_persona", 2)
-  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_id_later", 2)
+  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 2)
+  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 3)
   case object USER_CREATED extends LibraryKind("user_created", 2)
 
   implicit def format[T]: Format[LibraryKind] =
@@ -315,6 +316,8 @@ object LibraryKind {
       case SYSTEM_SECRET.value => SYSTEM_SECRET
       case SYSTEM_PERSONA.value => SYSTEM_PERSONA
       case SYSTEM_READ_IT_LATER.value => SYSTEM_READ_IT_LATER
+      case "system_read_id_later" => SYSTEM_READ_IT_LATER //for backward compatibility. I'll update the db and clear the cache. can remove by Aug 6, 2015
+      case SYSTEM_GUIDE.value => SYSTEM_GUIDE
       case USER_CREATED.value => USER_CREATED
     }
   }

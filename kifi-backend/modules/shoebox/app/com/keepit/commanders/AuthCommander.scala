@@ -127,7 +127,7 @@ class AuthCommander @Inject() (
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
     db.readOnlyMaster { implicit s =>
-      emailAddressRepo.getByAddressOpt(addr).isDefined
+      emailAddressRepo.getByAddress(addr).isDefined
     }
   }
 

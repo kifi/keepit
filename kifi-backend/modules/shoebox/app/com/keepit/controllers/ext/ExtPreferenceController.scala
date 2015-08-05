@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
+import com.keepit.classify.{ NormalizedHostname, DomainRepo, Domain, DomainStates }
 import com.keepit.commanders.{ UserIpAddressCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
@@ -110,13 +110,13 @@ class ExtPreferenceController @Inject() (
 
   def setKeeperPositionOnSite() = UserAction(parse.tolerantJson) { request =>
     val pos = request.body \ "pos"
-    val host = (request.body \ "host").as[String]
+    val host = (request.body \ "host").as[NormalizedHostname]
 
     db.readWrite { implicit s =>
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
         case Some(d) => d
-        case None => domainRepo.save(Domain.fromHostname(hostname = host))
+        case None => domainRepo.save(Domain(hostname = host))
       }
       userToDomainRepo.get(request.user.id.get, domain.id.get, UserToDomainKinds.KEEPER_POSITION) match {
         case Some(p) if p.state != UserToDomainStates.ACTIVE || p.value.get != pos =>
@@ -131,24 +131,29 @@ class ExtPreferenceController @Inject() (
 
   def setKeeperHiddenOnSite() = UserAction(parse.tolerantJson) { request =>
     val json = request.body
-    val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
-    val suppress: Boolean = (json \ "suppress").as[Boolean]
-    db.readWrite(attempts = 3) { implicit s =>
-      val domain = domainRepo.get(host, excludeState = None) match {
-        case Some(d) if d.isActive => d
-        case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
-        case None => domainRepo.save(Domain.fromHostname(hostname = host))
-      }
-      userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
-        case Some(utd) if (utd.isActive != suppress) =>
-          userToDomainRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
-        case Some(utd) => utd
-        case None =>
-          userToDomainRepo.save(UserToDomain(None, request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, None))
-      }
-    }
+    val hostOpt = NormalizedHostname.fromHostname(URI.parse((json \ "url").as[String]).get.host.get.name)
+    hostOpt match {
+      case Some(host) => {
+        val suppress: Boolean = (json \ "suppress").as[Boolean]
+        db.readWrite(attempts = 3) { implicit s =>
+          val domain = domainRepo.get(host, excludeState = None) match {
+            case Some(d) if d.isActive => d
+            case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
+            case None => domainRepo.save(Domain(hostname = host))
+          }
+          userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
+            case Some(utd) if (utd.isActive != suppress) =>
+              userToDomainRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
+            case Some(utd) => utd
+            case None =>
+              userToDomainRepo.save(UserToDomain(None, request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, None))
+          }
+        }
 
-    Ok(Json.obj("host" -> host, "suppressed" -> suppress))
+        Ok(Json.obj("host" -> host, "suppressed" -> suppress))
+      }
+      case None => BadRequest("invalid hostname")
+    }
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[UserExperimentType]): Future[UserPrefs] = {

@@ -14,14 +14,14 @@ import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.duration._
 
+// todo(Léo): replace several occurences of getByAddressOpt with getByAddressAndUserId
+
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress]
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
@@ -41,10 +41,10 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
-    def verifiedAt = column[DateTime]("verified_at", O.Nullable)
-    def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
+    def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
+    def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt.?, lastVerificationSent.?,
+    def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.apply _).tupled, UserEmailAddress.unapply _)
   }
 
@@ -64,12 +64,11 @@ class UserEmailAddressRepoImpl @Inject() (
     deleteCache(emailAddress)
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress] =
-    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] =
+    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
 
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
-    val allAddresses = getByAddress(address, excludeState)
-    allAddresses.find(_.state == UserEmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == UserEmailAddressStates.UNVERIFIED).headOption)
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    (for (f <- rows if f.address === address && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
@@ -86,18 +85,6 @@ class UserEmailAddressRepoImpl @Inject() (
     }
   }
 
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] =
-    (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
-
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) = {
-    // returns (verifiedEmailOption, isFirstTimeUsed)
-    getByUserAndCode(userId, verificationCode) match {
-      case Some(verifiedAddress) if verifiedAddress.state == UserEmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
-      case Some(unverifiedAddress) if unverifiedAddress.state == UserEmailAddressStates.UNVERIFIED => (Some(save(unverifiedAddress.withState(UserEmailAddressStates.VERIFIED))), true)
-      case None => (None, false)
-    }
-  }
-
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] = {
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
   }
@@ -107,7 +94,7 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
-    (for (e <- rows if e.state === UserEmailAddressStates.UNVERIFIED && e.createdAt > from && e.createdAt < to) yield e).list
+    (for (e <- rows if (e.state === UserEmailAddressStates.UNVERIFIED || (e.state =!= UserEmailAddressStates.INACTIVE) && e.verifiedAt.isEmpty) && e.createdAt > from && e.createdAt < to) yield e).list
   }
 
 }
