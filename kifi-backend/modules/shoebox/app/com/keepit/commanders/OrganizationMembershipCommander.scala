@@ -34,7 +34,7 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
@@ -104,22 +104,15 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
-      val members = organizationMembershipRepo.getByOrgId(orgId, limit, offset)
+      val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId)
       val invitees = includeInvitees match {
         case true =>
-          val leftOverCount = Limit(Math.max(limit.value - members.length, 0))
-          val leftOverOffset = if (members.isEmpty) {
-            val totalCountForOrg = organizationMembershipRepo.countByOrgId(orgId)
-            Offset(offset.value - totalCountForOrg)
-          } else {
-            Offset(0)
-          }
-          organizationInviteRepo.getByOrganization(orgId, leftOverCount, leftOverOffset)
+          organizationInviteRepo.getAllByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING).toSeq // includes resends, needs to be deduped
         case false => Seq.empty[OrganizationInvite]
       }
-      buildMaybeMembers(members, invitees)
+      buildMaybeMembers(members, invitees).drop(offset.value.toInt).take(limit.value.toInt)
     }
   }
 
@@ -148,8 +141,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   private def buildMaybeMembers(members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
-    val invitedUserIds = invitees.filter(_.userId.isDefined)
-    val invitedEmailAddresses = invitees.filter(_.emailAddress.isDefined)
+    import com.keepit.common.time.dateTimeOrdering
+
+    val (userInvites, emailInvites) = invitees.partition(_.userId.isDefined)
+    val invitedUserIds = userInvites.groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values
+    val invitedEmailAddresses = emailInvites.groupBy(_.emailAddress.get).mapValues(_.maxBy(_.updatedAt)).values // assumes that if no userId is defined, an email address must be
     val usersMap = db.readOnlyMaster { implicit session =>
       basicUserRepo.loadAllActive((members.map(_.userId) ++ invitedUserIds.map(_.userId.get)).toSet)
     }
