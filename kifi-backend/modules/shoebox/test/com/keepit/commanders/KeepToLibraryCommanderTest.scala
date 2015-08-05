@@ -32,15 +32,15 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             (user, keep, otherLib)
           }
 
-          val link = db.readWrite { implicit session =>
-            val maybeAttachResponse = ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, otherLib.id.get, user.id.get))
+          val ktl = db.readWrite { implicit session =>
+            val maybeAttachResponse = ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, otherLib.id.get, user.id.get))
             maybeAttachResponse.isRight === true
-            maybeAttachResponse.right.get.link
+            maybeAttachResponse.right.get.ktl
           }
 
-          link.keepId === keep.id.get
-          link.keeperId === user.id.get
-          link.libraryId === otherLib.id.get
+          ktl.keepId === keep.id.get
+          ktl.addedBy === user.id.get
+          ktl.libraryId === otherLib.id.get
         }
       }
       "bail if the user doesn't have write permission" in {
@@ -60,30 +60,30 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             for (lib <- libs) {
-              ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+              ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
             }
           }
           1 === 1
         }
       }
-      "bail if the keep is already in the target library" in {
+      "do nothing if the keep is already in the target library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, keep, lib) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withUser(user).saved
-            val keep = KeepFactory.keep().withLibrary(userLib).saved
-
-            val rando = UserFactory.user().saved
-            val randoLib = LibraryFactory.library().withUser(rando).withCollaborators(Seq(user)).saved
-
-            ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, randoLib.id.get, user.id.get)) must beRight
-            ktlRepo.countByLibraryId(randoLib.id.get) === 1
-
-            (user, keep, randoLib)
+          val (user1, user2, keep, lib) = db.readWrite { implicit session =>
+            val user1 = UserFactory.user().saved
+            val user2 = UserFactory.user().saved
+            val lib = LibraryFactory.library().withUser(user1).withCollaborators(Seq(user2)).saved
+            val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).saved
+            (user1, user2, keep, lib)
           }
 
           db.readWrite { implicit session =>
-            ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+            // user1 re-interns the keep
+            ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user1.id.get)) must beRight
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
+
+            // user2 re-interns the keep
+            ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user2.id.get)) must beRight
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
           }
           1 === 1
         }
@@ -95,22 +95,22 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           val (user, keep, userLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val userLib = LibraryFactory.library().withUser(user).saved
-            val keep = KeepFactory.keep().withLibrary(userLib).saved
+            val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
             (user, keep, userLib)
           }
 
           db.readWrite { implicit session =>
-            ktlCommander.detach(KeepToLibraryDetachRequest(keep.id.get, userLib.id.get, user.id.get)) must beRight
+            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, userLib.id.get, user.id.get)) must beRight
           }
           1 === 1
         }
       }
-      "bail if the link doesn't exist" in {
+      "bail if the keep isn't in the library" in {
         withDb(modules: _*) { implicit injector =>
           val (user, keep, libs) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val userLib = LibraryFactory.library().withUser(user).saved
-            val keep = KeepFactory.keep().withLibrary(userLib).saved
+            val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
 
             val rando = UserFactory.user().saved
             val randoOrg = OrganizationFactory.organization().withOwner(rando).saved
@@ -122,7 +122,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             for (lib <- libs) {
-              ktlCommander.detach(KeepToLibraryDetachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
             }
           }
           1 === 1
