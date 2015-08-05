@@ -14,7 +14,7 @@ case class KeepToLibrary(
   state: State[KeepToLibrary] = KeepToLibraryStates.ACTIVE,
   keepId: Id[Keep],
   libraryId: Id[Library],
-  keeperId: Id[User])
+  addedBy: Id[User])
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
@@ -32,13 +32,11 @@ sealed abstract class KeepToLibraryFail(val status: Int, val message: String) {
 }
 object KeepToLibraryFail {
   case object INSUFFICIENT_PERMISSIONS extends KeepToLibraryFail(FORBIDDEN, "insufficient_permissions")
-  case object ALREADY_IN_LIBRARY extends KeepToLibraryFail(BAD_REQUEST, "keep_already_in_library")
   case object NOT_IN_LIBRARY extends KeepToLibraryFail(BAD_REQUEST, "keep_not_in_library")
 
   def apply(str: String): KeepToLibraryFail = {
     str match {
       case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
-      case ALREADY_IN_LIBRARY.message => ALREADY_IN_LIBRARY
       case NOT_IN_LIBRARY.message => NOT_IN_LIBRARY
     }
   }
@@ -50,11 +48,11 @@ sealed abstract class KeepToLibraryRequest {
   def requesterId: Id[User]
 }
 
-case class KeepToLibraryAddRequest(
+case class KeepToLibraryInternRequest(
   keepId: Id[Keep],
   libraryId: Id[Library],
   requesterId: Id[User]) extends KeepToLibraryRequest
-case class KeepToLibraryAddResponse(ktl: KeepToLibrary)
+case class KeepToLibraryInternResponse(ktl: KeepToLibrary)
 
 case class KeepToLibraryRemoveRequest(
   keepId: Id[Keep],

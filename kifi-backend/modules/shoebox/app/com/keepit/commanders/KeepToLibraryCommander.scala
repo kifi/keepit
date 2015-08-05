@@ -10,7 +10,7 @@ import com.keepit.model._
 
 @ImplementedBy(classOf[KeepToLibraryCommanderImpl])
 trait KeepToLibraryCommander {
-  def addKeepToLibrary(ar: KeepToLibraryAddRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryAddResponse]
+  def internKeepToLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
   def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse]
 }
 
@@ -24,42 +24,37 @@ class KeepToLibraryCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
-  def getValidationError(r: KeepToLibraryRequest)(implicit session: RSession): Option[KeepToLibraryFail] = {
-    def userCanWrite = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, requesterId).exists(_.canWrite)
-    def keepIsActivelyLinked = keepToLibraryRepo.getByKeepIdAndLibraryId(keepId, libId).exists(ktl => ktl.isActive)
+  private def getValidationError(request: KeepToLibraryRequest)(implicit session: RSession): Option[KeepToLibraryFail] = {
+    def userCanWrite = libraryMembershipRepo.getWithLibraryIdAndUserId(request.libraryId, request.requesterId).exists(_.canWrite)
+    def keepIsActive = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).exists(ktl => ktl.isActive)
 
-    r match {
-      case KeepToLibraryAddRequest(keepId, libId, requesterId) =>
+    request match {
+      case _: KeepToLibraryInternRequest =>
         if (!userCanWrite) Some(KeepToLibraryFail.INSUFFICIENT_PERMISSIONS)
-        else if (keepIsActivelyLinked) Some(KeepToLibraryFail.ALREADY_IN_LIBRARY)
         else None
 
-      case KeepToLibraryRemoveRequest(keepId, libId, requesterId) =>
+      case _: KeepToLibraryRemoveRequest =>
         if (!userCanWrite) Some(KeepToLibraryFail.INSUFFICIENT_PERMISSIONS)
-        else if (!keepIsActivelyLinked) Some(KeepToLibraryFail.NOT_IN_LIBRARY)
+        else if (!keepIsActive) Some(KeepToLibraryFail.NOT_IN_LIBRARY)
         else None
     }
   }
 
-  def addKeepToLibrary(ar: KeepToLibraryAddRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryAddResponse] = {
-    getValidationError(ar).map(Left(_)).getOrElse {
-      keepToLibraryRepo.getByKeepIdAndLibraryId(ar.keepId, ar.libraryId, excludeStates = Set.empty) match {
-        case Some(ktl) =>
-          if (ktl.isActive) {
-            airbrake.notify(s"User ${ar.requesterId} managed to add a keep ${ar.keepId} a library ${ar.libraryId} where it already exists")
-          }
-          val reactivatedLink = keepToLibraryRepo.activate(ktl.copy(keeperId = ar.requesterId))
-          Right(KeepToLibraryAddResponse(reactivatedLink))
-        case None =>
-          val newKtl = keepToLibraryRepo.save(KeepToLibrary(keepId = ar.keepId, libraryId = ar.libraryId, keeperId = ar.requesterId))
-          Right(KeepToLibraryAddResponse(newKtl))
+  def internKeepToLibrary(request: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse] = {
+    getValidationError(request).map(Left(_)).getOrElse {
+      val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId, excludeStates = Set.empty) match {
+        case Some(existingKtl) if existingKtl.isActive => existingKtl
+        case existingKtlOpt =>
+          val newKtlTemplate = KeepToLibrary(keepId = request.keepId, libraryId = request.libraryId, addedBy = request.requesterId) // no id yet
+          keepToLibraryRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
       }
+      Right(KeepToLibraryInternResponse(ktl))
     }
   }
 
-  def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse] = {
-    getValidationError(dr).map(Left(_)).getOrElse {
-      val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(dr.keepId, dr.libraryId).get // Guaranteed to return an active link
+  def removeKeepFromLibrary(request: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse] = {
+    getValidationError(request).map(Left(_)).getOrElse {
+      val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).get // Guaranteed to return an active link
       keepToLibraryRepo.deactivate(ktl)
       Right(KeepToLibraryRemoveResponse())
     }
