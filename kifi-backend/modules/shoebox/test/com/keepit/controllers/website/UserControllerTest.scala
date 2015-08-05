@@ -239,7 +239,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         // verify emails
         db.readWrite { implicit session =>
           userEmailAddressRepo.getAllByUser(user.id.get).map { em =>
-            userEmailAddressRepo.save(em.copy(state = UserEmailAddressStates.VERIFIED))
+            userEmailAddressRepo.save(em.copy(verifiedAt = Some(currentDateTime)))
           }
           userRepo.save(user.copy(primaryEmail = Some(EmailAddress(address2)))) // because email2 is pending primary
           userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)

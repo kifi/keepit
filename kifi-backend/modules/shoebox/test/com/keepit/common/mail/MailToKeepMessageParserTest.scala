@@ -14,6 +14,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserEmailAddress
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory
+import com.keepit.common.time._
 
 class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector {
   "MailToKeepMessageParser" should {
@@ -70,7 +71,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
             UserFactory.user().withName("Greg", "Methvin").withUsername("test").saved)
         }
         db.readWrite { implicit s =>
-          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, state = UserEmailAddressStates.VERIFIED))
+          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, verifiedAt = Some(currentDateTime)))
           emailAddressRepo.save(UserEmailAddress(address = EmailAddress("greg@42go.com"), userId = greg.id.get))
         }
         val parser = new MailToKeepMessageParser(db, emailAddressRepo, userRepo)

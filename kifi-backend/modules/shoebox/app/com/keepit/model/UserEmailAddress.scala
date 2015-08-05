@@ -15,7 +15,7 @@ case class UserEmailAddress(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    state: State[UserEmailAddress] = UserEmailAddressStates.UNVERIFIED,
+    state: State[UserEmailAddress] = UserEmailAddressStates.ACTIVE,
     address: EmailAddress,
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
@@ -55,8 +55,7 @@ object UserEmailAddress {
   }
 }
 
-object UserEmailAddressStates {
+object UserEmailAddressStates extends States[UserEmailAddress] {
   val VERIFIED = State[UserEmailAddress]("verified")
   val UNVERIFIED = State[UserEmailAddress]("unverified")
-  val INACTIVE = State[UserEmailAddress]("inactive")
 }
