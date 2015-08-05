@@ -38,8 +38,8 @@
                 Organization library
               </label>
               <div class="manage-lib-org-selector" ng-show="libraryProps.inOrg">
-                <div 
-                  class="manage-lib-org-selector-org" 
+                <div
+                  class="manage-lib-org-selector-org"
                   ng-repeat="org in me.orgs"
                   ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
                   ng-click="setOrg(org.id)"
@@ -57,16 +57,17 @@
 
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-heading">Privacy</div>
-            <div class="manage-lib-create-visibility-input-container">
-              <span kf-library-visibility-selector library="library" space="space.destination"></span>
-            </div>
-            <div ng-if="!libraryProps.inOrg" ng-switch="library.visibility" class="manage-lib-visibility-description">
-              <div ng-switch-when="published" class="manage-lib-visibility-description-content">
+            <div class="manage-lib-create-visibility-wrapper" ng-switch="library.visibility">
+              <div kf-library-visibility-selector library="library" space="space.destination"></div>
+              <p ng-switch-when="published" class="manage-lib-create-visiblity-description">
                 Anyone can see and follow this library
-              </div>
-              <div ng-switch-when="secret" class="manage-lib-visibility-description-content">
+              </p>
+              <p ng-switch-when="organization" class="manage-lib-create-visiblity-description">
+                Only members of {{ space.destination | name }} can see this library
+              </p>
+              <p ng-switch-when="secret" class="manage-lib-create-visiblity-description">
                 Only people you invite can see this library
-              </div>
+              </p>
             </div>
           </div>
 
