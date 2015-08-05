@@ -138,9 +138,7 @@ object Username {
 
   case class UndefinedUsernameException(user: User) extends Exception(s"No username for $user")
 
-  implicit val linkable: Linkable[Username] = new Linkable[Username] {
-    override def getLink(value: Username): String = Linkable.kifiLink(value.value)
-  }
+  implicit val linkable: Linkable[Username] = Linkable(username => Linkable.kifiLink(username.value))
 
 }
 

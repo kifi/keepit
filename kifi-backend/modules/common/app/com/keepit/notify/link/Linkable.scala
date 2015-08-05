@@ -1,5 +1,8 @@
 package com.keepit.notify.link
 
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("No Linkable instance found for ${A}")
 trait Linkable[A] extends (A => String) { self =>
 
   override def apply(v1: A): String = getLink(v1)
