@@ -13,6 +13,7 @@ import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
@@ -92,7 +93,7 @@ class AdminLibraryController @Inject() (
         keeps + chunk.size
         page += 1
       }
-      Ok(s"keep count = ${keeps} for library: $newOwnerLib")
+      Ok(s"keep count = $keeps for library: $newOwnerLib")
     }
   }
 
@@ -282,6 +283,38 @@ class AdminLibraryController @Inject() (
     val terms = tc.trim.split(", ").map { token => val Array(term, weight) = token.split(":"); (term.trim, weight.trim.toFloat) }.toMap
     suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms), SuggestedSearchTermKind.AUTO)
     Ok
+  }
+
+  def moveLibraryToNewOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val newOwner = Id[User](body.get("user-id").get.toLong)
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libId)
+      val owner = userRepo.get(newOwner)
+      assert(owner.state == UserStates.ACTIVE)
+      libraryRepo.save(lib.copy(ownerId = newOwner))
+      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
+      libraryMembershipRepo.save(membership.copy(userId = newOwner))
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
+  }
+
+  def cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val libId: Id[Library] = Id[Library](600673) //hard coded to https://admin.kifi.com/admin/libraries/600673
+    val newLibId = db.readWrite { implicit s =>
+      libraryRepo.getOrganizationLibraries(orgId) foreach { lib =>
+        if (lib.kind == LibraryKind.SYSTEM_GUIDE) throw new Exception(s"Org $orgId already have a SYSTEM_GUIDE library $lib")
+      }
+      val origLib = libraryRepo.get(libId)
+      val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
+        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE)
+      val newLib = libraryRepo.save(newLibCandidate)
+      keepRepo.getByLibrary(newLib.id.get, 0, 5000) foreach { keep =>
+        keepRepo.save(keep.copy(id = None, visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied))
+      }
+      newLib.id.get
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(newLibId))
   }
 
 }

@@ -778,20 +778,22 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
-POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
-POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+POST    /admin/slider/unkillVersion @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
+POST    /admin/slider/goldenVersion @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
-GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
-GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library], transfer: Boolean ?= false)
+GET     /admin/libraries                    @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+GET     /admin/libraries/:id                @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library], transfer: Boolean ?= false)
 GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
-GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
-POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+GET     /admin/libraries/:id/keeps          @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
+POST    /admin/libraries/internForUser      @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
-POST    /admin/libraries/saveSuggestedSearches    @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
+POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
+POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
+POST    /admin/libraries/moveLibraryToNewOwner          @com.keepit.controllers.admin.AdminLibraryController.moveLibraryToNewOwner(libId: Id[Library])
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
