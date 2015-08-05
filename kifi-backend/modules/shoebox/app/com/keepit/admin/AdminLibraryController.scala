@@ -42,6 +42,7 @@ class AdminLibraryController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -288,11 +289,13 @@ class AdminLibraryController @Inject() (
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
+    val newOrg = Id[Organization](body.get("org-id").get.toLong)
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libId)
+      val org = orgRepo.get(newOrg) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner))
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id))
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
       libraryMembershipRepo.save(membership.copy(userId = newOwner))
     }
