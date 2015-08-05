@@ -33,7 +33,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           }
 
           val link = db.readWrite { implicit session =>
-            val maybeAttachResponse = ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, otherLib.id.get, user.id.get))
+            val maybeAttachResponse = ktlCommander.addKeepToLibrary(KeepToLibraryAddRequest(keep.id.get, otherLib.id.get, user.id.get))
             maybeAttachResponse.isRight === true
             maybeAttachResponse.right.get.link
           }
@@ -60,7 +60,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             for (lib <- libs) {
-              ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+              ktlCommander.addKeepToLibrary(KeepToLibraryAddRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
             }
           }
           1 === 1
@@ -76,14 +76,14 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val rando = UserFactory.user().saved
             val randoLib = LibraryFactory.library().withUser(rando).withCollaborators(Seq(user)).saved
 
-            ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, randoLib.id.get, user.id.get)) must beRight
+            ktlCommander.addKeepToLibrary(KeepToLibraryAddRequest(keep.id.get, randoLib.id.get, user.id.get)) must beRight
             ktlRepo.getCountByLibraryId(randoLib.id.get) === 1
 
             (user, keep, randoLib)
           }
 
           db.readWrite { implicit session =>
-            ktlCommander.attach(KeepToLibraryAttachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+            ktlCommander.addKeepToLibrary(KeepToLibraryAddRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
           }
           1 === 1
         }
@@ -100,7 +100,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           }
 
           db.readWrite { implicit session =>
-            ktlCommander.detach(KeepToLibraryDetachRequest(keep.id.get, userLib.id.get, user.id.get)) must beRight
+            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, userLib.id.get, user.id.get)) must beRight
           }
           1 === 1
         }
@@ -122,7 +122,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             for (lib <- libs) {
-              ktlCommander.detach(KeepToLibraryDetachRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
             }
           }
           1 === 1
