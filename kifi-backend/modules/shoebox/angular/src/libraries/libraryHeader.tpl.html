@@ -63,6 +63,17 @@
         <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{'one': '1 follower', 'other': '{{library.numFollowers|num}} followers'}" ng-if="library.numFollowers" ng-click="openMembersModal('followers_only')"></button>
       </div>
 
+      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.org">
+        <div class="kf-lh-owner-image-wrap">
+          <a class="kf-lh-owner-image-a kf-lh-org" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator">
+            <img class="kf-lh-owner-image" ng-src="{{ library.org|pic:200 }}" itemprop="image" alt="{{library.org|name}}">
+          </a>
+        </div>
+        <div class="kf-lh-owner-name-wrap kf-lh-org-name">
+          <a class="kf-lh-owner-name" href="{{library.org|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.org|name}}</a>
+        </div>
+      </div>
+
       <!-- owner only -->
       <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.numCollaborators === 0">
         <div class="kf-lh-owner-image-wrap">
