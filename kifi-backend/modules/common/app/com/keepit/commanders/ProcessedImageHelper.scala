@@ -140,7 +140,7 @@ trait ProcessedImageHelper {
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
           val key = if (isCropScale) {
-            ImagePath(baseLabel, hash, processImageRequest.size, outFormat)
+            ImagePath(baseLabel, hash, processImageRequest, outFormat)
           } else {
             ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageRequest.operation, outFormat)
           }

@@ -117,38 +117,23 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()
 
-      {
-        val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
-        val saved = Await.result(savedF, Duration("10 seconds"))
-        saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-        saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
-      }
-
-        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
-
-        db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
+        val n = 20
+        for (x <- 1 to n) {
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(x, x), 50))
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
+          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
         }
 
-      {
-        val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile2, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
-        val saved = Await.result(savedF, Duration("10 seconds"))
-        saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-        saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
-        // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
-      }
+        store.all.keySet.size === n * OrganizationAvatarConfiguration.numSizes
 
-        // All the images have been uploaded and persisted
-        store.all.keySet.size === 2 * OrganizationAvatarConfiguration.numSizes
-
-        // Only the second avatars are active
         db.readOnlyMaster { implicit s =>
+          repo.count === n * OrganizationAvatarConfiguration.numSizes
+          repo.all.map(_.imagePath).toSet.size === n * OrganizationAvatarConfiguration.numSizes
+          // Now check the actually active avatars
           repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
-          repo.count === 2 * OrganizationAvatarConfiguration.numSizes
         }
-
       }
     }
-  }
   }
 }
