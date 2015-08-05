@@ -73,7 +73,9 @@ angular.module('kifi')
       var action = (isOpen ? 'clickedMemberToggleOpen' : 'clickedMemberToggleClosed');
       memberPageAnalytics({ action: action, orgMember: member.username });
 
-      $scope.$broadcast('memberOpened', member);
+      if (isOpen) {
+        $scope.$broadcast('memberOpened', member);
+      }
     });
 
     $scope.$on('removeMember', function (e, member) {
