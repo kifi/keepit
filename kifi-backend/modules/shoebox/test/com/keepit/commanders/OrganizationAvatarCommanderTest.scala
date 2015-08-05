@@ -56,19 +56,18 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         // upload an image
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile1, org1.id.get)
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
-        println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
 
         db.readOnlyMaster { implicit s =>
           val org1Avatars = repo.getByOrganization(org1.id.get)
-          org1Avatars.length === OrganizationAvatarConfiguration.numSizes + 1
+          org1Avatars.length === OrganizationAvatarConfiguration.numSizes
         }
       }
     }
@@ -80,22 +79,20 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         val (_, _, org1, _) = setup()
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile1, org1.id.get)
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
         }
 
-        println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
+        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
 
         db.readOnlyMaster { implicit s =>
-          val org1Avatars =
-            repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
+          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
         }
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile2, org1.id.get)
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile2, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
@@ -103,57 +100,39 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         // All the images have been uploaded and persisted
-        store.all.keySet.size === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
+        store.all.keySet.size === 2 * OrganizationAvatarConfiguration.numSizes
 
         // Only the second avatars are active
         db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
-          repo.count === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
+          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
+          repo.count === 2 * OrganizationAvatarConfiguration.numSizes
         }
 
       }
     }
-    "reuse existing images when possible" in {
+    "be sure that every distinct upload gets its own file path" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
         val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
-        val (_, _, org1, org2) = setup()
+        val (_, _, org1, _) = setup()
 
-        // upload an image
-        {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile2, org1.id.get)
+        val n = 20
+        for (x <- 1 to n) {
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(x, x), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
-          // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
         }
 
-        println("OrgAvatarStore keys: " + store.all.keySet)
-        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
+        store.all.keySet.size === n * OrganizationAvatarConfiguration.numSizes
 
         db.readOnlyMaster { implicit s =>
-          val org1Avatars =
-            repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
+          repo.count === n * OrganizationAvatarConfiguration.numSizes
+          repo.all.map(_.imagePath).toSet.size === n * OrganizationAvatarConfiguration.numSizes
+          // Now check the actually active avatars
+          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
         }
-
-        {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile2, org2.id.get)
-          val saved = Await.result(savedF, Duration("10 seconds"))
-          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
-        }
-
-        // No new images have been persisted in the image store
-        store.all.keySet.size === OrganizationAvatarConfiguration.numSizes + 1
-
-        // But the appropriate avatars are in the DB now
-        db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
-          repo.getByOrganization(org2.id.get).length === OrganizationAvatarConfiguration.numSizes + 1
-          repo.count === 2 * (OrganizationAvatarConfiguration.numSizes + 1)
-        }
-
       }
     }
   }

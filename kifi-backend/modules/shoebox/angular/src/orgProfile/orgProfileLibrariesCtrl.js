@@ -69,7 +69,6 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           organization: organization,
-          createOnly: true,
           returnAction: function (newLibrary) {
             newLibraryIds[newLibrary.id] = true;
 
@@ -83,7 +82,7 @@ angular.module('kifi')
     $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
 
     $scope.shouldShowMoveCard = function () {
-      return $scope.canCreateLibraries && $scope.libraries.length === 0 && libraryLazyLoader.hasLoaded();
+      return $scope.canCreateLibraries && $scope.libraries.length < 10 && libraryLazyLoader.hasLoaded();
     };
 
     resetAndFetchLibraries();

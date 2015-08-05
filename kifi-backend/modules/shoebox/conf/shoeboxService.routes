@@ -203,7 +203,9 @@ POST    /m/1/android/store/params               @com.keepit.controllers.mobile.A
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 
-GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.search(q: String, n: Int ?= 4)
+GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.searchForNonUserContacts(q: String, n: Int ?= 4)
+GET     /m/2/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.searchForAllContacts(query:Option[String], limit:Option[Int])
+
 
 POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
 
@@ -526,9 +528,9 @@ POST          /site/organizations/:id/members/invites/decline   @com.keepit.cont
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
+GET           /site/organizations/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
-POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization])
-
+POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -705,6 +707,7 @@ POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 POST    /admin/organization/:id/removeCandidate @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
+POST    /admin/organization/:id/inviteCandidateToOrg @com.keepit.controllers.admin.AdminOrganizationController.inviteCandidateToOrg(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
 POST    /admin/organization/:id/removeMember    @com.keepit.controllers.admin.AdminOrganizationController.removeMember(id: Id[Organization])
 POST    /admin/organization/:id/transferOwner   @com.keepit.controllers.admin.AdminOrganizationController.transferOwner(id: Id[Organization])

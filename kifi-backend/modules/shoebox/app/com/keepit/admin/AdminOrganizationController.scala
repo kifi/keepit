@@ -240,50 +240,69 @@ class AdminOrganizationController @Inject() (
   }
 
   def transferOwner(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val newOwnerId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
+    val newOwnerId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
     val oldOwnerId = org.ownerId
-    orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId))
-    //next two line are to check that the impossible does not happen
-    val updatedOrg = db.readOnlyMaster { implicit s => orgRepo.get(orgId) }
-    assume(updatedOrg.ownerId == newOwnerId)
-    /**
-     * When we're creating orgs via the admin tool, we're setting a fake owner id as the owner to preserve data integrity.
-     * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
-     */
-    if (oldOwnerId == fakeOwnerId) {
-      orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
+    orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId)) match {
+      case Left(fail) =>
+        fail.asErrorResponse
+      case Right(res) =>
+        //next two line are to check that the impossible does not happen
+        val updatedOrg = db.readOnlyMaster { implicit s => orgRepo.get(orgId) }
+        assume(updatedOrg.ownerId == newOwnerId)
+        /**
+         * When we're creating orgs via the admin tool, we're setting a fake owner id as the owner to preserve data integrity.
+         * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
+         */
+        if (oldOwnerId == fakeOwnerId) {
+          orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
+        }
+        db.readWrite { implicit s =>
+          orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
+            case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+            case None => //whatever
+          }
+        }
+        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
     }
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("candidate-id").head.toLong)
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
-  def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
+  def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val userId = Id[User](request.body.get("user-id").flatMap(_.headOption).get.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-    orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = org.ownerId, targetId = userId))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = org.ownerId, targetId = userId)) match {
+      case Right(res) =>
+        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+      case Left(fail) =>
+        fail.asErrorResponse
+    }
   }
 
-  def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val userId = Id[User](request.body.get("candidate-id").flatMap(_.headOption).get.toLong)
+  def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val userId = Id[User](request.body.get("user-id").flatMap(_.headOption).get.toLong)
     orgMembershipCandidateCommander.removeCandidates(orgId, Set(userId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
-    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, fakeOwnerId, userId, OrganizationRole.MEMBER))
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
+    val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, requesterId = org.ownerId, targetId = userId, OrganizationRole.MEMBER)) match {
+      case Right(res) =>
+        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
+      case Left(fail) =>
+        fail.asErrorResponse
+    }
   }
 
-  def inviteMemberToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("member-id").head.toLong)
+  def inviteCandidateToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     orgMembershipCandidateCommander.inviteCandidate(orgId, userId)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
