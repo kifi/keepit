@@ -30,7 +30,7 @@ object NotificationKind {
   implicit val format = new Format[NotificationKind[_]] {
 
     override def reads(json: JsValue): JsResult[NotificationKind[_]] = {
-      val kindName = json.as[String]
+      val kindName = (json \ "kind").as[String]
       getByName(kindName).fold[JsResult[NotificationKind[_]]](JsError(s"Notification action kind $kindName does not exist")) { kind =>
         JsSuccess(kind)
       }
