@@ -32,7 +32,7 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
           unverified.size === 3
         }
         db.readWrite { implicit s =>
-          userEmailAddressRepo.save(address.withState(UserEmailAddressStates.VERIFIED))
+          userEmailAddressRepo.save(address.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(now)))
         }
         db.readOnlyMaster { implicit s =>
           val unverified = userEmailAddressRepo.getUnverified(now.minusDays(10), now)
