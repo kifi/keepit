@@ -109,6 +109,7 @@
 
 .manage-lib-body
   display: inline-block
+  width: calc(100% - 120px)
 
 input.manage-lib-input
 textarea.manage-lib-input
@@ -549,17 +550,18 @@ button.manage-lib-delete-button
 
 .manage-lib-org-selector
   margin-top: 15px
+  max-height: 115px
+  overflow: auto
 
   .manage-lib-org-selector-org
-    max-width: 100px
-    display: inline-block
     vertical-align: top
-    margin-right: 10px
     position: relative
     cursor: pointer
-    padding: 5px
+    padding: 0 5px
     margin-left: -5px
     border-radius: 7px
+    display: block
+    width: 100%
 
     &:hover
       background: #EEEEEE
@@ -571,25 +573,30 @@ button.manage-lib-delete-button
         display: block
         position: absolute
         top: -2px
-        right: -2px
+        left: -2px
         background: accentGreen
         padding: 0 5px
-        border-top-right-radius: 7px
-        border-bottom-left-radius: 5px
+        border-top-left-radius: 7px
+        border-bottom-right-radius: 5px
         box-shadow: -2px 2px 2px 1px rgba(0, 0, 0, 0.25)
 
     img
-      width: 60px
-      height: 60px
+      width: 30px
+      height: 30px
       margin: 0px auto
       display: block
       border-radius: 15%
       margin-bottom: 3px
+      display: inline-block
+      vertical-align: middle
+      margin-right: 7px
 
     h1
       heading_sm()
       text-align: center
       margin-bottom: 0
+      display: inline-block
+      vertical-align: middle
 
 .manage-lib-user-selector
   margin-top: 15px
