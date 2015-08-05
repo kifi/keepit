@@ -295,9 +295,12 @@ class AdminLibraryController @Inject() (
       val org = orgRepo.get(newOrg) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id))
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id, visibility = LibraryVisibility.ORGANIZATION))
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
       libraryMembershipRepo.save(membership.copy(userId = newOwner))
+      keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
+        keepRepo.save(keep.copy(id = None, visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
+      }
     }
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
   }
@@ -310,7 +313,7 @@ class AdminLibraryController @Inject() (
       }
       val origLib = libraryRepo.get(libId)
       val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
-        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE)
+        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
       val newLib = libraryRepo.save(newLibCandidate)
       keepRepo.getByLibrary(newLib.id.get, 0, 5000) foreach { keep =>
         keepRepo.save(keep.copy(id = None, visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied))
