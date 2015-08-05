@@ -1,27 +1,22 @@
 package com.keepit.model
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
+import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
-import org.joda.time.DateTime
-import play.api.libs.json.Json
-
-import scala.slick.jdbc.{ PositionedResult, GetResult }
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def allActive(implicit session: RSession): Seq[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
-  def getOrgByName(name: String)(implicit session: RSession): Option[Organization]
-  def searchOrgsByNameFuzzy(name: String)(implicit session: RSession): Seq[Organization]
+  def getOrgByName(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Option[Organization]
+  def searchOrgsByNameFuzzy(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Seq[Organization]
   def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
 }
 
@@ -50,7 +45,7 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
-  implicit def orgId2Key(orgId: Id[Organization]) = OrganizationKey(orgId)
+  implicit def orgId2Key(orgId: Id[Organization]): OrganizationKey = OrganizationKey(orgId)
 
   initTable()
 
@@ -76,26 +71,27 @@ class OrganizationRepoImpl @Inject() (
     }
   }
 
+  // Be aware that this will return inactive organizations, so make sure you want the orgs you ask for
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {
     orgCache.bulkGetOrElse(orgIds map orgId2Key) { missingKeys =>
-      val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }.toSet) && row.state === OrganizationStates.ACTIVE } yield row }
-      q.list.map { x => (orgId2Key(x.id.get) -> x) }.toMap
-    }.map { case (key, org) => key.id -> org }.toMap
+      val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }) } yield row }
+      q.list.map { x => orgId2Key(x.id.get) -> x }.toMap
+    }.map { case (key, org) => key.id -> org }
   }
 
   def deactivate(model: Organization)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
   }
 
-  def getOrgByName(name: String)(implicit session: RSession): Option[Organization] = {
+  def getOrgByName(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Option[Organization] = {
     val lowerCaseName = name.toLowerCase
-    val q = for (row <- rows if row.name.toLowerCase === lowerCaseName) yield row
+    val q = for (row <- rows if row.state === state && row.name.toLowerCase === lowerCaseName) yield row
     q.firstOption
   }
 
-  def searchOrgsByNameFuzzy(name: String)(implicit session: RSession): Seq[Organization] = {
+  def searchOrgsByNameFuzzy(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Seq[Organization] = {
     val lowerCaseNameEx = "%" + name.toLowerCase + "%"
-    val q = for (row <- rows if row.name.toLowerCase.like(lowerCaseNameEx)) yield row
+    val q = for (row <- rows if row.state === state && row.name.toLowerCase.like(lowerCaseNameEx)) yield row
     q.list
   }
 
