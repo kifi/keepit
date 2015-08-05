@@ -10,17 +10,14 @@
     <label class="library-visibility-radio-label">
       <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'published'">
       <span class="library-visibility-option-text">Public</span>
-      <p>Anyone can see and follow this library</p>
     </label><!-- remove extra space from inline-block
     --><label class="library-visibility-radio-label">
       <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'organization'">
       <span class="library-visibility-option-text">Organization</span>
-      <p>Only members of {{ space | name }} can see this library</p>
     </label><!-- remove extra space from inline-block
     --><label class="library-visibility-radio-label">
       <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'secret'">
       <span class="library-visibility-option-text">Private</span>
-      <p>Only people you invite can see this library</p>
     </label>
   </div>
 </div>

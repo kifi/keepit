@@ -8,10 +8,10 @@
 .library-visibility-checkbox-custom-input
   position: relative
   display: inline-block
-  margin: 0 10px 0 15px
   border-radius: 18px
   width: 55px
   height: 28px
+  margin: 0 10px 0 15px
   background-color: #6FCA72
   vertical-align: middle
   cursor: pointer
@@ -57,27 +57,26 @@
 // Radio Button Styles
 //==========================
 
-.library-visibility-radio-settings-option
-  margin-bottom: 8px
-
 .library-visibility-radio-label
-  display: inline-block
-  width: 120px
-  margin-right: 10px
-  padding: 5px
-  background-color: whitesmoke
-  border-radius: 12px
-  vertical-align: top
   box-sizing: border-box
+  display: inline-block
+  width: 33%
+  padding: 5px 10px
+  border: 1px solid whitesmoke
+  vertical-align: top
+  text-align: center
   cursor: pointer
 
-  &:hover
-    background-color: lightblue
+  &:first-child
+    border-top-left-radius: 8px
+    border-bottom-left-radius: 8px
+
+  &:last-child
+    border-top-right-radius: 8px
+    border-bottom-right-radius: 8px
+
+  & + &
+    margin-left: -1px
 
 .library-visibility-radio-input
-  display: none
-
-.library-visibility-radio-input:checked ~ .library-visibility-option-text:after
-  content: '✓'
-  float: right
-  color: green
+  margin-right: 5px
