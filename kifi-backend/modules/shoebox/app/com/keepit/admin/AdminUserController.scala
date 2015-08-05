@@ -960,7 +960,7 @@ class AdminUserController @Inject() (
     val user = userRepo.get(userId)
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-    handleCommander.reclaimAll(userId)
+    handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>

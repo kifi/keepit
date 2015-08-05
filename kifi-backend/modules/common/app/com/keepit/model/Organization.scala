@@ -69,6 +69,7 @@ case class Organization(
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
+    primaryHandle = None,
     basePermissions = Organization.totallyInvisiblePermissions,
     description = None
   )
