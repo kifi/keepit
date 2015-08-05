@@ -26,6 +26,12 @@ object Linkable {
 
   def apply[A](implicit linkable: Linkable[A]) = linkable
 
+  def apply[A](fn: A => String) = new Linkable[A] {
+
+    override def getLink(value: A): String = fn(value)
+
+  }
+
   implicit object StringIsLinkable extends Linkable[String] {
 
     override def getLink(value: String): String = value
