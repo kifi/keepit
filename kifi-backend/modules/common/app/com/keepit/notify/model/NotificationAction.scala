@@ -1,24 +1,20 @@
 package com.keepit.notify.model
 
 import com.keepit.common.db.Id
-import com.keepit.model.{Library, User}
+import com.keepit.model.{ Library, User }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-class NotificationAction(toUser: Id[User], time: DateTime) {
-
-  val kind = implicitly[NotificationKind[this.type]]
-
-}
+sealed abstract class NotificationAction(toUser: Id[User], time: DateTime)
 
 case class NewFollower(
   toUser: Id[User],
   time: DateTime,
   followerId: Id[User],
   library: Library) extends NotificationAction(
-    toUser,
-    time)
+  toUser,
+  time)
 
 object NewFollower extends NotificationKind[NewFollower] {
 
@@ -40,5 +36,5 @@ case class NewCollaborator(
   time: DateTime,
   collaboratorId: Id[User],
   library: Library) extends NotificationAction(
-    toUser,
-    time)
+  toUser,
+  time)

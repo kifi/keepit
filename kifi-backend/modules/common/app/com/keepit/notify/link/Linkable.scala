@@ -2,7 +2,7 @@ package com.keepit.notify.link
 
 trait Linkable[A] extends (A => String) { self =>
 
- override def apply(v1: A): String = getLink(v1)
+  override def apply(v1: A): String = getLink(v1)
 
   def getLink(value: A): String
 
@@ -22,7 +22,7 @@ trait Linkable[A] extends (A => String) { self =>
 
 object Linkable {
 
-  def kifiLink(path: String): String = s"https://kifi.com/$path"
+  def kifiLink(path: String): String = s"https://www.kifi.com/$path"
 
   def apply[A](implicit linkable: Linkable[A]) = linkable
 

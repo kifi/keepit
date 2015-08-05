@@ -11,23 +11,21 @@ trait NotificationKind[N] {
 
   implicit val format: Format[N]
 
-  implicit val selfCompanion: NotificationKind[ N] = this
+  implicit val selfCompanion: NotificationKind[N] = this
 
   def shouldGroupWith(newAction: N, existingActions: Set[N]): Boolean
-
-  NotificationKind.addKind(this)
 
 }
 
 object NotificationKind {
 
-  private var kinds: Map[String, NotificationKind[_]] = Map()
+  private val kinds: List[NotificationKind[_]] = List[NotificationKind[_]](
+    NewFollower
+  )
 
-  private def addKind(kind: NotificationKind[_]) = {
-    kinds = kinds + (kind.name -> kind)
-  }
+  private val kindsByName: Map[String, NotificationKind[_]] = kinds.map(kind => kind.name -> kind).toMap
 
-  def getByName(name: String): Option[NotificationKind[_]] = kinds.get(name)
+  def getByName(name: String): Option[NotificationKind[_]] = kindsByName.get(name)
 
   implicit val format = new Format[NotificationKind[_]] {
 

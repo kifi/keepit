@@ -3,7 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.db.{ Model, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.{NotificationKind, NotificationAction}
+import com.keepit.notify.model.{ NotificationKind, NotificationAction }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
 
