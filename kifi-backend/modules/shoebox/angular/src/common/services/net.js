@@ -25,6 +25,7 @@ angular.module('kifi')
 
       userOrOrg: get(shoebox, '/user-or-org/:handle', 30),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),
+      uploadOrgAvatar: post(shoebox, '/organizations/:id/avatar/upload?x=:x&y=:y&s=:sideLength'),
       getOrgMembers: get(shoebox, '/organizations/:id/members', 30),
       getOrgLibraries: get(shoebox, '/organizations/:id/libraries', 30),
       sendOrgMemberInvite: post(shoebox, '/organizations/:id/members/invite'),

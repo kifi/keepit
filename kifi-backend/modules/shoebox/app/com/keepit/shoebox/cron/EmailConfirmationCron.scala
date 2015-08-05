@@ -1,17 +1,19 @@
 package com.keepit.shoebox.cron
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.EmailConfirmationSender
+import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
-import com.keepit.model.{ UserValueName, UserValueRepo, UserEmailAddressRepo }
+import com.keepit.model.{ UserEmailAddressRepo }
 import us.theatr.akka.quartz.QuartzActor
-import com.keepit.common.concurrent.ExecutionContext.singleThread
+
+import scala.concurrent.ExecutionContext
 
 private[cron] object SendEmailConfirmation
 
@@ -19,9 +21,9 @@ class EmailConfirmationActor @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
-    emailConfirmationSender: EmailConfirmationSender,
-    userValueRepo: UserValueRepo,
-    clock: Clock) extends FortyTwoActor(airbrake) with Logging {
+    userEmailAddressCommander: UserEmailAddressCommander,
+    clock: Clock,
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case SendEmailConfirmation =>
@@ -30,23 +32,11 @@ class EmailConfirmationActor @Inject() (
       val from = to.minusDays(1)
       val emailsToConfirm = db.readOnlyMaster { implicit s =>
         val allEmails = userEmailAddressRepo.getUnverified(to, from)
-        allEmails.filterNot { email =>
-          userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).exists(_ == true.toString)
-        }
+        allEmails.filterNot(_.verificationSent)
       }
       log.info(s"sending verification emails to $emailsToConfirm")
-      emailsToConfirm foreach { maybeVerification =>
-        val withVerification = if (maybeVerification.verificationCode.isEmpty) {
-          db.readWrite { implicit s => userEmailAddressRepo.save(maybeVerification.withVerificationCode(clock.now())) }
-        } else {
-          maybeVerification
-        }
-        emailConfirmationSender(withVerification).onSuccess {
-          case e =>
-            db.readWrite { implicit s =>
-              userValueRepo.setValue(withVerification.userId, UserValueName.SENT_EMAIL_CONFIRMATION, true)
-            }
-        }(singleThread)
+      FutureHelpers.sequentialExec(emailsToConfirm) { emailAddress =>
+        userEmailAddressCommander.sendVerificationEmail(emailAddress)
       }
   }
 

@@ -1,14 +1,11 @@
 package com.keepit.model
 
-import java.math.BigInteger
-import java.security.SecureRandom
-
 import org.joda.time.{ Period, DateTime }
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.strings
 import com.keepit.common.mail.EmailAddress
@@ -35,8 +32,8 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     def token = column[String]("token", O.NotNull)
     def usedAt = column[DateTime]("used_at", O.Nullable)
     def usedByIP = column[String]("used_by_ip", O.Nullable)
-    def sentTo = column[String]("sent_to", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, token, usedAt.?, usedByIP.?, sentTo.?) <> ((PasswordReset.apply _).tupled, PasswordReset.unapply _)
+    def sentTo = column[EmailAddress]("sent_to", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, userId, state, token, usedAt.?, usedByIP.?, sentTo) <> ((PasswordReset.apply _).tupled, PasswordReset.unapply _)
   }
 
   def table(tag: Tag) = new PasswordResetTable(tag)
@@ -72,7 +69,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   }
 
   def createNewResetToken(userId: Id[User], sentTo: EmailAddress)(implicit session: RWSession): PasswordReset = {
-    saveWithNewToken(PasswordReset(userId = userId, state = PasswordResetStates.ACTIVE, token = "", sentTo = Some(sentTo.address)))
+    saveWithNewToken(PasswordReset(userId = userId, state = PasswordResetStates.ACTIVE, token = "", sentTo = sentTo))
   }
 
   private def saveWithNewToken(passwordReset: PasswordReset)(implicit session: RWSession): PasswordReset = {

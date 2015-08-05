@@ -64,6 +64,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
@@ -220,8 +221,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
             session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
             val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
             val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
-            organizationMembershipRepo.save(newMembership)
+            val savedMembership = organizationMembershipRepo.save(newMembership)
+            organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId) match {
+              case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+              case None => //whatever
+            }
+            savedMembership
           }
+        }
+        //remove the following experiment checks/adds once ORGANIZATION experiment is killed.
+        // We need it for now since the experiment may be broken for the new members
+        if (!userExperimentRepo.hasExperiment(newMembership.userId, UserExperimentType.ORGANIZATION)) {
+          userExperimentRepo.save(UserExperiment(userId = newMembership.userId, experimentType = UserExperimentType.ORGANIZATION))
         }
         Right(OrganizationMembershipAddResponse(request, newMembership))
     }

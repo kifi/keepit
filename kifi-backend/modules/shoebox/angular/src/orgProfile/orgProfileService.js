@@ -58,6 +58,13 @@ angular.module('kifi')
           return response.data;
         });
       },
+      uploadOrgAvatar: function (handle, x, y, sideLength, image) {
+        invalidateOrgProfileCache();
+
+        return net.uploadOrgAvatar(handle, x, y, sideLength, image).then(function (response) {
+          return response.data;
+        });
+      },
 
       getCommonTrackingAttributes: function (organization) {
         var defaultAttributes = {

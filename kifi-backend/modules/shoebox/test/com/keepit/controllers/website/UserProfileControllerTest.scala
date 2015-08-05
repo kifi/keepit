@@ -191,7 +191,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           val user1secretLib = libraries(3).map(_.withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).withOrganization(org.id).saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
           val user3lib = library().withUser(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
@@ -455,7 +455,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "followers":[],
                 "numCollaborators":0,
                 "collaborators":[],
-                "lastKept":${lib3.updatedAt.getMillis},
+                "lastKept":${lib3.lastKept.get.getMillis},
                 "following": true,
                 "membership": {"access":"read_only","listed":true,"subscribed":false},
                 "modifiedAt":${lib3.updatedAt.getMillis},

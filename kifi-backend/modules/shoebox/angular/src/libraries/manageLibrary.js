@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,21 +39,11 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
-        scope.space = {
-          current: profileService.me,
-          destination: profileService.me
+        scope.me = profileService.me;
+        scope.libraryProps = {
+          inOrg: false,
+          selectedOrgId: null
         };
-        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
-
-        // Find out where we're opening this from
-        if ('organization' in scope.modalData) {
-          var orgSpace = scope.modalData.organization;
-          // Angular is very picky about the object you're using.
-          scope.space.current = scope.spaces.filter(function(space) {
-            return (space.id === orgSpace.id);
-          })[0];
-        }
-        scope.space.destination = scope.space.current;
 
         scope.onChangeSpace = function () {
           var currIsOrg = scope.spaceIsOrg(scope.space.current);
@@ -118,6 +107,23 @@ angular.module('kifi')
 
         scope.removeSubscription = function (index) {
           scope.library.subscriptions.splice(index,1);
+        };
+
+        scope.setOrg = function(id) { 
+          if (scope.libraryProps.inOrg) {
+            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+            var orgId = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            scope.libraryProps.selectedOrgId = orgId;
+            scope.space.destination = scope.me.orgs.filter(function(org) {
+              return org.id === orgId;
+            })[0];
+          }
+          else {
+            // If user unclicks "organization" their destination should be
+            // their current profile.
+            scope.space.destination = scope.me;
+          }
+          scope.onChangeSpace();
         };
 
 
@@ -288,25 +294,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-
-        //
-        // Watches and listeners.
-        //
-        scope.$watch('library.name', function (newVal, oldVal) {
-          if (newVal !== oldVal) {
-            // Clear the error popover when the user changes the name field.
-            scope.$error.name = null;
-
-            // Update the slug to reflect the library's name only if we're not modifying an
-            // existing library and the user has not edited the slug yet.
-            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
-              scope.library.slug = util.generateSlug(newVal);
-              scope.emptySlug = false;
-            }
-          }
-        });
-
-
         //
         // On link.
         //
@@ -337,8 +324,47 @@ angular.module('kifi')
           scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
         }
+        var libraryOrg = scope.library.org || scope.modalData.organization;
+        if (libraryOrg) {
+          scope.libraryProps.inOrg = !!libraryOrg;
+          scope.libraryProps.selectedOrgId = libraryOrg.id;
+        }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
+
+        var currentSpace = (scope.library.org || profileService.me);
+
+        // Set up the spaces.
+        // The scope.space.* objects MUST BE REFERENCE-EQUAL to the scope.spaces objects
+        // to make the angular <select> binding work
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.space = {};
+
+        var desiredId = scope.modalData.organization ? scope.modalData.organization.id : currentSpace.id;
+        scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
+        scope.space.destination = scope.space.current;
+
+        // If it's a new org library, default to org visibility
+        if (scope.library.name === '' && scope.spaceIsOrg(scope.space.destination)) {
+          scope.library.visibility = 'organization';
+        }
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('library.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+
+            // Update the slug to reflect the library's name only if we're not modifying an
+            // existing library and the user has not edited the slug yet.
+            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
+              scope.library.slug = util.generateSlug(newVal);
+              scope.emptySlug = false;
+            }
+          }
+        });
 
         element.find('.manage-lib-name-input').focus();
       }

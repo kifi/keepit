@@ -3,6 +3,7 @@ package com.keepit.shoebox
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.util.Providers
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -113,6 +114,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
+  val socialUserInfosByNetworkAndSocialId = MutableMap[(SocialId, SocialNetworkType), SocialUserInfo]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -390,7 +392,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] =
+    Future.successful(socialUserInfosByNetworkAndSocialId.get(id, networkType))
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }
@@ -650,7 +653,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = Future.successful(Seq())
 
-  def internDomainsByDomainNames(domainNames: Set[String]) = Future.successful(Map.empty)
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]) = Future.successful(Map.empty)
 
   def getOrganizationInviteViews(orgId: Id[Organization]) = Future.successful(Set.empty)
 

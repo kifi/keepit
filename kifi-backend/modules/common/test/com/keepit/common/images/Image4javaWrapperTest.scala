@@ -195,6 +195,20 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
       resizedInfo.height === 150
       range(imageByteSize(cropscaled), 69859)
     }
+    "cropscale a square png" in {
+      val image = getPngImage("wide_image_4x1")
+      val im = new Image4javaWrapper(Mode.Test)
+
+      val imageInfo = im.imageInfo(image).get
+      imageInfo.width === 1564
+      imageInfo.height === 391
+
+      val cropscaled = im.cropScaleImage(image, ImageFormat.PNG, x = 100, y = 50, width = 50, height = 50, finalWidth = 200, finalHeight = 200).get
+      val resizedInfo = im.imageInfo(cropscaled).get
+      resizedInfo.width === 200
+      resizedInfo.height === 200
+      range(imageByteSize(cropscaled), 29683)
+    }
 
     "optimize jpg" in {
       val image = getJpgImage("unoptimized1")

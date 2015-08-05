@@ -1,14 +1,12 @@
 package com.keepit.commanders
 
-import java.awt.image.BufferedImage
 import java.io._
 import java.math.BigInteger
 import java.net.URLConnection
 import java.security.MessageDigest
-import javax.imageio.ImageIO
 
 import com.keepit.common.core.File
-import com.keepit.common.images.{ RawImageInfo, Photoshop }
+import com.keepit.common.images.{ Photoshop, RawImageInfo }
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store.{ ImageOffset, ImagePath, ImageSize }
@@ -22,24 +20,32 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
 
-sealed abstract case class ProcessImageRequest(operation: ProcessImageOperation, size: ImageSize)
-class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.Scale, size)
-class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CenteredCrop, size)
-class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize) extends ProcessImageRequest(operation = ProcessImageOperation.CropScale, scaledSize)
+sealed abstract class ProcessImageRequest {
+  def operation: ProcessImageOperation
+  def size: ImageSize
+  def pathFragment: String
+}
+case class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest {
+  val operation = ProcessImageOperation.Scale
+  val pathFragment = size.width + "x" + size.height + operation.fileNameSuffix
+}
+case class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest {
+  val operation = ProcessImageOperation.CenteredCrop
+  val pathFragment = size.width + "x" + size.height + operation.fileNameSuffix
+}
+case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, finalSize: ImageSize) extends ProcessImageRequest {
+  val operation = ProcessImageOperation.CropScale
+  def size: ImageSize = finalSize
+  val pathFragment = s"${cropSize.width}x${cropSize.height}-${offset.x}x${offset.y}-${finalSize.width}x${finalSize.height}" + operation.fileNameSuffix
+}
 
 object ScaleImageRequest {
-  def apply(boundingBox: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(boundingBox, boundingBox))
-  def apply(imageSize: ImageSize): ScaleImageRequest = new ScaleImageRequest(imageSize)
-  def apply(width: Int, height: Int): ScaleImageRequest = new ScaleImageRequest(ImageSize(width, height))
+  def apply(boundingBox: Int): ScaleImageRequest = ScaleImageRequest(ImageSize(boundingBox, boundingBox))
+  def apply(width: Int, height: Int): ScaleImageRequest = ScaleImageRequest(ImageSize(width, height))
 }
 
 object CenteredCropImageRequest {
-  def apply(imageSize: ImageSize): CenteredCropImageRequest = new CenteredCropImageRequest(imageSize)
   def apply(width: Int, height: Int): CenteredCropImageRequest = new CenteredCropImageRequest(ImageSize(width, height))
-}
-
-object CropScaleImageRequest {
-  def apply(offset: ImageOffset, cropSize: ImageSize, scaledSize: ImageSize): CropScaleImageRequest = new CropScaleImageRequest(offset, cropSize, scaledSize)
 }
 
 trait ProcessedImageHelper {
@@ -118,16 +124,27 @@ trait ProcessedImageHelper {
 
   protected def processAndPersistImages(image: File, baseLabel: String, hash: ImageHash,
     outFormat: ImageFormat, sizes: Set[ProcessImageRequest])(implicit photoshop: Photoshop) = {
-    val resizedImages = sizes.map { processImageSize =>
-      def process(): Try[File] = processImageSize match {
-        case c if c.operation == ProcessImageOperation.CenteredCrop => photoshop.centeredCropImage(image, outFormat, c.size.width, c.size.height)
-        case s => photoshop.resizeImage(image, outFormat, s.size.width, s.size.height)
+    val resizedImages = sizes.map { processImageRequest =>
+      log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat to $processImageRequest")
+
+      val isCropScale = processImageRequest match {
+        case _: CropScaleImageRequest => true
+        case _ => false
+      }
+      def process(): Try[File] = processImageRequest match {
+        case CropScaleImageRequest(offset, cropSize, scaleSize) => photoshop.cropScaleImage(image, outFormat, offset.x, offset.y, cropSize.width, cropSize.height, scaleSize.width, scaleSize.height)
+        case CenteredCropImageRequest(size) => photoshop.centeredCropImage(image, outFormat, size.width, size.height)
+        case ScaleImageRequest(size) => photoshop.resizeImage(image, outFormat, size.width, size.height)
       }
 
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
-          val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageSize.operation, outFormat)
-          ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageSize.operation)
+          val key = if (isCropScale) {
+            ImagePath(baseLabel, hash, processImageRequest, outFormat)
+          } else {
+            ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageRequest.operation, outFormat)
+          }
+          ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageRequest.operation)
         }
       }.flatten match {
         case Success(img) => Right(img)
@@ -147,9 +164,9 @@ trait ProcessedImageHelper {
   // All the ProcessImageRequests in A that are also in B
   protected def intersectProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
     @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
-    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
+    val Bp = B.collect { case ScaleImageRequest(size) => boundingBox(size) }
     A filter {
-      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
+      case ScaleImageRequest(size) => Bp.contains(boundingBox(size))
       case otherRequest => B.contains(otherRequest)
     }
   }
@@ -157,9 +174,9 @@ trait ProcessedImageHelper {
   protected def diffProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
     // hack to eliminate expecting scale versions that have the same scaled bounding box
     @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
-    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
+    val Bp = B.collect { case ScaleImageRequest(size) => boundingBox(size) }
     A filterNot {
-      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
+      case ScaleImageRequest(size) => Bp.contains(boundingBox(size))
       case otherRequest => B.contains(otherRequest)
     }
   }
@@ -404,9 +421,12 @@ object ScaledImageSize {
 }
 
 object CroppedImageSize {
-  case object Tiny extends CroppedImageSize("tiny", ImageSize(100, 100))
   case object Small extends CroppedImageSize("small", ImageSize(150, 150))
-  case object Medium extends CroppedImageSize("medium", ImageSize(200, 200))
+}
+
+object CropScaledImageSize {
+  case object Tiny extends CropScaledImageSize("small", ImageSize(100, 100))
+  case object Medium extends CropScaledImageSize("medium", ImageSize(200, 200))
 }
 
 object ProcessedImageSize {

@@ -71,13 +71,11 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterGlobalModal);
 
     $scope.importBookmarksToLibrary = function (library) {
-      $scope.forceClose = true;
+      $scope.$broadcast('forceCloseModal');
 
       // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
       $timeout(function () {
-        $scope.forceClose = false;
-
         var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -180,13 +178,11 @@ angular.module('kifi')
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
 
-            $scope.forceClose = true;
+            $scope.$broadcast('forceCloseModal');
 
             // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
             $timeout(function () {
-              $scope.forceClose = false;
-
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
