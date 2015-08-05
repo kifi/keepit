@@ -29,7 +29,7 @@ class RecommendationsCommander @Inject() (
     libRepo: LibraryRepo,
     userRepo: UserRepo,
     libCommander: LibraryCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     rover: RoverServiceClient,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
@@ -230,7 +230,7 @@ class RecommendationsCommander @Inject() (
           owner = owner,
           id = Library.publicId(libraryId),
           name = lib.name,
-          path = libPathCommander.getPath(lib),
+          path = libPathCommander.getPathForLibrary(lib),
           color = lib.color.map { _.hex }
         )
     }

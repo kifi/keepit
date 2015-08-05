@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryPathCommander, TwitterWaitlistCommander }
+import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
 import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -19,7 +19,7 @@ class TwitterWaitlistController @Inject() (
     commander: TwitterWaitlistCommander,
     socialRepo: SocialUserInfoRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     db: Database,
     airbrakeNotifier: AirbrakeNotifier,
     socialGraphPlugin: SocialGraphPlugin,
@@ -164,7 +164,7 @@ class TwitterWaitlistController @Inject() (
           val library = db.readOnlyReplica { implicit session =>
             libraryRepo.get(existingSync.get.libraryId)
           }
-          Redirect(libPathCommander.getPath(library))
+          Redirect(libPathCommander.getPathForLibrary(library))
         } else {
           pollDbForTwitterHandle(ur.userId, iterations = 60).map { twRes =>
             twRes match {

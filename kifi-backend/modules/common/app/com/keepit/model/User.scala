@@ -3,7 +3,7 @@ package com.keepit.model
 import java.net.URLEncoder
 
 import com.keepit.common.strings._
-import com.keepit.notify.link.Linkable
+import com.keepit.common.path.{Path, Linkable}
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.concurrent.duration._
@@ -66,8 +66,6 @@ object User {
     (__ \ 'username).formatNullable[Username] and
     (__ \ 'normalizedUsername).formatNullable[Username]
   )(User.applyFromDbRow, unlift(User.unapplyToDbRow))
-
-  implicit val linkable: Linkable[User] = Linkable[Username].contramap(_.username)
 
   def applyFromDbRow(
     id: Option[Id[User]],
@@ -137,8 +135,6 @@ object Username {
   }
 
   case class UndefinedUsernameException(user: User) extends Exception(s"No username for $user")
-
-  implicit val linkable: Linkable[Username] = Linkable(username => Linkable.kifiLink(username.value))
 
 }
 

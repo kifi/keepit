@@ -45,7 +45,7 @@ class LibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
-  libPathCommander: LibraryPathCommander,
+  libPathCommander: PathCommander,
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -186,7 +186,7 @@ class LibraryController @Inject() (
       val info = libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
-    val path = libPathCommander.getPathUrlEncoded(lib)
+    val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
     Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
@@ -239,7 +239,7 @@ class LibraryController @Inject() (
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
         val id = Library.decodePublicId(info.id).get
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-        val path = libPathCommander.getPathUrlEncoded(lib)
+        val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
         val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
         if (mem.lastViewed.nonEmpty) {
           obj ++ Json.obj("lastViewed" -> mem.lastViewed)

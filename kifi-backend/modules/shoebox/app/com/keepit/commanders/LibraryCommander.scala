@@ -141,7 +141,7 @@ class LibraryCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
@@ -192,7 +192,7 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def getLibraryPath(library: Library): String = {
-    libPathCommander.getPath(library)
+    libPathCommander.getPathForLibrary(library)
   }
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
@@ -379,7 +379,7 @@ class LibraryCommanderImpl @Inject() (
           owner = owner,
           description = lib.description,
           slug = lib.slug,
-          url = libPathCommander.getPath(lib),
+          url = libPathCommander.getPathForLibrary(lib),
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
@@ -1107,7 +1107,7 @@ class LibraryCommanderImpl @Inject() (
                 userId,
                 message = message,
                 libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
+                libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
                 category = LibraryPushNotificationCategory.LibraryChanged
               )

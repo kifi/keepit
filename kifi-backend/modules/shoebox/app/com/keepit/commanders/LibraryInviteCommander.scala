@@ -54,7 +54,7 @@ class LibraryInviteCommanderImpl @Inject() (
     abookClient: ABookServiceClient,
     libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     heimdal: HeimdalServiceClient,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
@@ -292,7 +292,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val libLink = s"""https://www.kifi.com${libPathCommander.getPath(lib)}"""
+    val libLink = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(lib)}"""
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
 
     if (inviter.id.get != lib.ownerId) {

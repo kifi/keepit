@@ -6,13 +6,13 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-sealed abstract class NotificationAction(toUser: Id[User], time: DateTime)
+sealed abstract class NotificationEvent(toUser: Id[User], time: DateTime)
 
 case class NewFollower(
   toUser: Id[User],
   time: DateTime,
   followerId: Id[User],
-  library: Library) extends NotificationAction(
+  library: Library) extends NotificationEvent(
   toUser,
   time)
 
@@ -35,6 +35,6 @@ case class NewCollaborator(
   toUser: Id[User],
   time: DateTime,
   collaboratorId: Id[User],
-  library: Library) extends NotificationAction(
+  library: Library) extends NotificationEvent(
   toUser,
   time)

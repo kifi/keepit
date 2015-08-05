@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryPathCommander, LibraryCommander, LocalUserExperimentCommander, UserCommander }
+import com.keepit.commanders.{ PathCommander, LibraryCommander, LocalUserExperimentCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.seo.{ AtomCommander, FeedCommander }
 import com.keepit.inject.FortyTwoConfig
@@ -14,7 +14,7 @@ import scala.concurrent.Future
 class LibraryFeedController @Inject() (
     userCommander: UserCommander,
     libraryCommander: LibraryCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     feedCommander: FeedCommander,
     fortyTwoConfig: FortyTwoConfig,
@@ -40,7 +40,7 @@ class LibraryFeedController @Inject() (
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
@@ -63,7 +63,7 @@ class LibraryFeedController @Inject() (
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
