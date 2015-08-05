@@ -248,7 +248,6 @@ object KeepSource {
   val tagImport = KeepSource("tagImport")
   val emailReco = KeepSource("emailReco")
   val userCopied = KeepSource("userCopied")
-  val systemCopied = KeepSource("systemCopied")
   val twitterFileImport = KeepSource("twitterFileImport")
   val twitterSync = KeepSource("twitterSync")
 

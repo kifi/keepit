@@ -15,12 +15,6 @@ orgStats: OrganizationStatistics
             <input type="Submit" value="Change">
         </form>
         </td></tr>
-    <tr><td>Clone Guide Lib</td>
-        <td>
-        <form action="@com.keepit.controllers.admin.routes.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgStats.orgId)" method="POST" class="form-inline">
-            <input type="Submit" value="Clone">
-        </form>
-        </td></tr>
     <tr><td>Created At</td>
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
     <tr><td>Handle</td>
