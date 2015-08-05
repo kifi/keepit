@@ -32,4 +32,6 @@ object Linkable {
 
   }
 
+  def fromExisting[A, B](f: B => A)(implicit existing: Linkable[A]) = existing.contramap(f)
+
 }

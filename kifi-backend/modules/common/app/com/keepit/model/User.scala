@@ -67,7 +67,7 @@ object User {
     (__ \ 'normalizedUsername).formatNullable[Username]
   )(User.applyFromDbRow, unlift(User.unapplyToDbRow))
 
-  implicit val linkable: Linkable[User] = Linkable[Username].contramap(_.username)
+  implicit val linkable: Linkable[User] = Linkable.fromExisting(_.username)
 
   def applyFromDbRow(
     id: Option[Id[User]],
@@ -138,7 +138,7 @@ object Username {
 
   case class UndefinedUsernameException(user: User) extends Exception(s"No username for $user")
 
-  implicit val linkable: Linkable[Username] = Linkable[String].contramap(_.value)
+  implicit val linkable: Linkable[Username] = Linkable.fromExisting(_.value)
 
 }
 
