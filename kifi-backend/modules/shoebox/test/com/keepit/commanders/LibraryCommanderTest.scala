@@ -490,18 +490,21 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             inject[LibraryAliasRepo].count === 2
 
             val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
-            ironManAlias.isDefined === true
+            ironManAlias must beSome
             ironManAlias.get.libraryId === ironLib.id.get
 
             val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
-            starkOrgAlias.isDefined === true
+            starkOrgAlias must beSome
             starkOrgAlias.get.libraryId === ironLib.id.get
           }
+
+          // TODO(ryan): This part of the test has been changed TEMPORARILY to let frontend UI catch up
+          // Very soon it needs to be changed back to response4 must beLeft
 
           // Try to move it back into starkOrg, should fail since by default members cannot remove libraries
           val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
-          response4.isLeft === true
+          response4 must beRight
         }
       }
     }
@@ -680,6 +683,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Cannot inject libraries from an organization you are part of to a random organization.
         libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
+        skipped("TODO(ryan): skipped temporarily to let frontend ui catch up to backend restrictions")
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = otherOrg.id)) }
         // Cannot remove libraries from other organizations you are not part of.
         libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)

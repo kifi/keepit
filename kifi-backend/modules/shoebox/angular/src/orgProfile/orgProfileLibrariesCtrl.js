@@ -42,7 +42,9 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.userProfile = profileService.me;
+    $scope.organization = organization;
+
+    $scope.me = profileService.me;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -75,6 +77,12 @@ angular.module('kifi')
           }
         }
       });
+    };
+
+    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
+
+    $scope.shouldShowMoveCard = function () {
+      return $scope.canCreateLibraries && $scope.libraries.length < 10 && libraryLazyLoader.hasLoaded();
     };
 
     resetAndFetchLibraries();

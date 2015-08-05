@@ -11,16 +11,18 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[OrganizationInvite]
-  def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
+  def getAllByOrgIdAndDecisions(organizationId: Id[Organization], decision: Set[InvitationDecision], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit
+  def getAllByOrganizationAndDecision(organizationId: Id[Organization], decision: InvitationDecision, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
 }
 
 @Singleton
@@ -30,10 +32,12 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   import db.Driver.simple._
 
+  implicit val invitationStatusMapper = MappedColumnType.base[InvitationDecision, String](_.value, InvitationDecision(_))
+
+  implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
+
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
-    implicit val invitationStatusMapper = MappedColumnType.base[InvitationDecision, String](_.value, InvitationDecision(_))
-    implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
@@ -114,18 +118,31 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
   }
 
   def getByOrgAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]], state: Column[State[OrganizationInvite]]) =>
-    (for (row <- rows if row.organizationId === orgId && row.userId === userId && row.state === state) yield row)
+    for (row <- rows if row.organizationId === orgId && row.userId === userId && row.state === state) yield row
   }
 
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
     getByOrgAndUserIdCompiled(organizationId, userId, state).list
   }
 
+  def getAllByOrgIdAndDecisions(organizationId: Id[Organization], decisions: Set[InvitationDecision], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite] = {
+    (for (row <- rows if row.organizationId === organizationId && row.decision.inSet(decisions) && row.state === state) yield row).list.toSet
+  }
+
   def getAllByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], state: Column[State[OrganizationInvite]]) =>
     for { row <- rows if row.organizationId === orgId && row.state === state } yield row
   }
+
   def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite] = {
     getAllByOrganizationCompiled(organizationId, state).list.toSet
+  }
+
+  def getAllByOrganizationAndDecisionCompiled = Compiled { (orgId: Column[Id[Organization]], decision: Column[InvitationDecision], state: Column[State[OrganizationInvite]]) =>
+    for { row <- rows if row.organizationId === orgId && row.state === state && row.decision === decision } yield row
+  }
+
+  def getAllByOrganizationAndDecision(organizationId: Id[Organization], decision: InvitationDecision, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite] = {
+    getAllByOrganizationAndDecisionCompiled(organizationId, decision, state).list.toSet
   }
 
   def getByInviterIdCompiled = Compiled { (inviterId: Column[Id[User]], state: Column[State[OrganizationInvite]]) => (for { row <- rows if row.inviterId === inviterId && row.state === state } yield row) }

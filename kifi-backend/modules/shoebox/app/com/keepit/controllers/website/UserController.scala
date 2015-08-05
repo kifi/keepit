@@ -45,6 +45,7 @@ class UserController @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userValueRepo: UserValueRepo,
     socialUserRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
@@ -204,21 +205,18 @@ class UserController @Inject() (
 
   def getEmailInfo(email: EmailAddress) = UserAction { implicit request =>
     db.readOnlyMaster { implicit session =>
-      emailRepo.getByAddressOpt(email) match {
-        case Some(emailRecord) =>
+      emailRepo.getByAddress(email) match {
+        case Some(emailRecord) if (emailRecord.userId != request.userId) && emailRecord.verified => Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
+        case Some(emailRecord) if (emailRecord.userId == request.userId) => {
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
-          if (emailRecord.userId == request.userId) {
-            Ok(Json.toJson(EmailInfo(
-              address = emailRecord.address,
-              isVerified = emailRecord.verified,
-              isPrimary = request.user.primaryEmail.isDefined && request.user.primaryEmail.get == emailRecord.address,
-              isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == emailRecord.address
-            )))
-          } else {
-            Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
-          }
-        case None =>
-          Ok(Json.obj("status" -> "available"))
+          Ok(Json.toJson(EmailInfo(
+            address = emailRecord.address,
+            isVerified = emailRecord.verified,
+            isPrimary = userEmailAddressCommander.isPrimaryEmail(emailRecord),
+            isPendingPrimary = pendingPrimary.contains(emailRecord.address)
+          )))
+        }
+        case _ => Ok(Json.obj("status" -> "available"))
       }
     }
   }
@@ -459,14 +457,9 @@ class UserController @Inject() (
 
   def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     db.readWrite { implicit s =>
-      emailRepo.getByAddressOpt(email) match {
-        case Some(emailAddr) if emailAddr.userId == request.userId =>
-          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
-          emailSender.confirmation(emailAddr) map { f =>
-            Ok("0")
-          }
-        case _ =>
-          Future.successful(Forbidden("0"))
+      emailRepo.getByAddressAndUser(request.userId, email) match {
+        case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmail(emailAddr).imap(_ => Ok("0"))
+        case _ => Future.successful(Forbidden("0"))
       }
     }
   }

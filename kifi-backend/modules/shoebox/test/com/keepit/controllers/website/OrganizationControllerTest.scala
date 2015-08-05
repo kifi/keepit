@@ -374,17 +374,13 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
     }
 
     "when deleteOrganization is called:" in {
-      def setupDelete(implicit injector: Injector) = db.readWrite { implicit session =>
-        val owner = UserFactory.user().withName("Dr", "Papaya").saved
-        val member = UserFactory.user().withName("Hansel", "Schmidt").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(OrganizationHandle("papaya_republic")).saved
-        inject[OrganizationMembershipRepo].save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
-        (org, owner, member)
-      }
-
       "succeed for owner" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, _) = setupDelete
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
           val publicId = Organization.publicId(org.id.get)
 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
@@ -396,7 +392,13 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
       "fail for non-owners" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, _, member) = setupDelete
+          val (org, owner, member, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            (org, owner, member, rando)
+          }
           val publicId = Organization.publicId(org.id.get)
 
           inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
@@ -404,6 +406,25 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val result = controller.deleteOrganization(publicId)(request)
 
           result === OrganizationFail.INSUFFICIENT_PERMISSIONS
+        }
+      }
+      "make sure that deleted orgs can't be seen anymore" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          val request = route.deleteOrganization(publicId)
+          val result = controller.deleteOrganization(publicId)(request)
+          status(result) === NO_CONTENT
+
+          val viewRequest = route.getOrganization(publicId)
+          val viewResponse = controller.getOrganization(publicId)(viewRequest)
+          status(viewResponse) === FORBIDDEN
         }
       }
     }

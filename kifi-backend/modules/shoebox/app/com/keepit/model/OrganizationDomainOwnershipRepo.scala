@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.classify.Domain
+import com.keepit.classify.{ NormalizedHostname, Domain }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
@@ -16,9 +16,9 @@ import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipRepoImpl])
 trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] with SeqNumberFunction[OrganizationDomainOwnership] {
-  def getDomainOwnershipBetween(organization: Id[Organization], domain: Id[Domain], onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
-  def getOwnershipsForOrganization(organization: Id[Organization])(implicit session: RSession): Seq[OrganizationDomainOwnership]
-  def getOwnershipsForDomain(domain: Id[Domain])(implicit session: RSession): Seq[OrganizationDomainOwnership]
+  def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership]
+  def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
 }
 
 @Singleton
@@ -37,9 +37,9 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
 
-    def domainId = column[Id[Domain]]("domain_id", O.NotNull)
+    def domainHostname = column[NormalizedHostname]("domain_hostname", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, domainId) <> ((OrganizationDomainOwnership.apply _).tupled, OrganizationDomainOwnership.unapply)
+    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, domainHostname) <> ((OrganizationDomainOwnership.apply _).tupled, OrganizationDomainOwnership.unapply)
   }
 
   def table(tag: Tag) = new OrganizationDomainOwnershipTable(tag)
@@ -54,24 +54,16 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
   override def deleteCache(model: OrganizationDomainOwnership)(implicit session: RSession): Unit = {}
 
-  override def getDomainOwnershipBetween(organization: Id[Organization], domain: Id[Domain], onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
-    val query =
-      if (onlyState.isDefined) {
-        for { row <- rows if row.organizationId === organization && row.domainId === domain && row.state === onlyState } yield row
-      } else {
-        for { row <- rows if row.organizationId === organization && row.domainId === domain } yield row
-      }
-    query.firstOption
+  override def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.organizationId === organization && row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
   }
 
-  override def getOwnershipsForOrganization(organization: Id[Organization])(implicit session: RSession): Seq[OrganizationDomainOwnership] = {
-    val query = for { row <- rows if row.organizationId === organization && row.state === OrganizationDomainOwnershipStates.ACTIVE } yield row
-    query.list
+  override def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.organizationId === organization && row.state =!= excludeState.orNull } yield row).list
   }
 
-  override def getOwnershipsForDomain(domain: Id[Domain])(implicit session: RSession): Seq[OrganizationDomainOwnership] = {
-    val query = for { row <- rows if row.domainId === domain && row.state === OrganizationDomainOwnershipStates.ACTIVE } yield row
-    query.list
+  override def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
   }
 
 }

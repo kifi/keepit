@@ -1,6 +1,6 @@
 package com.keepit.rover.fetcher.apache
 
-import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect }
+import com.keepit.rover.fetcher.{ HttpRedirect, FetchRequestInfo }
 import com.keepit.rover.model.HttpProxy
 import org.apache.http.HttpHeaders._
 import org.apache.http.protocol.HttpContext

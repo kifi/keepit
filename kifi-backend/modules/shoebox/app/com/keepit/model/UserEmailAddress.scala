@@ -15,7 +15,7 @@ case class UserEmailAddress(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    state: State[UserEmailAddress] = UserEmailAddressStates.UNVERIFIED,
+    state: State[UserEmailAddress] = UserEmailAddressStates.ACTIVE,
     address: EmailAddress,
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
@@ -29,7 +29,9 @@ case class UserEmailAddress(
       lastVerificationSent = Some(now),
       verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   }
-  def verified: Boolean = state == UserEmailAddressStates.VERIFIED
+  def clearVerificationCode = copy(lastVerificationSent = None, verificationCode = None)
+  def verificationSent: Boolean = lastVerificationSent.isDefined && verificationCode.isDefined
+  def verified: Boolean = state == UserEmailAddressStates.VERIFIED || (state != UserEmailAddressStates.INACTIVE && verifiedAt.isDefined)
 }
 
 object UserEmailAddress {
@@ -53,8 +55,7 @@ object UserEmailAddress {
   }
 }
 
-object UserEmailAddressStates {
+object UserEmailAddressStates extends States[UserEmailAddress] {
   val VERIFIED = State[UserEmailAddress]("verified")
   val UNVERIFIED = State[UserEmailAddress]("unverified")
-  val INACTIVE = State[UserEmailAddress]("inactive")
 }

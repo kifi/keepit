@@ -347,6 +347,5 @@ class MobileUserController @Inject() (
     db.readWrite { implicit rw => postOffice.sendMail(email) }
     Ok
   }
-
 }
 
