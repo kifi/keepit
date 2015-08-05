@@ -861,11 +861,11 @@ class LibraryCommanderImpl @Inject() (
       (userIdOpt match {
         case Some(id) =>
           val userIsInLibrary = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty
-          val userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
-          val userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
-          val userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
+          def userIsInvitedToLibrary = libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty
+          def userHasValidAuthToken = getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
+          def userIsInOrg = library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty
           val libIsOrgVisible = library.visibility == LibraryVisibility.ORGANIZATION
-          userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (libIsOrgVisible && userIsInOrg)
+          userIsInLibrary || userIsInvitedToLibrary || userHasValidAuthToken || (userIsInOrg && libIsOrgVisible)
         case None =>
           getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
       })
@@ -888,7 +888,9 @@ class LibraryCommanderImpl @Inject() (
       val userOwnsLibrary = library.ownerId == userId
       val canMoveFromSpace = from match {
         case OrganizationSpace(fromOrg) =>
-          organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
+          library.ownerId == userId
+        // TODO(ryan): when the frontend has UI for this, add it in
+        // organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
         case UserSpace(fromUser) => fromUser == userId // Can move libraries from Personal space to Organization Space.
       }
       val canMoveToSpace = to match {

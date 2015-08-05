@@ -23,15 +23,20 @@ import scala.util.{ Failure, Success, Try }
 sealed abstract class ProcessImageRequest {
   def operation: ProcessImageOperation
   def size: ImageSize
+  def pathFragment: String
 }
 case class ScaleImageRequest(size: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.Scale
+  val pathFragment = size.width + "x" + size.height + operation.fileNameSuffix
 }
 case class CenteredCropImageRequest(size: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.CenteredCrop
+  val pathFragment = size.width + "x" + size.height + operation.fileNameSuffix
 }
-case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, size: ImageSize) extends ProcessImageRequest {
+case class CropScaleImageRequest(offset: ImageOffset, cropSize: ImageSize, finalSize: ImageSize) extends ProcessImageRequest {
   val operation = ProcessImageOperation.CropScale
+  def size: ImageSize = finalSize
+  val pathFragment = s"${cropSize.width}x${cropSize.height}+${offset.x}+${offset.y}-${finalSize.width}x${finalSize.height}" + operation.fileNameSuffix
 }
 
 object ScaleImageRequest {
@@ -122,6 +127,10 @@ trait ProcessedImageHelper {
     val resizedImages = sizes.map { processImageRequest =>
       log.info(s"[pih] processing images baseLabel=$baseLabel format=$outFormat to $processImageRequest")
 
+      val isCropScale = processImageRequest match {
+        case _: CropScaleImageRequest => true
+        case _ => false
+      }
       def process(): Try[File] = processImageRequest match {
         case CropScaleImageRequest(offset, cropSize, scaleSize) => photoshop.cropScaleImage(image, outFormat, offset.x, offset.y, cropSize.width, cropSize.height, scaleSize.width, scaleSize.height)
         case CenteredCropImageRequest(size) => photoshop.centeredCropImage(image, outFormat, size.width, size.height)
@@ -130,7 +139,11 @@ trait ProcessedImageHelper {
 
       process().map { resizedImage =>
         validateAndGetImageInfo(resizedImage).map { imageInfo =>
-          val key = ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageRequest.operation, outFormat)
+          val key = if (isCropScale) {
+            ImagePath(baseLabel, hash, processImageRequest, outFormat)
+          } else {
+            ImagePath(baseLabel, hash, ImageSize(imageInfo.width, imageInfo.height), processImageRequest.operation, outFormat)
+          }
           ImageProcessState.ReadyToPersist(key, outFormat, resizedImage, imageInfo, processImageRequest.operation)
         }
       }.flatten match {

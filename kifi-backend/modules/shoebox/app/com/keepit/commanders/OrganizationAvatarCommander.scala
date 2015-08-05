@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.{ ImageOffset, RoverImageStore, ImagePath, ImageSize }
+import com.keepit.common.store._
 import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
@@ -21,7 +21,7 @@ import scala.util.{ Failure, Success }
 @ImplementedBy(classOf[OrganizationAvatarCommanderImpl])
 trait OrganizationAvatarCommander {
   def getBestImage(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar]
-  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, offset: ImageOffset, cropSize: ImageSize): Future[Either[ImageStoreFailure, ImageHash]]
+  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
 }
 
 @Singleton
@@ -38,14 +38,14 @@ class OrganizationAvatarCommanderImpl @Inject() (
     ProcessedImageSize.pickByIdealImageSize(idealSize, candidates, strictAspectRatio = false)(_.imageSize)
   }
 
-  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, offset: ImageOffset, cropSize: ImageSize): Future[Either[ImageStoreFailure, ImageHash]] = {
+  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashLocalImage(imageFile).flatMap {
       case Left(storeError) => Future.successful(Left(storeError))
       case Right(sourceImage) =>
         validateAndGetImageInfo(sourceImage.file.file) match {
           case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
           case Success(imageInfo) =>
-            val uploadedImagesFut = persistOrganizationAvatarsFromSourceImage(orgId, sourceImage, imageInfo, offset, cropSize)
+            val uploadedImagesFut = persistOrganizationAvatarsFromSourceImage(orgId, sourceImage, imageInfo, cropRegion)
             uploadedImagesFut.imap {
               case Left(uploadError) => Left(uploadError)
               case Right(uploadedImages) =>
@@ -62,8 +62,8 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def persistOrganizationAvatarsFromSourceImage(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, offset: ImageOffset, cropSize: ImageSize): Future[Either[ImageStoreFailure, Set[ImageProcessState.UploadedImage]]] = {
-    val necessary: Set[ProcessImageRequest] = OrganizationAvatarConfiguration.sizes.map { finalSize => CropScaleImageRequest(offset, cropSize, finalSize.idealSize) }
+  def persistOrganizationAvatarsFromSourceImage(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, Set[ImageProcessState.UploadedImage]]] = {
+    val necessary: Set[ProcessImageRequest] = OrganizationAvatarConfiguration.sizes.map { finalSize => CropScaleImageRequest(offset = cropRegion.offset, cropSize = cropRegion.size, finalSize = finalSize.idealSize) }
     val processedImages = processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop)
     processedImages match {
       case Left(processingError) => Future.successful(Left(processingError))

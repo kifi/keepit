@@ -108,18 +108,21 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       withDb(modules: _*) { implicit injector =>
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
+        val users = db.readWrite { implicit session => UserFactory.users(3).saved }
+
+        val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
+          orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
         }
 
-        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = Id[User](2), targetId = Id[User](42), newRole = OrganizationRole.MEMBER)
+        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = users(1).id.get, targetId = users(2).id.get, newRole = OrganizationRole.MEMBER)
 
         // By default, Organizations do not allow members to invite other members
         val try1 = orgMembershipCommander.addMembership(memberInviteMember)
@@ -127,7 +130,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         // An owner can change the base permissions so that members CAN do this
         val betterBasePermissions = org.basePermissions.modified(OrganizationRole.MEMBER, added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
-        val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
+        val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
           modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
 
         val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
@@ -141,7 +144,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         allMembers.size === 3
-        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](42))
+        allMembers.map(_.userId) === users.map(_.id.get).toSet
       }
     }
 

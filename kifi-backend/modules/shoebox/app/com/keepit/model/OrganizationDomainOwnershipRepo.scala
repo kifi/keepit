@@ -16,9 +16,9 @@ import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipRepoImpl])
 trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] with SeqNumberFunction[OrganizationDomainOwnership] {
-  def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
-  def getOwnershipsForOrganization(organization: Id[Organization])(implicit session: RSession): Seq[OrganizationDomainOwnership]
-  def getOwnershipForDomain(domainHostname: NormalizedHostname)(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership]
+  def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
 }
 
 @Singleton
@@ -54,24 +54,16 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
   override def deleteCache(model: OrganizationDomainOwnership)(implicit session: RSession): Unit = {}
 
-  override def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, onlyState: Option[State[OrganizationDomainOwnership]] = Option(OrganizationDomainOwnershipStates.ACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
-    val query =
-      if (onlyState.isDefined) {
-        for { row <- rows if row.organizationId === organization && row.domainHostname === domainHostname && row.state === onlyState } yield row
-      } else {
-        for { row <- rows if row.organizationId === organization && row.domainHostname === domainHostname } yield row
-      }
-    query.firstOption
+  override def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.organizationId === organization && row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
   }
 
-  override def getOwnershipsForOrganization(organization: Id[Organization])(implicit session: RSession): Seq[OrganizationDomainOwnership] = {
-    val query = for { row <- rows if row.organizationId === organization && row.state === OrganizationDomainOwnershipStates.ACTIVE } yield row
-    query.list
+  override def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.organizationId === organization && row.state =!= excludeState.orNull } yield row).list
   }
 
-  override def getOwnershipForDomain(domainHostname: NormalizedHostname)(implicit session: RSession): Option[OrganizationDomainOwnership] = {
-    val query = for { row <- rows if row.domainHostname === domainHostname && row.state === OrganizationDomainOwnershipStates.ACTIVE } yield row
-    query.firstOption
+  override def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
   }
 
 }
