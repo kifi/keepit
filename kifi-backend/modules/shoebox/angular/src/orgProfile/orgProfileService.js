@@ -58,10 +58,10 @@ angular.module('kifi')
           return response.data;
         });
       },
-      uploadOrgAvatar: function (handle, x, y, width, height, image) {
+      uploadOrgAvatar: function (handle, x, y, sideLength, image) {
         invalidateOrgProfileCache();
 
-        return net.uploadOrgAvatar(handle, x, y, width, height, image).then(function (response) {
+        return net.uploadOrgAvatar(handle, x, y, sideLength, image).then(function (response) {
           return response.data;
         });
       },

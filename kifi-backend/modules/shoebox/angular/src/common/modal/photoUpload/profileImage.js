@@ -261,7 +261,7 @@ angular.module('kifi')
               return;
             }
 
-            upload = orgProfileService.uploadOrgAvatar(scope.profile.id, data.cropX, data.cropY, data.cropSize, data.cropSize, file);
+            upload = orgProfileService.uploadOrgAvatar(scope.profile.id, data.cropX, data.cropY, data.cropSize, file);
             upload.then(function () {
               scope.$broadcast('forceCloseModal');
 
