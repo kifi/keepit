@@ -270,7 +270,8 @@ class OrganizationCommanderImpl @Inject() (
           handleCommander.reclaimAll(HandleOwner.fromOrganizationId(org.id.get))
 
           orgRepo.save(org.sanitizeForDelete)
-          handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
+          handleCommander.deactivateAll(org.id.get)
+
           Right(OrganizationDeleteResponse(request))
         case Some(orgFail) => Left(orgFail)
       }

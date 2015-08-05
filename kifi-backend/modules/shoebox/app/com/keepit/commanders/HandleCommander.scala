@@ -36,6 +36,8 @@ trait HandleCommander {
   def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle]
   def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]]
 
+  def deactivateAll(ownerId: HandleOwner)(implicit session: RWSession): Unit
+
   def autoSetUsername(user: User)(implicit session: RWSession): Option[User]
   def setUsername(user: User, username: Username, lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[User]
   def claimUsername(username: Username, userId: Id[User], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[Username]
@@ -59,17 +61,19 @@ class HandleCommanderImpl @Inject() (
 
   def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)] = {
     handleRepo.getByHandle(handle).flatMap { ownership =>
-      ownership.ownerId.flatMap {
-        case HandleOwner.OrganizationOwner(organizationId) => {
+      ownership.ownerId.map {
+        case HandleOwner.OrganizationOwner(organizationId) =>
           val organization = organizationRepo.get(organizationId)
-          if (organization.isActive) Some((Left(organization), isPrimaryOwner(ownership, organization)))
-          else None
-        }
-        case HandleOwner.UserOwner(userId) => {
+          if (organization.isInactive) {
+            airbrake.notify(s"Organization $organization with handle $handle is inactive but the handle ownership is not!")
+          }
+          (Left(organization), isPrimaryOwner(ownership, organization))
+        case HandleOwner.UserOwner(userId) =>
           val user = userRepo.get(userId)
-          if (user.isActive) Some((Right(user), isPrimaryOwner(ownership, user)))
-          else None
-        }
+          if (user.isInactive) {
+            airbrake.notify(s"User $user with handle $handle is inactive but the handle ownership is not!")
+          }
+          (Right(user), isPrimaryOwner(ownership, user))
       }
     }
   }
@@ -92,6 +96,15 @@ class HandleCommanderImpl @Inject() (
   def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
     val handles = handleRepo.getByOwnerId(Some(ownerId)).map(_.handle)
     handles.map(reclaim(_, overrideProtection = overrideProtection, overrideLock = overrideLock))
+  }
+
+  def deactivateAll(ownerId: HandleOwner)(implicit session: RWSession): Unit = {
+    handleRepo.getByOwnerId(Some(ownerId)).map(_.handle).foreach { handle =>
+      val normalizedHandle = HandleOps.normalizeHandle(handle)
+      handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None).foreach { ownership =>
+        handleRepo.save(ownership.copy(state = HandleOwnershipStates.INACTIVE))
+      }
+    }
   }
 
   def autoSetUsername(user: User)(implicit session: RWSession): Option[User] = {

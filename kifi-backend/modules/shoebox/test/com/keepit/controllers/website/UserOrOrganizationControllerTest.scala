@@ -113,19 +113,6 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
           (jsonResponse \ "type").as[String] === "org"
         }
       }
-      "pretend it can't find something if it's inactive" in {
-        withDb(modules: _*) { implicit injector =>
-          val (user, org) = testSetup
-          val deleteResponse = inject[OrganizationCommander].deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
-          deleteResponse must beRight
-
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
-          val request = route.getByHandle(org.handle)
-          val response = controller.getByHandle(org.handle)(request)
-
-          status(response) === NOT_FOUND
-        }
-      }
     }
   }
 

@@ -65,6 +65,7 @@ case class Organization(
   def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.handle)
 
   def isActive: Boolean = state == OrganizationStates.ACTIVE
+  def isInactive: Boolean = state == OrganizationStates.INACTIVE
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),

@@ -185,11 +185,12 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         trueOwnerDeleteResponse must haveClass[Right[OrganizationDeleteRequest, Organization]]
         trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
 
-        val (deactivatedOrg, memberships) = db.readOnlyMaster { implicit session =>
-          (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
+        db.readOnlyMaster { implicit session =>
+          handleCommander.getByHandle(org.handle) must beNone
+          orgRepo.get(org.id.get).state === OrganizationStates.INACTIVE
+          orgMembershipRepo.getAllByOrgId(org.id.get).size === 0
         }
-        deactivatedOrg.state === OrganizationStates.INACTIVE
-        memberships.size === 0
+        1 === 1
       }
     }
     "transfer ownership of an organization" in {
