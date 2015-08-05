@@ -285,7 +285,7 @@ class AdminLibraryController @Inject() (
     Ok
   }
 
-  def moveLibraryToNewOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
+  def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
     db.readWrite { implicit s =>
