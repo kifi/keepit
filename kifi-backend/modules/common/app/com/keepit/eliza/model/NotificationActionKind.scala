@@ -1,19 +1,19 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.Id
-import com.keepit.model.User
-import org.joda.time.DateTime
 import play.api.libs.json._
 
-trait NotificationActionKind[O] {
+import scala.annotation.implicitNotFound
+
+@implicitNotFound("No kind object found for action ${N}")
+trait NotificationActionKind[ N] {
 
   val name: String
 
-  protected def getData(fromUser: Id[User], toUser: Id[User], time: DateTime, obj: O): Option[JsObject]
+  implicit val format: Format[N]
 
-  def buildFrom(fromUser: Id[User], toUser: Id[User], time: DateTime, obj: O): NotificationAction = {
-    new NotificationAction(this, fromUser, toUser, time, getData(fromUser, toUser, time, obj))
-  }
+  implicit val selfCompanion: NotificationActionKind[ N] = this
+
+  def shouldGroupWith(newAction: N, existingActions: Set[N]): Boolean
 
   NotificationActionKind.addKind(this)
 
@@ -29,6 +29,8 @@ object NotificationActionKind {
 
   def getByName(name: String): Option[NotificationActionKind[_]] = kinds.get(name)
 
+  def kifiLink(path: String): String = s"https://kifi.com/$path"
+
   implicit val format = new Format[NotificationActionKind[_]] {
 
     override def reads(json: JsValue): JsResult[NotificationActionKind[_]] = {
@@ -41,21 +43,5 @@ object NotificationActionKind {
     override def writes(o: NotificationActionKind[_]): JsValue = Json.toJson(o.name)
 
   }
-
-}
-
-trait EmptyNotificationActionKind extends NotificationActionKind[Unit] {
-
-  override def getData(fromUser: Id[User], toUser: Id[User], time: DateTime, obj: Unit): Option[JsObject] = None
-
-  def buildFrom(fromUser: Id[User], time: DateTime, toUser: Id[User]) = {
-    buildFrom(fromUser, toUser, time, ())
-  }
-
-}
-
-object ConnectionRequest extends EmptyNotificationActionKind {
-
-  override val name: String = "connection_request"
 
 }

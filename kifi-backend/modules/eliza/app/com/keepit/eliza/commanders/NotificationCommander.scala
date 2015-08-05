@@ -12,7 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.eliza.{ PushNotificationExperiment, SimplePushNotificationCategory }
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.model.{ Notification, UserThread, UserThreadActivity, _ }
+import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
@@ -346,7 +346,7 @@ class NotificationCommander @Inject() (
     }
 
     //This is mostly for testing and monitoring
-    notificationRouter.sendNotification(Some(userId), Notification(thread.id.get, message.id.get))
+    notificationRouter.sendNotification(Some(userId), UserThreadNotification(thread.id.get, message.id.get))
   }
 
   private def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
@@ -444,7 +444,7 @@ class NotificationCommander @Inject() (
     message.createdAt
   }
 
-  def getUnreadThreadNotifications(userId: Id[User]): Seq[Notification] = {
+  def getUnreadThreadNotifications(userId: Id[User]): Seq[UserThreadNotification] = {
     db.readOnlyReplica { implicit session =>
       userThreadRepo.getUnreadThreadNotifications(userId)
     }

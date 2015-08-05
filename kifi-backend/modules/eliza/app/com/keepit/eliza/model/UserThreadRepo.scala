@@ -38,7 +38,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit
 
-  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[Notification]
+  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
@@ -211,10 +211,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId && (row.lastSeen < timestamp || row.lastSeen.isEmpty)) yield (row.lastSeen, row.updatedAt)).update((Some(timestamp), clock.now()))
   }
 
-  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[Notification] = {
+  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification] = {
     (for (row <- rows if row.user === userId && row.unread) yield (row.threadId, row.lastMsgFromOther)).list.map {
       case (thread, message) =>
-        Notification(thread, message.get)
+        UserThreadNotification(thread, message.get)
     }
   }
 
