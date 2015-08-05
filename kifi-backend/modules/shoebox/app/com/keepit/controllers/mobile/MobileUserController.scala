@@ -347,16 +347,5 @@ class MobileUserController @Inject() (
     db.readWrite { implicit rw => postOffice.sendMail(email) }
     Ok
   }
-
-  def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-    typeaheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { contactSearchResult =>
-      val response = contactSearchResult.collect {
-        case u: UserContactResult => Json.toJson(u)
-        case e: EmailContactResult => Json.toJson(e)
-      }
-      Ok(Json.toJson(response))
-    }
-  }
-
 }
 
