@@ -1,14 +1,14 @@
-package com.keepit.eliza.model
+package com.keepit.notify.model
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, User }
+import com.keepit.model.{Library, User}
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 class NotificationAction(toUser: Id[User], time: DateTime) {
 
-  val kind = implicitly[NotificationActionKind[this.type]]
+  val kind = implicitly[NotificationKind[this.type]]
 
 }
 
@@ -20,7 +20,7 @@ case class NewFollower(
     toUser,
     time)
 
-object NewFollower extends NotificationActionKind[NewFollower] {
+object NewFollower extends NotificationKind[NewFollower] {
 
   override val name: String = "new_follower"
 

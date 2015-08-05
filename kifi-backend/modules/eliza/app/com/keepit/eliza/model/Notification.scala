@@ -3,6 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.notify.model.NotificationKind
 import org.joda.time.DateTime
 
 case class Notification(
@@ -10,7 +11,8 @@ case class Notification(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    lastCheck: DateTime = START_OF_TIME) extends Model[Notification] {
+    lastCheck: DateTime = START_OF_TIME,
+    kind: NotificationKind) extends Model[Notification] {
 
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 
