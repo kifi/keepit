@@ -793,7 +793,7 @@ POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepI
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
 POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
-POST    /admin/libraries/moveLibraryToNewOwner          @com.keepit.controllers.admin.AdminLibraryController.moveLibraryToNewOwner(libId: Id[Library])
+POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
