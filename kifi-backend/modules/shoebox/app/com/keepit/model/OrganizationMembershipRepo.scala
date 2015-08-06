@@ -123,7 +123,7 @@ class OrganizationMembershipRepoImpl @Inject() (
       from organization org inner join organization_membership om on org.id = om.organization_id inner join user u on om.user_id = u.id
       where om.state != ${excludeState.map(_.value).orNull} and org.id = $orgId
       order by case when om.user_id = org.owner_id then 0 else 1 end asc,
-      case when om.user_id != org.owner_id then u.last_name end asc
+      case when om.user_id != org.owner_id then CONCAT(u.first_name, u.last_name) end asc
       limit ${offset.value}, ${limit.value};
       """
     val ids = query.as[Id[OrganizationMembership]].list.toSeq
