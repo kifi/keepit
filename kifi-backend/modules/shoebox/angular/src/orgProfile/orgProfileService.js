@@ -50,6 +50,15 @@ angular.module('kifi')
       modifyOrgMember: function (orgId, memberFields) {
         return net.modifyOrgMember(orgId, memberFields);
       },
+      suggestOrgMember: function (orgId, query, limit) {
+        if (typeof limit === 'undefined') {
+          limit = 3;
+        }
+
+        return net.suggestOrgMember(orgId, query, limit).then(function (response) {
+          return response.data.members;
+        });
+      },
       updateOrgProfile: function (orgId, modifiedFields) {
         return net.updateOrgProfile(orgId, modifiedFields);
       },
