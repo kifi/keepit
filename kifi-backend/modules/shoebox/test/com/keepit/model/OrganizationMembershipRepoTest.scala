@@ -114,6 +114,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         implicit def membershipOrdering = new Ordering[OrganizationMembership] {
           def compare(x: OrganizationMembership, y: OrganizationMembership): Int = {
             if (x.userId == owner.id.get) -1
+            else if (y.userId == owner.id.get) +1
             else userById(x.userId).fullName.compareTo(userById(y.userId).fullName)
           }
         }
