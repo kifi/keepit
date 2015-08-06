@@ -31,7 +31,7 @@ case class UserEmailAddress(
   }
   def clearVerificationCode = copy(lastVerificationSent = None, verificationCode = None)
   def verificationSent: Boolean = lastVerificationSent.isDefined && verificationCode.isDefined
-  def verified: Boolean = state == UserEmailAddressStates.VERIFIED || (state != UserEmailAddressStates.INACTIVE && verifiedAt.isDefined)
+  def verified: Boolean = (state == UserEmailAddressStates.ACTIVE) && verifiedAt.isDefined
 }
 
 object UserEmailAddress {
@@ -55,7 +55,4 @@ object UserEmailAddress {
   }
 }
 
-object UserEmailAddressStates extends States[UserEmailAddress] {
-  val VERIFIED = State[UserEmailAddress]("verified")
-  val UNVERIFIED = State[UserEmailAddress]("unverified")
-}
+object UserEmailAddressStates extends States[UserEmailAddress]

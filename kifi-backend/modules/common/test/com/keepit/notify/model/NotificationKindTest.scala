@@ -6,7 +6,6 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
-
 class NotificationKindTest extends Specification {
 
   "NotificationKind" should {

@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus, LibraryCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
@@ -28,7 +28,7 @@ class InviteController @Inject() (db: Database,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
     libraryRepo: LibraryRepo,
-    libraryCommander: LibraryCommander,
+    pathCommander: PathCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialGraphPlugin: SocialGraphPlugin,
     val userActionsHelper: UserActionsHelper,
@@ -195,7 +195,7 @@ class InviteController @Inject() (db: Database,
       val library = db.readOnlyReplica { implicit session =>
         libraryRepo.get(libId)
       }
-      val link = s"https://kifi.com${libraryCommander.getLibraryPath(library)}"
+      val link = s"https://kifi.com${pathCommander.getPathForLibraryUrlEncoded(library)}"
       val title = library.name
       Ok(Json.obj(
         "is_api_deprecated" -> "yes_very_much_so",

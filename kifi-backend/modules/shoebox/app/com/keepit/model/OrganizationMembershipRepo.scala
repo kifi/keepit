@@ -12,12 +12,15 @@ import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import play.api.libs.json._
 
+import scala.slick.jdbc.{ PositionedResult, GetResult }
+
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
   def getByUserId(userId: Id[User], limit: Limit, offset: Offset, excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getAllByUserId(userId: Id[User], excludeStates: Set[State[OrganizationMembership]] = Set(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
-  def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
-  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Set[OrganizationMembership]
+  def getSortedMembershipsByOrgId(orgId: Id[Organization], offset: Offset, limit: Limit, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
+  def getAllByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationMembership]
+  def getAllByIds(membershipIds: Set[Id[OrganizationMembership]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[OrganizationMembership], OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -42,8 +45,33 @@ class OrganizationMembershipRepoImpl @Inject() (
 
   import db.Driver.simple._
 
+  def applyFromDbRow(
+    id: Option[Id[OrganizationMembership]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[OrganizationMembership],
+    seq: SequenceNumber[OrganizationMembership],
+    organizationId: Id[Organization],
+    userId: Id[User],
+    role: OrganizationRole,
+    permissions: Set[OrganizationPermission]) = {
+    OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions)
+  }
+
+  def unapplyToDbRow(member: OrganizationMembership) = {
+    Some((member.id,
+      member.createdAt,
+      member.updatedAt,
+      member.state,
+      member.seq,
+      member.organizationId,
+      member.userId,
+      member.role,
+      member.permissions))
+  }
+
   type RepoImpl = OrganizationMembershipTable
-  class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] {
+  class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] with NamedColumns {
     implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
     implicit val organizationPermissionsMapper = MappedColumnType.base[Set[OrganizationPermission], String](
       { permissions => Json.stringify(Json.toJson(permissions)) },
@@ -54,31 +82,6 @@ class OrganizationMembershipRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.NotNull)
     def role = column[OrganizationRole]("role", O.NotNull)
     def permissions = column[Set[OrganizationPermission]]("permissions", O.NotNull)
-
-    def applyFromDbRow(
-      id: Option[Id[OrganizationMembership]],
-      createdAt: DateTime,
-      updatedAt: DateTime,
-      state: State[OrganizationMembership],
-      seq: SequenceNumber[OrganizationMembership],
-      organizationId: Id[Organization],
-      userId: Id[User],
-      role: OrganizationRole,
-      permissions: Set[OrganizationPermission]) = {
-      OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions)
-    }
-
-    def unapplyToDbRow(member: OrganizationMembership) = {
-      Some((member.id,
-        member.createdAt,
-        member.updatedAt,
-        member.state,
-        member.seq,
-        member.organizationId,
-        member.userId,
-        member.role,
-        member.permissions))
-    }
 
     def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
@@ -109,26 +112,37 @@ class OrganizationMembershipRepoImpl @Inject() (
     }
   }
 
-  private val getByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]], count: ConstColumn[Long], offset: ConstColumn[Long]) =>
-    (for { row <- rows if row.organizationId === orgId } yield row).drop(offset).take(count)
+  def getAllByIds(membershipIds: Set[Id[OrganizationMembership]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[OrganizationMembership], OrganizationMembership] = {
+    (for (row <- rows if row.id.inSet(membershipIds) && row.state =!= excludeState.orNull) yield (row.id, row)).list.toMap
   }
 
-  private val getByOrgIdWithExcludeCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]], limit: ConstColumn[Long], offset: ConstColumn[Long]) =>
-    (for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row).drop(offset).take(limit)
+  override def getSortedMembershipsByOrgId(orgId: Id[Organization], offset: Offset, limit: Limit, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val query = sql"""
+      select om.id
+      from organization org inner join organization_membership om on org.id = om.organization_id inner join user u on om.user_id = u.id
+      where om.state != ${excludeState.map(_.value).orNull} and org.id = $orgId
+      order by case when om.user_id = org.owner_id then 0 else 1 end asc,
+      case when om.user_id != org.owner_id then u.last_name end asc
+      limit ${offset.value}, ${limit.value};
+      """
+    val ids = query.as[Id[OrganizationMembership]].list.toSeq
+
+    val mems = getAllByIds(ids.toSet)
+
+    ids.map(id => mems(id))
   }
 
-  def getByOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
-    excludeState match {
-      case None => getByOrgIdCompiled(orgId, limit.value, offset.value).list
-      case Some(exclude) => getByOrgIdWithExcludeCompiled(orgId, exclude, limit.value, offset.value).list
-    }
+  private val getAllByOrgIdWithExcludeCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]]) =>
+    (for (row <- rows if row.organizationId === orgId && row.state =!= excludeState) yield row)
   }
 
-  private val getAllByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]]) =>
-    for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row
+  private val getAllByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]]) =>
+    for { row <- rows if row.organizationId === orgId } yield row
   }
-  def getAllByOrgId(orgId: Id[Organization], excludeState: State[OrganizationMembership] = OrganizationMembershipStates.INACTIVE)(implicit session: RSession): Set[OrganizationMembership] = {
-    getAllByOrgIdCompiled(orgId, excludeState).list.toSet
+
+  def getAllByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationMembership] = {
+    excludeState.map(state => getAllByOrgIdWithExcludeCompiled(orgId, state)).getOrElse(getAllByOrgIdCompiled(orgId)).list.toSet
   }
 
   def countByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]]) =>
