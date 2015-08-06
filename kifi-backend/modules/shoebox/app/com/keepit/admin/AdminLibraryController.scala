@@ -11,6 +11,7 @@ import com.keepit.common.net.RichRequestHeader
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
@@ -317,9 +318,9 @@ class AdminLibraryController @Inject() (
       val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
         memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
       val newLib = libraryRepo.save(newLibCandidate)
-      keepRepo.getByLibrary(newLib.id.get, 0, 5000) foreach { keep =>
-        keepRepo.save(keep.copy(id = None, visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied))
-      }
+      val keeps = keepRepo.getByLibrary(newLib.id.get, 0, 5000)
+      implicit val context = HeimdalContext.empty
+      libraryCommander.copyKeeps(newLib.ownerId, toLibraryId = newLib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))
       newLib.id.get
     }
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(newLibId))
