@@ -33,7 +33,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           }
 
           val ktl = db.readWrite { implicit session =>
-            val maybeAttachResponse = ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, otherLib.id.get, user.id.get))
+            val maybeAttachResponse = ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, otherLib.id.get, user.id.get))
             maybeAttachResponse.isRight === true
             maybeAttachResponse.right.get.ktl
           }
@@ -60,7 +60,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             for (lib <- libs) {
-              ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib.id.get, user.id.get)) must beLeft
             }
           }
           1 === 1
@@ -78,11 +78,11 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
           db.readWrite { implicit session =>
             // user1 re-interns the keep
-            ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user1.id.get)) must beRight
+            ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib.id.get, user1.id.get)) must beRight
             ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
 
             // user2 re-interns the keep
-            ktlCommander.internKeepToLibrary(KeepToLibraryInternRequest(keep.id.get, lib.id.get, user2.id.get)) must beRight
+            ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib.id.get, user2.id.get)) must beRight
             ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
           }
           1 === 1
