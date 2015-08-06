@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.classify.{ DomainInfo, Domain }
+import com.keepit.classify.{ NormalizedHostname, DomainInfo, Domain }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
@@ -124,11 +124,12 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int): Future[Seq[IngestableOrganizationMembershipCandidate]]
-  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]]
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]]
   def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
+  def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -153,7 +154,8 @@ case class ShoeboxCacheProvider @Inject() (
   allFakeUsersCache: AllFakeUsersCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
-  keepImagesCache: KeepImagesCache)
+  keepImagesCache: KeepImagesCache,
+  primaryOrgForUserCache: PrimaryOrgForUserCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -768,9 +770,9 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
 
-  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]] = {
     val payload = Json.obj("domainNames" -> domainNames)
-    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
+    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo } }
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
@@ -787,5 +789,16 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]] = {
     call(Shoebox.internal.getIngestableOrganizationDomainOwnerships(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableOrganizationDomainOwnership]] }
+  }
+
+  def getPrimaryOrg(id: Id[User]): Future[Option[Id[Organization]]] = {
+    cacheProvider.primaryOrgForUserCache.getOrElseFutureOpt(PrimaryOrgForUserKey(id)) {
+      call(Shoebox.internal.getPrimaryOrg(id)).map { r =>
+        r.json match {
+          case JsNull => None
+          case js: JsValue => Some(js.as[Id[Organization]])
+        }
+      }
+    }
   }
 }

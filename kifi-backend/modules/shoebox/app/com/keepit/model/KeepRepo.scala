@@ -14,15 +14,13 @@ import com.keepit.common.core._
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
+  def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
+  def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
+
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
-  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
-  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
-  def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
-  def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
-  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getByUser(userId: Id[User], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
@@ -42,29 +40,36 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
-  def save(model: Keep)(implicit session: RWSession): Keep
-  def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
+  def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
+
+  // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
+  // These ones already exist there:
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
-  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
-  def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
-  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
-  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
-  def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
-  def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
+  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
+  def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
+  // These ones do not yet
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
+  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
+  def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
+  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+  def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
+  // I think these ones need to be changed:
+  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
-  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
-  def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
+
+  def deactivate(model: Keep)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -84,7 +89,6 @@ class KeepRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
-    def inDisjointLib = column[Option[Boolean]]("in_disjoint_lib", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
@@ -98,7 +102,7 @@ class KeepRepoImpl @Inject() (
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
@@ -118,7 +122,6 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
-      inDisjointLib = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       isPrivate = r.<<[Boolean],
@@ -151,6 +154,10 @@ class KeepRepoImpl @Inject() (
     super.save(newModel.clean())
   }
 
+  def deactivate(model: Keep)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
+  }
+
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     val q = for {
       t <- rows if (t.isPrivate === false || includePrivate == true) && !t.state.inSet(excludeStates)
@@ -180,6 +187,9 @@ class KeepRepoImpl @Inject() (
     }
   }
 
+  def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+    getOpt(extId).filter(k => !excludeStates.contains(k.state))
+  }
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
     if (extIds.isEmpty) {
       Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
@@ -201,7 +211,7 @@ class KeepRepoImpl @Inject() (
     keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
       val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
       if (keeps.length > 1) log.warn(s"[getByUriAndUser] ${keeps.length} keeps found for (uri, user) pair ${(uriId, userId)}")
-      keeps.find(_.inDisjointLib).orElse(keeps.headOption) // order: disjoint, custom
+      keeps.headOption
     }
 
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
@@ -221,19 +231,19 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
+    getByExtId(extId) flatMap { keep =>
+      if (keep.userId != userId) {
+        log.info("[KTL] unexpected keep owner: $")
+        None
+      } else {
+        Some(keep)
+      }
+    }
   }
 
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
   }
-
-  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.inDisjointLib && b.isPrimary === true) yield b).firstOption
-  }
-
-  def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =
-    (for (b <- rows if b.title === title) yield b).list
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
     (for (b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
@@ -420,14 +430,6 @@ class KeepRepoImpl @Inject() (
     q.delete
   }
 
-  def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])] = {
-    val q = for {
-      r <- rows
-      s <- rows if (r.userId === s.userId && r.uriId === s.uriId && r.id < s.id)
-    } yield (r.userId, r.uriId)
-    q.list.distinct
-  }
-
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
   }
@@ -482,14 +484,15 @@ class KeepRepoImpl @Inject() (
     libraryIds.map { libId => libId -> map.getOrElse(libId, 0) }.toMap
   }
 
-  private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
-    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId) yield b)
-  }
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
-    if (excludeSet.isEmpty) {
-      getByExtIdandLibraryIdCompiled(extId, libraryId).firstOption
-    } else {
-      (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).firstOption
+    // TODO(ryan): deprecate ASAP
+    getByExtId(extId, excludeSet).flatMap { keep =>
+      if (!keep.libraryId.contains(libraryId)) {
+        log.info(s"[KTL] unexpected keep location: $keep not in library $libraryId")
+        None
+      } else {
+        Some(keep)
+      }
     }
   }
 

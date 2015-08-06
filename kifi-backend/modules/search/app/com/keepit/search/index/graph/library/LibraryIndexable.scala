@@ -4,8 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.search.index._
 import com.keepit.search.LangDetector
-import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.Term
 
 object LibraryFields {
   val nameField = "t"
@@ -56,6 +54,7 @@ object LibraryFields {
     val USER_CREATED = 2
     val SYSTEM_PERSONA = 3
     val SYSTEM_READ_IT_LATER = 4
+    val SYSTEM_GUIDE = 5
 
     @inline def toNumericCode(kind: LibraryKind) = kind match {
       case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
@@ -63,12 +62,14 @@ object LibraryFields {
       case LibraryKind.USER_CREATED => USER_CREATED
       case LibraryKind.SYSTEM_PERSONA => SYSTEM_PERSONA
       case LibraryKind.SYSTEM_READ_IT_LATER => SYSTEM_READ_IT_LATER
+      case LibraryKind.SYSTEM_GUIDE => SYSTEM_GUIDE
     }
 
     @inline def fromNumericCode(kind: Long) = {
       if (kind == SYSTEM_MAIN) LibraryKind.SYSTEM_MAIN
       else if (kind == SYSTEM_SECRET) LibraryKind.SYSTEM_SECRET
       else if (kind == SYSTEM_READ_IT_LATER) LibraryKind.SYSTEM_READ_IT_LATER
+      else if (kind == SYSTEM_GUIDE) LibraryKind.SYSTEM_GUIDE
       else LibraryKind.USER_CREATED
     }
   }

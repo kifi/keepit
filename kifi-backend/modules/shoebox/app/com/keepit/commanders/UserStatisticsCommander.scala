@@ -63,7 +63,7 @@ case class OrganizationStatistics(
   org: Organization,
   orgId: Id[Organization],
   pubId: PublicId[Organization],
-  ownerId: Id[User],
+  owner: User,
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
@@ -121,7 +121,7 @@ class UserStatisticsCommander @Inject() (
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
-    val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.orgId).toSet).values.toList
+    val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
 
     UserStatistics(
       user,
@@ -237,7 +237,7 @@ class UserStatisticsCommander @Inject() (
       org = org,
       orgId = orgId,
       pubId = Organization.publicId(orgId),
-      ownerId = org.ownerId,
+      owner = membersStats(org.ownerId).user,
       handle = org.handle,
       name = org.name,
       description = org.description,

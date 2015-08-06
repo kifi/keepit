@@ -63,7 +63,7 @@ class SecureSocialUserPluginImpl @Inject() (
         // find a SUI with the correct email address, we go searching.
         val email = EmailAddress(id.userId)
         db.readOnlyMaster { implicit session =>
-          emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
+          emailRepo.getByAddress(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
               sui.credentials map { creds =>
@@ -163,12 +163,7 @@ class SecureSocialUserPluginImpl @Inject() (
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
       val email = EmailAddress.validate(emailString).get
-      val emailAddress = emailRepo.getByAddressOpt(address = email) match {
-        case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty => userEmailAddressCommander.saveAsVerified(e)
-        case Some(e) if e.state == UserEmailAddressStates.VERIFIED => e
-        case Some(e) => userEmailAddressCommander.saveAsVerified(e)
-        case None => userEmailAddressCommander.saveAsVerified(UserEmailAddress(userId = userId, address = email))
-      }
+      val emailAddress = userEmailAddressCommander.intern(userId, email, verified = true).get
       log.info(s"[save] Saved email is $emailAddress")
       emailAddress
     }
@@ -283,9 +278,7 @@ class SecureSocialUserPluginImpl @Inject() (
             for (user <- userOpt) {
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
                 val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
-                val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
-                  emailRepo.save(UserEmailAddress(userId = user.id.get, address = email))
-                }
+                val emailAddress = userEmailAddressCommander.intern(user.id.get, email).get
                 val cred =
                   UserCred(
                     userId = user.id.get,

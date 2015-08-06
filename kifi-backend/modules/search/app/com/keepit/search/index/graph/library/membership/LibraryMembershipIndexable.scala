@@ -21,20 +21,17 @@ object LibraryMembershipFields {
   object Access {
     val OWNER = 0
     val READ_WRITE = 1
-    val READ_INSERT = 2
     val READ_ONLY = 3
 
     @inline def toNumericCode(libraryAccess: LibraryAccess) = libraryAccess match {
       case LibraryAccess.READ_ONLY => READ_ONLY
       case LibraryAccess.READ_WRITE => READ_WRITE
-      case LibraryAccess.READ_INSERT => READ_INSERT
       case LibraryAccess.OWNER => OWNER
     }
 
     @inline def fromNumericCode(access: Long) = {
       if (access == OWNER) LibraryAccess.OWNER
       else if (access == READ_WRITE) LibraryAccess.READ_WRITE
-      else if (access == READ_INSERT) LibraryAccess.READ_INSERT
       else LibraryAccess.READ_ONLY
     }
 
@@ -50,20 +47,20 @@ object LibraryMembershipIndexable {
 
   def getLibrariesByMember(libraryMembershipSearcher: Searcher, memberId: Id[User], showInSearchOnly: Boolean = true): Set[Long] = {
     val memberField = if (showInSearchOnly) searcherField else userField
-    LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(memberField, memberId.id.toString), libraryIdField).toArray)
+    LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(memberField, memberId.id.toString), libraryIdField).toArray())
   }
 
   def countPublishedLibrariesByMember(librarySearcher: Searcher, libraryMembershipSearcher: Searcher, memberId: Id[User]): Int = {
-    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(userField, memberId.id.toString), libraryIdField).toArray
+    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(userField, memberId.id.toString), libraryIdField).toArray()
     libraryIds.count(LibraryIndexable.isPublished(librarySearcher, _))
   }
 
   def getLibrariesByCollaborator(libraryMembershipSearcher: Searcher, collaboratorId: Id[User]): Set[Long] = {
-    LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(collaboratorField, collaboratorId.id.toString), libraryIdField).toArray)
+    LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(collaboratorField, collaboratorId.id.toString), libraryIdField).toArray())
   }
 
   def countPublishedLibrariesByCollaborator(librarySearcher: Searcher, libraryMembershipSearcher: Searcher, collaboratorId: Id[User]): Int = {
-    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(collaboratorField, collaboratorId.id.toString), libraryIdField).toArray
+    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(collaboratorField, collaboratorId.id.toString), libraryIdField).toArray()
     libraryIds.count(LibraryIndexable.isPublished(librarySearcher, _))
   }
 
@@ -89,7 +86,7 @@ object LibraryMembershipIndexable {
           val userId = userIdValues.get(doc)
           val buffer = {
             if (access == Access.OWNER) owners
-            else if (access == Access.READ_WRITE || access == Access.READ_INSERT) collaborators
+            else if (access == Access.READ_WRITE) collaborators
             else followers
           }
           buffer += userId
@@ -98,7 +95,7 @@ object LibraryMembershipIndexable {
       }
     }
 
-    (LongArraySet.from(owners.toArray), LongArraySet.from(collaborators.toArray), LongArraySet.from(followers.toArray))
+    (LongArraySet.from(owners.toArray()), LongArraySet.from(collaborators.toArray()), LongArraySet.from(followers.toArray()))
   }
 }
 
@@ -106,7 +103,7 @@ class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Inde
 
   val id = membership.id
   val sequenceNumber = membership.seq
-  val isDeleted: Boolean = (membership.state == LibraryMembershipStates.INACTIVE)
+  val isDeleted: Boolean = membership.state == LibraryMembershipStates.INACTIVE
 
   override def buildDocument = {
     import LibraryMembershipFields._

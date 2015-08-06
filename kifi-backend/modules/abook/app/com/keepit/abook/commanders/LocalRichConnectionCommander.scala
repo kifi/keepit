@@ -35,12 +35,10 @@ class LocalRichConnectionCommander @Inject() (
     scheduler: Scheduler) extends RichConnectionCommander with Logging {
 
   def startUpdateProcessing(): Unit = {
-    log.info("RConn: Triggered queued update processing")
     if (serviceDiscovery.isLeader()) {
-      log.info("RConn: I'm the leader, let's go")
+      log.info("RConn: Triggered queued update processing")
       processQueueItems()
     } else {
-      log.info("RConn: I'm not the leader, nothing to do yet")
       scheduler.scheduleOnce(1 minute) {
         startUpdateProcessing()
       }
@@ -48,18 +46,14 @@ class LocalRichConnectionCommander @Inject() (
   }
 
   private def processQueueItems(): Unit = {
-    log.info("RConn: Fetching one item from the queue")
     val fut = queue.nextWithLock(1 minute)
     fut.onComplete {
       case Success(queueMessageOpt) => {
-        log.info("RConn: Queue call returned")
         queueMessageOpt.map { queueMessage =>
-          log.info("RConn: Got something")
           try {
             processUpdateImmediate(queueMessage.body).onComplete {
               case Success(_) => {
                 queueMessage.consume()
-                log.info("RConn: Consumed message")
                 processQueueItems()
               }
               case Failure(t) => {
@@ -73,7 +67,6 @@ class LocalRichConnectionCommander @Inject() (
               processQueueItems()
           }
         } getOrElse {
-          log.info("RConn: Got nothing")
           processQueueItems()
         }
       }
@@ -90,7 +83,6 @@ class LocalRichConnectionCommander @Inject() (
   }
 
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
-    log.info(s"[WTI] Processing $message")
     try {
       message match {
         case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {

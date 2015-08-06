@@ -34,7 +34,7 @@ class KifiUserTypeahead @Inject() (
     UserCache: UserIdCache) extends Typeahead[User, User, User, UserUserTypeahead] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
 
-  protected val refreshRequestConsolidationWindow = 10 minutes
+  protected val refreshRequestConsolidationWindow = 1 seconds
 
   protected val fetchRequestConsolidationWindow = 15 seconds
 
@@ -68,7 +68,6 @@ class KifiUserTypeahead @Inject() (
     db.readOnlyMasterAsync { implicit ro =>
       userConnectionRepo.getConnectedUsers(id) ++ organizationMembershipRepo.getTeammates(id) ++ libraryMembershipRepo.getCollaborators(id)
     } flatMap { ids =>
-      log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
       getInfos(ids.toSeq).map(_.map(user => user.id.get -> user))
     }
   }

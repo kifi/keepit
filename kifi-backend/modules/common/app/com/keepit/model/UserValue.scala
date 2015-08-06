@@ -59,7 +59,6 @@ object UserValueName {
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
-  val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
 
   val TWITTER_FOLLOWERS_CURSOR = UserValueName("twitter_followers_cursor")

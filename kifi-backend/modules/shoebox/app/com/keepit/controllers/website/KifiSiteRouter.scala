@@ -134,7 +134,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfLibraryFound(handle: Handle, slug: String) = WebAppPage { implicit request =>
-    lookupByHandle(handle) flatMap {
+    lookupByHandle(handle, mustBeInExperiment = false) flatMap {
       case (handleOwner, spaceRedirectStatusOpt) =>
         val handleSpace: LibrarySpace = handleOwner match {
           case Left(org) => org.id.get
@@ -196,11 +196,11 @@ class KifiSiteRouter @Inject() (
   }
 
   // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
-  private def lookupByHandle(handle: Handle)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
-    val userHasOrgExperiment = request match {
+  private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
+    val userHasOrgExperiment = !mustBeInExperiment || (request match {
       case r: UserRequest[_] if r.experiments.contains(UserExperimentType.ORGANIZATION) => true
       case _ => false
-    }
+    })
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
     handleOwnerOpt.flatMap {
       // TODO(ryan): when orgs go live, drop this flatmap

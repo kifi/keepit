@@ -1,7 +1,7 @@
 <li class="kf-org-member">
   <div class="kf-org-member-upper clearfix">
     <div class="kf-org-member-upper-left">
-      <a href="{{member|profileUrl}}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="close()">
+      <a href="{{ member.id ? (member|profileUrl) : '#' }}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="member.id ? triggerClickedAvatar() : null">
         <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">

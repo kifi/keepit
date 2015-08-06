@@ -5,11 +5,11 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded', 'profile',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, libraryImageLoaded, profile) {
+    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -77,7 +77,6 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
-    $scope.profile = profile;
     $scope.libraryImageLoaded = libraryImageLoaded === true; // can also be an object containing a promise
     $scope.scrollDistance = '100%';
     $scope.loading = true;  // whether keeps are currently loading
@@ -176,7 +175,7 @@ angular.module('kifi')
       trackShareEvent('clickedShareFacebook');
       $FB.ui({
         method: 'share',
-        href: env.origin + library.url +
+        href: env.origin + (library.path || library.url) +
           '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
           '&kcid=na-vf_facebook-library_share-lid_' + library.id
       });
@@ -188,7 +187,7 @@ angular.module('kifi')
 
     $scope.shareTwitter = function (event) {
       trackShareEvent('clickedShareTwitter');
-      var absUrl = env.origin + library.url;
+      var absUrl = env.origin + (library.path || library.url);
       event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
         original_referer: absUrl,
         text: 'Discover this amazing @Kifi library about ' + library.name + '!',

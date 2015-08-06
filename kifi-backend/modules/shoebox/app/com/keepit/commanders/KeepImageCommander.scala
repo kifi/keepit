@@ -304,7 +304,7 @@ class KeepImageCommanderImpl @Inject() (
             }
           } else {
             // have existing KeepImages, use those
-            log.info(s"[kic] Existing stored images (${existingSameHash.size}}) found: $existingSameHash")
+            log.info(s"[kic] Existing stored images (${existingSameHash.size}) found: $existingSameHash")
             Future.successful(copyExistingImagesAndReplace(keepId, source, existingSameHash))
           }
         case Left(failure) => Future.successful(failure)
@@ -355,7 +355,6 @@ class KeepImageCommanderImpl @Inject() (
           val image = KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format,
             width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash,
             sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal, kind = prev.kind)
-          log.info(s"saving new image [$image] derived from [$prev]")
           Some(image)
         }
       }

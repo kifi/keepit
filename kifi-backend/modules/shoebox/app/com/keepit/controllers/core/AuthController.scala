@@ -315,21 +315,30 @@ class AuthController @Inject() (
             Redirect("/")
           }
         }
-      case nonUserRequest: NonUserRequest[_] =>
-        if (nonUserRequest.identityOpt.isDefined) {
-          // User tried to log in (not sign up) with social network.
-          nonUserRequest.identityOpt.get.email.flatMap(e => db.readOnlyMaster(emailAddressRepo.getByAddressOpt(EmailAddress(e))(_))) match {
-            case Some(addr) =>
-              // A user with this email address exists in the system, but it is not yet linked to this social identity.
-              Ok(views.html.authMinimal.linkSocial(nonUserRequest.identityOpt.get.identityId.providerId, nonUserRequest.identityOpt.get.email.get))
-            case None =>
-              // No email for this user exists in the system.
-              Redirect("/signup").flashing("signin_error" -> "no_account")
+      case nonUserRequest: NonUserRequest[_] => {
+        nonUserRequest.identityOpt match {
+
+          case Some(identity) => {
+            // User tried to log in (not sign up) with social network.
+            identity.email.flatMap { addressStr =>
+              EmailAddress.validate(addressStr).toOption.flatMap { validEmailAddress =>
+                db.readOnlyMaster(emailAddressRepo.getByAddress((validEmailAddress))(_))
+              }
+            } match {
+              case Some(addr) =>
+                // A user with this email address exists in the system, but it is not yet linked to this social identity.
+                Ok(views.html.authMinimal.linkSocial(nonUserRequest.identityOpt.get.identityId.providerId, nonUserRequest.identityOpt.get.email.get))
+              case None =>
+                // No email for this user exists in the system.
+                Redirect("/signup").flashing("signin_error" -> "no_account")
+            }
           }
-        } else {
-          Redirect("/") // error??
+
+          case None =>
+            Redirect("/") // error??
           // Ok(views.html.website.welcome(msg = request.flash.get("error")))
         }
+      }
     }
   }
 

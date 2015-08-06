@@ -11,12 +11,16 @@ import com.keepit.common.net.RichRequestHeader
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.util.Try
 
 case class LibraryStatistic(
   library: Library,
@@ -41,6 +45,7 @@ class AdminLibraryController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -92,7 +97,7 @@ class AdminLibraryController @Inject() (
         keeps + chunk.size
         page += 1
       }
-      Ok(s"keep count = ${keeps} for library: $newOwnerLib")
+      Ok(s"keep count = $keeps for library: $newOwnerLib")
     }
   }
 
@@ -157,7 +162,7 @@ class AdminLibraryController @Inject() (
       val keepCount = keepRepo.getCountByLibrary(libraryId)
       val members = libraryMembershipRepo.getWithLibraryId(libraryId)
 
-      val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
+      val contributors = members.filter(x => x.access == LibraryAccess.READ_WRITE).map { m => userRepo.get(m.userId) }
       val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
       val terms = suggestedSearchCommander.getSuggestedTermsForLibrary(libraryId, limit = 25, SuggestedSearchTermKind.AUTO)
       (lib, owner, keepCount, contributors, followers, terms)
@@ -282,6 +287,45 @@ class AdminLibraryController @Inject() (
     val terms = tc.trim.split(", ").map { token => val Array(term, weight) = token.split(":"); (term.trim, weight.trim.toFloat) }.toMap
     suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms), SuggestedSearchTermKind.AUTO)
     Ok
+  }
+
+  def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val newOwner = Id[User](body.get("user-id").get.toLong)
+    val newOrgOpt = body.get("org-id").map(id => Try(id.toLong).toOption).flatten.map(id => Id[Organization](id))
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libId)
+      val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
+      val owner = userRepo.get(newOwner)
+      assert(owner.state == UserStates.ACTIVE)
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility))
+      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
+      libraryMembershipRepo.save(membership.copy(userId = newOwner))
+      keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
+        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
+      }
+    }
+    Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
+  }
+
+  def cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
+    val libId: Id[Library] = Id[Library](600673) //hard coded to https://admin.kifi.com/admin/libraries/600673
+    val newLib = db.readWrite { implicit s =>
+      libraryRepo.getOrganizationLibraries(orgId) foreach { lib =>
+        if (lib.kind == LibraryKind.SYSTEM_GUIDE) throw new Exception(s"Org $orgId already have a SYSTEM_GUIDE library $lib")
+      }
+      val origLib = libraryRepo.get(libId)
+      val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
+        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
+      libraryRepo.save(newLibCandidate)
+    }
+    db.readWrite { implicit s =>
+      implicit val context = HeimdalContext.empty
+      val keeps = keepRepo.getByLibrary(newLib.id.get, 0, 5000)
+      libraryCommander.copyKeeps(newLib.ownerId, toLibraryId = newLib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))
+      newLib.id.get
+    }
+    Redirect(routes.AdminLibraryController.libraryView(newLib.id.get))
   }
 
 }

@@ -232,7 +232,7 @@ trait UserActions extends Logging { self: Controller =>
       val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
-          case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
+          case None => Future.successful(Forbidden)
         }
       }
       result.map(maybeAugmentCORS(_))

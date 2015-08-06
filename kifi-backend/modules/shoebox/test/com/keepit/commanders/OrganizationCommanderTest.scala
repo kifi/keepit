@@ -44,16 +44,16 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val owner = UserFactory.user().withName("Owner", "McOwnerson").saved
           val nonMember = UserFactory.user().withName("Rando", "McRanderson").saved
           val org = OrganizationFactory.organization().withName("Test Org").withOwner(owner).saved
-          val publicLibs = LibraryFactory.libraries(10).map(_.withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganization(Some(org.id.get))).saved
-          val orgLibs = LibraryFactory.libraries(20).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(Some(org.id.get))).saved
-          val deletedLibs = LibraryFactory.libraries(15).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(Some(org.id.get))).saved.map(_.deleted)
+          val publicLibs = LibraryFactory.libraries(10).map(_.withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganizationIdOpt(Some(org.id.get))).saved
+          val orgLibs = LibraryFactory.libraries(20).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved
+          val deletedLibs = LibraryFactory.libraries(15).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved.map(_.deleted)
           (org, owner, nonMember, publicLibs, orgLibs, deletedLibs)
         }
 
         val orgCommander = inject[OrganizationCommander]
-        val ownerVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(owner.id.get), offset = Offset(0), limit = Limit(100))
-        val randoVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))
-        val nooneVisibleLibraries = orgCommander.getLibrariesVisibleToUser(org.id.get, None, offset = Offset(0), limit = Limit(100))
+        val ownerVisibleLibraries = orgCommander.getOrganizationLibrariesVisibleToUser(org.id.get, Some(owner.id.get), offset = Offset(0), limit = Limit(100))
+        val randoVisibleLibraries = orgCommander.getOrganizationLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))
+        val nooneVisibleLibraries = orgCommander.getOrganizationLibrariesVisibleToUser(org.id.get, None, offset = Offset(0), limit = Limit(100))
 
         ownerVisibleLibraries.length === publicLibs.length + orgLibs.length
         randoVisibleLibraries.length === publicLibs.length
@@ -108,18 +108,21 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       withDb(modules: _*) { implicit injector =>
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val createRequest = OrganizationCreateRequest(requesterId = Id[User](1), OrganizationInitialValues(name = "Kifi"))
+        val users = db.readWrite { implicit session => UserFactory.users(3).saved }
+
+        val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
         val org = createResponse.right.get.newOrg
 
         db.readWrite { implicit session =>
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
+          orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
         }
 
-        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = Id[User](2), targetId = Id[User](42), newRole = OrganizationRole.MEMBER)
+        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = users(1).id.get, targetId = users(2).id.get, newRole = OrganizationRole.MEMBER)
 
         // By default, Organizations do not allow members to invite other members
         val try1 = orgMembershipCommander.addMembership(memberInviteMember)
@@ -127,7 +130,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         // An owner can change the base permissions so that members CAN do this
         val betterBasePermissions = org.basePermissions.modified(OrganizationRole.MEMBER, added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
-        val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
+        val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
           modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
 
         val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
@@ -141,7 +144,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
         val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         allMembers.size === 3
-        allMembers.map(_.userId) === Set(Id[User](1), Id[User](2), Id[User](42))
+        allMembers.map(_.userId) === users.map(_.id.get).toSet
       }
     }
 
@@ -182,11 +185,12 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         trueOwnerDeleteResponse must haveClass[Right[OrganizationDeleteRequest, Organization]]
         trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
 
-        val (deactivatedOrg, memberships) = db.readOnlyMaster { implicit session =>
-          (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
+        db.readOnlyMaster { implicit session =>
+          handleCommander.getByHandle(org.handle) must beNone
+          orgRepo.get(org.id.get).state === OrganizationStates.INACTIVE
+          orgMembershipRepo.getAllByOrgId(org.id.get).size === 0
         }
-        deactivatedOrg.state === OrganizationStates.INACTIVE
-        memberships.size === 0
+        1 === 1
       }
     }
     "transfer ownership of an organization" in {

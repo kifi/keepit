@@ -1,6 +1,6 @@
 package com.keepit.graph.manager
 
-import com.keepit.classify.{ DomainInfo }
+import com.keepit.classify.{ NormalizedHostname, DomainInfo }
 import com.keepit.common.net.URI
 
 import scala.concurrent.Future
@@ -17,6 +17,8 @@ import com.keepit.common.core._
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.core.ModelVersion
+
+import scala.util.Try
 
 trait GraphUpdateFetcher {
   def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]]
@@ -71,11 +73,12 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case EmailAccountGraphUpdate => {
         abook.getEmailAccountsChanged(seq.copy(), fetchSize).flatMap { emailAccounts =>
-          shoebox.internDomainsByDomainNames(emailAccounts.map { _.getDomainName }.toSet).imap { domainInfoByName: Map[String, DomainInfo] =>
+          val normalizedHostnames = emailAccounts.flatMap(email => NormalizedHostname.fromHostname(email.getDomainName)).toSet
+          shoebox.internDomainsByDomainNames(normalizedHostnames).imap { domainInfoByName: Map[NormalizedHostname, DomainInfo] =>
             emailAccounts.map { email =>
-              domainInfoByName.get(email.getDomainName) match {
+              NormalizedHostname.fromHostname(email.getDomainName).flatMap { domainInfoByName.get } match {
                 case Some(domain: DomainInfo) if !domain.isEmailProvider => EmailAccountGraphUpdate.apply(email, domain.id)
-                case _ => EmailAccountGraphUpdate(email, None) // if domain.isEmailProvider || !Domain.isValid(email.getDomainName) (guard in DomainRepo)
+                case _ => EmailAccountGraphUpdate(email, None)
               }
             }
           }

@@ -107,6 +107,10 @@
   .kf-color>&
     padding-top: 8px
 
+.manage-lib-body
+  display: inline-block
+  width: calc(100% - 120px)
+
 input.manage-lib-input
 textarea.manage-lib-input
 select.manage-lib-input
@@ -170,64 +174,20 @@ select.manage-lib-input
   height: 100px
   resize: none
 
+.manage-lib-create-visibility-wrapper
+  display: inline-block
+  width: calc(100% - 115px)
+  vertical-align: top
+  padding-top: 10px
+
 .manage-lib-create-visibility-input-container
   display: inline-block
   vertical-align: top
   margin: 7px 20px 0 0
-  width: 56px
 
-  .library-visibility-custom-input
-    margin: 0
-
-.manage-lib-visibility-description
-  display: inline-block
-  vertical-align: top
-  width: 300px
-  margin-top: 7px
-
-.manage-lib-visibility-description-content
-  font-size: 15px
-  line-height: 28px
-  height: 48px
-
-.manage-lib-listed-visibility
-  color: #9b9b9b
-
-  input[type="checkbox"]
-    display: none;
-
-  input[type="checkbox"] + label span
-    position: relative
-    display: inline-block
-    margin: -5px 5px 0 0
-    border-radius: 3px
-    width: 12px
-    height: 12px
-    background-color: #3b99fa
-    vertical-align: middle
-    cursor: pointer
-
-  input[type="checkbox"]:checked + label span
-    &::before
-    &::after
-      content: ' '
-      position: absolute;
-      border-radius: 2px
-      width: 2px;
-      background: #fff
-      font-size: 0
-
-    &::before
-      left: 60%
-      top: 2px
-      bottom: 2px
-      transform: translate(-1px) rotate(35deg)
-
-    &::after
-      left: 35%
-      top: 5px
-      bottom: 2px
-      transform: translate(-1px) rotate(-45deg)
+.manage-lib-create-visiblity-description
+  margin-left: 10px
+  color: secondaryTextGray
 
 .manage-lib-color
   display: inline-block
@@ -583,6 +543,70 @@ button.manage-lib-delete-button
 .manage-lib-subs-instruct
   margin-left: 42px
   color: gray
+
+.manage-lib-org-selector
+  margin-top: 15px
+  max-height: 115px
+  overflow: auto
+
+  .manage-lib-org-selector-org
+    vertical-align: top
+    position: relative
+    cursor: pointer
+    padding: 0 6px
+    margin-left: 12px
+    border-radius: 7px
+    display: block
+    width: 100%
+
+    &:hover
+      background: #EEEEEE
+
+    &.selected
+      &:before
+        content: '✓'
+        color: white
+        display: block
+        position: absolute
+        top: 0px
+        left: 5px
+        background: accentGreen
+        padding: 0 5px
+        border-top-left-radius: 3px
+        border-bottom-right-radius: 7px
+        box-shadow: -2px 2px 2px 1px rgba(0, 0, 0, 0.25)
+
+    img
+      width: 30px
+      height: 30px
+      margin: 0px auto
+      display: block
+      border-radius: 15%
+      margin-bottom: 3px
+      display: inline-block
+      vertical-align: middle
+      margin-right: 7px
+
+    h1
+      heading_sm()
+      text-align: center
+      margin-bottom: 0
+      display: inline-block
+      vertical-align: middle
+
+.manage-lib-user-selector
+  margin-top: 15px
+
+  img
+    width: 30px
+    height: 30px
+    border-radius: 50%
+    margin-right: 7px
+
+  img
+  span
+    vertical-align: middle
+    display: inline-block
 
 
 input.manage-lib-sub-input

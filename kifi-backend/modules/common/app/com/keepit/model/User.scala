@@ -43,6 +43,8 @@ case class User(
     case Some(originalUsername) => originalUsername
     case None => throw Username.UndefinedUsernameException(this) // rare occurence, .username should be safe to use
   }
+  def isActive: Boolean = state == UserStates.ACTIVE
+  def isInactive: Boolean = state == UserStates.INACTIVE
   override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",username=$primaryUsername, state=$state]"""
 }
 

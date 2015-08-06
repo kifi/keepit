@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.common.cache._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -26,7 +28,7 @@ object MaybeOrganizationMember {
   implicit val writes = Writes[MaybeOrganizationMember] { member =>
     val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
     val relatedFields = Json.obj("role" -> member.role, "lastInvitedAt" -> member.lastInvitedAt)
-    json.minify(identityFields ++ relatedFields)
+    json.aggressiveMinify(identityFields ++ relatedFields)
   }
 }
 
@@ -34,6 +36,7 @@ object MaybeOrganizationMember {
 trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
+  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
@@ -56,15 +59,28 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
+
+  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
+    primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
+      db.readOnlyReplica { implicit s =>
+        organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
+          organizationMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
+        }
+      }
+    }
+  }
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
     db.readWrite { implicit session =>
@@ -205,8 +221,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
             session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
             val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
             val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
-            organizationMembershipRepo.save(newMembership)
+            val savedMembership = organizationMembershipRepo.save(newMembership)
+            organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId) match {
+              case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+              case None => //whatever
+            }
+            savedMembership
           }
+        }
+        //remove the following experiment checks/adds once ORGANIZATION experiment is killed.
+        // We need it for now since the experiment may be broken for the new members
+        if (!userExperimentRepo.hasExperiment(newMembership.userId, UserExperimentType.ORGANIZATION)) {
+          userExperimentRepo.save(UserExperiment(userId = newMembership.userId, experimentType = UserExperimentType.ORGANIZATION))
         }
         Right(OrganizationMembershipAddResponse(request, newMembership))
     }

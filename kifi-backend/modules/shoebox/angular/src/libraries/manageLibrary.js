@@ -30,7 +30,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -40,21 +39,32 @@ angular.module('kifi')
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
-        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
-        scope.thisSpace = profileService.me; // Default
+        scope.me = profileService.me;
+        scope.libraryProps = {
+          inOrg: false,
+          selectedOrgId: null
+        };
 
-        // Find out where we're opening this from
-        if ('organization' in scope.modalData) { 
-          var thisSpace = scope.modalData.organization;
-          // Angular is very picky about the object you're using.
-          scope.thisSpace = scope.spaces.filter(function(space) {
-            return (space.id === thisSpace.id);
-          })[0];
-        }
-        scope.destinationSpace = scope.thisSpace; // Default
+        scope.onChangeSpace = function () {
+          var currIsOrg = scope.spaceIsOrg(scope.space.current);
+          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
 
-        scope.setSpace = function(space) {
-          scope.destinationSpace = space;
+          if (currIsOrg !== destIsOrg) {
+            if (currIsOrg) {
+              if (scope.library.visibility === 'organization') {
+                scope.library.visibility = 'secret';
+              }
+            } else {
+              if (scope.library.visibility === 'secret') {
+                scope.library.visibility = 'organization';
+              }
+            }
+          }
+
+          // Prevent non-org lib from having visibility === 'organization'
+          if (!destIsOrg && scope.library.visibility === 'organization') {
+            scope.library.visibility = 'secret';
+          }
         };
 
         //
@@ -97,6 +107,32 @@ angular.module('kifi')
 
         scope.removeSubscription = function (index) {
           scope.library.subscriptions.splice(index,1);
+        };
+
+        scope.setOrg = function(id) { 
+          if (scope.libraryProps.inOrg) {
+            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+            var orgId = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            scope.libraryProps.selectedOrgId = orgId;
+            scope.space.destination = scope.me.orgs.filter(function(org) {
+              return org.id === orgId;
+            })[0];
+          }
+          else {
+            // If user unclicks "organization" their destination should be
+            // their current profile.
+            scope.space.destination = scope.me;
+          }
+          scope.onChangeSpace();
+        };
+
+
+        scope.spaceIsOrg = function (space) {
+          return 'numMembers' in space;
+        };
+
+        var ownerType = function(space) {
+          return scope.spaceIsOrg(space) ? 'org' : 'user';
         };
 
         scope.saveLibrary = function () {
@@ -151,16 +187,8 @@ angular.module('kifi')
             return sub.name !== '' && sub.info.url !== '';
           });
 
-          var spaceIsOrg = function(space) {
-            return 'numMembers' in space;
-          };
-
-          var ownerType = function(space) {
-            return spaceIsOrg(space) ? 'org' : 'user';
-          };
-          
           var owner = {};
-          owner[ownerType(scope.destinationSpace)] = scope.destinationSpace.id;
+          owner[ownerType(scope.space.destination)] = scope.space.destination.id;
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -183,12 +211,12 @@ angular.module('kifi')
             scope.close();
 
             scope.library.subscriptions = nonEmptySubscriptions;
-            if (scope.thisSpace.id !== scope.destinationSpace.id) {
+            if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
 
             if (!returnAction) {
-              $location.url(newLibrary.url);
+              $location.url(newLibrary.url || newLibrary.path);
             } else {
               returnAction(newLibrary);
             }
@@ -230,10 +258,25 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            // If we were on the deleted library's page, return to the homepage.
+            // If we were on the deleted library's page,
+            // return to the space it was in.
             if ($state.is('library.keeps') &&
-                ($state.href('library.keeps') === scope.library.url)) {
-              $location.url('/');
+                $state.href('library.keeps') === scope.library.path) {
+
+              var redirectToSpaceParams = {
+                handle: (
+                  scope.library.org ? scope.library.org.handle : (
+                    scope.library.owner ? scope.library.owner.username : null
+                  )
+                )
+              };
+
+              // If something went wrong, go to the main page
+              if (!redirectToSpaceParams.handle) {
+                $location.path('/');
+              } else {
+                $state.go('userOrOrg', redirectToSpaceParams);
+              }
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;
@@ -250,25 +293,6 @@ angular.module('kifi')
           scope.viewFollowersFirst = false;
           scope.showFollowers = false;
         };
-
-
-        //
-        // Watches and listeners.
-        //
-        scope.$watch('library.name', function (newVal, oldVal) {
-          if (newVal !== oldVal) {
-            // Clear the error popover when the user changes the name field.
-            scope.$error.name = null;
-
-            // Update the slug to reflect the library's name only if we're not modifying an
-            // existing library and the user has not edited the slug yet.
-            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
-              scope.library.slug = util.generateSlug(newVal);
-              scope.emptySlug = false;
-            }
-          }
-        });
-
 
         //
         // On link.
@@ -300,8 +324,47 @@ angular.module('kifi')
           scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
         }
+        var libraryOrg = scope.library.org || scope.modalData.organization;
+        if (libraryOrg) {
+          scope.libraryProps.inOrg = !!libraryOrg;
+          scope.libraryProps.selectedOrgId = libraryOrg.id;
+        }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
+
+        var currentSpace = (scope.library.org || profileService.me);
+
+        // Set up the spaces.
+        // The scope.space.* objects MUST BE REFERENCE-EQUAL to the scope.spaces objects
+        // to make the angular <select> binding work
+        scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
+        scope.space = {};
+
+        var desiredId = scope.modalData.organization ? scope.modalData.organization.id : currentSpace.id;
+        scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
+        scope.space.destination = scope.space.current;
+
+        // If it's a new org library, default to org visibility
+        if (scope.library.name === '' && scope.spaceIsOrg(scope.space.destination)) {
+          scope.library.visibility = 'organization';
+        }
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('library.name', function (newVal, oldVal) {
+          if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+
+            // Update the slug to reflect the library's name only if we're not modifying an
+            // existing library and the user has not edited the slug yet.
+            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
+              scope.library.slug = util.generateSlug(newVal);
+              scope.emptySlug = false;
+            }
+          }
+        });
 
         element.find('.manage-lib-name-input').focus();
       }

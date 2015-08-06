@@ -11,7 +11,7 @@ angular.module('kifi')
 
     function librarySource(pageNumber, pageSize) {
       return orgProfileService
-        .getOrgLibraries(organization.id, pageNumber, pageSize)
+        .getOrgLibraries(organization.id, pageNumber * pageSize, pageSize)
         .then(function (libData) {
           return libData.libraries;
         });
@@ -41,6 +41,10 @@ angular.module('kifi')
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
     });
+
+    $scope.organization = organization;
+
+    $scope.me = profileService.me;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -73,6 +77,12 @@ angular.module('kifi')
           }
         }
       });
+    };
+
+    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
+
+    $scope.shouldShowMoveCard = function () {
+      return $scope.canCreateLibraries && $scope.libraries.length < 10 && libraryLazyLoader.hasLoaded();
     };
 
     resetAndFetchLibraries();

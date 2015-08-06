@@ -49,7 +49,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
       val builder = new PrefixFilterBuilder[E]
       allInfos.foreach { case (infoId, info) => builder.add(infoId, extractName(info)) }
       val filter = builder.build
-      log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
+      log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).map(_._1).mkString(",")}) filter.len=${filter.data.length}")
       filter
     }
   }
@@ -104,6 +104,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
     implicit val fj = ExecutionContext.fj
     consolidateRefreshReq(ownerId) { id =>
       create(id).map { typeahead =>
+        consolidateFetchReq.set(ownerId, Future.successful(typeahead))
         invalidate(typeahead)
         typeahead
       }

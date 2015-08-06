@@ -319,10 +319,12 @@ class LibraryController @Inject() (
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         }
 
+        println("Joining with subscribed = " + subscribedOpt)
         libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
+            println(("membership" -> LibraryMembershipInfo.fromMembership(mem)))
             Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
         }
     }
@@ -540,6 +542,7 @@ class LibraryController @Inject() (
     }
   }
 
+  // TODO(ryan): This seems to only update the keep title. Is it supposed to do other things?
   def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(libraryPubId).get
     val body = request.body
@@ -600,7 +603,7 @@ class LibraryController @Inject() (
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -608,7 +611,7 @@ class LibraryController @Inject() (
   def suggestTagsSimple(pubId: PublicId[Library], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, None, None, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
   }
@@ -624,7 +627,6 @@ class LibraryController @Inject() (
       }
       case _ => Future.successful(Forbidden)
     }
-
   }
 
   def relatedLibraries(pubId: PublicId[Library]) = MaybeUserAction.async { request =>

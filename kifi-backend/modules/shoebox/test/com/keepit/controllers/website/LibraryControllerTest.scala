@@ -852,7 +852,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
 
-          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_WRITE))
           (userA, userB, libraryB1, inv1)
         }
       }
@@ -980,8 +980,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
 
           // user B invites A to both libraries
-          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
-          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_WRITE))
+          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_WRITE))
           (userA, userB, libraryB1, libraryB2, inv1, inv2)
         }
 
@@ -999,14 +999,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser2 = db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }
 
-        val expected1 = Json.parse("""{"membership": {"access": "read_insert", "listed": true, "subscribed": false}}""")
+        val expected1 = Json.parse("""{"membership": {"access": "read_write", "listed": true, "subscribed": true}}""")
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
         val result11 = libraryController.joinLibrary(pubLibId1, None, Some(true))(request1)
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 
-        val expected11 = Json.parse("""{"membership": {"access": "read_insert", "listed": true, "subscribed": true}}""")
+        val expected11 = Json.parse("""{"membership": {"access": "read_write", "listed": true, "subscribed": true}}""")
         Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)
@@ -1066,10 +1066,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           (user1, library1, keep1, keep2)
         }
@@ -1154,10 +1154,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           val userB = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("test").saved
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
@@ -1526,7 +1526,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = lib1.visibility, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = lib1.visibility, libraryId = Some(lib1.id.get)))
 
           keepRepo.getByLibrary(lib1.id.get, 0, 5).map(_.title) === Seq(Some("k1"))
           (user1, lib1, keep1)

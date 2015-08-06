@@ -64,9 +64,13 @@ case class Organization(
 
   def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.handle)
 
+  def isActive: Boolean = state == OrganizationStates.ACTIVE
+  def isInactive: Boolean = state == OrganizationStates.INACTIVE
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
+    primaryHandle = None,
+    basePermissions = Organization.totallyInvisiblePermissions,
     description = None
   )
 }
@@ -88,6 +92,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         OrganizationPermission.ADD_LIBRARIES
       )
     ))
+  val totallyInvisiblePermissions: BasePermissions =
+    BasePermissions(OrganizationRole.allOpts.map(_ -> Set.empty[OrganizationPermission]).toMap)
 
   implicit val format: Format[Organization] = (
     (__ \ 'id).formatNullable[Id[Organization]] and
@@ -204,4 +210,13 @@ case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
 
 class OrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrganizationKey, Organization](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class PrimaryOrgForUserKey(id: Id[User]) extends Key[Id[Organization]] {
+  override val version = 1
+  val namespace = "primary_org_user"
+  def toKey(): String = id.id.toString
+}
+
+class PrimaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[PrimaryOrgForUserKey, Id[Organization]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

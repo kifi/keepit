@@ -23,7 +23,6 @@ class ExtUserController @Inject() (
       val res1 = res.collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-        case a: AliasContactResult if request.experiments.contains(UserExperimentType.ADMIN) => Json.toJson(a)
       }
       Ok(Json.toJson(res1))
     }

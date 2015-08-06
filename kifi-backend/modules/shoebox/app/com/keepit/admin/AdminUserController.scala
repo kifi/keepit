@@ -86,6 +86,7 @@ class AdminUserController @Inject() (
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     emailRepo: UserEmailAddressRepo,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
@@ -276,7 +277,7 @@ class AdminUserController @Inject() (
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
       val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.orgId).toSet).values.toList
+      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -496,20 +497,17 @@ class AdminUserController @Inject() (
 
     db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
-      val newEmails = (emailList map { address =>
-        val email = emailRepo.getByAddressOpt(address)
-        email match {
-          case Some(addr) => addr // We're good! It already exists
-          case None => // Create a new one
-            log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            emailRepo.save(UserEmailAddress(address = address, userId = userId))
-        }
-      }).toSet
 
-      // Set state of removed email addresses to INACTIVE
-      (oldEmails -- newEmails) map { removedEmail =>
+      // Intern required emails
+      emailList map { address =>
+        log.info("Interning email address %s to userId %s".format(address, userId.toString))
+        userEmailAddressCommander.intern(userId, address).get
+      }
+
+      // Deactivate other emails
+      oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        emailRepo.save(removedEmail.withState(UserEmailAddressStates.INACTIVE))
+        userEmailAddressCommander.deactivate(removedEmail).get
       }
     }
 
@@ -968,7 +966,7 @@ class AdminUserController @Inject() (
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
+      userEmailAddressCommander.deactivate(userEmail).get
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
@@ -1009,7 +1007,7 @@ class AdminUserController @Inject() (
     db.readOnlyReplica { implicit s =>
       val users = userRepo.getAllUsers(userIds).values.toList
       val orgs = users map { user =>
-        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.orgId).toSet
+        val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
       }

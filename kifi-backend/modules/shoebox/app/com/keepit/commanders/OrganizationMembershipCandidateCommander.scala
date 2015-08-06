@@ -18,6 +18,7 @@ trait OrganizationMembershipCandidateCommander {
   def addCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
   def removeCandidates(orgId: Id[Organization], userIds: Set[Id[User]]): Future[Unit]
   def inviteCandidates(orgId: Id[Organization]): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
+  def inviteCandidate(orgId: Id[Organization], userId: Id[User]): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
 }
 
 @Singleton
@@ -45,7 +46,7 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
 
       val userIdsToBeAdded = userIds -- existingCandidates.map(_.userId).toSet
       userIdsToBeAdded.foreach { uid =>
-        orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(orgId = orgId, userId = uid))
+        orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(organizationId = orgId, userId = uid))
       }
     }
   }
@@ -67,6 +68,16 @@ class OrganizationMembershipCandidateCommanderImpl @Inject() (
 
     implicit val context = heimdalContextBuilder().build
     val orgInvite = OrganizationInviteSendRequest(orgId = org.id.get, requesterId = org.ownerId, targetEmails = Set.empty, targetUserIds = existingCandidates.map(_.userId))
+    orgInviteCommander.inviteToOrganization(orgInvite)
+  }
+
+  def inviteCandidate(orgId: Id[Organization], userId: Id[User]): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
+    val (org, existingCandidate) = db.readOnlyReplica { implicit session =>
+      (orgRepo.get(orgId), orgMembershipCandidateRepo.getByUserAndOrg(userId, orgId).get)
+    }
+
+    implicit val context = heimdalContextBuilder().build
+    val orgInvite = OrganizationInviteSendRequest(orgId = org.id.get, requesterId = org.ownerId, targetEmails = Set.empty, targetUserIds = Set(existingCandidate.userId))
     orgInviteCommander.inviteToOrganization(orgInvite)
   }
 }

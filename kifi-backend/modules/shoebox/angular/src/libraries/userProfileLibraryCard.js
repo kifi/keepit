@@ -15,7 +15,7 @@ angular.module('kifi')
     }
 
     function updateCollaborators(numCollaborators, ignored, scope) {
-      var n = 3; // at most 4 circles, one spot reserved for owner
+      var n = scope.lib.org ? 2 : 3; // at most 4 circles, one spot reserved for owner
       if (canModifyCollaborators(scope.lib)) {
         n--; // one spot reserved for add collaborator button
       }
@@ -33,7 +33,7 @@ angular.module('kifi')
             libraryService.getLibraryById(library.id, true).then(function (data) {
               _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership'));
               library.subscriptions = data.subscriptions;
-              library.path = data.library.url;
+              library.path = data.library.path || data.library.url;
               library.followers = _.take(data.library.followers, 3);
             })['catch'](modalService.openGenericErrorModal);
           }

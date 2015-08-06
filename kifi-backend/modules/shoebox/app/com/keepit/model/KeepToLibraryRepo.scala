@@ -9,14 +9,18 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
-  def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def countByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
+  def getAllByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
-  def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getCountByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
+  def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
+  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
-  def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
+  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+
+  def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
 
@@ -47,34 +51,54 @@ class KeepToLibraryRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
 
-  private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.keepId === keepId && row.state =!= excludeStateOpt.orNull) yield row
+  private def getByKeepIdHelper(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
+    for (row <- rows if row.keepId === keepId && !row.state.inSet(excludeStates)) yield row
   }
-  def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
-    getByKeepIdHelper(keepId, excludeStateOpt).run.length
+  def countByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
+    getByKeepIdHelper(keepId, excludeStates).run.length
   }
-  def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByKeepIdHelper(keepId, excludeStateOpt).list
-  }
-
-  private def getByLibraryIdHelper(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.libraryId === libraryId && row.state =!= excludeStateOpt.orNull) yield row
-  }
-  def countByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).run.length
-  }
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).drop(offset.value).take(limit.value).list
-  }
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).list
+  def getAllByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByKeepIdHelper(keepId, excludeStates).list
   }
 
-  private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.keepId === keepId && row.libraryId === libraryId && row.state =!= excludeStateOpt.orNull) yield row
+  private def getByLibraryIdsHelper(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
+    for (row <- rows if row.libraryId.inSet(libraryIds) && !row.state.inSet(excludeStates)) yield row
   }
-  def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary] = {
-    getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStateOpt).firstOption
+  private def getByLibraryIdHelper(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
+    getByLibraryIdsHelper(Set(libraryId), excludeStates)
+  }
+  def getCountByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
+    getByLibraryIdHelper(libraryId, excludeStates).run.length
+  }
+  def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int] = {
+    // TODO(ryan): This needs to use a cache, and fall back on a single monster query, not a bunch of tiny queries
+    libraryIds.map(libId => libId -> getCountByLibraryId(libId, excludeStates)).toMap
+  }
+  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByLibraryIdHelper(libraryId, excludeStates).drop(offset.value).take(limit.value).list
+  }
+  def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByLibraryIdHelper(libraryId, excludeStates).list
+  }
+  def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
+    getByLibraryIdsHelper(libraryIds, excludeStates).list.groupBy(_.libraryId)
+  }
+
+  private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
+    for (row <- rows if row.keepId === keepId && row.libraryId === libraryId && !row.state.inSet(excludeStates)) yield row
+  }
+  def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary] = {
+    getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStates).firstOption
+  }
+
+  private def getByUserIdAndLibraryIdHelper(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
+    for (row <- rows if row.keeperId === userId && row.libraryId === libraryId && !row.state.inSet(excludeStates)) yield row
+  }
+  def countByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
+    getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStates).run.length
+  }
+  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
+    getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStates).list
   }
 
   def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {

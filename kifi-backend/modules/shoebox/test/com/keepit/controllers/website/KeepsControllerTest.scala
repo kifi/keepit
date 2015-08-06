@@ -57,8 +57,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
   def stateForTitle(title: String)(implicit injector: Injector): String = forTitle(title).state.value
 
   def forTitle(title: String)(implicit injector: Injector): Keep = {
+    // hilariously inefficient, but it's only for testing
     inject[Database].readWrite { implicit session =>
-      val keeps = inject[KeepRepo].getByTitle(title)
+      val keeps = inject[KeepRepo].all().filter(_.title == title)
       keeps.size === 1
       keeps.head
     }
@@ -105,13 +106,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, user2, bookmark1, bookmark2, bookmark3, lib1)
         }
@@ -217,13 +218,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, bookmark1, bookmark2, bookmark3, lib1)
         }
@@ -552,10 +553,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
 
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(1)))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(3)))
@@ -748,10 +749,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get), inDisjointLib = mainLib.get.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
 
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(1)))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(3)))

@@ -169,8 +169,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u2))
 
-          emailAddressRepo.save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
-          emailAddressRepo.save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
+          userEmailAddressRepo.save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
+          userEmailAddressRepo.save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
 
           su1
         }
@@ -185,7 +185,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             socialId = SocialId("bsmith"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(user))
-          emailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
+          userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
           (user, socialUserInfo)
         }
 

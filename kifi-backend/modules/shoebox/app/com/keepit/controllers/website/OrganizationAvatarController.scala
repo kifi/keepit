@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.store.{ SquareImageCropRegion, ImageCropRegion, ImageOffset, ImageSize }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
@@ -23,9 +24,10 @@ class OrganizationAvatarController @Inject() (
   private implicit val executionContext: ExecutionContext)
     extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def uploadAvatar(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.temporaryFile) { request =>
+  def uploadAvatar(pubId: PublicId[Organization], x: Int, y: Int, s: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.temporaryFile) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.body, request.orgId)
+    val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
+    val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body, cropRegion)
     uploadImageF.map {
       case Left(fail) => InternalServerError(Json.obj("error" -> fail.reason))
       case Right(hash) =>

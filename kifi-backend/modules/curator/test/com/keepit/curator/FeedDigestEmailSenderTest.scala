@@ -292,17 +292,17 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           val (firstRecoUri, firstReco, _) = savedRecoModels(2)
           val keep0 = Keep(title = None, userId = user2.id.get, url = firstRecoUri.url, urlId = Id[URL](firstRecoUri.id.get.id),
             uriId = firstRecoUri.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](3)),
-            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+            visibility = LibraryVisibility.SECRET)
 
           val keep1 = Keep(title = Some("Espn"), userId = user2.id.get, url = "http://espn.com", urlId = Id[URL](40),
             uriId = uriModels(0)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](1)),
-            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+            visibility = LibraryVisibility.SECRET)
           val keep2 = Keep(title = Some("Digg"), userId = user2.id.get, url = "http://digg.com", urlId = Id[URL](41),
             uriId = uriModels(1)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](2)),
-            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+            visibility = LibraryVisibility.SECRET)
           val keep3 = Keep(title = Some("The Verge"), userId = user2.id.get, url = "http://theverge.com", urlId = Id[URL](42),
             uriId = uriModels(2)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](4)),
-            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+            visibility = LibraryVisibility.SECRET)
           Seq(keep0, keep1, keep2, keep3)
         }
 

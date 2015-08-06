@@ -19,7 +19,6 @@ case class Keep(
     title: Option[String] = None,
     uriId: Id[NormalizedURI],
     isPrimary: Boolean = true, // trick to let us have multiple inactive Keeps while keeping integrity constraints
-    inDisjointLib: Boolean,
     urlId: Id[URL],
     url: String, // denormalized for efficiency
     visibility: LibraryVisibility, // denormalized from this keep’s library
@@ -35,7 +34,7 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -61,7 +60,13 @@ case class Keep(
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
 
+  def withLibrary(lib: Library) = this.copy(
+    libraryId = Some(lib.id.get),
+    visibility = lib.visibility
+  )
+
   def isActive: Boolean = state == KeepStates.ACTIVE
+  def isInactive: Boolean = state == KeepStates.INACTIVE
 
   @deprecated("Use `visibility` instead", "2014-08-29")
   def isDiscoverable = !isPrivate
@@ -87,10 +92,10 @@ object Keep {
   }
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
-    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
-        uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, inDisjointLib = inDisjointLib, urlId = urlId, url = url,
+        uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, urlId = urlId, url = url,
         userId = userId, state = state, source = source, kifiInstallation = kifiInstallation,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
@@ -99,26 +104,26 @@ object Keep {
 
   // is_primary: trueOrNull in db
   def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
-    title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean],
+    title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
     urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]]): Keep = {
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url,
       visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId)
   }
 
   def unapplyToDbRow(k: Keep) = {
     Some(
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
-        k.uriId, if (k.isPrimary) Some(true) else None, if (k.inDisjointLib) Some(true) else None, k.urlId, k.url),
+        k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url),
       (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation,
         k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
         k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId)
     )
   }
 
-  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Option[Boolean], Id[URL], String)
+  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Id[URL], String)
   private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, Option[ExternalId[KifiInstallation]], SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
@@ -129,7 +134,6 @@ object Keep {
       (__ \ 'title).readNullable[String] and
       (__ \ 'uriId).read(Id.format[NormalizedURI]) and
       (__ \ 'isPrimary).readNullable[Boolean] and
-      (__ \ 'inDisjointLib).readNullable[Boolean] and
       (__ \ 'urlId).read(Id.format[URL]) and
       (__ \ 'url).read[String]).tupled
     val fields10Up: Reads[KeepRestArguments] = (
@@ -164,7 +168,6 @@ object Keep {
         "title" -> k.title,
         "uriId" -> k.uriId,
         "isPrimary" -> k.isPrimary,
-        "inDisjointLib" -> k.inDisjointLib,
         "urlId" -> k.urlId,
         "url" -> k.url,
         "bookmarkPath" -> (None: Option[String]),
@@ -245,6 +248,7 @@ object KeepSource {
   val tagImport = KeepSource("tagImport")
   val emailReco = KeepSource("emailReco")
   val userCopied = KeepSource("userCopied")
+  val systemCopied = KeepSource("systemCopied")
   val twitterFileImport = KeepSource("twitterFileImport")
   val twitterSync = KeepSource("twitterSync")
 

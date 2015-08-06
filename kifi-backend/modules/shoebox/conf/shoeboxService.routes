@@ -203,7 +203,9 @@ POST    /m/1/android/store/params               @com.keepit.controllers.mobile.A
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 
-GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.search(q: String, n: Int ?= 4)
+GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.searchForNonUserContacts(q: String, n: Int ?= 4)
+GET     /m/2/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.searchForAllContacts(query:Option[String], limit:Option[Int])
+
 
 POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
 
@@ -283,9 +285,9 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
-GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 GET     /m/1/user/:id/organizations                      @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST    /m/1/organizations/create                        @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/modify                    @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
 DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
 GET     /m/1/organizations/:id/members                   @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
@@ -512,9 +514,9 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
-GET           /site/organizations/:id                           @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
 GET           /site/user/:id/organizations                      @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
+GET           /site/organizations/:id                           @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/modify                    @com.keepit.controllers.website.OrganizationController.modifyOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/transfer                  @com.keepit.controllers.website.OrganizationController.transferOrganization(id: PublicId[Organization])
 DELETE        /site/organizations/:id/delete                    @com.keepit.controllers.website.OrganizationController.deleteOrganization(id: PublicId[Organization])
@@ -526,9 +528,9 @@ POST          /site/organizations/:id/members/invites/decline   @com.keepit.cont
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
+GET           /site/organizations/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
-POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization])
-
+POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -598,7 +600,6 @@ GET     /admin/domains/tags            @com.keepit.controllers.admin.UrlControll
 POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlController.saveDomainTags
 GET     /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.getDomainOverrides
 POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlController.saveDomainOverrides
-GET     /admin/domains/updateAllDomainHashes    @com.keepit.controllers.admin.UrlController.updateAllDomainHashes
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -705,10 +706,13 @@ POST    /admin/organization/:id/setName         @com.keepit.controllers.admin.Ad
 POST    /admin/organization/:id/setHandle       @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription  @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate    @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
-POST    /admin/organization/:id/removeMember       @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
+POST    /admin/organization/:id/removeCandidate @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
+POST    /admin/organization/:id/inviteCandidateToOrg @com.keepit.controllers.admin.AdminOrganizationController.inviteCandidateToOrg(id: Id[Organization])
 POST    /admin/organization/:id/addMember       @com.keepit.controllers.admin.AdminOrganizationController.addMember(id: Id[Organization])
+POST    /admin/organization/:id/removeMember    @com.keepit.controllers.admin.AdminOrganizationController.removeMember(id: Id[Organization])
+POST    /admin/organization/:id/transferOwner   @com.keepit.controllers.admin.AdminOrganizationController.transferOwner(id: Id[Organization])
 POST    /admin/organization/:id/ownDomain       @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
-GET    /admin/organization/:id/disownDomain/:domainId @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainId: Id[com.keepit.classify.Domain])
+GET     /admin/organization/:id/disownDomain/:domainHostname @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainHostname: String)
 POST    /admin/organization/:id/setInactive       @com.keepit.controllers.admin.AdminOrganizationController.setInactive(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
@@ -774,20 +778,22 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
-POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
-POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+POST    /admin/slider/unkillVersion @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
+POST    /admin/slider/goldenVersion @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
-GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
-GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library], transfer: Boolean ?= false)
+GET     /admin/libraries                    @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+GET     /admin/libraries/:id                @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library], transfer: Boolean ?= false)
 GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
-GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
-POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+GET     /admin/libraries/:id/keeps          @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
+POST    /admin/libraries/internForUser      @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
-POST    /admin/libraries/saveSuggestedSearches    @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
+POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
+POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
+POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
@@ -920,29 +926,29 @@ GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.in
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
 POST    /internal/shoebox/database/processAndSendMail @com.keepit.controllers.internal.ShoeboxController.processAndSendMail
-GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
+GET     /internal/shoebox/database/getPhrasesChanged  @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUrisWithContent     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int)
-GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)
-GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
+GET     /internal/shoebox/database/getUserConnectionsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)
+GET     /internal/shoebox/database/getSearchFriendsChanged         @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
-GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
-GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
+GET     /internal/shoebox/database/getIndexableSocialUserInfos     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
+GET     /internal/shoebox/database/getEmailAccountUpdates          @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesChanged                     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
 GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
 GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.keepit.controllers.internal.ShoeboxDataPipeController.dumpLibraryURIIds(libId: Id[Library])
-GET     /internal/shoebox/database/getIngestableOrganizations                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int)
+GET     /internal/shoebox/database/getIngestableOrganizations              @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableOrganizationMemberships                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableOrganizationMembershipCandidates        @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
-POST     /internal/shoebox/database/internDomainsByDomainNames               @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
-GET     /internal/shoebox/database/getIngestableOrganizationDomainOwnerships                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int)
+POST     /internal/shoebox/database/internDomainsByDomainNames            @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
+GET     /internal/shoebox/database/getIngestableOrganizationDomainOwnerships            @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()
@@ -953,9 +959,10 @@ GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.in
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.internal.ShoeboxController.saveExperiment
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
+GET     /internal/shoebox/database/getPrimaryOrg      @com.keepit.controllers.internal.ShoeboxController.getPrimaryOrg(id: Id[User])
 GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
-GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
-GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
+GET     /internal/shoebox/database/searchFriends      @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
+GET     /internal/shoebox/database/unfriends          @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
 GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
 GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
