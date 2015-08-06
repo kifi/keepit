@@ -39,6 +39,7 @@ object OrganizationDomainOwnershipCommander {
   }
 
   case class OwnDomainSuccess(domain: Domain, ownership: OrganizationDomainOwnership)
+
 }
 
 @Singleton

@@ -13,7 +13,6 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
-import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.mvc.{ Request, Call, Result }
@@ -38,7 +37,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
       db.readWrite { implicit session =>
         val members = UserFactory.users(numMembers).saved
         val invitedUsers = UserFactory.users(numInvitedUsers).saved
-        val invitedEmails = List.fill(numInvitedEmails)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
+        val invitedEmails = List.fill(numInvitedEmails)(EmailAddress("ryan@kifi.com"))
         val owner = UserFactory.user().withName("A", "Moneybags").saved
 
         val org = OrganizationFactory.organization()
@@ -69,7 +68,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val resultMembersList = (json \ "members").as[Seq[JsValue]]
           resultMembersList.length === n
           (json \ "members" \\ "id").length == n
-          (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]).toSet === (members :+ owner).map(_.externalId).toSet
+          (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) == (owner :: members.toList).take(n).map(_.externalId)
         }
       }
       "list an organization's invitees, if the requester can invite members" in {
@@ -104,7 +103,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
             val resultInviteesList = (json \ "members").as[Seq[JsValue]]
             resultInviteesList.length === n
             (json \ "members" \\ "id").length === n
-            (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]).toSet === invitedUsers.take(n).map(_.externalId).toSet
+            (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) === invitedUsers.take(n).map(_.externalId)
           }
 
         }
@@ -129,7 +128,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           resultInviteesList.length === n
           (json \ "members" \\ "id").length === 0 // no user ids, only emails
           (json \ "members" \\ "email").length === n
-          (json \ "members" \\ "email").map(v => v.as[EmailAddress]).toSet === invitedEmails.take(n).toSet
+          (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n)
         }
       }
     }
