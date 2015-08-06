@@ -378,8 +378,7 @@ class LibraryController @Inject() (
       case Success(libraryId) =>
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
         val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
-        val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
-        val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+        val maybeMembers = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
         Ok(Json.obj("members" -> maybeMembers))
     }
   }
