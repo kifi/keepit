@@ -306,12 +306,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} has joined ${org.name}"
+      val title = s"${invitee.firstName} accepted your invitation to join ${org.name}!"
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"You invited ${invitee.fullName} to join ${org.name}.",
+        body = s"Click here to see ${invitee.firstName}'s profile.",
         linkText = s"See ${invitee.firstName}’s profile",
         linkUrl = s"https://www.kifi.com/${invitee.username.value}",
         imageUrl = inviteeImage,
