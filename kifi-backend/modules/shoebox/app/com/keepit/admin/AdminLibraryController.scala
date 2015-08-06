@@ -310,20 +310,22 @@ class AdminLibraryController @Inject() (
 
   def cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val libId: Id[Library] = Id[Library](600673) //hard coded to https://admin.kifi.com/admin/libraries/600673
-    val newLibId = db.readWrite { implicit s =>
+    val newLib = db.readWrite { implicit s =>
       libraryRepo.getOrganizationLibraries(orgId) foreach { lib =>
         if (lib.kind == LibraryKind.SYSTEM_GUIDE) throw new Exception(s"Org $orgId already have a SYSTEM_GUIDE library $lib")
       }
       val origLib = libraryRepo.get(libId)
       val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
         memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
-      val newLib = libraryRepo.save(newLibCandidate)
-      val keeps = keepRepo.getByLibrary(newLib.id.get, 0, 5000)
+      libraryRepo.save(newLibCandidate)
+    }
+    db.readWrite { implicit s =>
       implicit val context = HeimdalContext.empty
+      val keeps = keepRepo.getByLibrary(newLib.id.get, 0, 5000)
       libraryCommander.copyKeeps(newLib.ownerId, toLibraryId = newLib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))
       newLib.id.get
     }
-    Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(newLibId))
+    Redirect(routes.AdminLibraryController.libraryView(newLib.id.get))
   }
 
 }
