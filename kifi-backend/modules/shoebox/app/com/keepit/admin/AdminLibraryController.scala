@@ -298,7 +298,7 @@ class AdminLibraryController @Inject() (
       val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = LibraryVisibility.ORGANIZATION))
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility))
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
       libraryMembershipRepo.save(membership.copy(userId = newOwner))
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
