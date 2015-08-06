@@ -38,6 +38,7 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
+    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteRepo: OrganizationInviteRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
     userRepo: UserRepo,
@@ -263,6 +264,9 @@ class OrganizationCommanderImpl @Inject() (
 
           val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
           memberships.foreach { membership => orgMembershipRepo.deactivate(membership) }
+
+          val membershipCandidates = organizationMembershipCandidateRepo.getAllByOrgId(org.id.get)
+          membershipCandidates.foreach { mc => organizationMembershipCandidateRepo.deactivate(mc) }
 
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
