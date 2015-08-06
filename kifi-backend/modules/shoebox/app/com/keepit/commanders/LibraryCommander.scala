@@ -1601,7 +1601,8 @@ class LibraryCommanderImpl @Inject() (
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
       libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
-    val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
+    val userIds = memberships.values.map(_.map(_.userId)).flatten.toSet
+    val allBasicUsers = basicUserRepo.loadAll(userIds)
 
     val orgCardById = organizationCommander.getOrganizationCards(libs.flatMap(_.organizationId), Some(viewerId))
 
@@ -1622,6 +1623,8 @@ class LibraryCommanderImpl @Inject() (
       val orgCardOpt = lib.organizationId.map(orgCardById.apply)
       val owner = basicUserRepo.load(lib.ownerId)
       val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgCardOpt.map(_.handle), slug = lib.slug)
+
+      if (!userIds.contains(lib.ownerId)) throw new Exception(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue?")
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),

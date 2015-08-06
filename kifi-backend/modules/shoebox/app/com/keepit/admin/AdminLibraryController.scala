@@ -294,11 +294,17 @@ class AdminLibraryController @Inject() (
     val newOwner = Id[User](body.get("user-id").get.toLong)
     val newOrgOpt = body.get("org-id").map(id => Try(id.toLong).toOption).flatten.map(id => Id[Organization](id))
     db.readWrite { implicit s =>
-      val lib = libraryRepo.get(libId)
-      val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility, seq = SequenceNumber.ZERO))
+      val lib = libraryRepo.get(libId)
+      newOrgOpt.map(id => orgRepo.get(id)) match {
+        case Some(org) =>
+          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id,
+            visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO))
+        case None =>
+          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = None,
+            visibility = LibraryVisibility.PUBLISHED, seq = SequenceNumber.ZERO))
+      }
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
       libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
