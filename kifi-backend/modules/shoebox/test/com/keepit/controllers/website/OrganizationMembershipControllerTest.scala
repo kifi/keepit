@@ -13,7 +13,6 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
-import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.mvc.{ Request, Call, Result }
@@ -38,7 +37,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
       db.readWrite { implicit session =>
         val members = UserFactory.users(numMembers).saved
         val invitedUsers = UserFactory.users(numInvitedUsers).saved
-        val invitedEmails = List.fill(numInvitedEmails)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
+        val invitedEmails = List.fill(numInvitedEmails)(EmailAddress("ryan@kifi.com"))
         val owner = UserFactory.user().withName("A", "Moneybags").saved
 
         val org = OrganizationFactory.organization()
@@ -105,7 +104,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
             val resultInviteesList = (json \ "members").as[Seq[JsValue]]
             resultInviteesList.length === n
             (json \ "members" \\ "id").length === n
-            (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]).toSet === invitedUsers.take(n).map(_.externalId).toSet
+            (json \ "members" \\ "id").map(v => v.as[ExternalId[User]]) === invitedUsers.take(n).map(_.externalId)
           }
 
         }
@@ -130,7 +129,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           resultInviteesList.length === n
           (json \ "members" \\ "id").length === 0 // no user ids, only emails
           (json \ "members" \\ "email").length === n
-          (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n).sortBy(_.address)
+          (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n)
         }
       }
     }

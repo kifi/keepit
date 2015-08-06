@@ -8,7 +8,6 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
-import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
 class OrganizationMembershipCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -26,11 +25,12 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         }
 
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
-        orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Offset(0), Limit(50), includeInvitees = true).length === 21
+        orgMembershipCommander.getMembersAndInvitees(Id[Organization](0), Limit(10), Offset(0), includeInvitees = true).length === 0
+        orgMembershipCommander.getMembersAndInvitees(org.id.get, Limit(50), Offset(0), includeInvitees = true).length === 21
       }
     }
 
-    "page results" in {
+    "and page results" in {
       withDb() { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -39,7 +39,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val org = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
           val users = UserFactory.users(19).saved
-          val invitees = Seq.fill(10)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
+          val invitees = Seq.fill(10)(EmailAddress("ryan@kifi.com"))
           val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withInvitedEmails(invitees).withName("Luther Corp.").saved
           org
         }
@@ -47,11 +47,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
         // limit by count
-        val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(0), Limit(10), includeInvitees = true)
+        val membersLimitedByCount = orgMembershipCommander.getMembersAndInvitees(orgId, Limit(10), Offset(0), includeInvitees = true)
         membersLimitedByCount.length === 10
 
         // limit with offset
-        val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(17), Limit(10), includeInvitees = true)
+        val membersLimitedByOffset = orgMembershipCommander.getMembersAndInvitees(orgId, Limit(10), Offset(17), includeInvitees = true)
         membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
         membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
         membersLimitedByOffset.length === 10
