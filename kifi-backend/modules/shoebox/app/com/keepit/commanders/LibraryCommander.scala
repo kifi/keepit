@@ -1624,7 +1624,7 @@ class LibraryCommanderImpl @Inject() (
       val owner = basicUserRepo.load(lib.ownerId)
       val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgCardOpt.map(_.handle), slug = lib.slug)
 
-      if (!userIds.contains(lib.ownerId)) throw new Exception(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue?")
+      if (!userIds.contains(lib.ownerId)) throw new Exception(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
