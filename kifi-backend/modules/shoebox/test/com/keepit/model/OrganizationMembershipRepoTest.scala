@@ -9,6 +9,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.IndexedSeq
+import scala.util.Random
 
 class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -89,6 +90,43 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByOrgIdAndUserIds(org.id.get, getUserIds) }
         memberships.length === getUserIds.size
         memberships.map(_.userId).diff(getUserIds.toSeq) === List.empty
+      }
+    }
+
+    "get list of members sorted by 1) owner, members, pending invites, 2) first name, last name alphabetically" in {
+      withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
+        val (org, owner, members) = db.readWrite { implicit session =>
+          val owner = user.withName("Zyxwv", "Utsr").saved
+          val members = Random.shuffle(Seq(user.withName("Aaron", "Aaronson").saved, user.withName("Barry", "Barnes").saved, user.withName("Carl", "Carson").saved, user.withName("Carl", "Junior").saved))
+          val org = organization().withOwner(owner).withMembers(members).saved
+          (org, owner, members)
+        }
+        val sortedMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getSortedMembershipsByOrgId(org.id.get) }
+
+        sortedMembers.exists(_.userId == owner.id.get) === true
+
+        db.readOnlyMaster { implicit s => orgMemberRepo.getByOrgIdAndUserId(org.id.get, owner.id.get) }.isDefined === true
+
+        val userById = members.+:(owner) groupBy (_.id.get)
+
+        def isSorted(sortedMembers: Seq[OrganizationMembership], userById: Map[Id[User], Seq[User]]): Boolean = {
+
+          def isSortedHelper(members: Seq[OrganizationMembership]): Boolean = {
+            members match {
+              case Nil => true
+              case x :: Nil => true
+              case x :: xs => (userById(x.userId).head.firstName < userById(xs.head.userId).head.firstName || userById(x.userId).head.lastName < userById(xs.head.userId).head.lastName) && isSortedHelper(members.tail)
+            }
+          }
+
+          sortedMembers.head.userId == owner.id.get && isSortedHelper(sortedMembers.tail)
+        }
+
+        isSorted(sortedMembers, userById) === true
+        isSorted(sortedMembers.reverse, userById) === false
       }
     }
 
