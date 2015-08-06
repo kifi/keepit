@@ -130,7 +130,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           resultInviteesList.length === n
           (json \ "members" \\ "id").length === 0 // no user ids, only emails
           (json \ "members" \\ "email").length === n
-          (json \ "members" \\ "email").map(v => v.as[EmailAddress]).toSet === invitedEmails.take(n).toSet
+          (json \ "members" \\ "email").map(v => v.as[EmailAddress]) === invitedEmails.take(n).sortBy(_.address)
         }
       }
     }

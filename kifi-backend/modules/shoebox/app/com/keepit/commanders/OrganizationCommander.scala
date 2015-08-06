@@ -81,7 +81,7 @@ class OrganizationCommanderImpl @Inject() (
 
     val ownerId = userRepo.get(org.ownerId).externalId
 
-    val memberIds = orgMembershipRepo.getSortedMembershipsByOrgId(orgId).take(8).map(_.userId)
+    val memberIds = orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = orgMembershipRepo.countByOrgId(orgId)

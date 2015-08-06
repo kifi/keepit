@@ -105,7 +105,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
           (org, owner, members)
         }
         val allMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getAllByOrgId(org.id.get) }.toSeq
-        val sortedMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getSortedMembershipsByOrgId(org.id.get) }
+        val sortedMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getSortedMembershipsByOrgId(org.id.get, Offset(0), Limit(Int.MaxValue)) }
 
         db.readOnlyMaster { implicit s => orgMemberRepo.getByOrgIdAndUserId(org.id.get, owner.id.get) }.isDefined === true
 

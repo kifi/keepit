@@ -26,8 +26,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         }
 
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
-        //orgMembershipCommander.getMembersAndInvitees(Id[Organization](0), Limit(10), Offset(0), includeInvitees = true).length === 0
-        orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Limit(50), Offset(0), includeInvitees = true).length === 21
+        orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Offset(0), Limit(50), includeInvitees = true).length === 21
       }
     }
 
@@ -48,11 +47,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
         // limit by count
-        val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Limit(10), Offset(0), includeInvitees = true)
+        val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(0), Limit(10), includeInvitees = true)
         membersLimitedByCount.length === 10
 
         // limit with offset
-        val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Limit(10), Offset(17), includeInvitees = true)
+        val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(17), Limit(10), includeInvitees = true)
         membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
         membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
         membersLimitedByOffset.length === 10
