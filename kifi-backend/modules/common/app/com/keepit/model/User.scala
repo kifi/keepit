@@ -3,7 +3,6 @@ package com.keepit.model
 import java.net.URLEncoder
 
 import com.keepit.common.strings._
-import com.keepit.common.path.{Path, Linkable}
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.concurrent.duration._

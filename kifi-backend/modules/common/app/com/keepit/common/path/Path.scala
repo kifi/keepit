@@ -4,7 +4,7 @@ import com.keepit.common.strings._
 
 import java.net.URLEncoder
 
-sealed class Path(private val value: String) extends AnyVal {
+sealed class Path(private val value: String) {
 
   def encode: Path = new EncodedPath(value)
   def decode: Path = this
@@ -16,7 +16,7 @@ sealed class Path(private val value: String) extends AnyVal {
   def relative: String = value
 
   override def toString: String = value
-  
+
 }
 
 class EncodedPath(private val value: String) extends Path(URLEncoder.encode(value, UTF8)) {
