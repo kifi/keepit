@@ -55,8 +55,6 @@ trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
   def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo]
-  def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo]
-  def getLibraryPath(library: Library): String
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembershipInfo])
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
@@ -72,7 +70,6 @@ trait LibraryCommander {
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
-  def canViewLibraryHelper(userId: Option[Id[User]], library: Library, authToken: Option[String] = None)(implicit session: RSession): Boolean
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
@@ -86,7 +83,6 @@ trait LibraryCommander {
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
-  def fixLibraryKeepCount(libIds: Seq[Id[Library]]): Unit
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
@@ -183,17 +179,13 @@ class LibraryCommanderImpl @Inject() (
       getLibrarySummariesHelper(libraries)
     }
   }
-  def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo] = {
+  private def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo] = {
     val ownersById = basicUserRepo.loadAll(libraries.map(_.ownerId).toSet) // cached
     libraries.map { lib =>
       val owner = ownersById(lib.ownerId)
       val org = lib.organizationId.map(orgRepo.get)
       LibraryInfo.fromLibraryAndOwner(lib, None, owner, org) // library images are not used, so no need to include
     }
-  }
-
-  def getLibraryPath(library: Library): String = {
-    libPathCommander.getPath(library)
   }
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
@@ -856,7 +848,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def canViewLibraryHelper(userIdOpt: Option[Id[User]], library: Library, authToken: Option[String] = None)(implicit session: RSession): Boolean = {
+  private def canViewLibraryHelper(userIdOpt: Option[Id[User]], library: Library, authToken: Option[String] = None)(implicit session: RSession): Boolean = {
     library.visibility == LibraryVisibility.PUBLISHED || // published library
       (userIdOpt match {
         case Some(id) =>
@@ -1320,7 +1312,7 @@ class LibraryCommanderImpl @Inject() (
     (goodKeeps.toSeq, badKeeps.toSeq)
   }
 
-  def fixLibraryKeepCount(libIds: Seq[Id[Library]]) = {
+  private def fixLibraryKeepCount(libIds: Seq[Id[Library]]) = {
     db.readWrite { implicit s =>
       val counts = keepRepo.getCountsByLibrary(libIds.toSet)
       libIds.foreach { libId =>
