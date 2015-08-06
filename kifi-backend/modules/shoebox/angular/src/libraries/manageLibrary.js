@@ -148,8 +148,11 @@ angular.module('kifi')
           });
 
           // Create an owner object that declares the type (user/org) for backend.
-          var owner = {};
-          owner[ownerType(scope.space.destination)] = scope.space.destination.id;
+          var owner;
+          if (scope.space.current.id !== scope.space.destination.id) {
+            owner = {};
+            owner[ownerType(scope.space.destination)] = scope.space.destination.id;
+          }
 
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
@@ -291,11 +294,23 @@ angular.module('kifi')
 
         // Set up the spaces.
         scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
-        scope.space = {};
+
+        if (scope.library.org) {
+          scope.libraryProps.inOrg = !!scope.library.org;
+          scope.libraryProps.selectedOrgId = scope.library.org.id;
+
+          // This library may not actually have "me" as a member
+          // Add this library's org to scope.spaces and remove any duplicates
+          scope.spaces.push(scope.library.org);
+          scope.spaces = _.uniq(scope.spaces, function(entity, key, id) {
+            return entity.id
+          });
+        }
 
         var desiredId = (scope.library.org || profileService.me).id
-
-        scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
+        scope.space = {
+          current: scope.spaces.filter(function (s) { return s.id === desiredId; }).pop()
+        };
         // By default, the library will be saved into the library we are already in.
         scope.space.destination = scope.space.current;
 
@@ -307,7 +322,7 @@ angular.module('kifi')
         scope.setOrg = function(id) { 
           if (scope.libraryProps.inOrg) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-            var orgId = id || (scope.library.org ? scope.library.org.id : scope.me.orgs[0].id);
+            var orgId = id || (scope.library.org || scope.me.orgs[0]).id;
             scope.libraryProps.selectedOrgId = orgId;
             scope.space.destination = scope.me.orgs.filter(function(org) {
               return org.id === orgId;
@@ -342,11 +357,6 @@ angular.module('kifi')
             scope.library.visibility = 'secret';
           }
         };
-
-        if (scope.library.org) {
-          scope.libraryProps.inOrg = !!scope.library.org;
-          scope.libraryProps.selectedOrgId = scope.library.org.id;
-        }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
