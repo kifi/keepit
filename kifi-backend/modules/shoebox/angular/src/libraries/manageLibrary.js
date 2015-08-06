@@ -302,12 +302,12 @@ angular.module('kifi')
           // This library may not actually have "me" as a member
           // Add this library's org to scope.spaces and remove any duplicates
           scope.spaces.push(scope.library.org);
-          scope.spaces = _.uniq(scope.spaces, function(entity, key, id) {
-            return entity.id
+          scope.spaces = _.uniq(scope.spaces, function(entity, key, id) { // jshint ignore:line
+            return entity.id;
           });
         }
 
-        var desiredId = (scope.library.org || profileService.me).id
+        var desiredId = (scope.library.org || profileService.me).id;
         scope.space = {
           current: scope.spaces.filter(function (s) { return s.id === desiredId; }).pop()
         };
