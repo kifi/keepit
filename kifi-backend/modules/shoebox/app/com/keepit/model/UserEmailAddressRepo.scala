@@ -20,6 +20,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
+  def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress]
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
@@ -39,18 +40,22 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
+    def primary = column[Option[Boolean]]("primary", O.Nullable)
     def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
     def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt, lastVerificationSent,
-      verificationCode, seq) <> ((UserEmailAddress.apply _).tupled, UserEmailAddress.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, state, address, primary, verifiedAt, lastVerificationSent,
+      verificationCode, seq) <> ((UserEmailAddress.applyFromDbRow _).tupled, UserEmailAddress.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new UserEmailAddressTable(tag)
   initTable()
 
   override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
-    val toSave = emailAddress.copy(seq = deferredSeqNum())
+    val toSave = (
+      if (emailAddress.state == UserEmailAddressStates.INACTIVE) emailAddress.sanitizedForDelete
+      else emailAddress
+    ).copy(seq = deferredSeqNum())
     userRepo.save(userRepo.get(emailAddress.userId)) // just to bump up user seqNum
     super.save(toSave)
   }
@@ -81,6 +86,10 @@ class UserEmailAddressRepoImpl @Inject() (
         case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
       }
     }
+  }
+
+  def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress] = {
+    getAllByUser(userId).find(_.primary)
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] = {
