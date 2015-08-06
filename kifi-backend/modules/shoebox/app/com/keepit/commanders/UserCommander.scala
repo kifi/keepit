@@ -114,6 +114,7 @@ class UserCommander @Inject() (
     libraryRepo: LibraryRepo,
     organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
+    orgInviteRepo: OrganizationInviteRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -317,15 +318,22 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
-    val newUser = db.readWrite(attempts = 3) { implicit session =>
+  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]): User = {
+    val newUser: User = db.readWrite(attempts = 3) { implicit session =>
       val user = userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
       )
-      handleCommander.autoSetUsername(user) getOrElse {
+      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
+        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
+          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ORGANIZATION))
+        }
+      }
+      val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
+      userWithUsername
     }
+
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
         userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
