@@ -20,7 +20,7 @@ object NotificationEvent {
     override def writes(o: NotificationEvent): JsObject = {
       Json.obj(
         "kind" -> Json.toJson(o.kind)
-      ) ++ o.kind.format.asInstanceOf[Writes[NotificationEvent]].writes(o).asInstanceOf[JsObject]
+      ) ++ o.kind.format.asInstanceOf[Writes[NotificationEvent]].writes(o).as[JsObject]
     }
 
   }
@@ -31,7 +31,7 @@ case class NewFollower(
   override val toUser: Id[User],
   override val time: DateTime,
   followerId: Id[User],
-  library: Library) extends NotificationEvent(toUser, time, NewFollower)
+  library: Id[Library]) extends NotificationEvent(toUser, time, NewFollower)
 
 object NewFollower extends NotificationKind[NewFollower] {
 
@@ -41,7 +41,7 @@ object NewFollower extends NotificationKind[NewFollower] {
     (__ \ "toUser").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "followerId").format[Id[User]] and
-    (__ \ "library").format[Library]
+    (__ \ "library").format[Id[Library]]
   )(NewFollower.apply, unlift(NewFollower.unapply))
 
   override def shouldGroupWith(newAction: NewFollower, existingActions: Set[NewFollower]): Boolean = false
@@ -52,7 +52,7 @@ case class NewCollaborator(
   override val toUser: Id[User],
   override val time: DateTime,
   collaboratorId: Id[User],
-  library: Library) extends NotificationEvent(toUser, time, NewCollaborator)
+  library: Id[Library]) extends NotificationEvent(toUser, time, NewCollaborator)
 
 object NewCollaborator extends NotificationKind[NewCollaborator] {
 
@@ -62,7 +62,7 @@ object NewCollaborator extends NotificationKind[NewCollaborator] {
     (__ \ "toUser").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "collaboratorId").format[Id[User]] and
-    (__ \ "library").format[Library]
+    (__ \ "library").format[Id[Library]]
   )(NewCollaborator.apply, unlift(NewCollaborator.unapply))
 
   override def shouldGroupWith(newAction: NewCollaborator, existingActions: Set[NewCollaborator]): Boolean = false

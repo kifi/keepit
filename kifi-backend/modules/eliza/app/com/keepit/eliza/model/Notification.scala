@@ -20,3 +20,30 @@ case class Notification(
 
 }
 
+object Notification {
+
+  def applyFromDbRow(
+    id: Option[Id[Notification]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    userId: Id[User],
+    lastChecked: DateTime,
+    kind: String): Notification = Notification(
+    id,
+    createdAt,
+    updatedAt,
+    userId,
+    lastChecked,
+    NotificationKind.getByName(kind).get
+  )
+
+  def unapplyFromDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Id[User], DateTime, String)] = Some(
+    notification.id,
+    notification.createdAt,
+    notification.updatedAt,
+    notification.userId,
+    notification.lastChecked,
+    notification.kind.name
+  )
+
+}
