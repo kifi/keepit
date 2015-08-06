@@ -143,7 +143,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
   private def buildMaybeMembers(members: Seq[OrganizationMembership], invitees: Seq[OrganizationInvite]): Seq[MaybeOrganizationMember] = {
     import com.keepit.common.time.dateTimeOrdering
 
-    val (userInvites, emailInvites) = invitees.partition(_.userId.isDefined)
+    val userInvites = invitees.filter(_.userId.isDefined)
+    val emailInvites = invitees.filter(invite => invite.userId.isEmpty && invite.emailAddress.isDefined)
+
     val invitedUserIds = userInvites.groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values
     val invitedEmailAddresses = emailInvites.groupBy(_.emailAddress.get).mapValues(_.maxBy(_.updatedAt)).values // assumes that if no userId is defined, an email address must be
 
