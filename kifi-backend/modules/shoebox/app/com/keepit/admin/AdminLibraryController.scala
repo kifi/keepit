@@ -325,8 +325,12 @@ class AdminLibraryController @Inject() (
         memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId),
         kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO)
       val lib = libraryRepo.save(newLibCandidate)
-      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, origLib.ownerId).get
-      libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, origLib.ownerId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = origLib.ownerId, access = LibraryAccess.OWNER))
+        case Some(membership) =>
+          libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
+      }
       val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
       (lib, keeps)
     }
