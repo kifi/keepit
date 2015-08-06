@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ LibrarySuggestedSearchCommander, LibraryCommander }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.{ SequenceNumber, State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
@@ -298,11 +298,11 @@ class AdminLibraryController @Inject() (
       val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility))
+      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility, seq = SequenceNumber.ZERO))
       val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
-      libraryMembershipRepo.save(membership.copy(userId = newOwner))
+      libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
-        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
+        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner, seq = SequenceNumber.ZERO))
       }
     }
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
@@ -316,8 +316,11 @@ class AdminLibraryController @Inject() (
       }
       val origLib = libraryRepo.get(libId)
       val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + "-" + RandomStringUtils.randomAlphanumeric(5)),
-        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
+        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId),
+        kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO)
       val lib = libraryRepo.save(newLibCandidate)
+      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, origLib.ownerId).get
+      libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
       val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
       (lib, keeps)
     }
@@ -330,4 +333,3 @@ class AdminLibraryController @Inject() (
   }
 
 }
-
