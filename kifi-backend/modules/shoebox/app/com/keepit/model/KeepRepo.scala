@@ -84,7 +84,7 @@ class KeepRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = KeepTable
-  class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep] {
+  class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
