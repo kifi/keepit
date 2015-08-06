@@ -329,8 +329,7 @@ class AdminLibraryController @Inject() (
       case (keep, libraryError) =>
         throw new Exception(s"can't copy keep $keep : $libraryError")
     }
-    Ok(routes.AdminLibraryController.libraryView(lib.id.get))
+    Redirect(routes.AdminLibraryController.libraryView(lib.id.get))
   }
 
 }
-
