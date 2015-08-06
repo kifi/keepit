@@ -520,7 +520,7 @@ class MobileLibraryController @Inject() (
         val recordsToDrop = if (!v1 && offset != 0) offset - 1 else offset
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
         val showInvites = userIdOpt.contains(library.ownerId)
-        val maybeMembers = libraryCommander.getLibraryMembers(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
+        val maybeMembers = libraryCommander.getLibraryMembersAndInvitees(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
         val membersList = if (v1 || offset != 0) {
           maybeMembers
         } else {

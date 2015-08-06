@@ -1507,7 +1507,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           memberCounts.readWrite === 0
         }
         val libraryCommander = inject[LibraryCommander]
-        val maybeMembers = libraryCommander.getLibraryMembers(libMurica.id.get, 0, 10, true).map(_.member)
+        val maybeMembers = libraryCommander.getLibraryMembersAndInvitees(libMurica.id.get, 0, 10, true).map(_.member)
         val userIds = maybeMembers.collect { case Left(x) => x }.map(_.externalId)
         val emails = maybeMembers.collect { case Right(x) => x }.map(_.email)
         // collaborators
