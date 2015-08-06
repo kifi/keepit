@@ -100,9 +100,9 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
     if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) {
       updatePrimaryEmailForUser(user, verifiedEmail)
+    } else {
+      verifiedEmail
     }
-
-    verifiedEmail
   }
 
   def setAsPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
@@ -114,7 +114,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
-  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     require(primaryEmail.userId == user.id.get, s"Suggested primary email $primaryEmail does not belong to $user")
 
@@ -122,6 +122,13 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
     userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
     userRepo.save(user.copy(primaryEmail = Some(primaryEmail.address)))
+    userEmailAddressRepo.getPrimaryByUser(primaryEmail.userId) match {
+      case Some(existingPrimary) if existingPrimary.address equalsIgnoreCase primaryEmail.address => existingPrimary // this email is already marked as primary
+      case existingPrimaryOpt => {
+        existingPrimaryOpt.foreach(existingPrimary => userEmailAddressRepo.save(existingPrimary.copy(primary = false)))
+        userEmailAddressRepo.save(primaryEmail.copy(primary = true))
+      }
+    }
   }
 
   def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = {
