@@ -6,7 +6,7 @@ import com.keepit.notify.model.{ NKind, NotificationKind, NotificationEvent }
 import org.joda.time.DateTime
 
 case class NotificationItem(
-    id: Option[Id[NotificationItem]],
+    id: Option[Id[NotificationItem]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],

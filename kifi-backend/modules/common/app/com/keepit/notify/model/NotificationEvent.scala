@@ -2,6 +2,7 @@ package com.keepit.notify.model
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, User }
+import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -44,7 +45,7 @@ object NewFollower extends NotificationKind[NewFollower] {
     (__ \ "library").format[Id[Library]]
   )(NewFollower.apply, unlift(NewFollower.unapply))
 
-  override def shouldGroupWith(newAction: NewFollower, existingActions: Set[NewFollower]): Boolean = false
+  override def shouldGroupWith(newEvent: NewFollower, existingEvents: Set[NewFollower]): Boolean = false
 
 }
 
@@ -65,6 +66,6 @@ object NewCollaborator extends NotificationKind[NewCollaborator] {
     (__ \ "library").format[Id[Library]]
   )(NewCollaborator.apply, unlift(NewCollaborator.unapply))
 
-  override def shouldGroupWith(newAction: NewCollaborator, existingActions: Set[NewCollaborator]): Boolean = false
+  override def shouldGroupWith(newEvent: NewCollaborator, existingEvents: Set[NewCollaborator]): Boolean = false
 
 }

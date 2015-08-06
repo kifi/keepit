@@ -1,16 +1,16 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, Repo}
+import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.time.Clock
 import com.keepit.notify.model.NotificationEvent
 
 @ImplementedBy(classOf[NotificationItemRepoImpl])
 trait NotificationItemRepo extends Repo[NotificationItem] {
 
-  def getAllForNotification(notification: Id[Notification]): Seq[NotificationItem]
+  def getAllForNotification(notification: Id[Notification])(implicit session: RSession): Seq[NotificationItem]
 
 }
 
@@ -40,6 +40,9 @@ class NotificationItemRepoImpl @Inject() (
 
   def invalidateCache(model: NotificationItem)(implicit session: RSession): Unit = {}
 
-  def getAllForNotification(notification: Id[Notification]): Seq[NotificationItem] = ???
+  def getAllForNotification(notification: Id[Notification])(implicit session: RSession): Seq[NotificationItem] = {
+    val q = for (row <- rows if row.notificationId === notification) yield row
+    q.list
+  }
 
 }

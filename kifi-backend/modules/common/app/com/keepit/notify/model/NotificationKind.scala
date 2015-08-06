@@ -14,7 +14,7 @@ trait NotificationKind[N <: NotificationEvent] {
 
   implicit val selfCompanion: NotificationKind[N] = this
 
-  def shouldGroupWith(newAction: N, existingActions: Set[N]): Boolean
+  def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
 
 }
 
