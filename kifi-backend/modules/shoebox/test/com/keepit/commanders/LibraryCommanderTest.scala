@@ -1511,7 +1511,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val userIds = maybeMembers.collect { case Left(x) => x }.map(_.externalId)
         val emails = maybeMembers.collect { case Right(x) => x }.map(_.email)
         // collaborators
-        userIds === Seq(userIron.externalId, userAgent.externalId, userHulk.externalId)
+        userIds.toSet === Set(userIron.externalId, userAgent.externalId, userHulk.externalId)
         emails === Seq(EmailAddress("thor@asgard.com"))
       }
     }
