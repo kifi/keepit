@@ -26,6 +26,36 @@ case class NotificationItem(
 
 }
 
+object NotificationItem {
+
+  def applyFromDbRow(
+    id: Option[Id[NotificationItem]],
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    notificationId: Id[Notification],
+    kind: String,
+    event: NotificationEvent): NotificationItem =
+    NotificationItem(
+      id,
+      createdAt,
+      updatedAt,
+      notificationId,
+      NotificationKind.getByName(kind).get,
+      event
+    )
+
+  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent)] =
+    Some(
+      item.id,
+      item.createdAt,
+      item.updatedAt,
+      item.notificationId,
+      item.kind.name,
+      item.event
+    )
+
+}
+
 @ImplementedBy(classOf[NotificationItemRepoImpl])
 trait NotificationItemRepo extends Repo[NotificationItem] {
 
@@ -44,10 +74,11 @@ class NotificationItemRepoImpl @Inject() (
   class NotificationItemTable(tag: Tag) extends RepoTable[NotificationItem](db, tag, "notification_item") {
 
     def notificationId = column[Id[Notification]]("notification_id", O.NotNull)
-    def kind = column[NKind]("kind", O.NotNull)
+    // Use a string here because a type like NotificationKind[_ <: NotificationEvent] just doesn't work
+    def kind = column[String]("kind", O.NotNull)
     def event = column[NotificationEvent]("event", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, notificationId, kind, event) <> ((NotificationItem.apply _).tupled, NotificationItem.unapply)
+    def * = (id.?, createdAt, updatedAt, notificationId, kind, event) <> ((NotificationItem.applyFromDbRow _).tupled, NotificationItem.unapplyToDbRow)
 
   }
 

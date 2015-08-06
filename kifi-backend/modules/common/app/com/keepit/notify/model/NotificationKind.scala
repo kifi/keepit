@@ -6,15 +6,15 @@ import scala.annotation.implicitNotFound
 import scala.annotation.unchecked.uncheckedVariance
 
 @implicitNotFound("No kind object found for action ${N}")
-trait NotificationKind[-N <: NotificationEvent] {
+trait NotificationKind[N <: NotificationEvent] {
 
   val name: String
 
-  implicit val format: Format[N @uncheckedVariance]
+  implicit val format: Format[N]
 
   implicit val selfCompanion: NotificationKind[N] = this
 
-  def shouldGroupWith(newAction: N, existingActions: Set[N @uncheckedVariance]): Boolean
+  def shouldGroupWith(newAction: N, existingActions: Set[N]): Boolean
 
 }
 
