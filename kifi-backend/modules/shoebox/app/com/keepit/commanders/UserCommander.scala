@@ -319,21 +319,18 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]): User = {
-    val newUser = db.readWrite(attempts = 3) { implicit session =>
+    val newUser: User = db.readWrite(attempts = 3) { implicit session =>
       val user = userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
       )
+      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
+        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
+          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ORGANIZATION))
+        }
+      }
       val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
-
-      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
-        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
-          userExperimentRepo.save(UserExperiment(userId = userWithUsername.id.get, experimentType = UserExperimentType.ORGANIZATION))
-        }
-      }
-      val x = 5
-
       userWithUsername
     }
 
