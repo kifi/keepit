@@ -1,9 +1,9 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
+import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, Repo}
 import com.keepit.common.time.Clock
 import com.keepit.notify.model.NotificationEvent
 
