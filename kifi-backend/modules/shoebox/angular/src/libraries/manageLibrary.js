@@ -279,6 +279,7 @@ angular.module('kifi')
             'slug': '',
             'visibility': 'published'
           };
+          scope.library.org = scope.modalData.organization;
           scope.library.membership = {
             access: 'owner',
             listed: true,
@@ -292,8 +293,7 @@ angular.module('kifi')
         scope.spaces = profileService.me.orgs ? [profileService.me].concat(profileService.me.orgs) : profileService.me;
         scope.space = {};
 
-        debugger;
-        var desiredId = scope.modalData.organization ? scope.modalData.organization.id : scope.space.current.id;
+        var desiredId = (scope.library.org || profileService.me).id
 
         scope.space.current = scope.spaces.filter(function (s) { return s.id === desiredId; }).pop();
         // By default, the library will be saved into the library we are already in.
@@ -307,7 +307,7 @@ angular.module('kifi')
         scope.setOrg = function(id) { 
           if (scope.libraryProps.inOrg) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-            var orgId = id || (scope.modalData.organization ? scope.modalData.organization.id : scope.me.orgs[0].id);
+            var orgId = id || (scope.library.org ? scope.library.org.id : scope.me.orgs[0].id);
             scope.libraryProps.selectedOrgId = orgId;
             scope.space.destination = scope.me.orgs.filter(function(org) {
               return org.id === orgId;
@@ -343,10 +343,9 @@ angular.module('kifi')
           }
         };
 
-        var libraryOrg = scope.library.org || scope.modalData.organization;
-        if (libraryOrg) {
-          scope.libraryProps.inOrg = !!libraryOrg;
-          scope.libraryProps.selectedOrgId = libraryOrg.id;
+        if (scope.library.org) {
+          scope.libraryProps.inOrg = !!scope.library.org;
+          scope.libraryProps.selectedOrgId = scope.library.org.id;
         }
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
