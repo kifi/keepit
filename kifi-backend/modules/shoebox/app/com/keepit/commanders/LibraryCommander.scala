@@ -902,7 +902,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = { //ZZZ
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = {
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
       val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
