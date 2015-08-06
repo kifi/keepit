@@ -114,6 +114,7 @@ class UserCommander @Inject() (
     libraryRepo: LibraryRepo,
     organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
+    orgInviteRepo: OrganizationInviteRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -322,6 +323,11 @@ class UserCommander @Inject() (
       val user = userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
       )
+      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
+        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
+          userExperimentRepo.save(UserExperiment(user.id.get, UserExperimentType.ORGANIZATION))
+        }
+      }
       handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
