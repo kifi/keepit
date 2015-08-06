@@ -149,7 +149,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     import com.keepit.common.time.dateTimeOrdering
     val allInvites = excludeState.map(state => getByOrganizationAndDecisionWithExcludeStateCompiled(organizationId, decision, offset.value, limit.value, state))
       .getOrElse(getByOrganizationAndDecisionCompiled(organizationId, decision, offset.value, limit.value)).list
-    val userInvites = allInvites.filter(_.userId.isDefined).groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values.toSeq.sortBy(_.userId)
+    val userInvites = allInvites.filter(_.userId.isDefined).groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values.toSeq.sortBy(_.updatedAt)
     val emailInvites = allInvites.filter(invite => invite.userId.isEmpty && invite.emailAddress.isDefined).groupBy(_.emailAddress.get).mapValues(_.maxBy(_.updatedAt)).values.toSeq.sortBy(_.emailAddress.get.address)
     userInvites ++ emailInvites
   }
