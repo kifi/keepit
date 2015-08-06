@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -69,6 +69,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     val remoteService = RemoteService.fromJson(nodeData)
     newInstances(childNode) = newInstances.get(childNode) match {
       case Some(instance) =>
+        debouncedLog(s"updated node. old: ${instance.remoteService} new: ${remoteService}")
         new ServiceInstance(childNode, instance.thisInstance, remoteService)
       case None =>
         log.info(s"discovered new node $childNode: $remoteService")
@@ -80,7 +81,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   }
 
   private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], children: Seq[(Node, String)]) = {
-    debouncedLog(s"discovered ${children.size} new/updated nodes")
+    debouncedLogWithStacktrace(s"discovered ${children.size} new/updated nodes", new StackTrace())
     children foreach { case (childNode, nodeData) => addNewNode(newInstances, childNode, nodeData) }
   }
 
@@ -191,4 +192,12 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   def refresh() = forceUpdateTopology()
 
   private val debouncedLog = extras.debounce(.1.seconds)(log.info)
+
+  private val debouncedLogWithStacktrace = {
+    val tupled: Function1[(String, Throwable), Unit] = {
+      case (m: String, e: Throwable) => log.info(m, e)
+    }
+    val debounced = extras.debounce(.1.seconds)(tupled)
+    (m: String, t: Throwable) => debounced((m, t))
+  }
 }
