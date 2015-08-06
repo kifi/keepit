@@ -319,6 +319,7 @@ object LibraryKind {
       case "system_read_id_later" => SYSTEM_READ_IT_LATER //for backward compatibility. I'll update the db and clear the cache. can remove by Aug 6, 2015
       case SYSTEM_GUIDE.value => SYSTEM_GUIDE
       case USER_CREATED.value => USER_CREATED
+      case _ => throw new Exception(s"unknown library kind: $str")
     }
   }
 }
