@@ -1,66 +1,43 @@
-label()
-  background: textDarkColor
-  padding: 3px 5px
-  text-align: center
-  font-size: 0.85rem
-  border-radius: 3px
-
-force-gone()
-  top: -9999px
-  bottom: auto
-
-tooltip-base()
-  margin-bottom: 0
-  position: absolute
-  display: block
-  opacity: 0
-  bottom: 100%
-  left: 50%
-  margin-left: -75px
-  box-shadow: 0px 5px 25px rgba(0, 0, 0, 0.25)
-  pointer-events: none
-  text-align: center
-  transition: transform 0.25s
-  width: 150px
-  line-height: 1.2rem
-
-tooltip-arrow()
-  border-top-style: solid
-  border-top-width: 10px
-  border-left: 10px solid transparent
-  border-right: 10px solid transparent
-  width: 0px
-  height: 0px
-  content: ' '
-  display: block
-  background: transparent
-  position: absolute
-  left: 50%
-  margin-left: -8px
-  pointer-events: none
-  opacity: 0
-
-pseudo-tooltip-color(color = textDarkColor)
-  &:after
-    label(color)
-    margin-bottom: 0
-
-  &:before
-    border-top-color: color
-
 [data-kf-tooltip]
-  pseudo-tooltip-color()
   position: relative
   white-space: normal
 
   &:after
+    background: textDarkColor
+    border-radius: 3px
+    bottom: 100%
+    box-shadow: 0px 5px 25px rgba(0, 0, 0, 0.25)
     content: attr(data-kf-tooltip)
-    tooltip-base()
+    display: block
+    font-size: 0.85rem
+    left: 50%
+    line-height: 1.2rem
+    margin-bottom: 0
+    margin-left: -75px
+    opacity: 0
+    padding: 3px 5px
+    pointer-events: none
+    position: absolute
+    text-align: center
     transform: translateY(0px)
+    transition: transform 0.25s
+    width: 150px
     z-index: 10
 
   &:before
-    tooltip-arrow()
+    border-top: 10px solid color
+    border-left: 10px solid transparent
+    border-right: 10px solid transparent
+    width: 0px
+    height: 0px
+    content: ' '
+    display: block
+    background: transparent
+    position: absolute
+    left: 50%
+    margin-left: -8px
+    pointer-events: none
+    opacity: 0
     bottom: 100%
     z-index: 100
 
