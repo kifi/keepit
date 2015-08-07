@@ -4,26 +4,10 @@ import com.google.inject.{ Singleton, Injector, Inject }
 import com.keepit.commanders.PathCommander
 import com.keepit.common.db.slick.{ Database, DataBaseComponent }
 import com.keepit.model.{ LibraryRepo, User, UserRepo }
-import com.keepit.notify.model.{ NewFollower, NotificationEvent, NotificationKind }
+import com.keepit.notify.model.{ NotificationEvent, NotificationKind }
 
 abstract class LinkGenerator[N <: NotificationEvent] {
 
   def getLink(actions: Set[N]): Path
-
-}
-
-@Singleton
-class NewFollowerLinkGenerator @Inject() (
-    libraryPathCommander: PathCommander,
-    libraryRepo: LibraryRepo,
-    db: Database) extends LinkGenerator[NewFollower] {
-
-  override def getLink(actions: Set[NewFollower]): Path = {
-    val library = db.readOnlyReplica { implicit session =>
-      libraryRepo.get(actions.head.library)
-    }
-
-    libraryPathCommander.pathForLibrary(library)
-  }
 
 }

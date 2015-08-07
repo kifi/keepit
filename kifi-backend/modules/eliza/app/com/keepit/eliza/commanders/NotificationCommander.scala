@@ -18,7 +18,7 @@ class NotificationCommander @Inject() (
 
   def processNewEvent(event: NotificationEvent): (Notification, NotificationItem) = {
     val (notifOpt, items) = db.readOnlyMaster { implicit session =>
-      val notifOpt = notificationRepo.getLastByUserAndKind(event.toUser, event.kind)
+      val notifOpt = notificationRepo.getLastByUserAndKind(event.userId, event.kind)
       notifOpt.fold(notifOpt, Set.empty[NotificationItem]) { notif =>
         (notifOpt, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
@@ -28,7 +28,7 @@ class NotificationCommander @Inject() (
       case _ =>
         db.readWrite { implicit session =>
           notificationRepo.save(Notification(
-            userId = event.toUser,
+            userId = event.userId,
             kind = event.kind
           ))
         }

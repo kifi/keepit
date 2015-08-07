@@ -21,8 +21,24 @@ trait NotificationKind[N <: NotificationEvent] {
 object NotificationKind {
 
   private val kinds: List[NKind] = List[NKind](
-    NewCollaborator,
-    NewFollower
+    NewKeepActivity,
+    NewSocialConnection,
+    OwnedLibraryNewFollower,
+    OwnedLibraryNewCollaborator,
+    LibraryNewKeep,
+    NewConnection,
+    LibraryCollabInviteAccepted,
+    LibraryFollowInviteAccepted,
+    LibraryNewCollabInvite,
+    LibraryNewFollowInvite,
+    OwnedLibraryNewCollabInvite,
+    OwnedLibraryNewFollowInvite,
+    OrgNewInvite,
+    OrgInviteAccepted,
+    SocialContactJoined,
+    NewConnectionInvite,
+    ConnectionInviteAccepted,
+    NewDepressedRobot
   )
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
