@@ -58,30 +58,30 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         val owner = user().saved
         val other = user().saved
 
-        val libPublishedLots = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(50).withSlug("published-lots").saved
-        val libPublishedFew = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withSlug("published-few").saved
-        val libPublishedFewUpdated = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withLastKept().withSlug("published-few-updated").saved
-        val libPublishedEmpty = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(0).withSlug("published-empty").saved
+        val libPublishedLots = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(50).withSlug("published-lots").saved
+        val libPublishedFew = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withSlug("published-few").saved
+        val libPublishedFewUpdated = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withLastKept().withSlug("published-few-updated").saved
+        val libPublishedEmpty = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(0).withSlug("published-empty").saved
 
         // a library `owner` has, with another collaborator
-        val libPublishedCollabWithMe = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-me").saved
+        val libPublishedCollabWithMe = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-me").saved
         membership().withLibraryCollaborator(libPublishedCollabWithMe, other).saved
         // a library owned by someone else, but `owner` collaborates with
-        val libPublishedCollabWithOther = library().withUser(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-other").saved
+        val libPublishedCollabWithOther = library().withOwner(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-other").saved
         membership().withLibraryCollaborator(libPublishedCollabWithOther, owner).saved
 
-        val libPublishedHidden = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("published-hidden").saved
+        val libPublishedHidden = library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("published-hidden").saved
         libraryMembershipRepo.getWithLibraryIdAndUserId(libPublishedHidden.id.get, owner.id.get).map { mem =>
           libraryMembershipRepo.save(mem.copy(listed = false))
         }
 
-        val libPrivate = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withSlug("private").saved
-        val libPrivateFollower = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-follower").saved
+        val libPrivate = library().withOwner(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withSlug("private").saved
+        val libPrivateFollower = library().withOwner(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-follower").saved
         membership().withLibraryFollower(libPrivateFollower, other).saved
-        val libPrivateCollab = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-collab").saved
+        val libPrivateCollab = library().withOwner(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-collab").saved
         membership().withLibraryCollaborator(libPrivateCollab, other).saved
 
-        val wrongLib = library().withUser(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("wrong-library").saved
+        val wrongLib = library().withOwner(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("wrong-library").saved
 
         val ownerLibs = Seq(
           libPublishedLots, // published library (lots of followers) - test ordering
@@ -127,8 +127,8 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
     withDb(modules: _*) { implicit injector =>
       db.readWrite { implicit s =>
         val libs = libraries(5)
-        val user1 = libs.take(3).map { _.withUser(Id[User](1)).published() }.saved
-        val user2 = libs.drop(3).map { _.withUser(Id[User](2)).published() }.saved
+        val user1 = libs.take(3).map { _.withOwner(Id[User](1)).published() }.saved
+        val user2 = libs.drop(3).map { _.withOwner(Id[User](2)).published() }.saved
       }
 
       db.readOnlyMaster { implicit s =>
@@ -150,13 +150,13 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         val user1 = user().saved
         val user2 = user().saved
         val user3 = user().saved
-        val lib1 = libraries(2).map(_.published().withUser(user1)).saved.head.savedInvitation(user2)
-        val lib2 = libraries(2).map(_.secret().withUser(user1)).saved.head.savedInvitation(user2).savedInvitation(user3)
-        val lib3 = libraries(2).map(_.published().withUser(user2)).saved.head.savedInvitation(user1)
-        invite().fromLibraryOwner(library.published().withUser(user2).saved).saved.savedStateChange(LibraryInviteStates.ACCEPTED)
-        invite().fromLibraryOwner(library.published().withUser(user2).saved).declined.saved
-        libraries(10).map(_.published().withUser(user1)).saved
-        libraries(10).map(_.published().withUser(user2)).saved
+        val lib1 = libraries(2).map(_.published().withOwner(user1)).saved.head.savedInvitation(user2)
+        val lib2 = libraries(2).map(_.secret().withOwner(user1)).saved.head.savedInvitation(user2).savedInvitation(user3)
+        val lib3 = libraries(2).map(_.published().withOwner(user2)).saved.head.savedInvitation(user1)
+        invite().fromLibraryOwner(library.published().withOwner(user2).saved).saved.savedStateChange(LibraryInviteStates.ACCEPTED)
+        invite().fromLibraryOwner(library.published().withOwner(user2).saved).declined.saved
+        libraries(10).map(_.published().withOwner(user1)).saved
+        libraries(10).map(_.published().withOwner(user2)).saved
         (user1, user2, user3, lib1 :: lib2 :: lib3 :: Nil)
       }
 
@@ -185,11 +185,11 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       val (owner, other, allLibs) = db.readWrite { implicit s =>
         val owner = user().saved
         val other = user().saved
-        val otherFollows1 = libraries(2).map(_.published().withUser(owner)).saved.head.savedFollowerMembership(other)
-        val otherFollows2 = libraries(2).map(_.secret().withUser(owner)).saved.head.savedFollowerMembership(other)
-        libraries(2).map(_.published().withUser(other)).saved.head.savedFollowerMembership(owner)
-        val otherFollows3 = libraries(10).map(_.published().withUser(owner)).saved.map(_.savedFollowerMembership(other))
-        libraries(10).map(_.published().withUser(other)).saved
+        val otherFollows1 = libraries(2).map(_.published().withOwner(owner)).saved.head.savedFollowerMembership(other)
+        val otherFollows2 = libraries(2).map(_.secret().withOwner(owner)).saved.head.savedFollowerMembership(other)
+        libraries(2).map(_.published().withOwner(other)).saved.head.savedFollowerMembership(owner)
+        val otherFollows3 = libraries(10).map(_.published().withOwner(owner)).saved.map(_.savedFollowerMembership(other))
+        libraries(10).map(_.published().withOwner(other)).saved
         (owner, other, List(otherFollows1) ++ otherFollows3)
       }
 
@@ -214,11 +214,11 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       val (owner, other, allLibs) = db.readWrite { implicit s =>
         val owner = user().saved
         val other = user().saved
-        val otherFollows1 = libraries(2).map(_.published().withUser(owner)).saved.head.savedFollowerMembership(other)
-        val otherFollows2 = libraries(2).map(_.secret().withUser(owner)).saved.head.savedFollowerMembership(other)
-        libraries(2).map(_.published().withUser(other)).saved.head.savedFollowerMembership(owner)
-        val otherFollows3 = libraries(10).map(_.published().withUser(owner)).saved.map(_.savedFollowerMembership(other))
-        libraries(10).map(_.published().withUser(other)).saved
+        val otherFollows1 = libraries(2).map(_.published().withOwner(owner)).saved.head.savedFollowerMembership(other)
+        val otherFollows2 = libraries(2).map(_.secret().withOwner(owner)).saved.head.savedFollowerMembership(other)
+        libraries(2).map(_.published().withOwner(other)).saved.head.savedFollowerMembership(owner)
+        val otherFollows3 = libraries(10).map(_.published().withOwner(owner)).saved.map(_.savedFollowerMembership(other))
+        libraries(10).map(_.published().withOwner(other)).saved
         (owner, other, List(otherFollows1, otherFollows2) ++ otherFollows3)
       }
 
@@ -237,12 +237,12 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         val user1 = user().saved
         val user2 = user().saved
         val user3 = user().saved
-        val follows1 = libraries(2).map(_.published().withUser(user1).withName("a")).saved.head.savedFollowerMembership(user2)
-        val follows2 = libraries(2).map(_.secret().withUser(user1).withName("b")).saved.head.savedFollowerMembership(user2).savedFollowerMembership(user3)
-        val follows3 = libraries(10).map(_.secret().withUser(user3).withName("c")).saved.map(_.savedFollowerMembership(user2))
-        libraries(2).map(_.published().withUser(user2).withName("d")).saved.head.savedFollowerMembership(user1)
-        val follows4 = libraries(10).map(_.published().withUser(user1).withName("e")).saved.map(_.savedFollowerMembership(user2))
-        libraries(10).map(_.published().withUser(user2).withName("f")).saved
+        val follows1 = libraries(2).map(_.published().withOwner(user1).withName("a")).saved.head.savedFollowerMembership(user2)
+        val follows2 = libraries(2).map(_.secret().withOwner(user1).withName("b")).saved.head.savedFollowerMembership(user2).savedFollowerMembership(user3)
+        val follows3 = libraries(10).map(_.secret().withOwner(user3).withName("c")).saved.map(_.savedFollowerMembership(user2))
+        libraries(2).map(_.published().withOwner(user2).withName("d")).saved.head.savedFollowerMembership(user1)
+        val follows4 = libraries(10).map(_.published().withOwner(user1).withName("e")).saved.map(_.savedFollowerMembership(user2))
+        libraries(10).map(_.published().withOwner(user2).withName("f")).saved
         (user1, user2, user3, follows1, follows2, follows3, follows4)
       }
 

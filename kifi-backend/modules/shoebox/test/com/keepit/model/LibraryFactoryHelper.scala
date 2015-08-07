@@ -20,6 +20,12 @@ object LibraryFactoryHelper {
       for (user <- partialLibrary.collaborators) {
         membership().withLibraryCollaborator(library, user).saved
       }
+      for (user <- partialLibrary.invitedUsers) {
+        invite().fromLibraryOwner(library).toUser(user).saved
+      }
+      for (email <- partialLibrary.invitedEmails) {
+        invite().fromLibraryOwner(library).toEmail(email).saved
+      }
       library
     }
   }

@@ -53,7 +53,7 @@ class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
   private def setupUris()(implicit injector: Injector) = {
     val (user1, keep1) = db.readWrite { implicit s =>
       val user1 = user().withName("Katniss", "Everdeen").saved
-      val lib1 = LibraryFactory.library().withUser(user1).saved
+      val lib1 = LibraryFactory.library().withOwner(user1).saved
       val keep1 = keep().withUser(user1).withLibrary(lib1).saved
       (user1, keep1)
     }

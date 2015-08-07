@@ -25,10 +25,10 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
         withDb(modules: _*) { implicit injector =>
           val (user, keep, otherLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withUser(user).saved
+            val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withLibrary(userLib).saved
 
-            val otherLib = LibraryFactory.library().withUser(user).saved
+            val otherLib = LibraryFactory.library().withOwner(user).saved
             (user, keep, otherLib)
           }
 
@@ -47,14 +47,14 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
         withDb(modules: _*) { implicit injector =>
           val (user, keep, libs) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withUser(user).saved
+            val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withLibrary(userLib).saved
 
             val rando = UserFactory.user().saved
             val randoOrg = OrganizationFactory.organization().withOwner(rando).saved
-            val randoSecretLib = LibraryFactory.library().withUser(rando).secret().saved
-            val randoPublicLib = LibraryFactory.library().withUser(rando).published().saved
-            val randoOrgLib = LibraryFactory.library().withUser(rando).withOrganization(randoOrg).orgVisible().saved
+            val randoSecretLib = LibraryFactory.library().withOwner(rando).secret().saved
+            val randoPublicLib = LibraryFactory.library().withOwner(rando).published().saved
+            val randoOrgLib = LibraryFactory.library().withOwner(rando).withOrganization(randoOrg).orgVisible().saved
             (user, keep, Seq(randoPublicLib, randoSecretLib, randoOrgLib))
           }
 
@@ -71,7 +71,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           val (user1, user2, keep, lib) = db.readWrite { implicit session =>
             val user1 = UserFactory.user().saved
             val user2 = UserFactory.user().saved
-            val lib = LibraryFactory.library().withUser(user1).withCollaborators(Seq(user2)).saved
+            val lib = LibraryFactory.library().withOwner(user1).withCollaborators(Seq(user2)).saved
             val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).saved
             (user1, user2, keep, lib)
           }
@@ -94,7 +94,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
         withDb(modules: _*) { implicit injector =>
           val (user, keep, userLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withUser(user).saved
+            val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
             (user, keep, userLib)
           }
@@ -109,14 +109,14 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
         withDb(modules: _*) { implicit injector =>
           val (user, keep, libs) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withUser(user).saved
+            val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
 
             val rando = UserFactory.user().saved
             val randoOrg = OrganizationFactory.organization().withOwner(rando).saved
-            val randoSecretLib = LibraryFactory.library().withUser(rando).secret().saved
-            val randoPublicLib = LibraryFactory.library().withUser(rando).published().saved
-            val randoOrgLib = LibraryFactory.library().withUser(rando).withOrganization(randoOrg).orgVisible().saved
+            val randoSecretLib = LibraryFactory.library().withOwner(rando).secret().saved
+            val randoPublicLib = LibraryFactory.library().withOwner(rando).published().saved
+            val randoOrgLib = LibraryFactory.library().withOwner(rando).withOrganization(randoOrg).orgVisible().saved
             (user, keep, Seq(randoPublicLib, randoSecretLib, randoOrgLib))
           }
 

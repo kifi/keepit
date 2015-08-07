@@ -71,14 +71,14 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret().withKeepCount(3)).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withOwner(user1).secret().withKeepCount(3)).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withOwner(user1).published().withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().withKeepCount(2).saved
-          val user5lib = library().withUser(user5).published().withKeepCount(4).saved.savedFollowerMembership(user1)
-          membership().withLibraryFollower(library().withUser(user5).published().withKeepCount(1).saved, user1).unlisted().saved
+          val user3lib = library().withOwner(user3).published().withKeepCount(2).saved
+          val user5lib = library().withOwner(user5).published().withKeepCount(4).saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withOwner(user5).published().withKeepCount(1).saved, user1).unlisted().saved
 
           keeps(2).map(_.withLibrary(user1secretLib)).saved
           keeps(3).map(_.withLibrary(user1lib)).saved
@@ -272,9 +272,9 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user, highPriorityMemberships, highPriorityLibs) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
-          val libs1 = LibraryFactory.libraries(3).map(_.withUser(user.id.get)).saved
-          val libs2 = LibraryFactory.libraries(2).map(_.withUser(user.id.get)).saved
-          val libs3 = LibraryFactory.libraries(1).map(_.withUser(user.id.get)).saved
+          val libs1 = LibraryFactory.libraries(3).map(_.withOwner(user.id.get)).saved
+          val libs2 = LibraryFactory.libraries(2).map(_.withOwner(user.id.get)).saved
+          val libs3 = LibraryFactory.libraries(1).map(_.withOwner(user.id.get)).saved
 
           val highPriorityMemberships = for (lib <- libs2) yield {
             val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = user.id.get).get
@@ -522,7 +522,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         val profileUsername = Username("cfalc")
         val (user1, user2, user3, user4) = db.readWrite { implicit s =>
           val user1 = user().withName("Captain", "Falcon").withUsername(profileUsername.value).saved
-          val library1 = library().withUser(user1).saved
+          val library1 = library().withOwner(user1).saved
 
           val otherUsers = users(3).saved
           membership().withLibraryFollower(library1, otherUsers(0)).saved

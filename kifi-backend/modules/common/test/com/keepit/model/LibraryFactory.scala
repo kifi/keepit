@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ ExternalId, Id, State }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model.LibraryVisibility.{ ORGANIZATION, PUBLISHED, SECRET, DISCOVERABLE }
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -20,11 +21,13 @@ object LibraryFactory {
   case class PartialLibrary private[LibraryFactory] (
       library: Library,
       followers: Seq[User] = Seq.empty[User],
-      collaborators: Seq[User] = Seq.empty[User]) {
+      collaborators: Seq[User] = Seq.empty[User],
+      invitedUsers: Seq[User] = Seq.empty[User],
+      invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress]) {
     def withId(id: Id[Library]) = this.copy(library = library.copy(id = Some(id)))
     def withId(id: Int) = this.copy(library = library.copy(id = Some(Id[Library](id))))
-    def withUser(id: Id[User]) = this.copy(library = library.copy(ownerId = id))
-    def withUser(user: User) = this.copy(library = library.copy(ownerId = user.id.get))
+    def withOwner(id: Id[User]) = this.copy(library = library.copy(ownerId = id))
+    def withOwner(user: User) = this.copy(library = library.copy(ownerId = user.id.get))
     def withMemberCount(memberCount: Int) = this.copy(library = library.copy(memberCount = memberCount, lastKept = Some(currentDateTime)))
     def withKeepCount(keepCount: Int) = this.copy(library = library.copy(keepCount = keepCount))
     def withName(name: String) = this.copy(library = library.copy(name = name))
@@ -43,8 +46,10 @@ object LibraryFactory {
     def withOrganizationIdOpt(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
     def withOrganization(org: Organization) = this.copy(library = library.copy(organizationId = Some(org.id.get)))
 
-    def withFollowers(users: Seq[User]) = this.copy(followers = followers ++ users)
-    def withCollaborators(users: Seq[User]) = this.copy(collaborators = collaborators ++ users)
+    def withFollowers(users: Seq[User]) = this.copy(followers = users)
+    def withCollaborators(users: Seq[User]) = this.copy(collaborators = users)
+    def withInvitedUsers(users: Seq[User]) = this.copy(invitedUsers = users)
+    def withInvitedEmails(emails: Seq[EmailAddress]) = this.copy(invitedEmails = emails)
 
     def get: Library = library
   }

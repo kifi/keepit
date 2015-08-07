@@ -69,14 +69,14 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withOwner(user1).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withOwner(user1).published().saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().saved.savedFollowerMembership(user2)
-          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
-          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+          val user3lib = library().withOwner(user3).published().saved.savedFollowerMembership(user2)
+          val user5lib = library().withOwner(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withOwner(user5).published().saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
@@ -189,15 +189,15 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withOwner(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withOwner(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).withOrganizationIdOpt(org.id).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
-          val user5lib = library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved.savedFollowerMembership(user1)
+          val user3lib = library().withOwner(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
+          val user5lib = library().withOwner(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved.savedFollowerMembership(user1)
           keep().withLibrary(user5lib).saved
-          membership().withLibraryFollower(library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).saved, user1).unlisted().saved
+          membership().withLibraryFollower(library().withOwner(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
@@ -360,9 +360,9 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
           val user3 = user().withName("third", "user").withUsername("thirduser").withPictureName("asdf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
-          val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
-          val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
+          val library1 = library().withName("lib1").withOwner(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
+          val library2 = library().withName("lib2").withOwner(user2).secret.withSlug("lib2").withMemberCount(22).saved
+          val library3 = library().withName("lib3").withOwner(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           val k1 = keep().withLibrary(library1).saved
           (user1, user2, user3, library1, library2, library3, k1)
         }
@@ -570,8 +570,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
 
-          libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2, user3) // create 3 secret libraries, one is follower by user2 and user3
-          library().withUser(user1).published().saved.savedFollowerMembership(user5, user4) // create 1 published library, followed by user4 and user 5
+          libraries(3).map(_.withOwner(user1).secret()).saved.head.savedFollowerMembership(user2, user3) // create 3 secret libraries, one is follower by user2 and user3
+          library().withOwner(user1).published().saved.savedFollowerMembership(user5, user4) // create 1 published library, followed by user4 and user 5
           connect(user1 -> user3).saved
           (user1, user2, user3, user4, user5)
         }
