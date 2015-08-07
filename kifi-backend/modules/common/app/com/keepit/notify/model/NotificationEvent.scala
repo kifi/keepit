@@ -331,7 +331,7 @@ case class SocialContactJoined(
 
 object SocialContactJoined extends NotificationKind[SocialContactJoined] {
 
-  override val name: String = "org_new_invite"
+  override val name: String = "social_contact_joined"
 
   override implicit val format = (
     (__ \ "userId").format[Id[User]] and
