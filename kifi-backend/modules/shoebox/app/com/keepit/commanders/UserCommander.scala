@@ -22,6 +22,7 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
+import com.keepit.notify.model.SocialContactJoined
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
@@ -390,6 +391,13 @@ class UserCommander @Inject() (
                   }
                 }
               }
+            toNotify.foreach { userId =>
+              elizaServiceClient.sendNotificationEvent(SocialContactJoined(
+                userId,
+                currentDateTime,
+                newUserId
+              ))
+            }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
           case _ =>
             log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)

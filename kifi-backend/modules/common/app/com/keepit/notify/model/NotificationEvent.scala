@@ -141,25 +141,6 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
 
 }
 
-case class NewConnection(
-  override val userId: Id[User],
-  override val time: DateTime,
-  connectionId: Id[User]) extends NotificationEvent(userId, time, NewConnection)
-
-object NewConnection extends NotificationKind[NewConnection] {
-
-  override val name: String = "new_connection"
-
-  override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
-    (__ \ "time").format[DateTime] and
-    (__ \ "connectionId").format[Id[User]]
-  )(NewConnection.apply, unlift(NewConnection.unapply))
-
-  override def shouldGroupWith(newEvent: NewConnection, existingEvents: Set[NewConnection]): Boolean = false
-
-}
-
 case class LibraryCollabInviteAccepted(
   override val userId: Id[User],
   override val time: DateTime,
@@ -248,7 +229,7 @@ case class OwnedLibraryNewCollabInvite(
   override val userId: Id[User],
   override val time: DateTime,
   inviterId: Id[User],
-  inviteeIds: Set[Id[User]],
+  inviteeId: Id[User],
   libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewCollabInvite)
 
 object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite] {
@@ -259,11 +240,15 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
-    (__ \ "inviteeIds").format[Set[Id[User]]] and
+    (__ \ "inviteeId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollabInvite.apply, unlift(OwnedLibraryNewCollabInvite.unapply))
 
-  override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = false
+  override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = {
+    // only check a random event, they should all have the same inviter and library
+    val existing = existingEvents.head
+    existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
+  }
 
 }
 
@@ -271,7 +256,7 @@ case class OwnedLibraryNewFollowInvite(
   override val userId: Id[User],
   override val time: DateTime,
   inviterId: Id[User],
-  inviteeIds: Set[Id[User]],
+  inviteeId: Set[Id[User]],
   libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewFollowInvite)
 
 object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
@@ -282,11 +267,15 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
-    (__ \ "inviteeIds").format[Set[Id[User]]] and
+    (__ \ "inviteeId").format[Set[Id[User]]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollowInvite.apply, unlift(OwnedLibraryNewFollowInvite.unapply))
 
-  override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = false
+  override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean =  {
+    // only check a random event, they should all have the same inviter and library
+    val existing = existingEvents.head
+    existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
+  }
 
 }
 
@@ -294,7 +283,6 @@ case class OrgNewInvite(
   override val userId: Id[User],
   override val time: DateTime,
   inviterId: Id[User],
-  inviteeIds: Set[Id[User]],
   orgId: Id[Organization]) extends NotificationEvent(userId, time, OrgNewInvite)
 
 object OrgNewInvite extends NotificationKind[OrgNewInvite] {
@@ -305,7 +293,6 @@ object OrgNewInvite extends NotificationKind[OrgNewInvite] {
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
-    (__ \ "inviteeIds").format[Set[Id[User]]] and
     (__ \ "orgId").format[Id[Organization]]
   )(OrgNewInvite.apply, unlift(OrgNewInvite.unapply))
 
@@ -316,8 +303,7 @@ object OrgNewInvite extends NotificationKind[OrgNewInvite] {
 case class OrgInviteAccepted(
   override val userId: Id[User],
   override val time: DateTime,
-  inviterId: Id[User],
-  inviteeIds: Set[Id[User]],
+  accepterId: Id[User],
   orgId: Id[Organization]) extends NotificationEvent(userId, time, OrgInviteAccepted)
 
 object OrgInviteAccepted extends NotificationKind[OrgInviteAccepted] {
@@ -327,8 +313,7 @@ object OrgInviteAccepted extends NotificationKind[OrgInviteAccepted] {
   override implicit val format = (
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
-    (__ \ "inviterId").format[Id[User]] and
-    (__ \ "inviteeIds").format[Set[Id[User]]] and
+    (__ \ "accepterId").format[Id[User]] and
     (__ \ "orgId").format[Id[Organization]]
   )(OrgInviteAccepted.apply, unlift(OrgInviteAccepted.unapply))
 

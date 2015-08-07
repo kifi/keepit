@@ -12,7 +12,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
+import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.notify.model.{NewConnectionInvite, ConnectionInviteAccepted}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType, SocialNetworks }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
@@ -193,6 +195,11 @@ class UserConnectionsCommander @Inject() (
             category = UserPushNotificationCategory.UserConnectionAccepted)
         }
       }
+    elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
+      friend.id.get,
+      currentDateTime,
+      myUserId
+    ))
 
     emailF flatMap (_ => notifF)
   }
@@ -231,6 +238,11 @@ class UserConnectionsCommander @Inject() (
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
         }
       }
+    elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
+      recipient.id.get,
+      currentDateTime,
+      myUserId
+    ))
 
     emailF flatMap (_ => friendReqF)
   }

@@ -5,6 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.LibraryInviteEmailSender
 import com.keepit.common.core._
+import com.keepit.common.time._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -16,6 +17,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
+import com.keepit.notify.model._
 import com.keepit.social.BasicUser
 import play.api.http.Status._
 import play.api.libs.json.Json
@@ -108,6 +110,22 @@ class LibraryInviteCommanderImpl @Inject() (
               category = UserPushNotificationCategory.NewLibraryFollower)
           }
         }
+      if (invite.access == LibraryAccess.READ_WRITE) {
+        elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
+          inviterId,
+          currentDateTime,
+          invitee.id.get,
+          lib.id.get
+        ))
+      } else {
+        elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
+          inviterId,
+          currentDateTime,
+          invitee.id.get,
+          lib.id.get
+        ))
+      }
+
     }
   }
 
@@ -319,6 +337,15 @@ class LibraryInviteCommanderImpl @Inject() (
       ))
     )
 
+    collabInviteeSet.foreach { invitee =>
+      elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
+        invitee,
+        currentDateTime,
+        inviter.id.get,
+        lib.id.get
+      ))
+    }
+
     val followInvitesF = elizaClient.sendGlobalNotification( //push sent
       userIds = followInviteeSet,
       title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
@@ -334,6 +361,15 @@ class LibraryInviteCommanderImpl @Inject() (
         "access" -> LibraryAccess.READ_ONLY
       ))
     )
+
+    followInviteeSet.foreach { invitee =>
+      elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
+        invitee,
+        currentDateTime,
+        inviter.id.get,
+        lib.id.get
+      ))
+    }
 
     for {
       collabInvites <- collabInvitesF
@@ -389,6 +425,15 @@ class LibraryInviteCommanderImpl @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
+      collabInviteeSet.foreach { userId =>
+        elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
+          lib.ownerId,
+          currentDateTime,
+          inviter.id.get,
+          userId,
+          lib.id.get
+        ))
+      }
     } else {
       Future.successful((): Unit)
     }
@@ -408,6 +453,15 @@ class LibraryInviteCommanderImpl @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
+      followInviteeSet.foreach { userId =>
+        elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
+          lib.ownerId,
+          currentDateTime,
+          inviter.id.get,
+          userId,
+          lib.id.get
+        ))
+      }
     } else {
       Future.successful((): Unit)
     }

@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
+import com.keepit.notify.model.NewKeepActivity
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -177,6 +178,11 @@ class ActivityPusher @Inject() (
         ) map { _ =>
             elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
+        elizaServiceClient.sendNotificationEvent(NewKeepActivity(
+          activity.userId, currentDateTime,
+          libMessage.newKeep.userId,
+          libMessage.newKeep.id.get,
+          libMessage.lib.id.get))
         devices.flatten
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")

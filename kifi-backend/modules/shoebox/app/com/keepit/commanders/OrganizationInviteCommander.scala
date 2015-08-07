@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -20,6 +21,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.model.{OrgInviteAccepted, OrgNewInvite}
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -233,6 +235,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       sticky = false,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
+    invitees.foreach { invitee =>
+      elizaClient.sendNotificationEvent(OrgNewInvite(
+        invitee,
+        currentDateTime,
+        inviter.id.get,
+        org.id.get
+      ))
+    }
 
     // TODO: handle push notifications to mobile.
   }
@@ -322,6 +332,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
         ))
       )
+      elizaClient.sendNotificationEvent(OrgInviteAccepted(
+        inviterId,
+        currentDateTime,
+        invitee.id.get,
+        org.id.get
+      ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(
