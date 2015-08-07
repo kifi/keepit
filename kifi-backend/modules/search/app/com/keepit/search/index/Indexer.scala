@@ -61,7 +61,8 @@ trait IndexingEventHandler[T, S] {
 
 abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   indexDirectory: IndexDirectory,
-  maxPrefixLength: Int = Int.MaxValue)
+  maxPrefixLength: Int = Int.MaxValue,
+  minPrefixLength: Int = 1)
     extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
   val commitBatchSize = 1000
@@ -87,7 +88,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   reopenWriter() // open indexWriter
 
   protected var searcher: Searcher = indexWriterLock.synchronized {
-    val s = Searcher(DirectoryReader.open(indexDirectory), maxPrefixLength)
+    val s = Searcher(DirectoryReader.open(indexDirectory), maxPrefixLength, minPrefixLength)
     s.setSimilarity(Similarity()) // use our default similarity (not lucene's default similarity)
     s
   }

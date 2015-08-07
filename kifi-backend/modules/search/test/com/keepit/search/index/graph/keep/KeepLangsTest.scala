@@ -58,7 +58,7 @@ class KeepLangsTest extends Specification {
     DirectoryReader.open(ramDir)
   }
 
-  private[this] val searcher = Searcher(indexReader, Int.MaxValue)
+  private[this] val searcher = Searcher(indexReader, Int.MaxValue, 1)
 
   "KeepLangs" should {
 
