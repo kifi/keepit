@@ -58,7 +58,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     unsentNotificationIds = messageHandle :: unsentNotificationIds
   }
 
-
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())
     p.future
