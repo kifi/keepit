@@ -323,8 +323,12 @@ class AdminLibraryController @Inject() (
           libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = None,
             visibility = LibraryVisibility.PUBLISHED, seq = SequenceNumber.ZERO))
       }
-      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
-      libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = newOwner, access = LibraryAccess.OWNER))
+        case Some(membership) =>
+          libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
+      }
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
         keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner, seq = SequenceNumber.ZERO))
       }
