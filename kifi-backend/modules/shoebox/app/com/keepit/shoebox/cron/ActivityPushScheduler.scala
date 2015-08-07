@@ -1,10 +1,11 @@
 package com.keepit.shoebox.cron
 
-import com.keepit.commanders.{ LibraryPathCommander, LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
+import com.keepit.commanders.{ PathCommander, LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
+import com.keepit.notify.model.NewKeepActivity
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -83,7 +84,7 @@ class ActivityPusher @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     kifiInstallationCommander: KifiInstallationCommander,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     s3ImageStore: S3ImageStore,
     actor: ActorInstance[ActivityPushActor],
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -177,6 +178,11 @@ class ActivityPusher @Inject() (
         ) map { _ =>
             elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
+        elizaServiceClient.sendNotificationEvent(NewKeepActivity(
+          activity.userId, currentDateTime,
+          libMessage.newKeep.userId,
+          libMessage.newKeep.id.get,
+          libMessage.lib.id.get))
         devices.flatten
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")
@@ -231,7 +237,7 @@ class ActivityPusher @Inject() (
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
         val owner = basicUserRepo.load(lib.ownerId)
-        val libraryUrl = "https://www.kifi.com" + libPathCommander.getPathUrlEncoded(lib)
+        val libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibraryUrlEncoded(lib)
         keepRepo.getByLibrary(lib.id.get, 0, 1) match {
           case keeps if keeps.nonEmpty =>
             val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)

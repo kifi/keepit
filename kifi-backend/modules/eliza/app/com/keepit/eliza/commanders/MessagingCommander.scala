@@ -59,7 +59,7 @@ class MessagingCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
-    notificationCommander: NotificationCommander,
+    notificationCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 

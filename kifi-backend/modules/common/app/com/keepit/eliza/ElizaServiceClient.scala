@@ -9,6 +9,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.notify.model.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -72,6 +73,8 @@ trait ElizaServiceClient extends ServiceClient {
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject] = None): Future[Id[MessageHandle]]
 
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit
+
+  def sendNotificationEvent(event: NotificationEvent): Unit
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -176,6 +179,11 @@ class ElizaServiceClientImpl @Inject() (
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
     //yes, we really want this one to get through. considering pushing the message to SQS later on.
     call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
+  }
+
+  def sendNotificationEvent(event: NotificationEvent): Unit = {
+    val payload = Json.toJson(event)
+    call(Eliza.internal.sendNotificationEvent(), payload)
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {

@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.Injector
-import com.keepit.commanders.{ LibraryPathCommander, KifiInstallationCommander, LibraryImageCommander }
+import com.keepit.commanders.{ PathCommander, KifiInstallationCommander, LibraryImageCommander }
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
@@ -32,7 +32,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val twitterSyncStateRepo = inject[TwitterSyncStateRepo]
     val executionContext = inject[WatchableExecutionContext]
     val libraryMembershipRepo = inject[LibraryMembershipRepo]
-    val libPathCommander = inject[LibraryPathCommander]
+    val libPathCommander = inject[PathCommander]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
         TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))

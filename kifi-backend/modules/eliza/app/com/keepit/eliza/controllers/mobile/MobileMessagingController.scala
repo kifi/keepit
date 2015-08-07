@@ -21,7 +21,7 @@ import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 class MobileMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     basicMessageCommander: MessageFetchingCommander,
-    notificationCommander: NotificationCommander,
+    notificationCommander: NotificationDeliveryCommander,
     val userActionsHelper: UserActionsHelper,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,

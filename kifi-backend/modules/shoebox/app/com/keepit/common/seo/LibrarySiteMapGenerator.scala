@@ -1,6 +1,6 @@
 package com.keepit.common.seo
 
-import com.keepit.commanders.{ LibraryPathCommander, UserCommander }
+import com.keepit.commanders.{ PathCommander, UserCommander }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -36,7 +36,7 @@ class LibrarySiteMapGenerator @Inject() (
     keepRepo: KeepRepo,
     fortyTwoConfig: FortyTwoConfig,
     libraryRepo: LibraryRepo,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     protected val experimentRepo: UserExperimentRepo,
     protected val db: Database,
     protected val userCommander: UserCommander) extends SitemapGenerator with Logging {
@@ -48,7 +48,7 @@ class LibrarySiteMapGenerator @Inject() (
   }
 
   private def path(lib: Library, owner: BasicUser): String = {
-    s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPath(lib)}"
+    s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPathForLibrary(lib)}"
   }
 
   def generateAndCache(): Future[String] = generate() map { sitemap =>

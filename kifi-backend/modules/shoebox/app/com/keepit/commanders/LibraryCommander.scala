@@ -22,6 +22,7 @@ import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationC
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
+import com.keepit.notify.model.{LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers
@@ -136,7 +137,7 @@ class LibraryCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
@@ -184,6 +185,10 @@ class LibraryCommanderImpl @Inject() (
       val org = lib.organizationId.map(orgRepo.get)
       LibraryInfo.fromLibraryAndOwner(lib, None, owner, org) // library images are not used, so no need to include
     }
+  }
+
+  def getLibraryPath(library: Library): String = {
+    libPathCommander.getPathForLibrary(library)
   }
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
@@ -363,7 +368,7 @@ class LibraryCommanderImpl @Inject() (
           owner = owner,
           description = lib.description,
           slug = lib.slug,
-          url = libPathCommander.getPath(lib),
+          url = libPathCommander.getPathForLibrary(lib),
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
@@ -1056,6 +1061,21 @@ class LibraryCommanderImpl @Inject() (
           }
         }
       }
+    if (access == LibraryAccess.READ_WRITE) {
+      elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
+        lib.ownerId,
+        currentDateTime,
+        newFollowerId,
+        lib.id.get
+      ))
+    } else {
+      elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
+        lib.ownerId,
+        currentDateTime,
+        newFollowerId,
+        lib.id.get
+      ))
+    }
   }
 
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
@@ -1108,12 +1128,21 @@ class LibraryCommanderImpl @Inject() (
                 userId,
                 message = message,
                 libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
+                libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
                 category = LibraryPushNotificationCategory.LibraryChanged
               )
             }
           }
+        toBeNotified foreach { userId =>
+          elizaClient.sendNotificationEvent(LibraryNewKeep(
+            userId,
+            currentDateTime,
+            newKeep.userId,
+            newKeep.id.get,
+            library.id.get
+          ))
+        }
       }
     }
   }

@@ -13,7 +13,7 @@ import com.google.inject.Inject
 class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
-  libPathCommander: LibraryPathCommander,
+  libPathCommander: PathCommander,
   userPersonaCommander: UserPersonaCommander,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -36,7 +36,7 @@ class ExtUserController @Inject() (
         Json.obj(
           "id" -> Library.publicId(lib.id.get),
           "name" -> lib.name,
-          "path" -> libPathCommander.getPath(lib),
+          "path" -> libPathCommander.getPathForLibrary(lib),
           "color" -> lib.color)
       }
     ))

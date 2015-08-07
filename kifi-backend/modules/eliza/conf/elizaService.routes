@@ -81,6 +81,8 @@ GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.in
 
 POST /internal/eliza/disableDevice              @com.keepit.eliza.controllers.internal.ElizaController.disableDevice(id: Id[com.keepit.realtime.Device])
 
+POST /internal/eliza/notifications/post              @com.keepit.eliza.controllers.internal.NotificationController.postEvent
+
 ##########################################
 # IMPORTS
 ##########################################
