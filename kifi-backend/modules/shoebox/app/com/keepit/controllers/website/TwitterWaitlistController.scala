@@ -126,7 +126,7 @@ class TwitterWaitlistController @Inject() (
     }
 
     var times = 0
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 600)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 700)
     def pollCheck(): Future[Option[String]] = {
       timeoutF.flatMap { _ =>
         checkStatusOfTwitterUser() match {
@@ -166,14 +166,14 @@ class TwitterWaitlistController @Inject() (
           }
           Redirect(libPathCommander.getPath(library))
         } else {
-          pollDbForTwitterHandle(ur.userId, iterations = 60).map { twRes =>
+          pollDbForTwitterHandle(ur.userId, iterations = 75).map { twRes =>
             twRes match {
               case Some(handle) =>
                 commander.addEntry(ur.userId, handle)
               case None => // we failed :(
                 log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
                 socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
-                  pollDbForTwitterHandle(ur.userId, iterations = 60).onComplete {
+                  pollDbForTwitterHandle(ur.userId, iterations = 75).onComplete {
                     case Success(Some(handle)) =>
                       commander.addEntry(ur.userId, handle)
                     case fail => // we failed :(
