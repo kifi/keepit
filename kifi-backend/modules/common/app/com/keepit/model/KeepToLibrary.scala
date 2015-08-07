@@ -14,6 +14,7 @@ case class KeepToLibrary(
   state: State[KeepToLibrary] = KeepToLibraryStates.ACTIVE,
   keepId: Id[Keep],
   libraryId: Id[Library],
+  addedAt: Option[DateTime] = Some(currentDateTime),
   addedBy: Id[User])
     extends ModelWithState[KeepToLibrary] {
 
