@@ -89,6 +89,7 @@ trait LibraryCommander {
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
+  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
@@ -1548,6 +1549,11 @@ class LibraryCommanderImpl @Inject() (
     } getOrElse Future.successful(Seq.empty)
   }
 
+  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo = {
+    db.readOnlyMaster { implicit session =>
+      createLibraryCardInfos(Seq(lib), Map(owner.id.get -> BasicUser.fromUser(owner)), viewerOpt, withFollowing, idealSize).head
+    }
+  }
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
     val membershipsToLibsMap = viewerOpt.map { viewer =>

@@ -103,7 +103,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (parseLibrary \ "name").as[String] === "Library1"
           (parseLibrary \ "slug").as[LibrarySlug].value === "lib1"
           (parseLibrary \ "visibility").as[LibraryVisibility].value === "secret"
-          (parseLibrary \ "keeps").as[Seq[JsValue]].size === 0
           (parseLibrary \ "owner").as[BasicUser].externalId === user.externalId
           (contentAsJson(result1) \ "listed").asOpt[Boolean].get === true
 

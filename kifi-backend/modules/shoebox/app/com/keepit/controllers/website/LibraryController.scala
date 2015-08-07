@@ -68,13 +68,13 @@ class LibraryController @Inject() (
     Json.obj("terms" -> terms, "weights" -> weights)
   }
 
-  def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
+  def addLibrary() = UserAction(parse.tolerantJson) { request =>
     val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
 
     externalAddRequestValidated match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
-        Future.successful(BadRequest(Json.obj("error" -> "badly_formatted_request")))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(externalAddRequest, _) =>
         val libAddRequest = db.readOnlyReplica { implicit session =>
           val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
@@ -98,16 +98,14 @@ class LibraryController @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         libraryCommander.addLibrary(libAddRequest, request.userId) match {
           case Left(fail) =>
-            Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
+            Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(newLibrary) =>
             val membership = db.readOnlyMaster {
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            libraryCommander.createFullLibraryInfo(Some(request.userId), showPublishedLibraries = false, newLibrary, LibraryController.defaultLibraryImageSize).map {
-              lib =>
-                Ok(Json.obj("library" -> Json.toJson(lib), "listed" -> membership.map(_.listed)))
-            }
+            val libCardInfo = libraryCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
   }
