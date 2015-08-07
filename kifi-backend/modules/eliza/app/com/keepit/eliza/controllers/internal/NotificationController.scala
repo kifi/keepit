@@ -15,7 +15,7 @@ class NotificationController @Inject() (
     val (notif, item) = notificationCommander.processNewEvent(event)
     Ok(Json.obj(
       "notification" -> Json.toJson(notif),
-      "item" -> Json.toJson(item)
+      "items" -> Json.toJson(item)
     ))
   }
 

@@ -10,8 +10,7 @@ create table notification (
   last_checked datetime NOT NULL,
   kind VARCHAR(32) NOT NULL,
 
-  PRIMARY KEY(id),
-  CONSTRAINT notification_user_id FOREIGN KEY (user_id) REFERENCES user(id)
+  PRIMARY KEY(id)
 );
 
 create table notification_item (
