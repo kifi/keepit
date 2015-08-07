@@ -400,7 +400,8 @@ case class DepressedRobotGrumble(
   override val userId: Id[User],
   override val time: DateTime,
   robotName: String,
-  grumblingAbout: String) extends NotificationEvent(userId, time, DepressedRobotGrumble)
+  grumblingAbout: String,
+  shouldGroup: Option[Boolean] = None) extends NotificationEvent(userId, time, DepressedRobotGrumble)
 
 object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
@@ -410,9 +411,10 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "robotName").format[String] and
-    (__ \ "grumblingAbout").format[String]
+    (__ \ "grumblingAbout").format[String] and
+    (__ \ "shouldGroup").formatNullable[Boolean]
   )(DepressedRobotGrumble.apply, unlift(DepressedRobotGrumble.unapply))
 
-  override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = false
+  override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = newEvent.shouldGroup.getOrElse(false)
 
 }
