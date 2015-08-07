@@ -25,6 +25,6 @@ create table notification_item (
   CONSTRAINT notification_item_notification_id FOREIGN KEY (notification_id) REFERENCES notification(id)
 );
 
-insert into evolutions (name, description) values('369.sql', 'Add notification and notification_item tables');
+insert into evolutions (name, description) values('370.sql', 'Add notification and notification_item tables');
 
 # --- !Downs
