@@ -256,7 +256,7 @@ case class OwnedLibraryNewFollowInvite(
   override val userId: Id[User],
   override val time: DateTime,
   inviterId: Id[User],
-  inviteeId: Set[Id[User]],
+  inviteeId: Id[User],
   libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewFollowInvite)
 
 object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
@@ -267,11 +267,11 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
-    (__ \ "inviteeId").format[Set[Id[User]]] and
+    (__ \ "inviteeId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollowInvite.apply, unlift(OwnedLibraryNewFollowInvite.unapply))
 
-  override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean =  {
+  override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = {
     // only check a random event, they should all have the same inviter and library
     val existing = existingEvents.head
     existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
