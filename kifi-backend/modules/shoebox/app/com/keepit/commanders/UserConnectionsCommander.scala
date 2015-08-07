@@ -14,7 +14,7 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.notify.model.{NewConnectionInvite, ConnectionInviteAccepted}
+import com.keepit.notify.model.{ NewConnectionInvite, ConnectionInviteAccepted }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType, SocialNetworks }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }

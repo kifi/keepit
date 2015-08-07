@@ -26,7 +26,6 @@ object NotificationKind {
     OwnedLibraryNewFollower,
     OwnedLibraryNewCollaborator,
     LibraryNewKeep,
-    NewConnection,
     LibraryCollabInviteAccepted,
     LibraryFollowInviteAccepted,
     LibraryNewCollabInvite,

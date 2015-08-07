@@ -425,6 +425,11 @@ class LibraryInviteCommanderImpl @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
+    } else {
+      Future.successful((): Unit)
+    }
+
+    if (collabInviteeSet.nonEmpty) {
       collabInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
           lib.ownerId,
@@ -434,8 +439,6 @@ class LibraryInviteCommanderImpl @Inject() (
           lib.id.get
         ))
       }
-    } else {
-      Future.successful((): Unit)
     }
 
     val followInvitesF = if (followInviteeSet.nonEmpty) {
@@ -453,6 +456,11 @@ class LibraryInviteCommanderImpl @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
+    } else {
+      Future.successful((): Unit)
+    }
+
+    if (followInviteeSet.nonEmpty) {
       followInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
           lib.ownerId,
@@ -462,8 +470,6 @@ class LibraryInviteCommanderImpl @Inject() (
           lib.id.get
         ))
       }
-    } else {
-      Future.successful((): Unit)
     }
 
     for {
