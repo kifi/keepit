@@ -1,7 +1,7 @@
 <div class="kf-click-to-edit" ng-class="{'editable': !readonly}">
   <div ng-show="!readonly">
     <span class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester">{{view.editableValue}}</span>
-    <textarea class="kf-click-to-edit-textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" ng-style="view.textareaHeight"></textarea>
+    <textarea placeholder="{{ inputPlaceholder }}" class="kf-click-to-edit-textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" ng-style="view.textareaHeight"></textarea>
   </div>
   <p class="kf-click-to-edit-p" ng-if="readonly && !linkable">{{ view.editableValue }}</p>
   <p class="kf-click-to-edit-p" ng-if="readonly && linkable">
