@@ -15,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.json.Json
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
@@ -288,6 +289,22 @@ class AdminLibraryController @Inject() (
     val terms = tc.trim.split(", ").map { token => val Array(term, weight) = token.split(":"); (term.trim, weight.trim.toFloat) }.toMap
     suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms), SuggestedSearchTermKind.AUTO)
     Ok
+  }
+
+  def unsafeAddMember = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val userId = (request.body \ "userId").as[Id[User]]
+    val libraryId = (request.body \ "libraryId").as[Id[Library]]
+    val access = (request.body \ "access").asOpt[LibraryAccess].getOrElse(LibraryAccess.READ_ONLY)
+    db.readWrite { implicit session =>
+      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
+      val newMembershipTemplate = LibraryMembership(
+        libraryId = libraryId,
+        userId = userId,
+        access = access
+      )
+      val newMembership = libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.flatMap(_.id)))
+      Ok(Json.toJson(newMembership))
+    }
   }
 
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
