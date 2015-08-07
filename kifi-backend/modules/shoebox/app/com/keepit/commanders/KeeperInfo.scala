@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
@@ -110,7 +111,8 @@ case class LibraryData(
   path: String,
   hasCollaborators: Boolean,
   subscribedToUpdates: Boolean,
-  collaborators: Seq[BasicUser])
+  collaborators: Seq[BasicUser],
+  orgAvatar: Option[ImagePath])
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and
@@ -120,6 +122,7 @@ object LibraryData {
     (__ \ 'path).write[String] and
     (__ \ 'hasCollaborators).write[Boolean] and
     (__ \ 'subscribedToUpdates).write[Boolean] and
-    (__ \ 'collaborators).write[Seq[BasicUser]]
+    (__ \ 'collaborators).write[Seq[BasicUser]] and
+    (__ \ 'orgAvatar).writeNullable[ImagePath]
   )(unlift(LibraryData.unapply))
 }

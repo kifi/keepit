@@ -36,6 +36,7 @@ class ExtLibraryController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
+  organizationAvatarCommander: OrganizationAvatarCommander,
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
@@ -53,6 +54,8 @@ class ExtLibraryController @Inject() (
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
     }
+    val avatarPathByOrgId = organizationAvatarCommander.getAvatarsByOrgIds(librariesWithMembershipAndCollaborators.flatMap(_._1.organizationId).toSet)
+    val avatarPathOptByLibId = librariesWithMembershipAndCollaborators.map { case (library, _, _) => library.id.get -> library.organizationId.flatMap(avatarPathByOrgId.get) }.toMap
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.get(lib.ownerId).getOrElse(throw new Exception(s"owner of $lib does not have a membership model"))
@@ -65,7 +68,8 @@ class ExtLibraryController @Inject() (
           path = libPathCommander.getPathForLibrary(lib),
           hasCollaborators = !collabs.isEmpty,
           subscribedToUpdates = membership.subscribedToUpdates,
-          collaborators = collabs
+          collaborators = collabs,
+          orgAvatar = None
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -81,6 +85,7 @@ class ExtLibraryController @Inject() (
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
+        val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImage(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
         Ok(Json.toJson(LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -89,7 +94,8 @@ class ExtLibraryController @Inject() (
           path = libPathCommander.getPathForLibrary(lib),
           hasCollaborators = false,
           subscribedToUpdates = false,
-          collaborators = Seq.empty)))
+          collaborators = Seq.empty,
+          orgAvatar = orgAvatar)))
     }
   }
 

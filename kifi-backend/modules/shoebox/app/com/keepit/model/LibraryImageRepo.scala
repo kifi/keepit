@@ -49,7 +49,7 @@ class LibraryImageRepoImpl @Inject() (
   initTable()
 
   override def invalidateCache(model: LibraryImage)(implicit session: RSession): Unit = {
-    libraryImageCache.remove(LibraryImageKey(model.libraryId))
+    libraryImageCache.remove(LibraryImageKey(model.libraryId)) // why doesn't this use cache.set ?
   }
 
   override def deleteCache(model: LibraryImage)(implicit session: RSession): Unit = {
