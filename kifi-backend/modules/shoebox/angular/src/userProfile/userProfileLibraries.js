@@ -16,7 +16,9 @@ angular.module('kifi')
     var libraryLazyLoader = new Paginator();
 
     function resetAndFetchLibraries() {
+      $scope.libraries = null;
       newLibraryIds = {};
+
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }
