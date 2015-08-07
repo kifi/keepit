@@ -330,7 +330,7 @@ class AdminLibraryController @Inject() (
         case None =>
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = origLib.ownerId, access = LibraryAccess.OWNER))
         case Some(membership) =>
-          libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
+          libraryMembershipRepo.save(membership.copy(id = None, libraryId = lib.id.get, access = LibraryAccess.OWNER, seq = SequenceNumber.ZERO))
       }
       val image = libraryImageRepoImpl.getActiveForLibraryId(origLib.id.get).head
       libraryImageRepoImpl.save(image.copy(id = None, libraryId = lib.id.get))
