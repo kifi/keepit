@@ -20,10 +20,9 @@ import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[OrganizationAvatarCommanderImpl])
 trait OrganizationAvatarCommander {
-  def getBestImage(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar]
+  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar]
+  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], Option[OrganizationAvatar]]
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
-  def getAvatarsByOrgIds(orgIds: Set[Id[Organization]]): Map[Id[Organization], Seq[OrganizationAvatar]]
-  def getAvatarsByOrgId(orgId: Id[Organization]): Seq[OrganizationAvatar]
 }
 
 @Singleton
@@ -35,17 +34,14 @@ class OrganizationAvatarCommanderImpl @Inject() (
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
-  def getBestImage(orgId: Id[Organization], idealSize: ImageSize): Option[OrganizationAvatar] = {
-    val candidates = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrganization(orgId) }
-    ProcessedImageSize.pickByIdealImageSize(idealSize, candidates, strictAspectRatio = false)(_.imageSize)
+  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar] = {
+    getBestImagesByOrgIds(Set(orgId), imageSize).head._2
   }
-
-  def getAvatarsByOrgIds(orgIds: Set[Id[Organization]]): Map[Id[Organization], Seq[OrganizationAvatar]] = {
-    db.readOnlyReplica { implicit session => orgAvatarRepo.getAllByOrganizationIds(orgIds) }
-  }
-
-  def getAvatarsByOrgId(orgId: Id[Organization]): Seq[OrganizationAvatar] = {
-    db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrganization(orgId) }
+  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], Option[OrganizationAvatar]] = {
+    val candidatesById = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrgIds(orgIds) }
+    orgIds.map { orgId =>
+      orgId -> ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById(orgId), strictAspectRatio = false)(_.imageSize)
+    }.toMap
   }
 
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: TemporaryFile, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]] = {
@@ -89,7 +85,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
 
   def saveNewAvatars(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, uploadedImages: Set[ImageProcessState.UploadedImage]): Unit = {
     db.readWrite(attempts = 3) { implicit session =>
-      orgAvatarRepo.getByOrganization(orgId).foreach(orgAvatarRepo.deactivate)
+      orgAvatarRepo.getByOrgId(orgId).foreach(orgAvatarRepo.deactivate)
       uploadedImages.foreach { img =>
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.imageInfo.width, height = img.imageInfo.height, format = img.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)

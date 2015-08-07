@@ -10,9 +10,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
-  def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
-  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
-  def getAllByOrganizationIds(organizationIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]]
+  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar]
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]]
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar
 }
 
@@ -21,13 +20,6 @@ class OrganizationAvatarRepoImpl @Inject() (
     orgAvatarCache: OrganizationAvatarCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationAvatarRepo with DbRepo[OrganizationAvatar] {
-  override def deleteCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
-    orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
-  }
-  override def invalidateCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
-    orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
-  }
-
   import db.Driver.simple._
 
   type RepoImpl = OrganizationAvatarTable
@@ -81,22 +73,24 @@ class OrganizationAvatarRepoImpl @Inject() (
   def table(tag: Tag) = new OrganizationAvatarTable(tag)
   initTable()
 
-  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]], state: Column[State[OrganizationAvatar]]) =>
-    for (row <- rows if row.organizationId === organizationId && row.state === state) yield row
+  override def deleteCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
+    orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
   }
-  def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
-    getByOrganizationCompiled(organizationId, state).list
+  override def invalidateCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
+    // Because this cache associates an org id with an entire Seq[OrganizationAvatar], we can't really "save" to it. It's essentially a read-only cache.
+    // If the cache becomes invalid, just dump the entire value associated with the Key
+    orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
   }
 
-  def getAllByOrganizationIds(organizationIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]] = {
-    Map.empty
+  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar] = {
+    getByOrgIds(Set(orgId), excludeState).head._2
   }
-  // something like this : // (for (row <- rows if row.organizationId.inSet(organizationIds) && row.state =!= excludeState.orNull) yield (row.organizationId, row)).list.toMap
-
-  // gets only the DISTINCT images (i.e., only distinct imagePaths)
-  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
-    val matchingAvatars = (for (row <- rows if row.sourceFileHash === hash && row.state === state) yield row).list
-    matchingAvatars.groupBy(_.imagePath).mapValues(_.head).values.toSeq
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]] = {
+    orgAvatarCache.bulkGetOrElse(orgIds.map(OrganizationAvatarKey)) { missingKeys =>
+      val missingIds = missingKeys.map(_.orgId)
+      val q = for (row <- rows if row.organizationId.inSet(missingIds) && row.state =!= excludeState.orNull) yield row
+      q.list.groupBy(_.organizationId).map { case (orgId, avatars) => OrganizationAvatarKey(orgId) -> avatars }
+    }.map { case (key, orgAvatar) => key.orgId -> orgAvatar }
   }
 
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {

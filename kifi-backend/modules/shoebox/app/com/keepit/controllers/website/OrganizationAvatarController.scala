@@ -31,7 +31,7 @@ class OrganizationAvatarController @Inject() (
     uploadImageF.map {
       case Left(fail) => InternalServerError(Json.obj("error" -> fail.reason))
       case Right(hash) =>
-        orgAvatarCommander.getBestImage(request.orgId, OrganizationAvatarConfiguration.defaultSize) match {
+        orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize) match {
           case Some(avatar: OrganizationAvatar) =>
             Ok(Json.obj("uploaded" -> avatar.imagePath))
           case None =>
