@@ -49,6 +49,7 @@ angular.module('kifi')
     $scope.myMembership = $scope.membership;
     $scope.organization = organization;
     $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf('invite_members') > -1;
+    $scope.me = profileService.me;
 
     function resetAndFetch() {
       memberLazyLoader.reset();
