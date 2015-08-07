@@ -66,7 +66,7 @@ class KifiUserTypeahead @Inject() (
 
   private def getAllInfos(id: Id[User]): Future[Seq[(Id[User], User)]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      userConnectionRepo.getConnectedUsers(id) ++ organizationMembershipRepo.getTeammates(id) ++ libraryMembershipRepo.getCollaborators(id)
+      userConnectionRepo.getConnectedUsers(id) ++ organizationMembershipRepo.getTeammates(id) ++ libraryMembershipRepo.getCollaborators(id) + id
     } flatMap { ids =>
       getInfos(ids.toSeq).map(_.map(user => user.id.get -> user))
     }
