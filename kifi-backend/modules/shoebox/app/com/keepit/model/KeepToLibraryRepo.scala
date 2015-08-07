@@ -10,6 +10,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
+  def getByIds(ids: Set[Id[KeepToLibrary]])(implicit session: RSession): Map[Id[KeepToLibrary], KeepToLibrary]
+
   def countByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
   def getAllByKeepId(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -56,6 +58,12 @@ class KeepToLibraryRepoImpl @Inject() (
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
+
+  // ought to use a cache
+  def getByIds(ids: Set[Id[KeepToLibrary]])(implicit session: RSession): Map[Id[KeepToLibrary], KeepToLibrary] = {
+    val q = for (row <- rows if row.id.inSet(ids)) yield row
+    q.list.map(ktl => ktl.id.get -> ktl).toMap
+  }
 
   private def getByKeepIdHelper(keepId: Id[Keep], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
     for (row <- rows if row.keepId === keepId && !row.state.inSet(excludeStates)) yield row
@@ -125,5 +133,23 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {
     save(model.withState(KeepToLibraryStates.INACTIVE))
+  }
+
+
+  /*****************************************************
+   * For backwards compatibility with KeepRepo methods *
+   *****************************************************/
+
+  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select bm.note from bookmark bm, keep_to_library ktl
+                | where ktl.library_id = $libId and ktl.keep_id = bm.id and note is not null
+                | order by updated_at desc limit $limit""".stripMargin
+    q.as[String].list
+  }
+
+  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep] = {
+    // Need to denormalize visibility onto ktls before this is possible
+    ???
   }
 }
