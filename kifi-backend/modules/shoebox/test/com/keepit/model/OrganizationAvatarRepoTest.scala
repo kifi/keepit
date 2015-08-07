@@ -10,11 +10,11 @@ import scala.collection.immutable.Range.Inclusive
 
 class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector {
 
-  "Organization Logo Repo" should {
+  "OrganizationAvatarRepo" should {
     "save invites and get them by id" in {
       withDb() { implicit injector =>
         val orgAvatarRepo = inject[OrganizationAvatarRepo]
-        val org = db.readWrite { implicit s =>
+        val avatar = db.readWrite { implicit s =>
           val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(100, 120), ProcessImageOperation.CenteredCrop, ImageFormat.JPG)
           orgAvatarRepo.save(OrganizationAvatar(organizationId = Id[Organization](1),
             width = 100, height = 120, format = ImageFormat.JPG, kind = ProcessImageOperation.CenteredCrop,
@@ -22,7 +22,7 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
         }
 
         db.readOnlyMaster { implicit s =>
-          orgAvatarRepo.get(org.id.get) === org
+          orgAvatarRepo.get(avatar.id.get) === avatar
         }
       }
     }
@@ -41,7 +41,7 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
           }
         }
 
-        val avatarsForOrganization = db.readOnlyMaster { implicit s => orgAvatarRepo.getByOrganization(orgId) }
+        val avatarsForOrganization = db.readOnlyMaster { implicit s => orgAvatarRepo.getByOrgId(orgId) }
         avatarsForOrganization.length === range.length
         avatarsForOrganization.map(_.width).diff(range) === List.empty[Int]
       }
