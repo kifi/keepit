@@ -18,6 +18,7 @@ angular.module('kifi')
     }
 
     function resetAndFetchLibraries() {
+      orgProfileService.invalidateOrgProfileCache();
       newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
@@ -27,8 +28,7 @@ angular.module('kifi')
 
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-        if (/^orgProfile\.libraries\./.test(toState.name)) {
-          //$scope.libraryType = toState.name.split('.').pop();
+        if (/^orgProfile\.libraries/.test(toState.name)) {
           resetAndFetchLibraries();
         }
       }),
@@ -82,7 +82,7 @@ angular.module('kifi')
     $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
 
     $scope.shouldShowMoveCard = function () {
-      return $scope.canCreateLibraries && $scope.libraries.length < 10 && libraryLazyLoader.hasLoaded();
+      return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
     };
 
     resetAndFetchLibraries();
