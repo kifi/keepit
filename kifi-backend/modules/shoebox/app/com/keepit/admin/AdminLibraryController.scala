@@ -50,6 +50,7 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
     db: Database,
@@ -331,6 +332,8 @@ class AdminLibraryController @Inject() (
         case Some(membership) =>
           libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
       }
+      val image = libraryImageRepoImpl.getActiveForLibraryId(origLib.id.get).head
+      libraryImageRepoImpl.save(image.copy(id = None, libraryId = lib.id.get))
       val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
       (lib, keeps)
     }
