@@ -3,53 +3,11 @@ label()
   padding: 3px 5px
   text-align: center
   font-size: 0.85rem
+  border-radius: 3px
 
 force-gone()
   top: -9999px
   bottom: auto
-
-tooltip_trigger(background-color = false)
-  position: relative
-  display: inline-block
-  cursor: pointer
-
-  &:not(:hover)
-    [data-kf-tooltip]
-      &:not(:hover)
-        &:after
-        &:before
-          force-gone()
-
-  [data-kf-tooltip]
-    &:hover
-      &:after
-      &:before
-        opacity: 1
-
-      &:after
-        transform: translateY(-8px)
-        transition: transform 0.25s
-
-  &:not(:hover)
-    .tooltip
-      force-gone()
-
-  &:hover
-    [data-kf-tooltip]
-      &:after
-      &:before
-        opacity: 1
-
-      &:after
-        transform: translateY(-8px)
-        transition: transform 0.25s
-
-    .tooltip
-      opacity: 1
-      transform: translateY(0px)
-
-      &:after
-        opacity: 1
 
 tooltip-base()
   margin-bottom: 0
@@ -58,12 +16,13 @@ tooltip-base()
   opacity: 0
   bottom: 100%
   left: 50%
-  margin-left: -20px
+  margin-left: -75px
   box-shadow: 0px 5px 25px rgba(0, 0, 0, 0.25)
   pointer-events: none
-  min-width: 100px
   text-align: center
   transition: transform 0.25s
+  width: 150px
+  line-height: 1.2rem
 
 tooltip-arrow()
   border-top-style: solid
@@ -90,9 +49,9 @@ pseudo-tooltip-color(color = textDarkColor)
     border-top-color: color
 
 [data-kf-tooltip]
+  pseudo-tooltip-color()
   position: relative
-
-  pseudo-tooltip-color
+  white-space: normal
 
   &:after
     content: attr(data-kf-tooltip)

@@ -12,22 +12,26 @@
       </div>
     </div>
     <div class="kf-upl-count-line" ng-class="{'kf-can-write': canWrite}">
-      <svg
-        class="kf-upl-card-private"
-        kf-symbol-sprite
-        icon="lock"
-        ng-class="{'kf-collab': lib.numCollaborators}"
-        title="A private library"
-        ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"
-      ></svg>
-      <svg
-        class="kf-upl-card-public"
-        kf-symbol-sprite
-        icon="globe"
-        ng-class="{'kf-collab': lib.numCollaborators }"
-        title="A public library"
-        ng-if="lib.kind !== 'system_main' && lib.visibility === 'published'"
-      ></svg>
+      <div data-kf-tooltip="This library is only viewable to those you invite">
+        <svg
+          class="kf-upl-card-private"
+          kf-symbol-sprite
+          icon="lock"
+          ng-class="{'kf-collab': lib.numCollaborators}"
+          title="A private library"
+          ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"
+        ></svg>
+      </div>
+      <div data-kf-tooltip="This library is viewable to the world">
+        <svg
+          class="kf-upl-card-public"
+          kf-symbol-sprite
+          icon="globe"
+          ng-class="{'kf-collab': lib.numCollaborators }"
+          title="A public library"
+          ng-if="lib.kind !== 'system_main' && lib.visibility === 'published'"
+        ></svg>
+      </div>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
     <div class="kf-upl-card-foot" ng-switch="footerKind" ng-if="footerKind !== 'followers'">
