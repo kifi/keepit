@@ -5,6 +5,8 @@ import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.notify.model.{ NKind, NotificationKind }
 import org.joda.time.DateTime
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Notification(
     id: Option[Id[Notification]] = None,
@@ -22,6 +24,15 @@ case class Notification(
 
 object Notification {
 
+  implicit val format = (
+    (__ \ "id").formatNullable[Id[Notification]] and
+    (__ \ "createdAt").format[DateTime] and
+    (__ \ "updatedAt").format[DateTime] and
+    (__ \ "userId").format[Id[User]] and
+    (__ \ "lastChecked").format[DateTime] and
+    (__ \ "kind").format[String]
+  )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
+
   def applyFromDbRow(
     id: Option[Id[Notification]],
     createdAt: DateTime,
@@ -37,7 +48,7 @@ object Notification {
     NotificationKind.getByName(kind).get
   )
 
-  def unapplyFromDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Id[User], DateTime, String)] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Id[User], DateTime, String)] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,

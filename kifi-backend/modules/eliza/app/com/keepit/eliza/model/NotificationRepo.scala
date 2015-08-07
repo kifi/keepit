@@ -30,7 +30,7 @@ class NotificationRepoImpl @Inject() (
     def lastChecked = column[DateTime]("last_checked", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, userId, lastChecked, kind) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyFromDbRow)
+    def * = (id.?, createdAt, updatedAt, userId, lastChecked, kind) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
 
