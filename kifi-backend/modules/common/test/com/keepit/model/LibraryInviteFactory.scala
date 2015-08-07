@@ -26,6 +26,7 @@ object LibraryInviteFactory {
     def toUser(id: Int) = new PartialLibraryInvite(invitation.copy(userId = Some(Id[User](id))))
     def toUser(id: Id[User]) = new PartialLibraryInvite(invitation.copy(userId = Some(id)))
     def toUser(user: User) = new PartialLibraryInvite(invitation.copy(userId = Some(user.id.get)))
+    def toEmail(email: EmailAddress) = new PartialLibraryInvite(invitation.copy(userId = None, emailAddress = Some(email)))
     def withState(state: State[LibraryInvite]) = new PartialLibraryInvite(invitation.copy(state = state))
     def get: LibraryInvite = invitation
   }

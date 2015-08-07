@@ -85,8 +85,8 @@ class MobileMutualUserControllerTest extends Specification with ShoeboxTestInjec
           val user3 = user().withUsername("mrfreeze").saved
           val user4 = user().withUsername("poisonivy").saved
 
-          val lib2 = library().withUser(user2).withSlug("gotham-sucks").saved
-          val lib3 = library().withUser(user3).withSlug("ice-ice-baby").saved
+          val lib2 = library().withOwner(user2).withSlug("gotham-sucks").saved
+          val lib3 = library().withOwner(user3).withSlug("ice-ice-baby").saved
 
           membership().withLibraryFollower(lib2, user1).saved
           membership().withLibraryFollower(lib2, user4).saved
