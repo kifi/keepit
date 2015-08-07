@@ -396,21 +396,23 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 
 }
 
-case class NewDepressedRobot(
+case class DepressedRobotGrumble(
   override val userId: Id[User],
   override val time: DateTime,
-  robotName: String) extends NotificationEvent(userId, time, NewDepressedRobot)
+  robotName: String,
+  grumblingAbout: String) extends NotificationEvent(userId, time, DepressedRobotGrumble)
 
-object NewDepressedRobot extends NotificationKind[NewDepressedRobot] {
+object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
-  override val name: String = "new_depressed_robot"
+  override val name: String = "depressed_robot_grumble"
 
   override implicit val format = (
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
-    (__ \ "robotName").format[String]
-  )(NewDepressedRobot.apply, unlift(NewDepressedRobot.unapply))
+    (__ \ "robotName").format[String] and
+    (__ \ "grumblingAbout").format[String]
+  )(DepressedRobotGrumble.apply, unlift(DepressedRobotGrumble.unapply))
 
-  override def shouldGroupWith(newEvent: NewDepressedRobot, existingEvents: Set[NewDepressedRobot]): Boolean = false
+  override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = false
 
 }

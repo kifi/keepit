@@ -38,7 +38,7 @@ object NotificationKind {
     SocialContactJoined,
     NewConnectionInvite,
     ConnectionInviteAccepted,
-    NewDepressedRobot
+    DepressedRobotGrumble
   )
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
