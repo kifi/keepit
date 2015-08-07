@@ -55,7 +55,7 @@ class ExtLibraryController @Inject() (
     }
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
-        val owner = basicUserById(lib.ownerId)
+        val owner = basicUserById.get(lib.ownerId).getOrElse(throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         LibraryData(
           id = Library.publicId(lib.id.get),
