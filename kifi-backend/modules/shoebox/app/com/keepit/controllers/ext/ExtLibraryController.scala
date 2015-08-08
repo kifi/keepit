@@ -32,10 +32,11 @@ class ExtLibraryController @Inject() (
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
-  libPathCommander: LibraryPathCommander,
+  libPathCommander: PathCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
+  organizationAvatarCommander: OrganizationAvatarCommander,
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
@@ -47,25 +48,32 @@ class ExtLibraryController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def getLibraries() = UserAction { request =>
+  val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
+
+  def getLibraries = UserAction { request =>
     val librariesWithMembershipAndCollaborators = libraryCommander.getLibrariesUserCanKeepTo(request.userId)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
     }
+
+    val libs = librariesWithMembershipAndCollaborators.map(_._1)
+    val orgIds = libs.flatMap(_.organizationId)
+    val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, defaultLibraryImageSize)
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
-        val owner = basicUserById(lib.ownerId)
+        val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = libPathCommander.getPath(lib),
-          hasCollaborators = !collabs.isEmpty,
+          path = libPathCommander.getPathForLibrary(lib),
+          hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.subscribedToUpdates,
-          collaborators = collabs
+          collaborators = collabs,
+          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath))
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -81,15 +89,17 @@ class ExtLibraryController @Inject() (
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
+        val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
         Ok(Json.toJson(LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = libPathCommander.getPath(lib),
+          path = libPathCommander.getPathForLibrary(lib),
           hasCollaborators = false,
           subscribedToUpdates = false,
-          collaborators = Seq.empty)))
+          collaborators = Seq.empty,
+          orgAvatar = orgAvatar)))
     }
   }
 

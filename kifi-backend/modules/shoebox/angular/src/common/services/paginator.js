@@ -30,11 +30,11 @@ angular.module('kifi')
       pageSize = pageSize || this.fetchPageSize;
 
       this.loading = true;
+      this.fetchPageNumber++;
 
       var fetchPromise = sourceFunction(pageNumber, pageSize)
         .then(function (items) {
           this.hasMoreItems = (items.length === this.fetchPageSize);
-          this.fetchPageNumber++;
           this.loading = false;
           this.init = true;
           this.items = this.items.concat(items);

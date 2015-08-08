@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ LibrarySuggestedSearchCommander, LibraryCommander }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.{ SequenceNumber, State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
@@ -15,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.json.Json
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
@@ -50,6 +51,7 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
     db: Database,
@@ -289,20 +291,46 @@ class AdminLibraryController @Inject() (
     Ok
   }
 
+  def unsafeAddMember = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val userId = (request.body \ "userId").as[Id[User]]
+    val libraryId = (request.body \ "libraryId").as[Id[Library]]
+    val access = (request.body \ "access").asOpt[LibraryAccess].getOrElse(LibraryAccess.READ_ONLY)
+    db.readWrite { implicit session =>
+      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
+      val newMembershipTemplate = LibraryMembership(
+        libraryId = libraryId,
+        userId = userId,
+        access = access
+      )
+      val newMembership = libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.flatMap(_.id)))
+      Ok(Json.toJson(newMembership))
+    }
+  }
+
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
     val newOrgOpt = body.get("org-id").map(id => Try(id.toLong).toOption).flatten.map(id => Id[Organization](id))
     db.readWrite { implicit s =>
-      val lib = libraryRepo.get(libId)
-      val orgOpt = newOrgOpt.map(id => orgRepo.get(id)) //checking the id is valid
       val owner = userRepo.get(newOwner)
       assert(owner.state == UserStates.ACTIVE)
-      libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = orgOpt.map(_.id.get).orElse(lib.organizationId), visibility = if (orgOpt.isDefined) LibraryVisibility.ORGANIZATION else lib.visibility))
-      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
-      libraryMembershipRepo.save(membership.copy(userId = newOwner))
+      val lib = libraryRepo.get(libId)
+      newOrgOpt.map(id => orgRepo.get(id)) match {
+        case Some(org) =>
+          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id,
+            visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO))
+        case None =>
+          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = None,
+            visibility = LibraryVisibility.PUBLISHED, seq = SequenceNumber.ZERO))
+      }
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = newOwner, access = LibraryAccess.OWNER))
+        case Some(membership) =>
+          libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
+      }
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
-        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner))
+        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner, seq = SequenceNumber.ZERO))
       }
     }
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
@@ -310,23 +338,32 @@ class AdminLibraryController @Inject() (
 
   def cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val libId: Id[Library] = Id[Library](600673) //hard coded to https://admin.kifi.com/admin/libraries/600673
-    val newLib = db.readWrite { implicit s =>
+    val (lib, keeps) = db.readWrite { implicit s =>
       libraryRepo.getOrganizationLibraries(orgId) foreach { lib =>
         if (lib.kind == LibraryKind.SYSTEM_GUIDE) throw new Exception(s"Org $orgId already have a SYSTEM_GUIDE library $lib")
       }
       val origLib = libraryRepo.get(libId)
-      val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + RandomStringUtils.randomAlphanumeric(5)),
-        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId), kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION)
-      libraryRepo.save(newLibCandidate)
+      val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + "-" + RandomStringUtils.randomAlphanumeric(5)),
+        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId),
+        kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO)
+      val lib = libraryRepo.save(newLibCandidate)
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, origLib.ownerId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = origLib.ownerId, access = LibraryAccess.OWNER))
+        case Some(membership) =>
+          libraryMembershipRepo.save(membership.copy(id = None, libraryId = lib.id.get, access = LibraryAccess.OWNER, seq = SequenceNumber.ZERO))
+      }
+      val image = libraryImageRepoImpl.getActiveForLibraryId(origLib.id.get).head
+      libraryImageRepoImpl.save(image.copy(id = None, libraryId = lib.id.get))
+      val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
+      (lib, keeps)
     }
-    db.readWrite { implicit s =>
-      implicit val context = HeimdalContext.empty
-      val keeps = keepRepo.getByLibrary(newLib.id.get, 0, 5000)
-      libraryCommander.copyKeeps(newLib.ownerId, toLibraryId = newLib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))
-      newLib.id.get
+    implicit val context = HeimdalContext.empty
+    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))._2 foreach {
+      case (keep, libraryError) =>
+        throw new Exception(s"can't copy keep $keep : $libraryError")
     }
-    Redirect(routes.AdminLibraryController.libraryView(newLib.id.get))
+    Redirect(routes.AdminLibraryController.libraryView(lib.id.get))
   }
 
 }
-

@@ -2,6 +2,7 @@ package com.keepit.search.index.graph.keep
 
 import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
+import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ KeepAndTags, NormalizedURI, Keep }
@@ -14,7 +15,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 
-class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexer](indexDirectory) {
+class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 2) {
   val name = "KeepIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 

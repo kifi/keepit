@@ -1,4 +1,3 @@
-/* global jQuery: true */
 'use strict';
 
 angular.module('kifi')
@@ -6,8 +5,6 @@ angular.module('kifi')
 .directive('kfClickMenu', [
   '$window',
   function ($window) {
-    var $ = jQuery;
-
     return {
       restrict: 'A',
       link: function (scope, element) {
@@ -28,12 +25,12 @@ angular.module('kifi')
           var $target;
 
           if (e.which === 1) {
-            $target = $(e.target);
+            $target = angular.element(e.target);
             // Open the menu if we clicked a child of the directive,
-            // and that child is not a dropdown item,
+            // and that child is not a dropdown item or a child of a dropdown item,
             // and the directive's menu has items to show
             if ($target.closest(element).length &&
-                !$target.hasClass('kf-dropdown-menu-item') &&
+                !$target.closest('.kf-dropdown-menu-item').length &&
                 element.find('menu').children().length) {
               // Only open the menu if it's closed
               if (!isOpen()) {

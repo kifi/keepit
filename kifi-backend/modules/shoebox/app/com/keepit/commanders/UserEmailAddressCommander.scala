@@ -89,20 +89,20 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     libraryInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
     organizationInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
-    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(state = UserEmailAddressStates.ACTIVE, verifiedAt = Some(currentDateTime))) // todo(Léo): remove state change when UNVERIFIED no longer appears in the DB
+    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(verifiedAt = Some(currentDateTime)))
 
     lazy val isPendingPrimaryEmail = {
       val pendingEmail = userValueRepo.getValueStringOpt(verifiedEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      pendingEmail.contains(verifiedEmail.address)
+      pendingEmail.exists(_ equalsIgnoreCase verifiedEmail.address)
     }
 
     val user = userRepo.get(verifiedEmail.userId)
 
     if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) {
       updatePrimaryEmailForUser(user, verifiedEmail)
+    } else {
+      verifiedEmail
     }
-
-    verifiedEmail
   }
 
   def setAsPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
@@ -114,12 +114,21 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
-  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     require(primaryEmail.userId == user.id.get, s"Suggested primary email $primaryEmail does not belong to $user")
+
+    session.onTransactionSuccess { heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address)) }
+
     userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
     userRepo.save(user.copy(primaryEmail = Some(primaryEmail.address)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
+    userEmailAddressRepo.getPrimaryByUser(primaryEmail.userId) match {
+      case Some(existingPrimary) if existingPrimary.address equalsIgnoreCase primaryEmail.address => existingPrimary // this email is already marked as primary
+      case existingPrimaryOpt => {
+        existingPrimaryOpt.foreach(existingPrimary => userEmailAddressRepo.save(existingPrimary.copy(primary = false)))
+        userEmailAddressRepo.save(primaryEmail.copy(primary = true))
+      }
+    }
   }
 
   def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = {
@@ -136,7 +145,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     else if (isPrimaryEmail(emailAddress)) Failure(new PrimaryEmailAddressException(emailAddress))
     else Success {
       val pendingPrimary = userValueRepo.getValueStringOpt(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      if (pendingPrimary.contains(emailAddress.address)) {
+      if (pendingPrimary.exists(_ equalsIgnoreCase emailAddress.address)) {
         userValueRepo.clearValue(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL)
       }
       userEmailAddressRepo.save(emailAddress.withState(UserEmailAddressStates.INACTIVE))

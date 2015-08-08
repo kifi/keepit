@@ -90,12 +90,12 @@ object SystemEmailAddress {
   val SUPPORT = EmailAddress("support@kifi.com")
   val OLD_SUPPORT = EmailAddress("support@42go.com") //keep for serialization of mail
   val FEED_QA = EmailAddress("feed-qa@kifi.com")
-  val ASHLEY = EmailAddress("ashley@kifi.com")
   val SALES = EmailAddress("sales@kifi.com")
+  val ASHLEY = EmailAddress("ashley@kifi.com") //keep it around for twitter communication
   val CONGRATS = EmailAddress("congrats@kifi.com")
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH, CAM)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, ASHLEY, EISHAY_PUBLIC, SALES)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, EISHAY_PUBLIC, SALES, ASHLEY)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 

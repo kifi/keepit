@@ -56,7 +56,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         case (lib, idx) =>
           val libSlug = s"$libName-l$idx"
           val libTitle = libSlug.replace("-", " ").toUpperCase
-          val savedLib = lib.withName(libTitle).withSlug(libSlug).withUser(libOwner).published().saved
+          val savedLib = lib.withName(libTitle).withSlug(libSlug).withOwner(libOwner).published().saved
 
           // add 5 keeps to each library
           val savedKeeps = keeps(numKeeps).zipWithIndex.map {
@@ -180,7 +180,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         db.readWrite { implicit rw =>
           Seq(user1, user2).zipWithIndex map {
             case (user, userIdx) =>
-              val lib = library().withUser(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
+              val lib = library().withOwner(user).withSlug(s"u${userIdx + 1}/newFollowersMyLibs").published().saved
               keep().withLibrary(lib).saved
 
               val followers = util.Random.shuffle(randomFollowers).take(util.Random.nextInt(randomFollowers.size))

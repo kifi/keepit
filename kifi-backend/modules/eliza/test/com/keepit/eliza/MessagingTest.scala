@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationCommander }
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationDeliveryCommander }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -69,7 +69,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
         val messageFetchingCommanger = inject[MessageFetchingCommander]
-        val notificationCommander = inject[NotificationCommander]
+        val notificationCommander = inject[NotificationDeliveryCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!", None)
 
         val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None, None)
@@ -94,7 +94,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
           val (user1, user2, user3, user2n3Seq, shoebox) = setup()
           val messagingCommander = inject[MessagingCommander]
-          val notificationCommander = inject[NotificationCommander]
+          val notificationCommander = inject[NotificationDeliveryCommander]
           var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
           inject[WebSocketRouter].onNotification { (userId, notification) =>
@@ -140,7 +140,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
-        val notificationCommander = inject[NotificationCommander]
+        val notificationCommander = inject[NotificationDeliveryCommander]
 
         val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo", None)
 

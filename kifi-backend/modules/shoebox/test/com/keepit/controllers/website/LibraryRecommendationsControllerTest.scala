@@ -52,7 +52,7 @@ class LibraryRecommendationsControllerTest extends TestKitSupport with Specifica
         val (libs, user1, user2) = db.readWrite { implicit rw =>
           val owner = UserFactory.user().saved
           (
-            LibraryFactory.libraries(5).map(_.withUser(owner).published().saved),
+            LibraryFactory.libraries(5).map(_.withOwner(owner).published().saved),
             UserFactory.user().saved,
             UserFactory.user().saved
           )
@@ -89,7 +89,7 @@ class LibraryRecommendationsControllerTest extends TestKitSupport with Specifica
         val (lib1, user1) = db.readWrite { implicit rw =>
           val owner = UserFactory.user().saved
           val user1 = UserFactory.user().saved
-          val lib = LibraryFactory.library().withUser(owner).published().saved
+          val lib = LibraryFactory.library().withOwner(owner).published().saved
           (lib, user1)
         }
         val libPubId = Library.publicId(lib1.id.get)
