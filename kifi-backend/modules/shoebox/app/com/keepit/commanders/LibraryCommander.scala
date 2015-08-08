@@ -1562,7 +1562,7 @@ class LibraryCommanderImpl @Inject() (
     } getOrElse Future.successful(Seq.empty)
   }
 
-  //@StatsdTiming("LibraryCommander.createLibraryCardInfos")
+  @StatsdTiming("LibraryCommander.createLibraryCardInfos")
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
     val membershipsToLibsMap = viewerOpt.map { viewer =>
