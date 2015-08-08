@@ -85,6 +85,16 @@ angular.module('kifi')
       return $scope.canCreateLibraries && $scope.libraries.length < 10 && libraryLazyLoader.hasLoaded();
     };
 
+    $scope.openMoveLibraryHelp = function () {
+      modalService.open({
+        template: 'common/modal/videoModal.tpl.html',
+        modalData: {
+          youtubeId: 'ixAmggSbYmg',
+          title: 'Moving Libraries'
+        }
+      });
+    };
+
     resetAndFetchLibraries();
   }
 ]);
