@@ -117,6 +117,8 @@ class AuthCommander @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
@@ -459,11 +461,27 @@ class AuthCommander @Inject() (
       implicit val context = HeimdalContext(Map())
       libraryCommander.joinLibrary(userId, libId, authToken).fold(
         { libFail =>
-          airbrake.notify(s"[finishSignup] auto-join failed. $libFail")
+          airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")
           false
         },
         { library =>
           log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+          true
+        }
+      )
+    }.getOrElse(false)
+  }
+
+  def autoJoinOrg(userId: Id[User], orgPubId: PublicId[Organization], authToken: String): Boolean = {
+    Organization.decodePublicId(orgPubId).map { orgId =>
+      implicit val context = HeimdalContext(Map())
+      orgInviteCommander.acceptInvitation(orgId, userId, authToken).fold(
+        { orgFail =>
+          airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
+          false
+        },
+        { org =>
+          log.info(s"[finishSignup] user(id=$userId) has successfully joined organization $org")
           true
         }
       )

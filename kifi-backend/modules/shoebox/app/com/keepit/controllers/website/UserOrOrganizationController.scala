@@ -22,6 +22,7 @@ class UserOrOrganizationController @Inject() (
     db: Database,
     orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryController: LibraryController,
     heimdalContextBuilder: HeimdalContextBuilderFactory,

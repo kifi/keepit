@@ -1,6 +1,6 @@
 package com.keepit.shoebox.controllers
 
-import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipCommander }
+import com.keepit.commanders.{ OrganizationInviteCommander, OrganizationCommander, OrganizationMembershipCommander }
 import com.keepit.common.controller.{ NonUserRequest, MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -17,6 +17,7 @@ trait OrganizationAccessActions {
   val publicIdConfig: PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
   val orgMembershipCommander: OrganizationMembershipCommander
+  val orgInviteCommander: OrganizationInviteCommander
 
   case class OrganizationRequest[T](request: MaybeUserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request)
   case class OrganizationUserRequest[T](request: UserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request)
@@ -44,10 +45,10 @@ trait OrganizationAccessActions {
 
   def OrganizationAction(id: PublicId[Organization], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
     override def invokeBlock[A](maybeRequest: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
-      maybeRequest match {
-        case request: UserRequest[_] if request.experiments.contains(UserExperimentType.ORGANIZATION) =>
-          Organization.decodePublicId(id) match {
-            case Success(orgId) =>
+      Organization.decodePublicId(id) match {
+        case Success(orgId) =>
+          maybeRequest match {
+            case request: UserRequest[_] if request.experiments.contains(UserExperimentType.ORGANIZATION) =>
               val userIdOpt: Option[Id[User]] = request match {
                 case userRequest: UserRequest[A] => Some(userRequest.userId)
                 case _ => None
@@ -60,10 +61,17 @@ trait OrganizationAccessActions {
               } else {
                 Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
               }
-            case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+            case request: NonUserRequest[_] =>
+              val authTokenOpt = request.getQueryString("authToken")
+              if (authTokenOpt.exists(authToken => orgInviteCommander.isAuthValid(orgId, authToken))) {
+                val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
+                block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
+              } else {
+                Future.successful(OrganizationFail.AUTH_INVALID.asErrorResponse)
+              }
           }
         case _ =>
-          Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
+          Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
       }
     }
   }

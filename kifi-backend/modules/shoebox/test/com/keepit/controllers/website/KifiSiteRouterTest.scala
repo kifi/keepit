@@ -57,11 +57,12 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     "route correctly" in {
       running(new ShoeboxApplication(modules: _*)) {
         // Database population
-        val (user1, user2, org) = db.readWrite { implicit session =>
+        val (user1, user2, org, authToken) = db.readWrite { implicit session =>
           val u1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abez").saved
           val u2 = UserFactory.user().withName("Léo", "HasAnAccentInHisName").withUsername("léo1221").saved
-          val org = OrganizationFactory.organization().withName("Kifi").withHandle(OrganizationHandle("kifiorghandle")).withOwner(u1).saved
-          (u1, u2, org)
+          val org = OrganizationFactory.organization().withName("Kifi").withHandle(OrganizationHandle("kifiorghandle")).withOwner(u1).withInvitedEmails(Seq(EmailAddress("cam@kifi.com"))).saved
+          val authToken = inject[OrganizationInviteRepo].getByEmailAddress(EmailAddress("cam@kifi.com"))
+          (u1, u2, org, authToken)
         }
 
         val userCommander = inject[UserCommander]
@@ -142,6 +143,9 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
           status(resF) === 200
           Some(resF) must not(beWebApp)
         }
+
+        route(FakeRequest("GET", s"/kifiorghandle?authToken=$authToken")) must beWebApp
+        route(FakeRequest("GET", s"/kifiorghandle")) must be404
 
         actionsHelper.setUser(user1)
 

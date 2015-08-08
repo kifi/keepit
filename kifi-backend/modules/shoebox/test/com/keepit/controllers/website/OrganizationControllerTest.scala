@@ -42,7 +42,6 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
-
           response === OrganizationFail.INVALID_PUBLIC_ID
         }
       }

@@ -20,6 +20,7 @@ class OrganizationAvatarController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   val orgMembershipCommander: OrganizationMembershipCommander,
+  val orgInviteCommander: OrganizationInviteCommander,
   implicit val config: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
     extends UserActions with OrganizationAccessActions with ShoeboxServiceController {

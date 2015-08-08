@@ -30,7 +30,8 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   }
 
   private def fileLoad(path: String): Option[String] = {
-    Play.resourceAsStream(s"/marketing/$path.html").map { stream =>
+    Play.resourceAsStream(s"/marketing/home.html").map { stream =>
+      println("here")
       val writer = new StringWriter()
       val fileStr = try {
         IOUtils.copy(stream, writer, "UTF-8")
