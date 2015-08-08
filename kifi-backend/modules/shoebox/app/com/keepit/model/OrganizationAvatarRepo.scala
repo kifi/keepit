@@ -83,14 +83,15 @@ class OrganizationAvatarRepoImpl @Inject() (
   }
 
   def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar] = {
-    getByOrgIds(Set(orgId), excludeState).head._2
+    getByOrgIds(Set(orgId), excludeState).apply(orgId)
   }
   def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]] = {
-    orgAvatarCache.bulkGetOrElse(orgIds.map(OrganizationAvatarKey)) { missingKeys =>
+    val result = orgAvatarCache.bulkGetOrElse(orgIds.map(OrganizationAvatarKey)) { missingKeys =>
       val missingIds = missingKeys.map(_.orgId)
       val q = for (row <- rows if row.organizationId.inSet(missingIds) && row.state =!= excludeState.orNull) yield row
       q.list.groupBy(_.organizationId).map { case (orgId, avatars) => OrganizationAvatarKey(orgId) -> avatars }
     }.map { case (key, orgAvatar) => key.orgId -> orgAvatar }
+    result.withDefaultValue(Seq.empty[OrganizationAvatar])
   }
 
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {

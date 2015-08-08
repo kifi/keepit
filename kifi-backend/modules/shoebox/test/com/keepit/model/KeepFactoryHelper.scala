@@ -44,7 +44,6 @@ object KeepFactoryHelper {
         fixUriReferences(candidate) |> fixLibraryReferences
       }
       val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None))
-      println("[RPB] finalKeep: " + finalKeep)
       injector.getInstance(classOf[KeepToLibraryRepo]).save(KeepToLibrary(keepId = finalKeep.id.get, libraryId = finalKeep.libraryId.get, addedBy = finalKeep.userId))
       finalKeep
     }
