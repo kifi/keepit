@@ -6,6 +6,6 @@
   </div>
   <div class="dialog-buttons" ng-if="!withoutButtons">
     <button class="dialog-cancel" ng-click="closeAndCancel()" ng-if="withCancel" tabindex="0">{{cancelText || 'Cancel'}}</button>
-    <button class="kf-action-button" ng-class="{'dialog-warn': withWarning}" ng-click="closeAndAction()" tabindex="0">{{actionText || 'Ok'}}</button>
+    <button class="kf-action-button" ng-class="{'dialog-warn': withWarning}" ng-click="closeAndAction()" ng-if="withOk" tabindex="0">{{actionText || 'Ok'}}</button>
   </div>
 </div>
