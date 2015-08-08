@@ -1,11 +1,10 @@
 package com.keepit.dev
 
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, HeimdalCacheModule }
 import com.keepit.common.controller.DevRemoteUserActionsHelperModule
-import com.keepit.heimdal._
+import com.keepit.heimdal.{ DevDelightedModule, HeimdalQueueDevModule, ProdAnalyticsModule, HeimdalModule }
 import com.keepit.helprank.DevReKeepStatsUpdaterModule
 import com.keepit.inject.CommonDevModule
-import com.keepit.common.cache.HashMapMemoryCacheModule
-import com.keepit.common.cache.HeimdalCacheModule
 
 case class HeimdalDevModule() extends HeimdalModule(
   userActionsModule = DevRemoteUserActionsHelperModule(),

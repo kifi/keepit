@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.Id
 import com.keepit.model.{ PrimaryOrgForUserKey, PrimaryOrgForUserCache, Organization, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -9,6 +9,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.concurrent.Future
 
+@ImplementedBy(classOf[PrimaryOrgProviderImpl])
 trait PrimaryOrgProvider {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
 }

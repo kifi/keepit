@@ -5,6 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
 import com.keepit.model.{ User, UserExperimentType }
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientModule }
 import com.keepit.social.NonUserKinds
 import com.keepit.test.{ FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
@@ -19,8 +20,8 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
   val sendEventsToAmplitude = false
 
   val modules: Seq[Module] =
-    if (sendEventsToAmplitude) Seq(ProdHttpClientModule(), FakeAnalyticsModule())
-    else Seq(FakeHttpClientModule(), FakeWebServiceModule(), FakeAnalyticsModule())
+    if (sendEventsToAmplitude) Seq(ProdHttpClientModule(), FakeAnalyticsModule(), FakeShoeboxServiceModule())
+    else Seq(FakeHttpClientModule(), FakeWebServiceModule(), FakeAnalyticsModule(), FakeShoeboxServiceModule())
 
   val testUserId = Id[User](777)
   val testUserExternalId = ExternalId[User]("68a320e9-3c33-4b76-b577-d7cba0102745")

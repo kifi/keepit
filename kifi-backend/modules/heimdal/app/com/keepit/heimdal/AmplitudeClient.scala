@@ -68,7 +68,7 @@ class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider
           case _ => AmplitudeEventSent(eventData)
         }
       }
-    })
+    }, Some(s"AmplitudeClientImpl.track(event=${eventBuilder.getEventType()})"))
   }
 
   def setUserProperties(userId: Id[User], context: HeimdalContext) = {
