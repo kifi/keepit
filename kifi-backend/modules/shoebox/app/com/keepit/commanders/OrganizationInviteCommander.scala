@@ -314,7 +314,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
+    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.name}!"
       val inviterId = invite.inviterId
