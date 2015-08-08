@@ -507,7 +507,7 @@ class AdminUserController @Inject() (
       // Deactivate other emails
       oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        userEmailAddressCommander.deactivate(removedEmail).get
+        userEmailAddressCommander.deactivate(removedEmail, force = true).get
       }
     }
 

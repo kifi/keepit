@@ -248,7 +248,7 @@ class UserCommander @Inject() (
   def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(email) if email.userId == userId => userEmailAddressCommander.deactivate(email) match {
+        case Some(email) => userEmailAddressCommander.deactivate(email) match {
           case Success(_) => Right(())
           case Failure(_: LastEmailAddressException) => Left("last email")
           case Failure(_: LastVerifiedEmailAddressException) => Left("last verified email")
@@ -480,8 +480,6 @@ class UserCommander @Inject() (
     db.readWrite { implicit session =>
       val uniqueEmails = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
-      // Remove missing emails
-      toRemove.foreach(userEmailAddressCommander.deactivate(_))
 
       // Add new emails
       val added = (uniqueEmails -- existing.map(_.address)).map { address =>
@@ -497,6 +495,9 @@ class UserCommander @Inject() (
           userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
         }
       }
+
+      // Remove missing emails
+      toRemove.foreach(userEmailAddressCommander.deactivate(_))
     }
   }
 
