@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time.Clock
+import com.keepit.common.performance.StatsdTiming
 
 @ImplementedBy(classOf[LibraryImageRepoImpl])
 trait LibraryImageRepo extends Repo[LibraryImage] {
@@ -64,6 +65,7 @@ class LibraryImageRepoImpl @Inject() (
     for (r <- rows if r.libraryId === libraryId && r.state =!= LibraryImageStates.INACTIVE) yield r
   }
 
+  @StatsdTiming("LibraryImageRepo.getActiveForLibraryId")
   def getActiveForLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[LibraryImage] = {
     libraryImageCache.getOrElse(LibraryImageKey(libraryId)) {
       getActiveForLibraryIdAndStatesCompiled(libraryId).list

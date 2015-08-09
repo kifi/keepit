@@ -1678,6 +1678,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("LibraryCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
     followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, orgCard: Option[OrganizationCard]): LibraryCardInfo = {
     LibraryCardInfo(
