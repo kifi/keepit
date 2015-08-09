@@ -9,7 +9,7 @@ import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.performance.timing
+import com.keepit.common.performance.{ timing, StatsdTiming }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -111,6 +111,7 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  @StatsdTiming("LibraryMembershipRepo.pageWithLibraryIdAndAccess")
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
     val safeOffset = if (offset >= 0) offset else 0
     // This can be removed once clients stop calling with offset = -1
@@ -167,6 +168,7 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  @StatsdTiming("LibraryMembershipRepo.getWithLibraryIdsAndUserId")
   def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Option[LibraryMembership]] = {
     val foundMembershipsMap = libraryIds.size match {
       case 0 =>
@@ -261,6 +263,7 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  @StatsdTiming("LibraryMembershipRepo.countWithLibraryIdByAccess")
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess = {
     countWithLibraryIdByAccessCache.getOrElse(CountWithLibraryIdByAccessKey(libraryId)) {
       import com.keepit.common.db.slick.StaticQueryFixed.interpolation

@@ -123,15 +123,15 @@ package object performance {
       val name = extractAnnotationParameters(c.prefix.tree)
 
       def modifiedDeclaration(defDecl: DefDef) = {
-        val q"def $defName(...$args): $retType = { ..$body }" = defDecl
+        val q"$mods def $defName(...$args): $retType = { ..$body }" = defDecl
 
         if (async) {
           c.Expr(q"""
-            def $defName(...$args): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
+            $mods def $defName(...$args): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
           """)
         } else {
           c.Expr(q"""
-            def $defName(...$args): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
+            $mods def $defName(...$args): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
           """)
         }
       }
