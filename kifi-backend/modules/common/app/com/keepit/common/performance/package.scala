@@ -122,39 +122,18 @@ package object performance {
 
       val name = extractAnnotationParameters(c.prefix.tree)
 
-      def modifiedDeclaration1(defDecl: DefDef) = {
-        val q"def $defName(..$args): $retType = { ..$body }" = defDecl
+      def modifiedDeclaration(defDecl: DefDef) = {
+        val q"def $defName(...$args): $retType = { ..$body }" = defDecl
 
         if (async) {
           c.Expr(q"""
-            def $defName(..$args): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
+            def $defName(...$args): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
           """)
         } else {
           c.Expr(q"""
-            def $defName(..$args): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
+            def $defName(...$args): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
           """)
         }
-      }
-
-      //Couldn't come up with a way to do this generically. Ideas welcome. In any case, curried one should be sufficient for almost all of our code.
-      def modifiedDeclaration2(defDecl: DefDef) = {
-        val q"def $defName(..$args1)(..$args2): $retType = { ..$body }" = defDecl
-
-        if (async) {
-          c.Expr(q"""
-            def $defName(..$args1)(..$args2): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
-          """)
-        } else {
-          c.Expr(q"""
-            def $defName(..$args1)(..$args2): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
-          """)
-        }
-      }
-
-      def modifiedDeclaration(defDecl: DefDef) = defDecl match {
-        case q"def $defName(..$args): $retType = { ..$body }" => modifiedDeclaration1(defDecl)
-        case q"def $defName(..$args1)(..$args2): $retType = { ..$body }" => modifiedDeclaration2(defDecl)
-        case _ => throw new Exception("Unsupported function form.")
       }
 
       annottees.map(_.tree) match {
