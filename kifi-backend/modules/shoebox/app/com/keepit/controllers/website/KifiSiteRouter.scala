@@ -199,7 +199,7 @@ class KifiSiteRouter @Inject() (
   // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
   private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
     def userCanSeeOrg(orgId: Id[Organization]) = request match {
-      case userReq: UserRequest[_] => !mustBeInExperiment && userReq.experiments.contains(UserExperimentType.ORGANIZATION)
+      case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
       case nonuserReq: NonUserRequest[_] => nonuserReq.getQueryString("authToken").exists(auth => orgInviteCommander.isAuthValid(orgId, auth))
     }
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }

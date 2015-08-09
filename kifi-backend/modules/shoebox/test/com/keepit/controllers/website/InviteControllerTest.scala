@@ -124,7 +124,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         // README: if you get a 404 here make sure you have pulled the marketing submodule modules/shoebox/marketing
         // 1) run from repository root: git submodule update --init
         // 2) cd to modules/shoebox/marketing and run: npm install
-        // 3) run "mkt" in SBT to generate the file this test depends on (you should only have to do this once)
+        // 3) run "mkt" in SBT from /kifi-backend/ to generate the file this test depends on (you should only have to do this once)
         code === 200
 
         // landing page at this point -- we'll make sure cookie is set

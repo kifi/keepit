@@ -18,15 +18,19 @@ import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.UserStates
+import com.keepit.model.{ InvitationDecision, UserRepo, OrganizationMembershipRepo, Organization, UserFactory, OrganizationInviteRepo, OrganizationFactory, UserStates }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.shoebox.{ FakeShoeboxServiceClientModule, FakeShoeboxServiceModule, KeepImportsModule }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector }
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.mvc.{ Request, AnyContent, Result }
 import play.api.test.Helpers._
 import play.api.test._
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 
 import scala.concurrent.Future
 
@@ -55,7 +59,8 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
     FakeCortexServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule(),
-    FakeOAuth2ConfigurationModule()
+    FakeOAuth2ConfigurationModule(),
+    FakeCryptoModule()
   )
 
   "AuthController" should {
@@ -161,6 +166,37 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         contentType(result1) must beSome("application/json")
         contentAsString(result1) === Json.obj("error" -> "user_exists_failed_auth").toString()
         session(result1).getUserId.isDefined === false
+      }
+    }
+
+    "auto-join an org with auth token" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        inject[MaybeAppFakeUserActionsHelper].removeUser()
+        implicit val pubIdConfig = inject[FakeCryptoModule].publicIdConfiguration
+        val authController = inject[AuthController]
+        val inviteeEmail = EmailAddress("foo@bar.com")
+        val (owner, org, authToken) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().withCreatedAt(DateTime.now).withName("Foo", "Bar").withUsername("foobar").saved
+          val org = OrganizationFactory.organization().withOwner(owner).withInvitedEmails(Seq(inviteeEmail)).saved
+          val authToken = inject[OrganizationInviteRepo].getByEmailAddress(inviteeEmail).head.authToken
+          (owner, org, authToken)
+        }
+        val orgPubId = Organization.publicId(org.id.get)
+        val path = "/auth/email-signup" + "?authToken=" + authToken
+        val orgPath = "/" + org.handle.value
+        val payload = Json.obj("email" -> inviteeEmail, "password" -> "raboof", "firstName" -> "Foo", "lastName" -> "Bar",
+          "orgPublicId" -> orgPubId, "orgAuthToken" -> authToken)
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result = authController.emailSignup()(request)
+        val newUserIdOpt = session(result).getUserId
+
+        status(result) === OK
+        contentAsJson(result) === Json.obj("uri" -> orgPath)
+        newUserIdOpt.isDefined === true
+        db.readOnlyMaster { implicit session =>
+          inject[OrganizationInviteRepo].getByEmailAddress(inviteeEmail).head.decision === InvitationDecision.ACCEPTED
+          inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, newUserIdOpt.get).isDefined === true
+        }
       }
     }
 

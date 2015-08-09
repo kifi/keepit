@@ -266,6 +266,7 @@ class AuthController @Inject() (
   def emailSignup() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[UserPassFinalizeInfo] match {
       case None =>
+        log.warn("emailsignup")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(info) =>
         val hasher = Registry.hashers.currentHasher
@@ -440,6 +441,7 @@ class AuthController @Inject() (
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    log.warn("first")
     authHelper.userPasswordSignupAction
   }
 

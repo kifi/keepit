@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'signupService',
-  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout) {
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'signupService', 'profileService',
+  function ($state, $http, $analytics, $location, modalService, orgProfileService, signupService, profileService, $timeout) {
 
   return {
     restrict: 'A',
@@ -20,7 +20,7 @@ angular.module('kifi')
 
       var authToken = $location.search().authToken || '';
       if (!profileService.userLoggedIn() && authToken && scope.profile) {
-        signupService.register({ orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken })
+        signupService.register({ orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken });
       }
 
       var lastSavedInfo = {};

@@ -115,6 +115,8 @@ class AuthHelper @Inject() (
   }
 
   def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, passwordOpt: Option[String])(implicit request: MaybeUserRequest[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
+    log.warn("YOU GOT HERE")
+    log.info(s"EMAIL: ${emailAddress.address}, PASSWORD: ${passwordOpt.get}")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
@@ -150,6 +152,7 @@ class AuthHelper @Inject() (
     } getOrElse {
       val pInfo = passwordOpt.map(p => hasher.hash(p))
       val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, firstName = "", lastName = "", isComplete = false)
+      println("GOT ALL THE WAY HERE")
       Authenticator.create(newIdentity).fold(
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator =>
@@ -158,6 +161,7 @@ class AuthHelper @Inject() (
             .withCookies(authenticator.toCookie)
       )
     }
+    println(res)
     res
   }
 

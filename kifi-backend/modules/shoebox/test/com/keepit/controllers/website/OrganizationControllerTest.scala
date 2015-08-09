@@ -22,7 +22,7 @@ import scala.concurrent.Future
 class OrganizationControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
 
-  val controllerTestModules = Seq(
+  def controllerTestModules = Seq(
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
