@@ -74,7 +74,7 @@ object OrganizationFail {
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
   case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
-  case object AUTH_INVALID extends OrganizationFail(BAD_REQUEST, "auth_invalid")
+  case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -86,7 +86,7 @@ object OrganizationFail {
       case BAD_PARAMETERS.message => BAD_PARAMETERS
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
-      case AUTH_INVALID.message => AUTH_INVALID
+      case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN
     }
   }
 }

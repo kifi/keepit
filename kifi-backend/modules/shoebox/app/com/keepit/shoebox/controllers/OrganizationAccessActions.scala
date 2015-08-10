@@ -67,7 +67,7 @@ trait OrganizationAccessActions {
                 val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
               } else {
-                Future.successful(OrganizationFail.AUTH_INVALID.asErrorResponse)
+                Future.successful(OrganizationFail.INVALID_AUTHTOKEN.asErrorResponse)
               }
           }
         case _ =>

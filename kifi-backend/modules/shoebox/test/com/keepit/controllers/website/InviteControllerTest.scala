@@ -125,7 +125,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         // 1) run from repository root: git submodule update --init
         // 2) cd to modules/shoebox/marketing and run: npm install
         // 3) run "mkt" in SBT from /kifi-backend/ to generate the file this test depends on (you should only have to do this once)
-        code === 200
+        code === OK
 
         // landing page at this point -- we'll make sure cookie is set
         val invCookie = cookies(result).get("inv")

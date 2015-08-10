@@ -263,10 +263,10 @@ trait UserActions extends Logging { self: Controller =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
           case None => block(userActionsHelper.buildNonUserRequest).map { resp =>
-              if (resp.header.status == OK && resp.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
-                maybeAugmentKcid(resp)
-              } else resp
-            }
+            if (resp.header.status == OK && resp.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
+              maybeAugmentKcid(resp)
+            } else resp
+          }
         }
       }
       result.map(maybeAugmentCORS(_))
