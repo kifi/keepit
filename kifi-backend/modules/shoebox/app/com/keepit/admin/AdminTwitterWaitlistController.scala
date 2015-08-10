@@ -14,6 +14,7 @@ import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -36,13 +37,14 @@ class AdminTwitterWaitlistController @Inject() (
 
   def acceptUser(userId: Id[User], handle: String) = AdminUserPage { implicit request =>
     val result = twitterWaitlistCommander.acceptUser(userId, handle).right.map { syncState =>
-      val (lib, owner) = db.readOnlyMaster { implicit s =>
+      val (lib, owner, email) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(syncState.libraryId)
         val owner = userRepo.get(lib.ownerId)
-        (lib, owner)
+        val email = Try(userEmailAddressRepo.getByUser(userId)).toOption
+        (lib, owner, email)
       }
       val libraryPath = libPathCommander.getPathForLibrary(lib)
-      (syncState, libraryPath, owner.primaryEmail)
+      (syncState, libraryPath, email)
     }
     Ok(html.admin.twitterWaitlistAccept(result))
   }
