@@ -239,7 +239,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
 
   }
 
-  private def appBoyGroupId = AppBoyConfig.appGroupId
+  private def appBoyGroupId = AppBoyConfig.prodAppGroupId
   private def deviceRepo()(implicit injector: Injector) = inject[DeviceRepo]
   private def appBoy()(implicit injector: Injector) = inject[AppBoy]
   private def appBoyClient()(implicit injector: Injector) = inject[FakeAppBoyClient]
