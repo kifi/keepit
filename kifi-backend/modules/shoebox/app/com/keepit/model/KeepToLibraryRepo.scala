@@ -6,6 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
@@ -43,9 +44,14 @@ class KeepToLibraryRepoImpl @Inject() (
   class KeepToLibraryTable(tag: Tag) extends RepoTable[KeepToLibrary](db, tag, "keep_to_library") {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def keeperId = column[Id[User]]("keeper_id", O.NotNull)
+    def addedAt = column[DateTime]("added_at", O.NotNull)
+    def addedBy = column[Id[User]]("added_by", O.NotNull)
+    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
+    def libraryVisibility = column[LibraryVisibility]("visibility", O.NotNull)
+    def libraryOrganizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, keeperId) <> ((KeepToLibrary.apply _).tupled, KeepToLibrary.unapply)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, libraryVisibility, libraryOrganizationId) <> ((KeepToLibrary.applyFromDbRow _).tupled, KeepToLibrary.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
@@ -92,7 +98,7 @@ class KeepToLibraryRepoImpl @Inject() (
   }
 
   private def getByUserIdAndLibraryIdHelper(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.keeperId === userId && row.libraryId === libraryId && !row.state.inSet(excludeStates)) yield row
+    for (row <- rows if row.addedBy === userId && row.libraryId === libraryId && !row.state.inSet(excludeStates)) yield row
   }
   def countByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStates).run.length
