@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.Injector
+import com.keepit.commanders.KeepToLibraryCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.KeepFactory.PartialKeep
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -44,7 +45,7 @@ object KeepFactoryHelper {
         fixUriReferences(candidate) |> fixLibraryReferences
       }
       val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None))
-      injector.getInstance(classOf[KeepToLibraryRepo]).save(KeepToLibrary(keepId = finalKeep.id.get, libraryId = finalKeep.libraryId.get, addedBy = finalKeep.userId))
+      injector.getInstance(classOf[KeepToLibraryCommander]).internKeepInLibrary(KeepToLibraryInternRequest(finalKeep, finalKeep.libraryId.get, finalKeep.userId))
       finalKeep
     }
 

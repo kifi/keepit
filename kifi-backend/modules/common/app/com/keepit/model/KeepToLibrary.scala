@@ -14,7 +14,15 @@ case class KeepToLibrary(
   state: State[KeepToLibrary] = KeepToLibraryStates.ACTIVE,
   keepId: Id[Keep],
   libraryId: Id[Library],
-  addedBy: Id[User])
+  addedAt: DateTime = currentDateTime,
+  addedBy: Id[User],
+  // A bunch of denormalized fields from Keep
+  uriId: Id[NormalizedURI],
+  isPrimary: Boolean = true,
+  keepOwner: Id[User],
+  // and from Library (which are already denormalized on Keep as well)
+  libraryVisibility: LibraryVisibility,
+  libraryOrganizationId: Option[Id[Organization]])
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
@@ -23,6 +31,30 @@ case class KeepToLibrary(
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
+}
+
+object KeepToLibrary {
+  // is_primary: trueOrNull in db
+  def applyFromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
+    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean], keepOwner: Id[User],
+    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
+    KeepToLibrary(
+      id, createdAt, updatedAt, state,
+      keepId, libraryId, addedAt, addedBy,
+      uriId, isPrimary.getOrElse(false), keepOwner,
+      libraryVisibility, libraryOrganizationId)
+  }
+
+  def trueOrNull(b: Boolean): Option[Boolean] = if (b) Some(true) else None
+  def unapplyToDbRow(ktl: KeepToLibrary) = {
+    Some(
+      (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
+        ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
+        ktl.uriId, trueOrNull(ktl.isPrimary), ktl.keepOwner,
+        ktl.libraryVisibility, ktl.libraryOrganizationId)
+    )
+  }
 }
 
 object KeepToLibraryStates extends States[KeepToLibrary]
@@ -49,9 +81,11 @@ sealed abstract class KeepToLibraryRequest {
 }
 
 case class KeepToLibraryInternRequest(
-  keepId: Id[Keep],
-  libraryId: Id[Library],
-  requesterId: Id[User]) extends KeepToLibraryRequest
+    keep: Keep, // sadly we need the whole keep (to get the denormalized fields out of it)
+    libraryId: Id[Library],
+    requesterId: Id[User]) extends KeepToLibraryRequest {
+  override def keepId = keep.id.get
+}
 case class KeepToLibraryInternResponse(ktl: KeepToLibrary)
 
 case class KeepToLibraryRemoveRequest(
