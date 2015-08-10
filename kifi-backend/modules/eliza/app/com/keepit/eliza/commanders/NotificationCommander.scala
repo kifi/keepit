@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ Notification, NotificationItem, NotificationItemRepo, NotificationRepo }
@@ -22,34 +23,67 @@ class NotificationCommander @Inject() (
     res
   }
 
-  def processNewEvent(event: NotificationEvent): (Notification, Set[NotificationItem]) = {
-    val (notifOpt, items) = db.readOnlyMaster { implicit session =>
-      val notifOpt = notificationRepo.getLastByUserAndKind(event.userId, event.kind)
+  private def getGroupIdentifier(event: NotificationEvent): Option[String] = {
+    event.kind.asInstanceOf[NotificationKind[NotificationEvent]].groupIdentifier(event)
+  }
 
-      notifOpt.fold(notifOpt, Set.empty[NotificationItem]) { notif =>
-        (notifOpt, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
-      }
+  private def saveToExistingNotification(notifId: Id[Notification], event: NotificationEvent, groupIdentifier: Option[String] = None): Notification = {
+    db.readWrite { implicit session =>
+      notificationItemRepo.save(NotificationItem(
+        notificationId = notifId,
+        kind = event.kind,
+        event = event,
+        groupIdentifier = groupIdentifier
+      ))
+      notificationRepo.get(notifId)
     }
-    log.info(s"notif_debug for event $event found $notifOpt with items $items")
-    val (grouped, notif) = notifOpt match {
-      case Some(existingNotif) if shouldGroupWith(event, items) => (true, existingNotif)
-      case _ =>
-        (false, db.readWrite { implicit session =>
-          notificationRepo.save(Notification(
-            userId = event.userId,
-            kind = event.kind
-          ))
-        })
-    }
-    val newItem = db.readWrite { implicit session =>
+  }
+
+  private def createNewNotification(event: NotificationEvent, groupIdentifier: Option[String] = None): Notification = {
+    db.readWrite { implicit session =>
+      val notif = notificationRepo.save(Notification(
+        userId = event.userId,
+        kind = event.kind
+      ))
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
-        event = event
+        event = event,
+        groupIdentifier = groupIdentifier
       ))
+      notif
     }
-    val allItems = if (grouped) items + newItem else Set(newItem)
-    (notif, allItems)
+  }
+
+  def processNewEvent(event: NotificationEvent): Notification = {
+    val groupIdentifier = getGroupIdentifier(event)
+    groupIdentifier match {
+      case Some(identifier) =>
+        db.readOnlyMaster { implicit session =>
+          notificationItemRepo.getByGroupIdentifier(identifier)
+        } match {
+          case Some(item) => saveToExistingNotification(item.notificationId, event, Some(identifier))
+          case None => createNewNotification(event)
+        }
+      case None => {
+        db.readOnlyMaster { implicit session =>
+          notificationRepo.getLastByUserAndKind(event.userId, event.kind)
+        } match {
+          case Some(existingNotif) =>
+            val notifItems = db.readOnlyMaster { implicit session =>
+              notificationItemRepo.getAllForNotification(existingNotif.id.get)
+            }
+            if (shouldGroupWith(event, notifItems.toSet)) {
+              saveToExistingNotification(existingNotif.id.get, event)
+            } else {
+              createNewNotification(event)
+            }
+          case _ => createNewNotification(event)
+        }
+      }
+    }
+
+
   }
 
 }

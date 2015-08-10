@@ -12,6 +12,8 @@ trait NotificationItemRepo extends Repo[NotificationItem] {
 
   def getAllForNotification(notification: Id[Notification])(implicit session: RSession): Seq[NotificationItem]
 
+  def getByGroupIdentifier(identifier: String)(implicit session: RSession): Option[NotificationItem]
+
 }
 
 @Singleton
@@ -28,8 +30,9 @@ class NotificationItemRepoImpl @Inject() (
     // Use a string here because a type like NotificationKind[_ <: NotificationEvent] just doesn't work
     def kind = column[String]("kind", O.NotNull)
     def event = column[NotificationEvent]("event", O.NotNull)
+    def groupIdentifier = column[String]("group_identifier", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, notificationId, kind, event) <> ((NotificationItem.applyFromDbRow _).tupled, NotificationItem.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, notificationId, kind, event, groupIdentifier.?) <> ((NotificationItem.applyFromDbRow _).tupled, NotificationItem.unapplyToDbRow)
 
   }
 
@@ -43,6 +46,11 @@ class NotificationItemRepoImpl @Inject() (
   def getAllForNotification(notification: Id[Notification])(implicit session: RSession): Seq[NotificationItem] = {
     val q = for (row <- rows if row.notificationId === notification) yield row
     q.list
+  }
+
+  def getByGroupIdentifier(identifier: String)(implicit session: RSession): Option[NotificationItem] = {
+    val q = for (row <- rows if row.groupIdentifier === identifier) yield row
+    q.firstOption
   }
 
 }

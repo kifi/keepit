@@ -403,3 +403,30 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
   override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = newEvent.shouldGroup.getOrElse(false)
 
 }
+
+case class NewMessage(
+  override val userId: Id[User],
+  override val time: DateTime,
+  messageThreadId: Id[_], // need to existential here because MessageThread is only defined in Eliza
+  text: String
+) extends NotificationEvent(userId, time, NewMessage)
+
+object NewMessage extends NotificationKind[NewMessage] {
+
+  override val name: String = "new_message"
+
+  override implicit val format = (
+    (__ \ "userId").format[Id[User]] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "messageThreadId").format[Id[_]] and
+    (__ \ "text").format[String]
+  )(NewMessage.apply, unlift(NewMessage.unapply))
+
+  override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
+
+  override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
+    val existing = existingEvents.head
+    existing.messageThreadId == newEvent.messageThreadId
+  }
+
+}

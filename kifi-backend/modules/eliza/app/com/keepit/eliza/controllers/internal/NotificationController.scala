@@ -14,11 +14,8 @@ class NotificationController @Inject() (
 
   def postEvent = Action(parse.json) { implicit request =>
     val event = request.body.as[NotificationEvent]
-    val (notif, item) = notificationCommander.processNewEvent(event)
-    Ok(Json.obj(
-      "notification" -> Json.toJson(notif),
-      "items" -> Json.toJson(item)
-    ))
+    val notif = notificationCommander.processNewEvent(event)
+    Ok(Json.toJson(notif))
   }
 
 }
