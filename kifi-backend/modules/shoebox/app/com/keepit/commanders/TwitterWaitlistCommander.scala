@@ -19,7 +19,7 @@ import play.api.libs.ws.WS
 import play.api.Play.current
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Success
+import scala.util.{ Try, Success }
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
@@ -34,6 +34,7 @@ trait TwitterWaitlistCommander {
 class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
     userRepo: UserRepo,
+    emailRepo: UserEmailAddressRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     twitterEmailSender: Provider[TwitterWaitlistEmailSender],
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -67,12 +68,12 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     }
     entryOpt.right.map { entry =>
-      val (user, savedEntry) = db.readWrite(attempts = 3) { implicit s =>
-        val user = userRepo.get(userId)
+      val (emailAddressOpt, savedEntry) = db.readWrite(attempts = 3) { implicit s =>
+        val emailAddressOpt = Try(emailRepo.getByUser(userId)).toOption
         val savedEntry = twitterWaitlistRepo.save(entry)
-        (user, savedEntry)
+        (emailAddressOpt, savedEntry)
       }
-      val emailToSend = user.primaryEmail.map { email =>
+      val emailToSend = emailAddressOpt.map { email =>
         twitterEmailSender.get.sendToUser(email, userId)
       }
       (savedEntry, emailToSend)
