@@ -111,9 +111,9 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       userRepo.count === 2
     }
     val (libMurica, libScience, libIron) = db.readWrite { implicit s =>
-      val libMurica = library().withUser(userCaptain).withName("MURICA").withSlug("murica").published().saved
-      val libScience = library().withUser(userCaptain).withName("Science & Stuff").withSlug("science").published().saved
-      val libIron = library().withUser(userIron).withName("Iron Working").withSlug("iron").published().saved
+      val libMurica = library().withOwner(userCaptain).withName("MURICA").withSlug("murica").published().saved
+      val libScience = library().withOwner(userCaptain).withName("Science & Stuff").withSlug("science").published().saved
+      val libIron = library().withOwner(userIron).withName("Iron Working").withSlug("iron").published().saved
       (libMurica, libScience, libIron)
     }
     db.readOnlyMaster { implicit s =>
@@ -203,9 +203,9 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
             val owner = user().saved
             (
               user().saved,
-              library().withUser(owner).withName("Scala").published().saved,
-              library().withUser(owner).withName("Secret").saved, // secret - shouldn't be a reco
-              library().withUser(owner).withName("Java").published().saved
+              library().withOwner(owner).withName("Scala").published().saved,
+              library().withOwner(owner).withName("Secret").saved, // secret - shouldn't be a reco
+              library().withOwner(owner).withName("Java").published().saved
             )
           }
           db.readWrite { implicit rw =>
@@ -273,7 +273,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           val uriRepo = inject[NormalizedURIRepo]
 
           db.readWrite { implicit s =>
-            library().withUser(Id[User](1)).withName("scala").withSlug("scala").published().withColor(LibraryColor.BLUE).saved
+            library().withOwner(Id[User](1)).withName("scala").withSlug("scala").published().withColor(LibraryColor.BLUE).saved
             uriRepo.save(NormalizedURI(title = Some("scala 101"), url = "http://scala101.org", urlHash = UrlHash("xyz"), state = NormalizedURIStates.SCRAPED, externalId = ExternalId[NormalizedURI]("367f1d08-9dfe-43cb-8d60-d39482b00fb7")))
             user().withName("Martin", "Odersky").withUsername("Martin Odersky").withPictureName("cool").withId(ExternalId[User]("786171c5-f0db-4221-b655-e6aeb9a848f6")).saved
           }

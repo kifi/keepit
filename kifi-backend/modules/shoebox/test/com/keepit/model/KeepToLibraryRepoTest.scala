@@ -34,12 +34,12 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             val user = UserFactory.user().saved
             val otherUser = UserFactory.user().saved
 
-            val userLib = LibraryFactory.library().withUser(user).saved
-            val otherLib = LibraryFactory.library().withUser(otherUser).withFollowers(Seq(user)).saved
-            val deadOtherLib = LibraryFactory.library().withUser(otherUser).withFollowers(Seq(user)).saved
+            val userLib = LibraryFactory.library().withOwner(user).saved
+            val otherLib = LibraryFactory.library().withOwner(otherUser).withFollowers(Seq(user)).saved
+            val deadOtherLib = LibraryFactory.library().withOwner(otherUser).withFollowers(Seq(user)).saved
             val deadOtherLibMembership = inject[LibraryMembershipRepo].getWithLibraryIdAndUserId(deadOtherLib.id.get, user.id.get).get
             inject[LibraryMembershipRepo].save(deadOtherLibMembership.withState(LibraryMembershipStates.INACTIVE))
-            val randoLib = LibraryFactory.library().withUser(otherUser).saved
+            val randoLib = LibraryFactory.library().withOwner(otherUser).saved
 
             val uris = createUris(50).toSeq
             val uri = uris.head

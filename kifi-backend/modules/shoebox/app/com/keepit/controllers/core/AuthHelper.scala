@@ -70,7 +70,7 @@ class AuthHelper @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     libraryInviteCommander: LibraryInviteCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
@@ -275,7 +275,7 @@ class AuthHelper @Inject() (
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
-          libPathCommander.getPath(library)
+          libPathCommander.getPathForLibrary(library)
         }.getOrElse("/")
         url
       case AutoJoinOrganization(orgPubId, authToken) =>

@@ -22,9 +22,9 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 @ImplementedBy(classOf[WebSocketRouterImpl])
 trait WebSocketRouter {
 
-  def sendNotification(userOpt: Option[Id[User]], notification: Notification): Unit
+  def sendNotification(userOpt: Option[Id[User]], notification: UserThreadNotification): Unit
 
-  def onNotification(f: (Option[Id[User]], Notification) => Unit): Unit
+  def onNotification(f: (Option[Id[User]], UserThreadNotification) => Unit): Unit
 
   def registerUserSocket(socket: SocketInfo): Unit
 
@@ -52,7 +52,7 @@ class WebSocketRouterImpl @Inject() (
 
   system.scheduler.schedule(30 seconds, 1 minutes)(updateStatsD _)
 
-  private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
+  private var notificationCallbacks = Vector[(Option[Id[User]], UserThreadNotification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
   private val userSocketLastTracked = TrieMap[Id[User], DateTime]()
 
@@ -86,13 +86,13 @@ class WebSocketRouterImpl @Inject() (
     sockets.remove(socket.id)
   }
 
-  def sendNotification(userOpt: Option[Id[User]], notification: Notification): Unit = {
+  def sendNotification(userOpt: Option[Id[User]], notification: UserThreadNotification): Unit = {
     notificationCallbacks.par.foreach { f =>
       f(userOpt, notification)
     }
   }
 
-  def onNotification(f: (Option[Id[User]], Notification) => Unit): Unit = {
+  def onNotification(f: (Option[Id[User]], UserThreadNotification) => Unit): Unit = {
     notificationCallbacks = notificationCallbacks :+ f
   }
 

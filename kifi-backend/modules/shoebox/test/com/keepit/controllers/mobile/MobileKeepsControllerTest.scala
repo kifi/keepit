@@ -777,7 +777,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
           val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-          val lib = library().withUser(user).saved
+          val lib = library().withOwner(user).saved
           val keep1 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
           val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
           val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
@@ -895,7 +895,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
           val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-          val lib = library().withUser(user).saved
+          val lib = library().withOwner(user).saved
           val keep1 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
           val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
           val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved

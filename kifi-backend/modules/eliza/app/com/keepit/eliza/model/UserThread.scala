@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import scala.Some
 import com.keepit.common.crypto.ModelWithPublicId
 
-case class Notification(thread: Id[MessageThread], message: Id[Message])
+case class UserThreadNotification(thread: Id[MessageThread], message: Id[Message])
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 

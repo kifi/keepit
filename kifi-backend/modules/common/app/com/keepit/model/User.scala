@@ -136,6 +136,7 @@ object Username {
   }
 
   case class UndefinedUsernameException(user: User) extends Exception(s"No username for $user")
+
 }
 
 case class PrimaryUsername(original: Username, normalized: Username)

@@ -8,6 +8,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
+import com.keepit.notify.model.NewSocialConnection
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 
@@ -63,6 +64,13 @@ class FriendConnectionNotifier @Inject() (
             category = UserPushNotificationCategory.UserConnectionAccepted)
         }
       }
+
+    elizaServiceClient.sendNotificationEvent(NewSocialConnection(
+      friendUserId,
+      currentDateTime,
+      myUserId,
+      networkTypeOpt
+    ))
 
     emailF flatMap (_ => notificationF)
   }

@@ -44,9 +44,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val owner = UserFactory.user().withName("Owner", "McOwnerson").saved
           val nonMember = UserFactory.user().withName("Rando", "McRanderson").saved
           val org = OrganizationFactory.organization().withName("Test Org").withOwner(owner).saved
-          val publicLibs = LibraryFactory.libraries(10).map(_.withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganizationIdOpt(Some(org.id.get))).saved
-          val orgLibs = LibraryFactory.libraries(20).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved
-          val deletedLibs = LibraryFactory.libraries(15).map(_.withUser(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved.map(_.deleted)
+          val publicLibs = LibraryFactory.libraries(10).map(_.withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).withOrganizationIdOpt(Some(org.id.get))).saved
+          val orgLibs = LibraryFactory.libraries(20).map(_.withOwner(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved
+          val deletedLibs = LibraryFactory.libraries(15).map(_.withOwner(owner).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(Some(org.id.get))).saved.map(_.deleted)
           (org, owner, nonMember, publicLibs, orgLibs, deletedLibs)
         }
 

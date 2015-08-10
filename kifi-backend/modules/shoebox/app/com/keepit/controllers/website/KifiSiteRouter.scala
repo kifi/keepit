@@ -26,7 +26,7 @@ class KifiSiteRouter @Inject() (
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
-  libPathCommander: LibraryPathCommander,
+  libPathCommander: PathCommander,
   orgInviteCommander: OrganizationInviteCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
@@ -150,7 +150,7 @@ class KifiSiteRouter @Inject() (
             val wasHandleNormalized = spaceRedirectStatusOpt.contains(SEE_OTHER)
 
             if (libraryHasBeenMoved || handleOwnerChangedTheirHandle || wasLibrarySlugNormalized || wasHandleNormalized) {
-              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
 
               val status = if (handleOwnerChangedTheirHandle || libraryHasBeenMoved) {
                 MOVED_PERMANENTLY

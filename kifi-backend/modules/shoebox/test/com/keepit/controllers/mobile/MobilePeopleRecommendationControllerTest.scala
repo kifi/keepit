@@ -35,7 +35,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
           val user2 = users(1)
           val user3 = users(2)
           val user4 = users(3)
-          val lib = library().withUser(user4).saved
+          val lib = library().withOwner(user4).saved
           membership().withLibraryFollower(lib.id.get, user1.id.get).saved
           membership().withLibraryFollower(lib.id.get, user2.id.get).saved
           membership().withLibraryFollower(lib.id.get, user3.id.get).saved

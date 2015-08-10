@@ -18,10 +18,12 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
+import com.keepit.notify.model.{ LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers
@@ -89,6 +91,7 @@ trait LibraryCommander {
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
+  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
@@ -118,7 +121,6 @@ class LibraryCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    keepToLibraryCommander: KeepToLibraryCommander,
     keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
@@ -135,7 +137,7 @@ class LibraryCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
@@ -183,6 +185,10 @@ class LibraryCommanderImpl @Inject() (
       val org = lib.organizationId.map(orgRepo.get)
       LibraryInfo.fromLibraryAndOwner(lib, None, owner, org) // library images are not used, so no need to include
     }
+  }
+
+  def getLibraryPath(library: Library): String = {
+    libPathCommander.getPathForLibrary(library)
   }
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
@@ -362,7 +368,7 @@ class LibraryCommanderImpl @Inject() (
           owner = owner,
           description = lib.description,
           slug = lib.slug,
-          url = libPathCommander.getPath(lib),
+          url = libPathCommander.getPathForLibrary(lib),
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
@@ -811,7 +817,6 @@ class LibraryCommanderImpl @Inject() (
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) => // TODO(ryan): Can this session be made implicit?
-        keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = keep.id.get, libraryId = libraryId, requesterId = userId))(s)
         keepRepo.deactivate(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
@@ -1055,6 +1060,21 @@ class LibraryCommanderImpl @Inject() (
           }
         }
       }
+    if (access == LibraryAccess.READ_WRITE) {
+      elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
+        lib.ownerId,
+        currentDateTime,
+        newFollowerId,
+        lib.id.get
+      ))
+    } else {
+      elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
+        lib.ownerId,
+        currentDateTime,
+        newFollowerId,
+        lib.id.get
+      ))
+    }
   }
 
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
@@ -1107,12 +1127,21 @@ class LibraryCommanderImpl @Inject() (
                 userId,
                 message = message,
                 libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
+                libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
                 category = LibraryPushNotificationCategory.LibraryChanged
               )
             }
           }
+        toBeNotified foreach { userId =>
+          elizaClient.sendNotificationEvent(LibraryNewKeep(
+            userId,
+            currentDateTime,
+            newKeep.userId,
+            newKeep.id.get,
+            library.id.get
+          ))
+        }
       }
     }
   }
@@ -1365,13 +1394,11 @@ class LibraryCommanderImpl @Inject() (
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
@@ -1405,14 +1432,10 @@ class LibraryCommanderImpl @Inject() (
           existingKeepOpt match {
             case None =>
               val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
-              keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               Right(movedKeep)
             case Some(existingKeep) if existingKeep.isInactive =>
               val movedKeep = keepRepo.save(k.withId(existingKeep.id.get).withLibrary(toLibrary)) // clone new keep into existing keep's place, wiping out the existing keep
               keepRepo.deactivate(k) // deactivate the keep in the old library
-              keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>
@@ -1548,6 +1571,13 @@ class LibraryCommanderImpl @Inject() (
     } getOrElse Future.successful(Seq.empty)
   }
 
+  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo = {
+    db.readOnlyMaster { implicit session =>
+      createLibraryCardInfos(Seq(lib), Map(owner.id.get -> BasicUser.fromUser(owner)), viewerOpt, withFollowing, idealSize).head
+    }
+  }
+
+  @StatsdTiming("LibraryCommander.createLibraryCardInfos")
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
     val membershipsToLibsMap = viewerOpt.map { viewer =>
@@ -1611,7 +1641,9 @@ class LibraryCommanderImpl @Inject() (
       val owner = basicUserRepo.load(lib.ownerId)
       val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgCardOpt.map(_.handle), slug = lib.slug)
 
-      if (!userIds.contains(lib.ownerId)) throw new Exception(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
+      if (!userIds.contains(lib.ownerId)) {
+        airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
+      }
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
@@ -1638,6 +1670,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("LibraryCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
     followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, orgCard: Option[OrganizationCard]): LibraryCardInfo = {
     LibraryCardInfo(

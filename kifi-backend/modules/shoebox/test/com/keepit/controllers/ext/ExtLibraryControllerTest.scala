@@ -503,7 +503,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, keep1, lib1) = db.readWrite { implicit s =>
           val user = UserFactory.user().withUsername("spiderman").saved
-          val lib = LibraryFactory.library().withUser(user).saved
+          val lib = LibraryFactory.library().withOwner(user).saved
           val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
           (user, keep, lib)
         }

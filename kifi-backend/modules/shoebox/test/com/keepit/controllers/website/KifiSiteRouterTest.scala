@@ -247,7 +247,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // user-or-orgs
         val orgLibrary = db.readWrite { implicit session =>
-          LibraryFactory.library().withName("Kifi Library").withSlug("kifi-lib").withUser(user1).withOrganizationIdOpt(org.id).saved
+          LibraryFactory.library().withName("Kifi Library").withSlug("kifi-lib").withOwner(user1).withOrganizationIdOpt(org.id).saved
         }
 
         actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
