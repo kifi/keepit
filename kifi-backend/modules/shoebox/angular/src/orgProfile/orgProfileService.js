@@ -62,8 +62,8 @@ angular.module('kifi')
       updateOrgProfile: function (orgId, modifiedFields) {
         return net.updateOrgProfile(orgId, modifiedFields);
       },
-      userOrOrg: function (handle, authToken) {
-        return net.userOrOrg(handle, authToken).then(function (response) {
+      userOrOrg: function (handle) {
+        return net.userOrOrg(handle).then(function (response) {
           return response.data;
         });
       },

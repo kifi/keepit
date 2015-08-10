@@ -52,12 +52,12 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken',
+        url: '/:handle',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
             orgProfileService
-              .userOrOrg($stateParams.handle, $stateParams.authToken)
+              .userOrOrg($stateParams.handle)
               .then(function (userOrOrgData) {
                 var type = userOrOrgData.type;
                 if (type === 'user') {
@@ -70,7 +70,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken',
+        url: '/:handle',
         params: { organization: null },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -80,7 +80,7 @@ angular.module('kifi')
             function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
               return orgProfileService
-                .userOrOrg($stateParams.handle, $stateParams.authToken)
+                .userOrOrg($stateParams.handle)
                 .then(function (userOrOrgData) {
                   var type = userOrOrgData.type;
 
@@ -120,7 +120,7 @@ angular.module('kifi')
             function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
               return orgProfileService
-                .userOrOrg($stateParams.handle, $stateParams.authToken)
+                .userOrOrg($stateParams.handle)
                 .then(function (userOrOrgData) {
                   var type = userOrOrgData.type;
 
