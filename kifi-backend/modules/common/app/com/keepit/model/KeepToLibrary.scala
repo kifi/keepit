@@ -20,8 +20,8 @@ case class KeepToLibrary(
   uriId: Id[NormalizedURI],
   isPrimary: Boolean = true,
   // and from Library
-  libraryVisibility: LibraryVisibility,
-  libraryOrganizationId: Option[Id[Organization]])
+  visibility: LibraryVisibility,
+  organizationId: Option[Id[Organization]])
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
@@ -51,7 +51,7 @@ object KeepToLibrary {
       (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
         ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
         ktl.uriId, trueOrNull(ktl.isPrimary),
-        ktl.libraryVisibility, ktl.libraryOrganizationId)
+        ktl.visibility, ktl.organizationId)
     )
   }
 }
