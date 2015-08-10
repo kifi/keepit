@@ -263,8 +263,7 @@ trait UserActions extends Logging { self: Controller =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
           case None =>
-            println("nonUserAction"); block(userActionsHelper.buildNonUserRequest).map { resp =>
-              log.warn("response: " + resp.toString)
+            block(userActionsHelper.buildNonUserRequest).map { resp =>
               if (resp.header.status == 200 && resp.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
                 maybeAugmentKcid(resp)
               } else resp
