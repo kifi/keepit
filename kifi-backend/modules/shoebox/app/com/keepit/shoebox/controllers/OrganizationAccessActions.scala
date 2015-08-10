@@ -43,7 +43,7 @@ trait OrganizationAccessActions {
     requiredPermissions.subsetOf(memberPermissions)
   }
 
-  def OrganizationAction(id: PublicId[Organization], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
+  def OrganizationAction(id: PublicId[Organization], authTokenOpt: Option[String], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
     override def invokeBlock[A](maybeRequest: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
       Organization.decodePublicId(id) match {
         case Success(orgId) =>
@@ -56,13 +56,11 @@ trait OrganizationAccessActions {
               val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
               val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
               if (requiredPermissionsSet.subsetOf(memberPermissions)) {
-                val authTokenOpt = request.getQueryString("authToken")
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
               } else {
                 Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
               }
             case request: NonUserRequest[_] =>
-              val authTokenOpt = request.getQueryString("authToken")
               if (authTokenOpt.exists(authToken => orgInviteCommander.isAuthValid(orgId, authToken))) {
                 val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))

@@ -48,7 +48,7 @@ class UserOrOrganizationController @Inject() (
       case Some(handleOwnerObject) =>
         val (action, actionType) = handleOwnerObject match {
           case (Left(org), _) =>
-            (orgController.getOrganization(Organization.publicId(org.id.get)), "org")
+            (orgController.getOrganization(Organization.publicId(org.id.get), authTokenOpt = request.getQueryString("authToken")), "org")
           case (Right(user), _) =>
             (userProfileController.getProfile(user.username), "user")
         }

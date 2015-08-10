@@ -26,7 +26,7 @@ class OrganizationMembershipController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   // If userIdOpt is provided AND the user can invite members, return invited users as well as members
-  def getMembers(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+  def getMembers(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     if (limit > 30) {
       BadRequest(Json.obj("error" -> "invalid_limit"))
     } else Organization.decodePublicId(pubId) match {
