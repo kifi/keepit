@@ -10,6 +10,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.util.Paginator
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -85,6 +86,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
+  @StatsdTiming("UserProfileCommander.getOwnLibraries")
   def getOwnLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
@@ -99,6 +101,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
+  @StatsdTiming("UserProfileCommander.getFollowedLibraries")
   def getFollowingLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering] = None, direction: Option[SortDirection] = None, orderedByPriority: Boolean = false): ParSeq[LibraryCardInfo] = {
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {

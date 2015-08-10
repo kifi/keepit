@@ -12,6 +12,7 @@ angular.module('kifi')
         inputPlaceholder: '=',
         onSave: '=',
         linkable: '=',
+        className: '=',
         readonly: '='
       },
       replace: true,

@@ -39,4 +39,5 @@ class PathCommander @Inject() (
 
     LibraryPathHelper.formatLibraryPathUrlEncoded(user, org.map(_.handle), lib.slug)
   }
+
 }

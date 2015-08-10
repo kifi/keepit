@@ -99,8 +99,8 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val (org, owner, members) = db.readWrite { implicit session =>
-          val owner = user.withName("Zyxwv", "Utsr").saved
-          val members = Random.shuffle(Seq(user.withName("Aaron", "Aaronson"), user.withName("Barry", "Barnes"), user.withName("Carl", "Carson"), user.withName("Carl", "Junior"))).map(_.saved)
+          val owner = user().withName("Zyxwv", "Utsr").saved
+          val members = Random.shuffle(Seq(user().withName("Aaron", "Aaronson"), user().withName("Barry", "Barnes"), user().withName("Carl", "Carson"), user().withName("Carl", "Junior"))).map(_.saved)
           val org = organization().withOwner(owner).withMembers(members).saved
           (org, owner, members)
         }
@@ -130,7 +130,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val membership = db.readWrite { implicit session =>
-          val org = organization.withOwner(user().saved).saved
+          val org = organization().withOwner(user().saved).saved
           orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = user().saved.id.get))
         }
 

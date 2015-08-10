@@ -1,9 +1,14 @@
 package com.keepit.common
 
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
 import play.api.Logger
 
 import scala.util.Random
+import scala.concurrent.{ Future, ExecutionContext }
+
+import scala.reflect.macros._
+import scala.language.experimental.macros
+import scala.annotation.StaticAnnotation
 
 package object performance {
 
@@ -78,4 +83,64 @@ package object performance {
     sw.logTimeWith(resString)
     res
   }
+
+  def statsdTiming[A](name: String)(f: => A): A = {
+    val timer = new NamedStatsdTimer(name)
+    val res = f
+    timer.stopAndReport()
+    res
+  }
+
+  def statsdTimingAsync[A](name: String)(f: => Future[A])(implicit ec: ExecutionContext): Future[A] = {
+    val timer = new NamedStatsdTimer(name)
+    val res: Future[A] = f
+    res.onComplete { _ =>
+      timer.stopAndReport()
+    }
+    res
+  }
+
+  object statsdMacroInstance extends StatsdMacro("test", false)
+  object statsdAsyncMacroInstance extends StatsdMacro("test", true)
+
+  class StatsdTiming(name: String) extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro statsdMacroInstance.impl
+  }
+
+  class StatsdTimingAsync(name: String) extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro statsdAsyncMacroInstance.impl
+  }
+
+  class StatsdMacro(name: String, async: Boolean) {
+    def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+      import c.universe._
+
+      def extractAnnotationParameters(tree: Tree): c.universe.Tree = tree match {
+        case q"new $name( $param )" => param
+        case _ => throw new Exception("Annotation must have exactly one argument.")
+      }
+
+      val name = extractAnnotationParameters(c.prefix.tree)
+
+      def modifiedDeclaration(defDecl: DefDef) = {
+        val q"$mods def $defName(...$args): $retType = { ..$body }" = defDecl
+
+        if (async) {
+          c.Expr(q"""
+            $mods def $defName(...$args): $retType = com.keepit.common.performance.statsdTimingAsync($name) { ..$body }
+          """)
+        } else {
+          c.Expr(q"""
+            $mods def $defName(...$args): $retType = com.keepit.common.performance.statsdTiming($name) { ..$body }
+          """)
+        }
+      }
+
+      annottees.map(_.tree) match {
+        case (defDecl: DefDef) :: Nil => modifiedDeclaration(defDecl)
+        case _ => c.abort(c.enclosingPosition, "Invalid annottee")
+      }
+    }
+  }
+
 }

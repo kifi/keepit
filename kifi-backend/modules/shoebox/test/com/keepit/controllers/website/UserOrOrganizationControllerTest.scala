@@ -94,7 +94,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(user.username)
-          val response = controller.getByHandle(user.username)(request)
+          val response = controller.getByHandle(user.username, authTokenOpt = None)(request)
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "type").as[String] === "user"
@@ -106,7 +106,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(org.handle)
-          val response = controller.getByHandle(org.handle)(request)
+          val response = controller.getByHandle(org.handle, authTokenOpt = None)(request)
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "type").as[String] === "org"
