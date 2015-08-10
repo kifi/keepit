@@ -111,7 +111,7 @@ angular.module('kifi')
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
       .state('userProfile', {
-        url: '/:handle',
+        url: '/:handle?authToken',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
