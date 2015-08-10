@@ -65,12 +65,8 @@ case class Keep(
     visibility = lib.visibility
   )
 
-  def isActive: Boolean = state == KeepStates.ACTIVE
+  def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
-
-  @deprecated("Use `visibility` instead", "2014-08-29")
-  def isDiscoverable = !isPrivate
-
 }
 
 object Keep {
@@ -225,9 +221,7 @@ case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
 class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-object KeepStates extends States[Keep] {
-  val DUPLICATE = State[Keep]("duplicate")
-}
+object KeepStates extends States[Keep]
 
 case class KeepSource(value: String) {
   override def toString = value
