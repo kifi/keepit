@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -49,8 +50,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[InviteToKifiSender]
         val toAddress = EmailAddress("taco@gmail.com")
         val inviteId = ExternalId[Invitation]()
-        val fromUser = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("test").saved
+        val (fromUser, fromEmail) = db.readWrite { implicit rw =>
+          val user = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress("billy@gmail.com")).get._1.address
+          (user, emailAddress)
         }
         val email = Await.result(sender(toAddress, fromUser.id.get, inviteId), Duration(5, "seconds"))
         outbox.size === 1
@@ -59,7 +62,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.fromName === Some("Billy Madison (via Kifi)")
         email.from === SystemEmailAddress.INVITATION
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
-        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
+        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromEmail.address
 
         val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email", "kcid=na-vf_email-kifi_invite")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
