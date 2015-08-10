@@ -64,7 +64,7 @@ class MobileOrganizationController @Inject() (
     }
   }
 
-  def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+  def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
     Ok(Json.toJson(organizationView))
   }
