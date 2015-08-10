@@ -18,7 +18,7 @@ class NotificationCommander @Inject() (
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
     val kind = event.kind.asInstanceOf[NotificationKind[NotificationEvent]]
     val res = kind.shouldGroupWith(event, items.map(_.event))
-    log.info(s"notif_debug for event $event with items $items")
+    log.info(s"notif_debug for event $event with items $items, decided to group? $res")
     res
   }
 
