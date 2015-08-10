@@ -32,7 +32,6 @@ class KeepInterner @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
-  keepToLibraryCommander: KeepToLibraryCommander,
   countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -265,7 +264,6 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(internedKeep.id.get, internedKeep.libraryId.get, internedKeep.userId))
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
