@@ -65,12 +65,8 @@ case class Keep(
     visibility = lib.visibility
   )
 
-  def isActive: Boolean = state == KeepStates.ACTIVE
+  def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
-
-  @deprecated("Use `visibility` instead", "2014-08-29")
-  def isDiscoverable = !isPrivate
-
 }
 
 object Keep {
