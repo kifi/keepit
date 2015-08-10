@@ -6,9 +6,11 @@
     <span class="kifi-keep-box-lib-color" style="background-color: {{color}};"></span>
     {{/color}}
     {{#orgAvatar}}
-      <img src="{{orgAvatar}}" />
+      <span class="kifi-keep-box-org-card" style="background-image: url({{cdnBase}}/{{orgAvatar}});" />
     {{/orgAvatar}}
+    {{^orgAvatar}}
     <span class="kifi-keep-box-lib-card"{{#color}} style="background-color:{{color}}"{{/color}}></span>
+    {{/orgAvatar}}
     {{#extraInfo}}
       <span class="kifi-keep-box-lib-1">
         <span class="kifi-keep-box-lib-icon"></span>
