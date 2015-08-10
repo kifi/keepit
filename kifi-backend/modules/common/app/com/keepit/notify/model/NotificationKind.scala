@@ -17,7 +17,7 @@ trait NotificationKind[N <: NotificationEvent] {
   /**
    * A shortcut to grouping events quickly. Ifthe group identifier function is defined for a notification kind,
    * then a new event of that kind will automatically be grouped with existing event s with the same identifier.
-   * 
+   *
    * Typically grouping is more intelligent and requires reading a couple events from the database and deserializing
    * JSON. For events like [[NewMessage]], which can be grouped with other events far earlier, deserializing a whole bunch
    * of events from the database to find the right group can be expensive. In addition, events like these do not require
@@ -61,6 +61,7 @@ object NotificationKind {
     SocialContactJoined,
     NewConnectionInvite,
     ConnectionInviteAccepted,
+    NewMessage,
     DepressedRobotGrumble
   )
 

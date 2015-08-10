@@ -407,9 +407,8 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 case class NewMessage(
   override val userId: Id[User],
   override val time: DateTime,
-  messageThreadId: Id[_], // need to existential here because MessageThread is only defined in Eliza
-  text: String
-) extends NotificationEvent(userId, time, NewMessage)
+  messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
+  text: String) extends NotificationEvent(userId, time, NewMessage)
 
 object NewMessage extends NotificationKind[NewMessage] {
 
@@ -418,7 +417,7 @@ object NewMessage extends NotificationKind[NewMessage] {
   override implicit val format = (
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
-    (__ \ "messageThreadId").format[Id[_]] and
+    (__ \ "messageThreadId").format[Long] and
     (__ \ "text").format[String]
   )(NewMessage.apply, unlift(NewMessage.unapply))
 
