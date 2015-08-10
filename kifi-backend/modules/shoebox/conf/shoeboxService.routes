@@ -913,7 +913,7 @@ GET     /internal/shoebox/database/getUsers                            @com.keep
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
-POST    /internal/shoebox/database/getPrimaryEmailAddressForUsers      @com.keepit.controllers.internal.ShoeboxController.getPrimaryEmailAddressForUsers()
+POST    /internal/shoebox/database/getEmailAddressForUsers             @com.keepit.controllers.internal.ShoeboxController.getEmailAddressForUsers()
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
 POST    /internal/shoebox/database/getExperimentsByUserIds             @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()

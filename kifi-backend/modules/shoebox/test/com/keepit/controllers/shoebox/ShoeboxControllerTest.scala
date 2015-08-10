@@ -147,9 +147,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     "getPrimaryEmailAddressForUsers" should {
       "return a map of user id -> EmailAddress" in {
         withDb(shoeboxControllerTestModules: _*) { implicit injector =>
-          val call = com.keepit.controllers.internal.routes.ShoeboxController.getPrimaryEmailAddressForUsers()
+          val call = com.keepit.controllers.internal.routes.ShoeboxController.getEmailAddressForUsers()
           call.method === "POST"
-          call.url === s"/internal/shoebox/database/getPrimaryEmailAddressForUsers"
+          call.url === s"/internal/shoebox/database/getEmailAddressForUsers"
 
           val userEmails = db.readWrite { implicit rw =>
             for (i <- 1 to 3) yield UserFactory.user().withName(s"first$i", s"last$i").withEmailAddress(s"test$i@yahoo.com").withUsername(s"test$i").saved
@@ -158,7 +158,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
           val userIds = userEmails.keySet
           val payload = Json.toJson(userIds)
           val ctrl = inject[ShoeboxController]
-          val result = ctrl.getPrimaryEmailAddressForUsers()(FakeRequest("POST", call.url, FakeHeaders(), payload))
+          val result = ctrl.getEmailAddressForUsers()(FakeRequest("POST", call.url, FakeHeaders(), payload))
           status(result) must equalTo(OK)
 
           val json = Json.parse(contentAsString(result))
