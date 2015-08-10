@@ -56,7 +56,6 @@ trait OrganizationAccessActions {
               val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
               val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
               if (requiredPermissionsSet.subsetOf(memberPermissions)) {
-                val authTokenOpt = request.getQueryString("authToken")
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
               } else {
                 Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
