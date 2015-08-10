@@ -19,7 +19,6 @@ case class KeepToLibrary(
   // A bunch of denormalized fields from Keep
   uriId: Id[NormalizedURI],
   isPrimary: Boolean = true,
-  keepOwner: Id[User],
   // and from Library
   libraryVisibility: LibraryVisibility,
   libraryOrganizationId: Option[Id[Organization]])
@@ -37,12 +36,12 @@ object KeepToLibrary {
   // is_primary: trueOrNull in db
   def applyFromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
     keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI], isPrimary: Option[Boolean], keepOwner: Id[User],
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
     libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
     KeepToLibrary(
       id, createdAt, updatedAt, state,
       keepId, libraryId, addedAt, addedBy,
-      uriId, isPrimary.getOrElse(false), keepOwner,
+      uriId, isPrimary.getOrElse(false),
       libraryVisibility, libraryOrganizationId)
   }
 
@@ -51,7 +50,7 @@ object KeepToLibrary {
     Some(
       (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
         ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
-        ktl.uriId, trueOrNull(ktl.isPrimary), ktl.keepOwner,
+        ktl.uriId, trueOrNull(ktl.isPrimary),
         ktl.libraryVisibility, ktl.libraryOrganizationId)
     )
   }

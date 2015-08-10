@@ -48,11 +48,10 @@ class KeepToLibraryRepoImpl @Inject() (
     def addedBy = column[Id[User]]("added_by", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
-    def keepOwner = column[Id[User]]("keep_owner", O.NotNull)
     def libraryVisibility = column[LibraryVisibility]("visibility", O.NotNull)
     def libraryOrganizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, keepOwner, libraryVisibility, libraryOrganizationId) <> ((KeepToLibrary.applyFromDbRow _).tupled, KeepToLibrary.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, libraryVisibility, libraryOrganizationId) <> ((KeepToLibrary.applyFromDbRow _).tupled, KeepToLibrary.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)

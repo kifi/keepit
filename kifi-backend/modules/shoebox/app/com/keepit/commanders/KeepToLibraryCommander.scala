@@ -51,7 +51,6 @@ class KeepToLibraryCommanderImpl @Inject() (
             addedBy = request.requesterId,
             uriId = request.keep.uriId,
             isPrimary = request.keep.isPrimary,
-            keepOwner = request.keep.userId,
             libraryVisibility = request.library.visibility,
             libraryOrganizationId = request.library.organizationId
           )
