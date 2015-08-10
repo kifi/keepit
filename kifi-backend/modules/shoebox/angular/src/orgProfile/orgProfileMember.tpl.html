@@ -18,6 +18,7 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
+      <button class="kf-org-member-action-button kf-org-member-admin-action" ng-click="makeOwner(member)">Make owner</button>
       <button ng-if="shouldShowDemote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerDemote(member)">Demote</button>
       <button ng-if="shouldShowPromote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerPromote(member)">Make admin</button>
     </div>
