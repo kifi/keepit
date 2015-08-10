@@ -41,14 +41,14 @@ class UserOrOrganizationController @Inject() (
 
   def getHandleOwnerObjectOpt(handle: Handle): Option[(Either[Organization, User], Boolean)] = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
 
-  def getByHandle(handle: Handle, authTokenOpt: Option[String]) = MaybeUserAction.async { request =>
+  def getByHandle(handle: Handle, authToken: Option[String]) = MaybeUserAction.async { request =>
     val handleOwnerObjectOpt = getHandleOwnerObjectOpt(handle)
     handleOwnerObjectOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
       case Some(handleOwnerObject) =>
         val (action, actionType) = handleOwnerObject match {
           case (Left(org), _) =>
-            (orgController.getOrganization(Organization.publicId(org.id.get), authTokenOpt), "org")
+            (orgController.getOrganization(Organization.publicId(org.id.get), authToken), "org")
           case (Right(user), _) =>
             (userProfileController.getProfile(user.username), "user")
         }
