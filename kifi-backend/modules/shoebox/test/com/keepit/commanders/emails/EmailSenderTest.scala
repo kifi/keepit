@@ -331,10 +331,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val passwordResetRepo = inject[PasswordResetRepo]
         val resetSender = inject[ResetPasswordEmailSender]
-        val user = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("billy").saved
+        val (user, emailAddress) = db.readWrite { implicit rw =>
+          val user = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress("billy@gmail.com")).get._1.address
+          (user, emailAddress)
         }
-        val email = Await.result(resetSender.sendToUser(user.id.get, user.primaryEmail.get), Duration(5, "seconds"))
+        val email = Await.result(resetSender.sendToUser(user.id.get, emailAddress), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
