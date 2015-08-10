@@ -408,7 +408,7 @@ case class NewMessage(
   override val userId: Id[User],
   override val time: DateTime,
   messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
-  text: String) extends NotificationEvent(userId, time, NewMessage)
+  messageId: Long) extends NotificationEvent(userId, time, NewMessage)
 
 object NewMessage extends NotificationKind[NewMessage] {
 
@@ -418,7 +418,7 @@ object NewMessage extends NotificationKind[NewMessage] {
     (__ \ "userId").format[Id[User]] and
     (__ \ "time").format[DateTime] and
     (__ \ "messageThreadId").format[Long] and
-    (__ \ "text").format[String]
+    (__ \ "messageId").format[Long]
   )(NewMessage.apply, unlift(NewMessage.unapply))
 
   override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
