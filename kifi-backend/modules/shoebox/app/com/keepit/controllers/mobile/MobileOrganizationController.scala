@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContext
 class MobileOrganizationController @Inject() (
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,

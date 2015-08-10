@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ UserCommander, OrganizationCommander, OrganizationMembershipCommander }
+import com.keepit.commanders.{ OrganizationInviteCommander, UserCommander, OrganizationCommander, OrganizationMembershipCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
@@ -18,6 +18,7 @@ import scala.util.{ Failure, Success }
 class MobileOrganizationMembershipController @Inject() (
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,

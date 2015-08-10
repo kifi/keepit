@@ -21,8 +21,7 @@ class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
-    organizationInviteCommander: OrganizationInviteCommander,
-    orgInviteCommander: OrganizationInviteCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
@@ -85,7 +84,7 @@ class MobileOrganizationInviteController @Inject() (
   def declineInvitation(pubId: PublicId[Organization]) = UserAction { request =>
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
-        organizationInviteCommander.declineInvitation(orgId, request.userId)
+        orgInviteCommander.declineInvitation(orgId, request.userId)
         NoContent
       case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }

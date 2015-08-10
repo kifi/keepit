@@ -57,7 +57,9 @@ object AuthController {
   cropY: Option[Int],
   cropSize: Option[Int],
   libraryPublicId: Option[PublicId[Library]], // for auto-follow
-  libAuthToken: Option[String])
+  libAuthToken: Option[String],
+  orgPublicId: Option[PublicId[Organization]],
+  orgAuthToken: Option[String])
 
 object UserPassFinalizeInfo {
   def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
@@ -85,7 +87,9 @@ object UserPassFinalizeInfo {
   cropX: Option[Int],
   cropY: Option[Int],
   cropSize: Option[Int],
-  libraryPublicId: Option[PublicId[Library]])
+  libraryPublicId: Option[PublicId[Library]],
+  orgPublicId: Option[PublicId[Organization]],
+  orgAuthToken: Option[String])
 
 object TokenFinalizeInfo {
   def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
@@ -262,6 +266,7 @@ class AuthController @Inject() (
   def emailSignup() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     request.body.asOpt[UserPassFinalizeInfo] match {
       case None =>
+        log.warn("emailsignup")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(info) =>
         val hasher = Registry.hashers.currentHasher
@@ -286,14 +291,14 @@ class AuthController @Inject() (
                     )
                 )
               } else {
-                authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+                authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
               }
             }
         } getOrElse {
           val pInfo = hasher.hash(info.password)
           val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, Some(pInfo), firstName = "", lastName = "", isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-          authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+          authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
     }
   }
@@ -350,7 +355,7 @@ class AuthController @Inject() (
     Ok(s"<!doctype html><script>if(window.opener)opener.postMessage('$message',location.origin);window.close()</script>").as(HTML)
   }
 
-  def signup(provider: String, publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String]) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String], publicOrgId: Option[String], orgAuthToken: Option[String]) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.transformResult(result) { (_, sess: Session) =>
@@ -364,7 +369,9 @@ class AuthController @Inject() (
         val cookies = Seq(
           publicLibraryId.map(libId => Cookie("publicLibraryId", libId)),
           intent.map(action => Cookie("intent", action)),
-          libAuthToken.map(at => Cookie("libraryAuthToken", at))
+          libAuthToken.map(at => Cookie("libraryAuthToken", at)),
+          publicOrgId.map(orgId => Cookie("publicOrgId", orgId)),
+          orgAuthToken.map(at => Cookie("orgAuthToken", at))
         ).flatten
         res.withCookies(cookies: _*)
       }
@@ -434,6 +441,7 @@ class AuthController @Inject() (
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    log.warn("first")
     authHelper.userPasswordSignupAction
   }
 
@@ -448,7 +456,11 @@ class AuthController @Inject() (
       val cookieIntent = request.cookies.get("intent") // make sure everywhere handles this right
       val libAuthToken = request.cookies.get("libAuthToken") // is this set?
       val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
-      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken).flatten.map(c => DiscardingCookie(c.name))
+      val publicOrgIdCookie = request.cookies.get("publicOrgId")
+      val orgAuthToken = request.cookies.get("orgAuthToken")
+      val pubOrgIdOpt = publicOrgIdCookie.map(cookie => PublicId[Organization](cookie.value))
+
+      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken, publicOrgIdCookie, orgAuthToken).flatten.map(c => DiscardingCookie(c.name))
 
       request match {
         case ur: UserRequest[_] =>
@@ -463,6 +475,9 @@ class AuthController @Inject() (
                 case "follow" if pubLibIdOpt.isDefined =>
                   val joinedSuccessfully = authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get, libAuthToken.map(_.value))
                   // todo redirect to library if `joinedSuccessfully`
+                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+                case "joinOrg" if pubOrgIdOpt.isDefined =>
+                  orgAuthToken.map(_.value).foreach(authToken => authCommander.autoJoinOrg(ur.userId, pubOrgIdOpt.get, authToken))
                   Redirect(homeUrl).discardingCookies(discardedCookies: _*)
                 case "waitlist" =>
                   Redirect("/twitter/thanks").discardingCookies(discardedCookies: _*)
@@ -530,8 +545,9 @@ class AuthController @Inject() (
                   password = None,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-                val targetPubLibId = if (cookieIntent.isDefined && cookieIntent.get.value == "follow") pubLibIdOpt else None
-                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, None, true)(request)
+                val targetPubLibId = if (cookieIntent.exists(_.value == "follow")) pubLibIdOpt else None
+                val targetPubOrgId = if (cookieIntent.exists(_.value == "joinOrg")) pubOrgIdOpt else None
+                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, None, targetPubOrgId, orgAuthToken.map(_.value), true)(request)
               }
 
             }
