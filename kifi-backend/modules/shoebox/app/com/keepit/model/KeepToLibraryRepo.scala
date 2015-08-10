@@ -148,8 +148,31 @@ class KeepToLibraryRepoImpl @Inject() (
     q.as[String].list
   }
 
-  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep] = {
-    // Need to denormalize visibility onto ktls before this is possible
-    ???
+  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Limit)(implicit session: RSession): Seq[KeepToLibrary] = {
+    val q = { for (r <- rows if r.libraryId === libId && r.visibility =!= excludeVisibility.orNull) yield r }.take(limit.value)
+    q.list
+  }
+  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.uriId.inSet(uriIds) && b.libraryId.inSet(libraryIds) && b.state === KeepToLibraryStates.ACTIVE) yield b).list
+  }
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary] = {
+    // TODO(ryan): this method needs to be deprecated, it doesn't make sense anymore (now we can have the same URI in a lib multiple times)
+    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
+  }
+  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Limit, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Id[Keep]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    import scala.collection.JavaConversions._
+
+    (beforeIdOpt.flatMap(getOpt), afterIdOpt.flatMap(getOpt)) match {
+      case (Some(before), _) =>
+        sql"""SELECT ktl.id FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at <= ${before.keptAt} AND id < ${before.id.get} ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+      case (None, Some(after)) =>
+        // This case is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
+        // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
+        // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated kept_at fields.
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at > ${after.keptAt} ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+      case (None, None) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $limit;""".as[Keep].list
+    }
   }
 }
