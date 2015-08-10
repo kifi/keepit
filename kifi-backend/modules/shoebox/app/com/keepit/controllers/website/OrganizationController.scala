@@ -88,7 +88,7 @@ class OrganizationController @Inject() (
     Ok(Json.toJson(organizationView))
   }
 
-  def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+  def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 
