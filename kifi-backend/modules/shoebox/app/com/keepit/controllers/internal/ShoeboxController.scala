@@ -406,7 +406,8 @@ class ShoeboxController @Inject() (
     val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
-          DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
+          val emailAddress = Try(emailAddressRepo.getByUser(userId)).toOption
+          DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName)
       }
     }
     Ok(Json.toJson(userInfos))
