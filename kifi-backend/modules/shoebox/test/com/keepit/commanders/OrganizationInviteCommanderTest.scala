@@ -28,8 +28,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
   def setup(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
-      userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
+      val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
+      userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")))
       val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
       val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
       (org, owner, membership)

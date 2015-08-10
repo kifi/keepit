@@ -259,7 +259,7 @@ class AuthCommander @Inject() (
         }
 
         val informationalMessage = s"""
-          UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}, Email: ${user.primaryEmail}""
+          UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}""
         """
         amazonSimpleMailProvider.sendMail(ElectronicMail(
           from = SystemEmailAddress.ENG,
