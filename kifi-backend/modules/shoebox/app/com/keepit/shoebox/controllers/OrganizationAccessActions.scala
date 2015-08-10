@@ -61,6 +61,7 @@ trait OrganizationAccessActions {
                 Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
               }
             case request: NonUserRequest[_] =>
+              log.info(s"[orgAuth] authToken = $authTokenOpt")
               if (authTokenOpt.exists(authToken => orgInviteCommander.isAuthValid(orgId, authToken))) {
                 val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
