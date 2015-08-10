@@ -79,11 +79,10 @@ class UriIntegrityActor @Inject() (
           case Some(currentPrimary) => {
 
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
-              val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
               val deadBm = keepRepo.save(
-                duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
+                duplicate.copy(uriId = newUriId, isPrimary = false)
               )
-              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
+              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
               keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
