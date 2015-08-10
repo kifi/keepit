@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.json.TupleFormat
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.social.BasicUser
@@ -144,7 +145,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "getPrimaryEmailAddressForUsers" should {
+    "getEmailAddressForUsers" should {
       "return a map of user id -> EmailAddress" in {
         withDb(shoeboxControllerTestModules: _*) { implicit injector =>
           val call = com.keepit.controllers.internal.routes.ShoeboxController.getEmailAddressForUsers()
@@ -152,8 +153,12 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
           call.url === s"/internal/shoebox/database/getEmailAddressForUsers"
 
           val userEmails = db.readWrite { implicit rw =>
-            for (i <- 1 to 3) yield UserFactory.user().withName(s"first$i", s"last$i").withEmailAddress(s"test$i@yahoo.com").withUsername(s"test$i").saved
-          }.map(user => user.id.get -> user.primaryEmail).toMap
+            for (i <- 1 to 3) yield {
+              val user = UserFactory.user().withName(s"first$i", s"last$i").withUsername(s"test$i").saved
+              val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress(s"test$i@yahoo.com")).get._1.address
+              user.id.get -> Some(emailAddress)
+            }
+          }.toMap
 
           val userIds = userEmails.keySet
           val payload = Json.toJson(userIds)
