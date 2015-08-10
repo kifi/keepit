@@ -52,8 +52,8 @@ class KeepToLibraryCommanderImpl @Inject() (
             uriId = request.keep.uriId,
             isPrimary = request.keep.isPrimary,
             keepOwner = request.keep.userId,
-            libraryVisibility = request.keep.visibility,
-            libraryOrganizationId = request.keep.organizationId
+            libraryVisibility = request.library.visibility,
+            libraryOrganizationId = request.library.organizationId
           )
           keepToLibraryRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
       }

@@ -20,7 +20,7 @@ case class KeepToLibrary(
   uriId: Id[NormalizedURI],
   isPrimary: Boolean = true,
   keepOwner: Id[User],
-  // and from Library (which are already denormalized on Keep as well)
+  // and from Library
   libraryVisibility: LibraryVisibility,
   libraryOrganizationId: Option[Id[Organization]])
     extends ModelWithState[KeepToLibrary] {
@@ -80,11 +80,14 @@ sealed abstract class KeepToLibraryRequest {
   def requesterId: Id[User]
 }
 
+// Unfortunately we need the full models in order to fill in the appropriate
+// denormalized fields (libraryVisibility, keepOwner, etc)
 case class KeepToLibraryInternRequest(
-    keep: Keep, // sadly we need the whole keep (to get the denormalized fields out of it)
-    libraryId: Id[Library],
+    keep: Keep,
+    library: Library,
     requesterId: Id[User]) extends KeepToLibraryRequest {
   override def keepId = keep.id.get
+  override def libraryId = library.id.get
 }
 case class KeepToLibraryInternResponse(ktl: KeepToLibrary)
 

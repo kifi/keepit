@@ -45,7 +45,7 @@ class KeepToLibraryRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def addedAt = column[DateTime]("added_at", O.NotNull)
-    def addedBy = column[Id[User]]("keeper_id", O.NotNull)
+    def addedBy = column[Id[User]]("added_by", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def keepOwner = column[Id[User]]("keep_owner", O.NotNull)
