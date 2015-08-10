@@ -113,9 +113,7 @@ angular.module('kifi')
       var params = $scope.userData ? {
         libraryId : $scope.userData.libraryId,
         intent : $scope.userData.intent,
-        libAuthToken: $scope.userData.libAuthToken,
-        organizationId: $scope.userData.organizationId,
-        orgAuthToken: $scope.userData.orgAuthToken
+        libAuthToken: $scope.userData.libAuthToken
       } : {};
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
@@ -187,8 +185,6 @@ angular.module('kifi')
           lastName: $scope.userData.lastName,
           libraryPublicId: $scope.userData.libraryId, // todo remove me
           libAuthToken: $scope.userData.libAuthToken,
-          orgPublicId: $scope.userData.organizationId,
-          orgAuthToken: $scope.userData.orgAuthToken,
           hook: $scope.userData.hook // todo implement
         };
 

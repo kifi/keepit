@@ -14,15 +14,6 @@ angular.module('kifi')
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
-      //
-      // Internal data
-      //
-
-      var authToken = $location.search().authToken || '';
-      if (!profileService.userLoggedIn() && authToken && scope.profile) {
-        signupService.register({ orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken });
-      }
-
       var lastSavedInfo = {};
       scope.notification = null;
 

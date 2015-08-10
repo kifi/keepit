@@ -128,9 +128,7 @@ angular.module('kifi')
         var params = {
           publicLibraryId : opts.libraryId || [],
           intent: opts.intent || [],
-          libAuthToken: opts.libAuthToken || [],
-          publicOrgId: opts.organizationId || [],
-          orgAuthToken: opts.orgAuthToken || []
+          libAuthToken: opts.libAuthToken || []
         };
         return navRoute('/signup/' + provider, params);
       },
