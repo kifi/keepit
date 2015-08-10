@@ -57,17 +57,19 @@ class ElizaUserEmailNotifierActor @Inject() (
       shoebox.getUsers(allUserIds).map(s => s.map(u => u.id.get -> u).toMap)
     )
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+    val allUserEmailAddressesFuture: Future[Map[Id[User], Option[EmailAddress]]] = new SafeFuture(shoebox.getEmailAddressForUsers(allUserIds.toSet))
     val uriSummaryFuture = elizaEmailCommander.getUriSummary(thread)
     val threadDataFuture = for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
+      allUserEmailAddresses <- allUserEmailAddressesFuture
       uriSummary <- uriSummaryFuture
-    } yield (allUsers, allUserImageUrls, uriSummary)
+    } yield (allUsers, allUserImageUrls, allUserEmailAddresses, uriSummary)
     threadDataFuture.flatMap { data =>
-      val (allUsers, allUserImageUrls, uriSummary) = data
+      val (allUsers, allUserImageUrls, allUserEmailAddresses, uriSummary) = data
       // Futures below will be executed concurrently
       val notificationFutures = userThreads.map { userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, ElizaEmailUriSummaryImageSizes.smallImageSize).recover {
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, allUserEmailAddresses, uriSummary, ElizaEmailUriSummaryImageSizes.smallImageSize).recover {
           case _ => ()
         }
       }
@@ -80,6 +82,7 @@ class ElizaUserEmailNotifierActor @Inject() (
     thread: MessageThread,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
+    allUserEmailAddresses: Map[Id[User], Option[EmailAddress]],
     uriSummary: Option[RoverUriSummary],
     idealImageSize: ImageSize): Future[Unit] = {
     log.info(s"processing user thread $userThread")
@@ -108,13 +111,14 @@ class ElizaUserEmailNotifierActor @Inject() (
       deepUrlFuture flatMap { deepUrl =>
         //if user is not active, skip it!
         val recipient = allUsers(recipientUserId)
-        val shouldBeEmailed = recipient.state == UserStates.ACTIVE && recipient.primaryEmail.isDefined
+        val emailAddressOpt = allUserEmailAddresses.get(recipientUserId).flatten
+        val shouldBeEmailed = recipient.state == UserStates.ACTIVE && emailAddressOpt.isDefined
 
         if (!shouldBeEmailed) {
           log.warn(s"user $recipient is not active, not sending emails")
           Future.successful(())
         } else {
-          val destinationEmail = recipient.primaryEmail.get
+          val destinationEmail = emailAddressOpt.get
           val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map {
             case unsubUrl =>
               val threadEmailInfo: ThreadEmailInfo =
