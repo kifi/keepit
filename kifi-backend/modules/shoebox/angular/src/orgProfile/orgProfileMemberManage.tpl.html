@@ -1,4 +1,5 @@
 <ul class="kf-org-member-manage" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreMembers()" scroll-next="fetchMembers()">
   <li ng-if="canInvite && me.experiments.indexOf('admin') > -1"><button class="kf-org-member-invite" ng-click="openInviteModal()">Invite new member</button></li>
   <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
+  <li class="kf-opl-empty" ng-if="members.length === 0">{{ profile | name }} has no publicly viewable members.</li>
 </ul>
