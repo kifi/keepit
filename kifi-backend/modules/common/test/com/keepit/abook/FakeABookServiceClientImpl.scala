@@ -129,6 +129,4 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = Future.successful(())
 
-  def fixEmailAddresses(): Future[Unit] = ???
-
 }

@@ -1067,9 +1067,4 @@ class AdminUserController @Inject() (
     abookClient.hideOrganizationRecommendationForUser(userId, orgId)
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
-
-  def fixEmailAddresses() = AdminUserPage { implicit request =>
-    abookClient.fixEmailAddresses()
-    Ok("It's on!")
-  }
 }
