@@ -94,6 +94,7 @@ angular.module('kifi')
     $scope.me = profileService.me;
 
     function resetAndFetch() {
+      orgProfileService.invalidateOrgProfileCache();
       memberLazyLoader.reset();
       $scope.fetchMembers();
     }
@@ -110,6 +111,10 @@ angular.module('kifi')
         })
         ['catch'](handleErrorResponse);
     };
+
+    $scope.$on('resetAndFetch', function() {
+      resetAndFetch();
+    });
 
     // Let the other member lines know to close
     $scope.$on('toggledMember', function (e, member, isOpen) {

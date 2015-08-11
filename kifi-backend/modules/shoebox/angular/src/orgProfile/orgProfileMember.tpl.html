@@ -6,7 +6,7 @@
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">
           <p class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</p>
-          <p class="kf-org-member-info-role">{{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}</p>
+          <p class="kf-org-member-info-role">{{ role() }}</p>
         </div>
       </a>
     </div>
