@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'modalService',
+  function (profileService, modalService) {
     function _isMe() {
       var $scope = this;
       return $scope.member.id === profileService.me.id;
@@ -86,7 +86,18 @@ angular.module('kifi')
 
     function _triggerMakeOwner() {
       var $scope = this;
-      $scope.$emit('makeOwner', $scope.member);
+
+      modalService.open({
+        template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
+        modalData: {
+          organization: $scope.organization,
+          member: $scope.member,
+          returnAction: function (response) {
+            var $scope = this;
+            $scope.$emit('resetAndFetch');
+          }.bind($scope)
+        }
+      });
     }
 
     function _triggerPromote() {
