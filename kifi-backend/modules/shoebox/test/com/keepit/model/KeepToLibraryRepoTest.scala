@@ -1,17 +1,16 @@
 package com.keepit.model
 
 import com.google.inject.Injector
-import com.keepit.common.db.Id
-import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.time._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.Specification
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.LibraryMembershipFactoryHelper._
 
 import scala.util.Random
 
@@ -36,10 +35,11 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
   }
 
   def randomLibs(n: Int, owner: User)(implicit injector: Injector, session: RWSession): Seq[Library] = {
-    val libs = LibraryFactory.libraries(10).map(_.withOwner(owner)).saved
+    // Random libraries with random keeps at random times
+    val libs = LibraryFactory.libraries(10).map(_.published().withOwner(owner)).saved
     libs.foreach { lib =>
       val numKeeps = 20 + Random.nextInt(50)
-      KeepFactory.keeps(numKeeps).map(_.withUser(owner).withLibrary(lib)).saved
+      KeepFactory.keeps(numKeeps).map(_.withUser(owner).withLibrary(lib).withKeptAt(currentDateTime.minusDays(Random.nextInt(1000)))).saved
     }
     libs
   }
@@ -76,14 +76,6 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
       }
     }
     "be backwards compatible with some KeepRepo methods" in {
-      /*
-      def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
-      // These ones do not yet
-      // I think these ones need to be changed or rethought:
-      def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
-      def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
-      def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
-      */
       "match getByLibrary" in {
         //def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
         withDb(modules: _*) { implicit injector =>
@@ -243,6 +235,59 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             val expected = inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user.id.get, 20, None, None)
             val actual = inject[KeepToLibraryRepo].getRecentFromLibraries(followedLibs.map(_.id.get).toSet, Limit(20), None, None)
             expected.map(_.id.get) === actual.map(_.keepId)
+          }
+          1 === 1
+        }
+      }
+      "match latestKeptAtByLibraryIds" in {
+        // def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val libs = LibraryFactory.libraries(20).map(_.withOwner(user)).saved
+            val dates = (1 to libs.length).map(currentDateTime.minusDays)
+            for ((lib, date) <- libs zip dates) {
+              KeepFactory.keeps(5).map(_.withLibrary(lib).withUser(user).withKeptAt(date)).saved
+            }
+
+            val libIds = libs.map(_.id.get).toSet
+            val expected = inject[KeepRepo].latestKeptAtByLibraryIds(libIds)
+            val actual = inject[KeepToLibraryRepo].latestKeptAtByLibraryIds(libIds)
+
+            actual.values.flatten.toSet === dates.toSet
+            expected === actual
+          }
+          1 === 1
+        }
+      }
+      "match librariesWithMostKeepsSince" in {
+        // def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val libs = randomLibs(10, user)
+
+            val libIds = libs.map(_.id.get).toSet
+            val expected = inject[KeepRepo].librariesWithMostKeepsSince(5, since = currentDateTime.minusDays(100)).toMap
+            val actual = inject[KeepToLibraryRepo].publishedLibrariesWithMostKeepsSince(Limit(5), since = currentDateTime.minusDays(100))
+
+            expected === actual
+          }
+          1 === 1
+        }
+      }
+      "match librariesWithMostKeepsSince" in {
+        // def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val libs = randomLibs(10, user)
+
+            val libIds = libs.map(_.id.get).toSet
+            val expected = inject[KeepRepo].getMaxKeepSeqNumForLibraries(libIds)
+            val actual = inject[KeepToLibraryRepo].getMaxKeepSeqNumForLibraries(libIds)
+
+            expected === actual
           }
           1 === 1
         }
