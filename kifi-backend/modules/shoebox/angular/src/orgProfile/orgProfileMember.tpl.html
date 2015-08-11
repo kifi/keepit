@@ -18,7 +18,7 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button class="kf-org-member-action-button kf-org-member-admin-action" ng-click="makeOwner(member)">
+      <button ng-if="shouldShowMakeOwner()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerMakeOwner(member)">
         <svg 
           kf-symbol-sprite
           icon="owner"
@@ -29,7 +29,7 @@
       <button ng-if="shouldShowDemote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerDemote(member)">
         <svg 
           kf-symbol-sprite
-          icon="admin"
+          icon="demote"
           class="kf-org-member-action-icon"
         ></svg>
         <span class="kf-org-member-action-title">Demote</span>
@@ -40,7 +40,7 @@
           icon="admin"
           class="kf-org-member-action-icon"
         ></svg>
-        <span class="kf-org-member-action-title">Demote</span>
+        <span class="kf-org-member-action-title">Make admin</span>
       </button>
     </div>
     <div class="kf-org-member-lower-right">
