@@ -22,7 +22,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress]
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
-  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
+  def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
 }
 
@@ -81,9 +81,9 @@ class UserEmailAddressRepoImpl @Inject() (
     val user = userRepo.get(userId)
     user.primaryEmail getOrElse {
       val all = getAllByUser(userId)
-      all.find(_.verified) match {
-        case Some(verifiedEmail) => verifiedEmail.address
-        case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
+      (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
+        case Some(email) => email.address
+        case None => throw new Exception(s"no emails for user $userId")
       }
     }
   }
@@ -96,8 +96,8 @@ class UserEmailAddressRepoImpl @Inject() (
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
   }
 
-  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
-    getByAddress(address).find(_.verified).map(_.userId)
+  def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
+    getByAddress(address).map(_.userId)
   }
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {

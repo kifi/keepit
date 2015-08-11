@@ -29,7 +29,7 @@ import play.api.libs.json._
 import play.api.mvc.Action
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.common.json.{ EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
@@ -257,8 +257,8 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getPrimaryEmailAddressForUsers() = Action(parse.tolerantJson) { request =>
-    Json.fromJson[Seq[Id[User]]](request.body).fold(
+  def getEmailAddressForUsers() = Action(parse.tolerantJson) { request =>
+    Json.fromJson[Set[Id[User]]](request.body).fold(
       invalid = { jsErr =>
         airbrake.notify("s[getPrimaryEmailAddressForUsers] failed to deserialize request body to Seq[Id[User]")
         log.error(s"[getPrimaryEmailAddressForUsers] bad request: ${request.body}")
@@ -266,7 +266,9 @@ class ShoeboxController @Inject() (
       },
       valid = { userIds =>
         val userEmailMap = db.readOnlyReplica(2) { implicit session =>
-          userRepo.getUsers(userIds) map { case (id, user) => (id, user.primaryEmail) }
+          userIds.map { userId =>
+            userId -> Try(emailAddressRepo.getByUser(userId)).toOption
+          } toMap
         }
         Ok(Json.toJson(userEmailMap))
       }
@@ -404,7 +406,8 @@ class ShoeboxController @Inject() (
     val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
-          DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
+          val emailAddress = Try(emailAddressRepo.getByUser(userId)).toOption
+          DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName)
       }
     }
     Ok(Json.toJson(userInfos))

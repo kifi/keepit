@@ -50,6 +50,7 @@ class EmailTestController @Inject() (
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
+    def verificationCode = request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}"
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "gratification" => emailSenderProvider.gratification(userId, Some(sendTo))
@@ -73,7 +74,7 @@ class EmailTestController @Inject() (
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, inviterId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
         emailSenderProvider.libraryInvite.sendInvite(invite).map(_.get)
-      case "confirm" => emailSenderProvider.confirmation.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
+      case "confirm" => emailSenderProvider.confirmation.sendToUser(userId, sendTo, verificationCode)
       case "tip" if tip.isDefined =>
         val emailTip = EmailTip(tip.get).get
         testEmailTip(Left(userId), emailTip)

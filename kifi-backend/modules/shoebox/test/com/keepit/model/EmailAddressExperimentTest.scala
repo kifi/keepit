@@ -4,10 +4,10 @@ import org.specs2.mutable.Specification
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.UserExperimentType.{ AUTO_GEN, FAKE }
 
-class UserEmailAddressTest extends Specification {
+class EmailAddressExperimentTest extends Specification {
 
-  "UserEmailAddress" should {
-    "assign experiments" in {
+  "ExperimentType" should {
+    "assign experiments for email address" in {
       exp("eishay@gmail.com") === Set.empty
       exp("eishay+test@gmail.com") === Set.empty
       exp("eishay@42go.com") === Set.empty
@@ -27,6 +27,5 @@ class UserEmailAddressTest extends Specification {
     }
   }
 
-  private def uea(addr: String) = UserEmailAddress(userId = null, address = EmailAddress(addr))
-  private def exp(addr: String) = UserEmailAddress.getExperiments(uea(addr))
+  private def exp(addr: String) = UserExperimentType.getExperimentForEmail(EmailAddress(addr))
 }
