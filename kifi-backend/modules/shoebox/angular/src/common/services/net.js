@@ -36,6 +36,7 @@ angular.module('kifi')
       removeOrgMember: post(shoebox, '/organizations/:id/members/remove'),
       modifyOrgMember: post(shoebox, '/organizations/:id/members/modify'),
       suggestOrgMember: get(shoebox, '/organizations/:id/members/suggest?query=:query&limit=:limit'),
+      transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
 
       getKeep: get(shoebox, '/keeps/:id'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),

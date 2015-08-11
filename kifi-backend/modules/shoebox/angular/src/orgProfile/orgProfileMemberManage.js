@@ -164,6 +164,16 @@ angular.module('kifi')
       });
     });
 
+    $scope.$on('makeOwner', function(e, member) {
+      orgProfileService.transferOrgMemberOwnership(organization.id, {
+        newOwner: member.id
+      }).then(function() {
+        member.role = 'admin';
+        memberPageAnalytics({ action: 'clickedMakeOwner', orgMember: member.username });
+      })
+      ['catch'](handleErrorResponse);
+    });
+
     $scope.$on('promoteMember', function (e, member) {
       modifyMemberRole(member, 'admin').then(function () {
         memberPageAnalytics({ action: 'clickedMakeAdmin', orgMember: member.username });

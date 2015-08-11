@@ -35,6 +35,9 @@ angular.module('kifi')
       removeOrgMember: function (orgId, removeFields) {
         return net.removeOrgMember(orgId, removeFields);
       },
+      transferOrgMemberOwnership: function (orgId, newOwner) {
+        return net.transferOrgMemberOwnership(orgId, newOwner);
+      },
       getOrgLibraries: function (orgId, page, size) {
         return net.getOrgLibraries(orgId, {
           offset: page,
