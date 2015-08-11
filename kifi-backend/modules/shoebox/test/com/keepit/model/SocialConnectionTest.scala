@@ -42,7 +42,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   def createEmailForUsers(users: List[User])(implicit injector: Injector, rw: RWSession) =
     users.foreach { user: User =>
-      inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get, address = EmailAddress(s"${user.firstName}@gmail.com")))
+      userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress(s"${user.firstName}@gmail.com")).get
     }
 
   "SocialConnection" should {
@@ -106,8 +106,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         val users = inject[Database].readWrite { implicit s =>
 
           // existing users must have emails
-          emailRepo.save(UserEmailAddress(userId = eishaySocialUserInfo.userId.get, address = EmailAddress("eishay@gmail.com")))
-          emailRepo.save(UserEmailAddress(userId = andrewSocialUserInfo.userId.get, address = EmailAddress("andrew@gmail.com")))
+          userEmailAddressCommander.intern(userId = eishaySocialUserInfo.userId.get, address = EmailAddress("eishay@gmail.com")).get
+          userEmailAddressCommander.intern(userId = andrewSocialUserInfo.userId.get, address = EmailAddress("andrew@gmail.com")).get
 
           val users = UserFactory.user().withName("Igor", "Perisic").withUsername("test").saved ::
             UserFactory.user().withName("Kelvin", "Jiang").withUsername("test2").saved ::

@@ -56,7 +56,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
   def setUp()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user1 = UserFactory.user().withName("Foo", "Foo").withUsername("test").saved
-      val email1 = userEmailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = senderEmail))
+      val email1 = userEmailAddressCommander.intern(userId = user1.id.get, address = senderEmail).get._1
       val pwdInfo = PasswordInfo("bcrypt", BCrypt.hashpw("random_pwd", BCrypt.gensalt()))
       val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
       val socialUserInfoRepo = inject[SocialUserInfoRepo]

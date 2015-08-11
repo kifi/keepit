@@ -2,6 +2,7 @@ package com.keepit.common.mail
 
 import java.util.Properties
 
+import com.keepit.common.social.FakeSocialGraphModule
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
@@ -71,8 +72,8 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
             UserFactory.user().withName("Greg", "Methvin").withUsername("test").saved)
         }
         db.readWrite { implicit s =>
-          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, verifiedAt = Some(currentDateTime)))
-          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("greg@42go.com"), userId = greg.id.get))
+          userEmailAddressCommander.intern(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, verified = true).get
+          userEmailAddressCommander.intern(address = EmailAddress("greg@42go.com"), userId = greg.id.get).get
         }
         val parser = new MailToKeepMessageParser(db, emailAddressRepo, userRepo)
         val session = Session.getDefaultInstance(new Properties())
