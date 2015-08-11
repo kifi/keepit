@@ -14,8 +14,7 @@ case class NotificationItem(
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],
     kind: NKind,
-    event: NotificationEvent,
-    groupIdentifier: Option[String] = None) extends Model[NotificationItem] {
+    event: NotificationEvent) extends Model[NotificationItem] {
 
   override def withId(id: Id[NotificationItem]): NotificationItem = copy(id = Some(id))
 
@@ -31,8 +30,7 @@ object NotificationItem {
     (__ \ "updatedAt").format[DateTime] and
     (__ \ "notificationIdId").format[Id[Notification]] and
     (__ \ "kind").format[String] and
-    (__ \ "event").format[NotificationEvent] and
-    (__ \ "groupIdentifier").formatNullable[String]
+    (__ \ "event").format[NotificationEvent]
   )(NotificationItem.applyFromDbRow, unlift(NotificationItem.unapplyToDbRow))
 
   def applyFromDbRow(
@@ -41,27 +39,24 @@ object NotificationItem {
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],
     kind: String,
-    event: NotificationEvent,
-    groupIdentifier: Option[String]): NotificationItem =
+    event: NotificationEvent): NotificationItem =
     NotificationItem(
       id,
       createdAt,
       updatedAt,
       notificationId,
       NotificationKind.getByName(kind).get,
-      event,
-      groupIdentifier
+      event
     )
 
-  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent, Option[String])] =
+  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent)] =
     Some(
       item.id,
       item.createdAt,
       item.updatedAt,
       item.notificationId,
       item.kind.name,
-      item.event,
-      item.groupIdentifier
+      item.event
     )
 
 }

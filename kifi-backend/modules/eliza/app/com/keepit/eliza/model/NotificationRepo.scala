@@ -14,6 +14,8 @@ trait NotificationRepo extends Repo[Notification] {
 
   def getLastByUserAndKind(userId: Id[User], kind: NKind)(implicit session: RSession): Option[Notification]
 
+  def getByKindAndGroupIdentifier(kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
+
 }
 
 @Singleton
@@ -29,8 +31,9 @@ class NotificationRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.NotNull)
     def lastChecked = column[DateTime]("last_checked", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
+    def groupIdentifier = column[String]("group_identifier", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, userId, lastChecked, kind) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, userId, lastChecked, kind, groupIdentifier.?) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
 
@@ -45,6 +48,12 @@ class NotificationRepoImpl @Inject() (
     val kindStr = kind.name
     val query = (for (row <- rows if row.userId === userId && row.kind === kindStr) yield row).sortBy(_.createdAt.desc)
     query.firstOption
+  }
+
+  def getByKindAndGroupIdentifier(kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
+    val kindStr = kind.name
+    val q = for (row <- rows if row.groupIdentifier === identifier && row.kind === kindStr) yield row
+    q.firstOption
   }
 
 }

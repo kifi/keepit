@@ -27,19 +27,18 @@ class NotificationCommander @Inject() (
     event.kind.asInstanceOf[NotificationKind[NotificationEvent]].groupIdentifier(event)
   }
 
-  private def saveToExistingNotification(notifId: Id[Notification], event: NotificationEvent, groupIdentifier: Option[String] = None): Notification = {
+  private def saveToExistingNotification(notifId: Id[Notification], event: NotificationEvent): Notification = {
     db.readWrite { implicit session =>
       notificationItemRepo.save(NotificationItem(
         notificationId = notifId,
         kind = event.kind,
-        event = event,
-        groupIdentifier = groupIdentifier
+        event = event
       ))
       notificationRepo.get(notifId)
     }
   }
 
-  private def createNewNotification(event: NotificationEvent, groupIdentifier: Option[String] = None): Notification = {
+  private def createNewNotification(event: NotificationEvent): Notification = {
     db.readWrite { implicit session =>
       val notif = notificationRepo.save(Notification(
         userId = event.userId,
@@ -48,8 +47,7 @@ class NotificationCommander @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
-        event = event,
-        groupIdentifier = groupIdentifier
+        event = event
       ))
       notif
     }
@@ -60,9 +58,9 @@ class NotificationCommander @Inject() (
     groupIdentifier match {
       case Some(identifier) =>
         db.readOnlyMaster { implicit session =>
-          notificationItemRepo.getByGroupIdentifier(identifier)
+          notificationRepo.getByKindAndGroupIdentifier(event.kind, identifier)
         } match {
-          case Some(item) => saveToExistingNotification(item.notificationId, event, Some(identifier))
+          case Some(notif) => saveToExistingNotification(notif.id.get, event)
           case None => createNewNotification(event)
         }
       case None => {
