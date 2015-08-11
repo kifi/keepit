@@ -8,6 +8,7 @@ angular.module('kifi')
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
+        net.getOrgMembers,
         net.userOrOrg
       ].forEach(function (endpoint) {
         endpoint.clearCache();
