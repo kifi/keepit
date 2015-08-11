@@ -24,7 +24,6 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
-  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[UserEmailAddress]
 }
 
 @Singleton
@@ -69,15 +68,19 @@ class UserEmailAddressRepoImpl @Inject() (
     deleteCache(emailAddress)
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] =
-    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
-
-  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
-    (for (f <- rows if f.address === address && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (f <- rows if f.address === address && f.hash === hash && f.state =!= excludeState.orNull) yield f).firstOption
   }
 
-  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (f <- rows if f.address === address && f.hash === hash && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
+  }
+
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] = {
     (for (f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
+  }
 
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
     val user = userRepo.get(userId)
@@ -104,11 +107,6 @@ class UserEmailAddressRepoImpl @Inject() (
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
     (for (e <- rows if e.state =!= UserEmailAddressStates.INACTIVE && e.verifiedAt.isEmpty && e.createdAt > from && e.createdAt < to) yield e).list
-  }
-
-  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[UserEmailAddress] = {
-    val emptyHash = EmailAddressHash("")
-    (for (e <- rows if e.hash === emptyHash) yield e).take(limit).list
   }
 }
 

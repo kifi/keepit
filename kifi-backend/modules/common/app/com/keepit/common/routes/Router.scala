@@ -325,6 +325,7 @@ object ABook extends Service {
     def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
     def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
     def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideOrganizationRecommendation", Param("irrelevantOrganizationId", irrelevantOrganizationId))
+    def fixEmailAddresses() = ServiceRoute(GET, "/internal/abook/database/fixEmailAddresses")
   }
 }
 
