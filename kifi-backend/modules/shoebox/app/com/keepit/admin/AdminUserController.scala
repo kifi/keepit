@@ -999,19 +999,19 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
+    val pages: Map[IpAddress, Set[(User, Option[EmailAddress], Set[Organization])]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
   }
 
-  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+  private def usersAndOrgs(userIds: Seq[Id[User]]): Set[(User, Option[EmailAddress], Set[Organization])] = {
     db.readOnlyReplica { implicit s =>
-      val users = userRepo.getAllUsers(userIds).values.toList
-      val orgs = users map { user =>
+      val users = userRepo.getAllUsers(userIds).values.toSet
+      val emailAddresses = userIds.map { userId => userId -> Try(emailRepo.getByUser(userId)).toOption }.toMap
+      users map { user =>
         val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
-        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+        (user, emailAddresses.get(user.id.get).flatten, orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet)
       }
-      orgs.toMap
     }
   }
 
