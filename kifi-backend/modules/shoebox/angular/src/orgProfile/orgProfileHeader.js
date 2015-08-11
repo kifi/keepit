@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout',
-  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout) {
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'profileService', 'signupService',
+  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout, profileService, signupService) {
 
   return {
     restrict: 'A',
@@ -17,9 +17,15 @@ angular.module('kifi')
       var lastSavedInfo = {};
       scope.notification = null;
 
+      var authToken = $location.search().authToken || '';
+
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
+
+      if (!profileService.userLoggedIn() && scope.profile && authToken) {
+        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken});
+      }
 
       scope.undo = function () {
         scope.profile = angular.extend(scope.profile, lastSavedInfo);

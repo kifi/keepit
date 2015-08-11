@@ -13,8 +13,9 @@
           </div>
         </div>
         <div ng-if="!userData.invite">
-          <div class="kf-register-header" ng-if="!userData.toConnectWith">Join Kifi to get updates to this library</div>
+          <div class="kf-register-header" ng-if="userData.libraryId && !userData.toConnectWith">Join Kifi to get updates to this library</div>
           <div class="kf-register-header" ng-if="userData.toConnectWith">Join Kifi to connect with {{userData.toConnectWith.firstName}}</div>
+          <div class="kf-register-header" ng-if="userData.orgId && !userData.invite">Sign up for Kifi to join this organization</div>
         </div>
 
         <div class="register-modal-social-block">
