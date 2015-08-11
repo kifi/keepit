@@ -151,7 +151,8 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       .getOrElse(getByOrganizationAndDecisionCompiled(organizationId, decision, offset.value, limit.value, includeAnonymous)).list
     val userInvites = allInvites.filter(_.userId.isDefined).groupBy(_.userId.get).mapValues(_.maxBy(_.updatedAt)).values.toSeq.sortBy(_.updatedAt)
     val emailInvites = allInvites.filter(invite => invite.userId.isEmpty && invite.emailAddress.isDefined).groupBy(_.emailAddress.get).mapValues(_.maxBy(_.updatedAt)).values.toSeq.sortBy(_.emailAddress.get.address)
-    userInvites ++ emailInvites
+    val anonymousInvites = allInvites.filter(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty)
+    userInvites ++ emailInvites ++ anonymousInvites
   }
 
   def getByInviterIdCompiled = Compiled { (inviterId: Column[Id[User]], state: Column[State[OrganizationInvite]]) => (for { row <- rows if row.inviterId === inviterId && row.state === state } yield row) }

@@ -33,7 +33,7 @@ case class OrganizationInvite(
   def accepted: OrganizationInvite = this.copy(decision = InvitationDecision.ACCEPTED)
   def declined: OrganizationInvite = this.copy(decision = InvitationDecision.DECLINED)
 
-  override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,email=$emailAddress,role=$role,state=$state,authToken=$authToken]"
+  override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,decision=$decision,email=$emailAddress,role=$role,state=$state, authToken=$authToken]"
 }
 
 // doesn't need to be specific to just OrganizationInvite, could be re-used later.

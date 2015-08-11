@@ -29,14 +29,15 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
     "get by inviter id" in {
       withDb() { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
-        val org = organization().saved
-        val inviter = user().saved
-        val users = UserFactory.users(10).saved
-        db.readWrite { implicit s =>
+        val (inviter, users) = db.readWrite { implicit session =>
+          val inviter = user().saved
+          val org = organization().withOwner(inviter).saved
+          val users = UserFactory.users(10).saved
           users.foreach { invitee =>
             orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get,
               userId = invitee.id, role = OrganizationRole.MEMBER))
           }
+          (inviter, users)
         }
 
         val invitesById = db.readOnlyMaster { implicit session => orgInviteRepo.getByInviter(inviter.id.get) }
@@ -49,18 +50,28 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
     "ignore anonymous invites when getting pending invitees" in {
       withDb() { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
-        val org = organization().saved
-        val inviter = user().saved
-        val users = UserFactory.users(10).saved
-        db.readWrite { implicit session =>
+        val org = db.readWrite { implicit session =>
+          val inviter = user().saved
+          val org = organization().withOwner(inviter).saved
+          val users = UserFactory.users(10).saved
           users.foreach { invitee =>
             orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get,
               userId = invitee.id, role = OrganizationRole.MEMBER))
           }
-          orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get,
-            userId = None, role = OrganizationRole.MEMBER))
+          orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = None, emailAddress = None, role = OrganizationRole.MEMBER))
+          org
         }
-        val invites = db.readOnlyMaster { implicit session => orgInviteRepo.getByOrganizationAndDecision(organizationId = org.id.get, decision = InvitationDecision.PENDING, offset = Offset(0)) }
+        val directInvites = db.readOnlyMaster { implicit session =>
+          orgInviteRepo.getByOrganizationAndDecision(organizationId = org.id.get, decision = InvitationDecision.PENDING, offset = Offset(0), limit = Limit(Int.MaxValue), includeAnonymous = false)
+        }
+        directInvites.length === 10
+        directInvites.exists(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty) === false
+
+        val allInvites = db.readOnlyMaster { implicit session =>
+          orgInviteRepo.getByOrganizationAndDecision(organizationId = org.id.get, decision = InvitationDecision.PENDING, offset = Offset(0), limit = Limit(Int.MaxValue), includeAnonymous = true)
+        }
+        allInvites.length === 11
+        allInvites.exists(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty) === true
       }
     }
   }
