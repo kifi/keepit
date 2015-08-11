@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.UserExperimentType.{ AUTO_GEN, FAKE }
 
-class UserEmailAddressTest extends Specification {
+class EmailAddressExperimentTest extends Specification {
 
   "UserEmailAddress" should {
     "assign experiments" in {

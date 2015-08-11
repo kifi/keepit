@@ -125,8 +125,8 @@ class SecureSocialUserPluginImpl @Inject() (
           userExperimentCommander.addExperimentForUser(userId, exp)
         }
       }
-      val emailAddresses = db.readOnlyMaster(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
-      val experiments = emailAddresses.flatMap(UserEmailAddress.getExperiments)
+      val emailAddresses = db.readOnlyMaster(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId).map(_.address) }
+      val experiments = emailAddresses.flatMap(UserExperimentType.getExperimentForEmail)
       experiments.foreach(setExp)
     }
   } catch {
