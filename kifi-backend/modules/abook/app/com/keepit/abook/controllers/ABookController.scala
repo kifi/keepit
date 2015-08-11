@@ -1,6 +1,7 @@
 package com.keepit.abook.controllers
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{ ABookServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
@@ -18,7 +19,7 @@ import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.common.queue.RichConnectionUpdateMessage
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.abook.model.{ EContactRepo, EContact }
+import com.keepit.abook.model.{ EmailAccountRepo, EContactRepo, EContact }
 import com.keepit.abook.{ ABookImporterPlugin, OAuth2TokenRepo, ABookInfoRepo }
 import com.keepit.abook.commanders.{ LocalRichConnectionCommander, ABookCommander }
 
@@ -58,6 +59,7 @@ class ABookController @Inject() (
     s3: ABookRawInfoStore,
     abookInfoRepo: ABookInfoRepo,
     econtactRepo: EContactRepo,
+    emailAccountRepo: EmailAccountRepo,
     oauth2TokenRepo: OAuth2TokenRepo,
     typeahead: EContactTypeahead,
     abookCommander: ABookCommander,
@@ -257,5 +259,4 @@ class ABookController @Inject() (
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
-
 }

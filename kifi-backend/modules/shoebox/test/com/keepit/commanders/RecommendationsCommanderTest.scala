@@ -94,7 +94,6 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
   val modules2 = modules.drop(2) ++ Seq(TestModule())
 
   def setupUsersAndLibrariesAndKeeps()(implicit injector: Injector) = {
-    val emailRepo = inject[UserEmailAddressRepo]
     val emailIron = EmailAddress("tony@stark.com")
     val emailCaptain = EmailAddress("steve.rogers@hotmail.com")
 
@@ -102,8 +101,8 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val userIron = user().withUsername("ironman").saved
       val userCaptain = user().withUsername("captainamerica").saved
 
-      emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
-      emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
+      userEmailAddressCommander.intern(userId = userIron.id.get, address = emailIron).get
+      userEmailAddressCommander.intern(userId = userCaptain.id.get, address = emailCaptain).get
 
       (userIron, userCaptain)
     }

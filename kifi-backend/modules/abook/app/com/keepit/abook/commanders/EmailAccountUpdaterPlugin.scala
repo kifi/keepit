@@ -55,7 +55,7 @@ class EmailAccountUpdaterActor @Inject() (
         updates.sortBy(_.seq).foreach {
 
           case update if !update.deleted => {
-            val emailAccount = emailAccountRepo.getByAddress(update.emailAddress) getOrElse EmailAccount(address = update.emailAddress)
+            val emailAccount = emailAccountRepo.getByAddress(update.emailAddress) getOrElse EmailAccount.create(update.emailAddress)
             val savedAccount = emailAccountRepo.save(emailAccount.copy(userId = Some(update.userId), verified = update.verified))
             if (savedAccount.verified && (!emailAccount.verified || savedAccount.userId != emailAccount.userId)) {
               contactRepo.updateOwnership(savedAccount.id.get, savedAccount.userId)

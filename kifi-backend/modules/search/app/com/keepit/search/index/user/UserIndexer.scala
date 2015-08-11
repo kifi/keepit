@@ -34,7 +34,7 @@ class UserIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient,
       case Seq() => Future.successful((Seq.empty[UserIndexable], true))
       case users =>
         val userIds = users.map(_.id.get)
-        val futureEmails = shoebox.getEmailAddressesForUsers(userIds)
+        val futureEmails = shoebox.getEmailAddressesForUsers(userIds.toSet)
         val futureExperiments = shoebox.getExperimentsByUserIds(userIds)
         for {
           emailsByUserId <- futureEmails

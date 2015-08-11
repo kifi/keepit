@@ -125,8 +125,8 @@ class SecureSocialUserPluginImpl @Inject() (
           userExperimentCommander.addExperimentForUser(userId, exp)
         }
       }
-      val emailAddresses = db.readOnlyMaster(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
-      val experiments = emailAddresses.flatMap(UserEmailAddress.getExperiments)
+      val emailAddresses = db.readOnlyMaster(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId).map(_.address) }
+      val experiments = emailAddresses.flatMap(UserExperimentType.getExperimentForEmail)
       experiments.foreach(setExp)
     }
   } catch {
@@ -146,7 +146,6 @@ class SecureSocialUserPluginImpl @Inject() (
     val u = userCommander.createUser(
       identity.firstName,
       identity.lastName,
-      identity.email.map(EmailAddress.apply),
       state = UserStates.ACTIVE
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
@@ -180,7 +179,7 @@ class SecureSocialUserPluginImpl @Inject() (
       val existingUserOpt = userId orElse {
         // Automatically connect accounts with existing emails
         socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
-          emailRepo.getVerifiedOwner(emailAddress) tap {
+          emailRepo.getOwner(emailAddress) tap {
             _.foreach { existingUserId =>
               log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
             }
@@ -277,7 +276,7 @@ class SecureSocialUserPluginImpl @Inject() (
           db.readWrite(attempts = 3) { implicit session =>
             for (user <- userOpt) {
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
-                val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
+                val email = socialUser.email.flatMap(EmailAddress.validate(_).toOption).getOrElse(throw new IllegalStateException(s"$user has invalid email address: ${socialUser.email}"))
                 val emailAddress = userEmailAddressCommander.intern(user.id.get, email).get
                 val cred =
                   UserCred(

@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.time._
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 
 import scala.concurrent.duration._
 
@@ -22,7 +22,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress]
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
-  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
+  def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
 }
 
@@ -40,11 +40,12 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
+    def hash = column[EmailAddressHash]("hash", O.NotNull)
     def primary = column[Option[Boolean]]("primary", O.Nullable)
     def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
     def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, primary, verifiedAt, lastVerificationSent,
+    def * = (id.?, createdAt, updatedAt, userId, state, address, hash, primary, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.applyFromDbRow _).tupled, UserEmailAddress.unapplyToDbRow _)
   }
 
@@ -67,23 +68,27 @@ class UserEmailAddressRepoImpl @Inject() (
     deleteCache(emailAddress)
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] =
-    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
-
-  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
-    (for (f <- rows if f.address === address && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (f <- rows if f.address === address && f.hash === hash && f.state =!= excludeState.orNull) yield f).firstOption
   }
 
-  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
+  def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (f <- rows if f.address === address && f.hash === hash && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
+  }
+
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] = {
     (for (f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
+  }
 
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
     val user = userRepo.get(userId)
     user.primaryEmail getOrElse {
       val all = getAllByUser(userId)
-      all.find(_.verified) match {
-        case Some(verifiedEmail) => verifiedEmail.address
-        case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
+      (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
+        case Some(email) => email.address
+        case None => throw new Exception(s"no emails for user $userId")
       }
     }
   }
@@ -96,14 +101,13 @@ class UserEmailAddressRepoImpl @Inject() (
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
   }
 
-  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
-    getByAddress(address).find(_.verified).map(_.userId)
+  def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
+    getByAddress(address).map(_.userId)
   }
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
     (for (e <- rows if e.state =!= UserEmailAddressStates.INACTIVE && e.verifiedAt.isEmpty && e.createdAt > from && e.createdAt < to) yield e).list
   }
-
 }
 
 trait UserEmailAddressSeqPlugin extends SequencingPlugin

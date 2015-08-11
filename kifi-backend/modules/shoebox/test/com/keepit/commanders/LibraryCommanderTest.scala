@@ -77,7 +77,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
   def setupUsers()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val emailRepo = inject[UserEmailAddressRepo]
     val emailIron = EmailAddress("tony@stark.com")
     val emailCaptain = EmailAddress("steve.rogers@hotmail.com")
     val emailAgent = EmailAddress("samuelljackson@shield.com")
@@ -89,10 +88,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       val userAgent = user().withUsername("agentfury").saved
       val userHulk = user().withUsername("incrediblehulk").saved
 
-      emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
-      emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
-      emailRepo.save(UserEmailAddress(userId = userAgent.id.get, address = emailAgent))
-      emailRepo.save(UserEmailAddress(userId = userHulk.id.get, address = emailHulk))
+      userEmailAddressCommander.intern(userId = userIron.id.get, address = emailIron).get
+      userEmailAddressCommander.intern(userId = userCaptain.id.get, address = emailCaptain).get
+      userEmailAddressCommander.intern(userId = userAgent.id.get, address = emailAgent).get
+      userEmailAddressCommander.intern(userId = userHulk.id.get, address = emailHulk).get
 
       (userIron, userCaptain, userAgent, userHulk)
     }

@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
@@ -94,6 +95,24 @@ object UserExperimentType {
     if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
+  }
+
+  private val kifiDomains = Set("kifi.com", "42go.com")
+  private val testDomains = Set("tfbnw.net", "mailinator.com") // tfbnw.net is for fake facebook accounts
+  private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
+
+  def getExperimentForEmail(email: EmailAddress): Set[UserExperimentType] = {
+    val Array(local, host) = email.address.split('@')
+    val tags = tagRe.findAllIn(local).toSet
+    if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
+      Set(FAKE, AUTO_GEN)
+    } else if (kifiDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
+      Set(FAKE)
+    } else if (testDomains.contains(host)) {
+      Set(FAKE)
+    } else {
+      Set.empty
+    }
   }
 }
 

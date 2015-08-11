@@ -4,14 +4,13 @@ import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
-import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[EmailAccountRepoImpl])
 trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
@@ -32,9 +31,10 @@ class EmailAccountRepoImpl @Inject() (
   type RepoImpl = EmailAccountTable
   class EmailAccountTable(tag: Tag) extends RepoTable[EmailAccount](db, tag, "email_account") with SeqNumberColumn[EmailAccount] {
     def address = column[EmailAddress]("address", O.NotNull)
+    def hash = column[EmailAddressHash]("hash", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def verified = column[Boolean]("verified", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, address, userId.?, verified, seq) <> ((EmailAccount.apply _).tupled, EmailAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, address, hash, userId.?, verified, seq) <> ((EmailAccount.apply _).tupled, EmailAccount.unapply _)
   }
 
   def table(tag: Tag) = new EmailAccountTable(tag)
@@ -49,25 +49,28 @@ class EmailAccountRepoImpl @Inject() (
   override def invalidateCache(emailAccount: EmailAccount)(implicit session: RSession): Unit = {}
 
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount] = {
-    (for (row <- rows if row.address === address) yield row).firstOption
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (row <- rows if row.address === address && row.hash === hash) yield row).firstOption
   }
 
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount = {
     getByAddress(address) match {
-      case None => save(EmailAccount(address = address))
+      case None => save(EmailAccount.create(address = address))
       case Some(emailAccount) => emailAccount
     }
   }
 
   def getByAddresses(addresses: EmailAddress*)(implicit session: RSession): Map[EmailAddress, EmailAccount] = {
-    (for (row <- rows if row.address inSet (addresses)) yield (row.address, row)).list.toMap
+    val hashes = addresses.map(EmailAddressHash.hashEmailAddress)
+    val lowerCasedAddresses = addresses.map(_.address.toLowerCase)
+    (for (row <- rows if row.hash inSet (hashes)) yield (row.address, row)).list.toMap.filterKeys(address => lowerCasedAddresses.contains(address.address.toLowerCase))
   }
 
   def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Map[EmailAddress, EmailAccount] = {
     val existingAccounts = getByAddresses(addresses: _*)
     val lowerCasedExistingAddresses = existingAccounts.keySet.map(_.address.toLowerCase)
     val allByLowerCasedAddress = addresses.map { address => address.address.toLowerCase -> address }.toMap
-    val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount(address = address)).toSeq
+    val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount.create(address)).toSeq
     if (toBeInserted.isEmpty) { existingAccounts }
     else {
       insertAll(toBeInserted)

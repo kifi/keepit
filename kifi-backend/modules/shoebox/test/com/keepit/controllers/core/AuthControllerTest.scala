@@ -54,10 +54,8 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit rw =>
           val user = UserFactory.user().withName("Elaine", "Benes").withUsername("test").saved
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
-            address = EmailAddress("elaine@gmail.com")))
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
-            address = EmailAddress("dancing@gmail.com")))
+          userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("elaine@gmail.com")).get._1
+          userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("dancing@gmail.com")).get._1
           user
         }
         inject[FakeUserActionsHelper].setUser(user)

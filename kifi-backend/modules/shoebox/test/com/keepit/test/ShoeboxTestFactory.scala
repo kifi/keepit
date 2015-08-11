@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import com.google.inject.{ Injector, Singleton, Inject }
+import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
@@ -19,7 +20,7 @@ class ShoeboxTestFactory @Inject() (
     (
       UserFactory.user().withName("Aaron", "Paul").withUsername("test").saved,
       UserFactory.user().withName("Bryan", "Cranston").withUsername("test2").saved,
-      UserFactory.user().withName("Anna", "Gunn").withUsername("test3").withEmailAddress("test@gmail.com").saved,
+      UserFactory.user().withName("Anna", "Gunn").withUsername("test3").saved,
       UserFactory.user().withName("Dean", "Norris").withUsername("test4").saved
     )
   }
@@ -37,22 +38,22 @@ class ShoeboxTestFactory @Inject() (
 
   def setupUsers() = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val emailRepo = inject[UserEmailAddressRepo]
+    val emailAddressCommander = inject[UserEmailAddressCommander]
     val emailIron = EmailAddress("tony@stark.com")
     val emailCaptain = EmailAddress("steve.rogers@hotmail.com")
     val emailAgent = EmailAddress("samuelljackson@shield.com")
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = UserFactory.user().withName("Tony", "Stark").withUsername("ironman").withEmailAddress(emailIron).withCreatedAt(t1).saved
-      val userCaptain = UserFactory.user().withName("Steve", "Rogers").withUsername("captainamerica").withEmailAddress(emailCaptain).withCreatedAt(t1).saved
-      val userAgent = UserFactory.user().withName("Nick", "Fury").withUsername("agentfury").withEmailAddress(emailAgent).withCreatedAt(t1).saved
-      val userHulk = UserFactory.user().withName("Bruce", "Banner").withUsername("incrediblehulk").withEmailAddress(emailHulk).withCreatedAt(t1).saved
+      val userIron = UserFactory.user().withName("Tony", "Stark").withUsername("ironman").withCreatedAt(t1).saved
+      val userCaptain = UserFactory.user().withName("Steve", "Rogers").withUsername("captainamerica").withCreatedAt(t1).saved
+      val userAgent = UserFactory.user().withName("Nick", "Fury").withUsername("agentfury").withCreatedAt(t1).saved
+      val userHulk = UserFactory.user().withName("Bruce", "Banner").withUsername("incrediblehulk").withCreatedAt(t1).saved
 
-      emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
-      emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
-      emailRepo.save(UserEmailAddress(userId = userAgent.id.get, address = emailAgent))
-      emailRepo.save(UserEmailAddress(userId = userHulk.id.get, address = emailHulk))
+      emailAddressCommander.intern(userIron.id.get, emailIron).get
+      emailAddressCommander.intern(userCaptain.id.get, emailCaptain).get
+      emailAddressCommander.intern(userAgent.id.get, emailAgent).get
+      emailAddressCommander.intern(userHulk.id.get, emailHulk).get
 
       (userIron, userCaptain, userAgent, userHulk)
     }

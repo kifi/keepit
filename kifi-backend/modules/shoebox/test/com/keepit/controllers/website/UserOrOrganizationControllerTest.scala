@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
@@ -94,7 +95,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(user.username)
-          val response = controller.getByHandle(user.username, authTokenOpt = None)(request)
+          val response = controller.getByHandle(user.username, authToken = None)(request)
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "type").as[String] === "user"
@@ -106,10 +107,27 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
           val request = route.getByHandle(org.handle)
-          val response = controller.getByHandle(org.handle, authTokenOpt = None)(request)
+          val response = controller.getByHandle(org.handle, authToken = None)(request)
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "type").as[String] === "org"
+        }
+      }
+
+      "allow non-users with valid auth to see the org" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, org, authToken) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("camco")).withInvitedEmails(Seq(EmailAddress("cam@kifi.com"))).saved
+            val authToken = inject[OrganizationInviteRepo].getByEmailAddress(EmailAddress("cam@kifi.com")).head.authToken
+            (owner, org, authToken)
+          }
+          val request = route.getByHandle(org.handle)
+          val response = controller.getByHandle(org.handle, authToken = Some(authToken))(request)
+
+          val jsonResponse = Json.parse(contentAsString(response))
+          (jsonResponse \ "type").as[String] === "org"
+          (jsonResponse \ "result" \ "organization" \ "handle").as[String] === "camco" // test that the org was returned
         }
       }
     }
