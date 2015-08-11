@@ -38,6 +38,11 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
+
+  // For backwards compatibility with KeepRepo
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
+  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary]
+  def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
 }
 
 @Singleton
@@ -98,7 +103,7 @@ class KeepToLibraryRepoImpl @Inject() (
     libraryIds.map(libId => libId -> getCountByLibraryId(libId, excludeStates)).toMap
   }
   def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStates).drop(offset.value).take(limit.value).list
+    getByLibraryIdHelper(libraryId, excludeStates).sortBy(r => (r.addedAt desc, r.keepId desc)).drop(offset.value).take(limit.value).list
   }
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
     getByLibraryIdHelper(libraryId, excludeStates).list
@@ -162,13 +167,14 @@ class KeepToLibraryRepoImpl @Inject() (
     val q = { for (ktl <- rows if ktl.libraryId === libId && ktl.visibility =!= excludeVisibility.orNull) yield ktl }.take(limit.value)
     q.list
   }
-  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Id[Keep]] = {
-    (for (ktl <- rows if ktl.uriId.inSet(uriIds) && ktl.libraryId.inSet(libraryIds) && ktl.state === KeepToLibraryStates.ACTIVE) yield ktl.keepId).list
+  def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary] = {
+    (for (ktl <- rows if ktl.uriId.inSet(uriIds) && ktl.libraryId.inSet(libraryIds) && ktl.state === KeepToLibraryStates.ACTIVE) yield ktl).list
   }
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary] = {
     // TODO(ryan): this method needs to be deprecated, it doesn't make sense anymore (now we can have the same URI in a lib multiple times)
     (for (ktl <- rows if ktl.uriId === uriId && ktl.libraryId === libId && ktl.isPrimary === true) yield ktl).firstOption
   }
+
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
     // This query now needs to do a 3-table join or something horrible. Rethink it.
     ???
@@ -179,8 +185,8 @@ class KeepToLibraryRepoImpl @Inject() (
       case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl.keepId).take(limit.value).list.toSet
     }
   }
-  def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Id[Keep]] = {
-    (for (ktl <- rows if ktl.libraryId === library && ktl.state === KeepToLibraryStates.ACTIVE && ktl.addedAt > since) yield ktl).sortBy(ktl => (ktl.addedAt asc, ktl.id)).map(_.keepId).take(max).list
+  def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
+    (for (ktl <- rows if ktl.libraryId === library && ktl.state === KeepToLibraryStates.ACTIVE && ktl.addedAt > since) yield ktl).sortBy(ktl => (ktl.addedAt asc, ktl.id)).take(max).list
   }
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
