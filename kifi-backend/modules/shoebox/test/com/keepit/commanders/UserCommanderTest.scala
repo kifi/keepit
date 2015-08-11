@@ -227,16 +227,14 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         // verify all emails
         db.readWrite { implicit session =>
           userEmailAddressRepo.getAllByUser(user.id.get).map { em =>
-            userEmailAddressRepo.save(em.copy(verifiedAt = Some(currentDateTime)))
+            inject[UserEmailAddressCommander].saveAsVerified(em)
           }
-          userRepo.save(user.copy(primaryEmail = Some(email2))) // because email2 is pending primary
-          userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
         }
 
         // make email1 primary
         userCommander.makeEmailPrimary(user.id.get, email1).isRight === true
         db.readOnlyMaster { implicit session =>
-          userRepo.get(user.id.get).primaryEmail.get === email1
+          userEmailAddressRepo.getPrimaryByUser(user.id.get).map(_.address) === Some(email1)
           userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL) === None
         }
         // remove email1 then email2
