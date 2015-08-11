@@ -3,7 +3,6 @@ package com.keepit.notify.model
 import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
-import scala.annotation.unchecked.uncheckedVariance
 
 @implicitNotFound("No kind object found for action ${N}")
 trait NotificationKind[N <: NotificationEvent] {
@@ -30,7 +29,7 @@ trait NotificationKind[N <: NotificationEvent] {
   def groupIdentifier(event: N): Option[String] = None
 
   /**
-   * Defines hether a new event of this kind should be grouped together with existing events in the same notification.
+   * Defines whether a new event of this kind should be grouped together with existing events in the same notification.
    *
    * @param newEvent The new events
    * @param existingEvents The existing events
