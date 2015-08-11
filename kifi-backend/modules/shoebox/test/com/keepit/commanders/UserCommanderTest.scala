@@ -26,20 +26,17 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val userRepo = inject[UserRepo]
-    val emailRepo = inject[UserEmailAddressRepo]
+    val emailCommander = inject[UserEmailAddressCommander]
     val connectionRepo = inject[UserConnectionRepo]
 
     db.readWrite { implicit session =>
-      var user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").saved
-      var user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
-      var user3 = UserFactory.user().withName("Clark", "Kent").withUsername("clark").saved
+      val user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").withPictureName("dfkjiyert").saved
+      val user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
+      val user3 = UserFactory.user().withName("Clark", "Kent").withUsername("clark").saved
 
-      val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
-      val email2 = emailRepo.save(UserEmailAddress(userId = user2.id.get, address = EmailAddress("peteg@42go.com")))
-      val email3 = emailRepo.save(UserEmailAddress(userId = user3.id.get, address = EmailAddress("superreporter@42go.com")))
-
-      user1 = userRepo.save(user1.copy(primaryEmail = Some(email1.address), pictureName = Some("dfkjiyert")))
-      user2 = userRepo.save(user2.copy(primaryEmail = Some(email2.address)))
+      emailCommander.intern(user1.id.get, EmailAddress("username@42go.com"), verified = true).get
+      emailCommander.intern(user2.id.get, EmailAddress("peteg@42go.com"), verified = true).get
+      emailCommander.intern(user3.id.get, EmailAddress("superreporter@42go.com"), verified = true).get
 
       val clock = inject[FakeClock]
       val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
@@ -254,14 +251,17 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
     "tellContactsAboutNewUser" should {
       // await wrapper about the commander method call
-      def tellContactsAboutNewUser(user: User)(implicit injector: Injector): Set[Id[User]] =
+      def tellContactsAboutNewUser(user: User)(implicit injector: Injector): Set[Id[User]] = {
         Await.result(inject[UserCommander].tellUsersWithContactOfNewUserImmediate(user).get, Duration(5, "seconds"))
+      }
 
       "send notifications to all users connected to a user's email" in withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Jane", "Doe").withUsername("jane").withEmailAddress("jane@doe.com").saved
+          val user4 = UserFactory.user().withName("Jane", "Doe").withUsername("jane").saved
+          inject[UserEmailAddressCommander].intern(user4.id.get, EmailAddress("jane@doe.com"), verified = true)
+          user4
         }
 
         // set service client response

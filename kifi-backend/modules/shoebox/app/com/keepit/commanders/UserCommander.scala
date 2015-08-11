@@ -355,11 +355,16 @@ class UserCommander @Inject() (
 
     val newUserId = newUser.id.get
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
-      newUser.primaryEmail.map { email =>
-        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
 
+      val verifiedEmailAddresses = db.readOnlyMaster { implicit session =>
+        val allAddresses = emailRepo.getAllByUser(newUserId)
+        allAddresses.collect { case email if email.verified => email.address }
+      }
+
+      if (verifiedEmailAddresses.nonEmpty) Some {
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
         // get users who have this user's email in their contacts
-        abookServiceClient.getUsersWithContact(email) flatMap {
+        Future.sequence(verifiedEmailAddresses.map(abookServiceClient.getUsersWithContact)).imap(_.toSet.flatten) flatMap {
           case contacts if contacts.nonEmpty =>
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
@@ -401,10 +406,11 @@ class UserCommander @Inject() (
             }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
           case _ =>
-            log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
+            log.info("cannot send contact notifications: no verified email found for user.id=" + newUserId)
             Future.successful(Set.empty)
         }
       }
+      else None
     } else Option(Future.successful(Set.empty))
   }
 
