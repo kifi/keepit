@@ -16,6 +16,10 @@ alter table notification drop column user_id;
 -- # Replaces the JSON, really ugly but it works. Commented out because this happens manually after the evolution
 -- # update notification_item set event = replace(replace(event, 'userId":', 'recipient":"user|'), ',"time', '","time');
 
+alter table notification add column last_event DATETIME not null;
+
+alter table notification add column disabled BOOLEAN not null default false;
+
 insert into evolutions (name, description) values('371.sql', 'Add group_identifier and recipient to notification');
 
 # --- !Downs

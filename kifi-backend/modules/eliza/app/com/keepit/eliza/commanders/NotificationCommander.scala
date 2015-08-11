@@ -34,7 +34,8 @@ class NotificationCommander @Inject() (
         kind = event.kind,
         event = event
       ))
-      notificationRepo.get(notifId)
+      val notif = notificationRepo.get(notifId)
+      notificationRepo.save(notif.copy(lastEvent = event.time))
     }
   }
 
@@ -42,7 +43,8 @@ class NotificationCommander @Inject() (
     db.readWrite { implicit session =>
       val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
-        kind = event.kind
+        kind = event.kind,
+        lastEvent = event.time
       ))
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,

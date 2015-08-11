@@ -31,7 +31,9 @@ case class Notification(
     recipient: Recipient,
     lastChecked: DateTime = START_OF_TIME,
     kind: NKind,
-    groupIdentifier: Option[String] = None) extends Model[Notification] {
+    groupIdentifier: Option[String] = None,
+    lastEvent: DateTime = currentDateTime,
+    disabled: Boolean = false) extends Model[Notification] {
 
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 
@@ -48,7 +50,9 @@ object Notification {
     (__ \ "lastChecked").format[DateTime] and
     (__ \ "kind").format[String] and
     (__ \ "groupIdentifier").formatNullable[String] and
-    (__ \ "recipient").format[Recipient]
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "lastEvent").format[DateTime] and
+    (__ \ "disabled").format[Boolean]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
 
   def applyFromDbRow(
@@ -58,24 +62,30 @@ object Notification {
     lastChecked: DateTime,
     kind: String,
     groupIdentifier: Option[String],
-    recipient: Recipient): Notification = Notification(
+    recipient: Recipient,
+    lastEvent: DateTime,
+    disabled: Boolean): Notification = Notification(
     id,
     createdAt,
     updatedAt,
     recipient,
     lastChecked,
     NotificationKind.getByName(kind).get,
-    groupIdentifier
+    groupIdentifier,
+    lastEvent,
+    disabled
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, DateTime, String, Option[String], Recipient)] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, DateTime, String, Option[String], Recipient, DateTime, Boolean)] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,
     notification.lastChecked,
     notification.kind.name,
     notification.groupIdentifier,
-    notification.recipient
+    notification.recipient,
+    notification.lastEvent,
+    notification.disabled
   )
 
 }
