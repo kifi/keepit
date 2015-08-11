@@ -1073,16 +1073,16 @@ class AdminUserController @Inject() (
     Ok("It's on!")
   }
 
-  def migratePrimaryEmails() = AdminUserPage { implicit request =>
+  def migratePrimaryEmails(limit: Option[Int]) = AdminUserPage { implicit request =>
     SafeFuture {
       val pageSize = 100
       var page = 0
       var total = 0
       var lastFixed: Option[Int] = None
-      while (!lastFixed.contains(0)) {
+      while (!limit.exists(_ < total) && !lastFixed.contains(0)) {
         lastFixed = Some {
           db.readWrite { implicit sesssion =>
-            val users = userRepo.page(0, pageSize)
+            val users = userRepo.pageAscending(0, pageSize)
             users.foreach { user =>
               user.primaryEmail.foreach { primaryEmail =>
                 emailRepo.getOwner(primaryEmail) match {
