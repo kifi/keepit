@@ -1,9 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{Id, SequenceNumber, State}
+import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
@@ -36,6 +36,10 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary]
   def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
+  def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
+  def publishedLibrariesWithMostKeepsSince(limit: Limit, since: DateTime)(implicit session: RSession): Map[Id[Library], Int]
+  def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
 }
 
 @Singleton
@@ -148,14 +152,6 @@ class KeepToLibraryRepoImpl @Inject() (
    * ***************************************************
    */
 
-  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select bm.note from bookmark bm, keep_to_library ktl
-                  where ktl.library_id = $libId and ktl.keep_id = bm.id and note is not null
-                  order by updated_at desc limit $limit"""
-    q.as[String].list
-  }
-
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Limit)(implicit session: RSession): Seq[KeepToLibrary] = {
     val q = { for (ktl <- rows if ktl.libraryId === libId && ktl.visibility =!= excludeVisibility.orNull) yield ktl }.take(limit.value)
     q.list
@@ -168,10 +164,6 @@ class KeepToLibraryRepoImpl @Inject() (
     (for (ktl <- rows if ktl.uriId === uriId && ktl.libraryId === libId && ktl.isPrimary === true) yield ktl).firstOption
   }
 
-  def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
-    // This query now needs to do a 3-table join or something horrible. Rethink it.
-    ???
-  }
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary] = {
     expectedOrgId match {
       case None => (for (ktl <- rows if ktl.libraryId === libraryId && ktl.organizationId.isDefined) yield ktl).take(limit.value).list.toSet
@@ -199,5 +191,40 @@ class KeepToLibraryRepoImpl @Inject() (
         allLibraryKeeps.filter(ktl => ktl.addedAt > lower.addedAt || (ktl.addedAt === lower.addedAt && ktl.keepId > lower.keepId))
     }
     recentLibraryKeeps.sortBy(ktl => (ktl.addedAt desc, ktl.keepId desc)).take(limit.value).list
+  }
+
+  def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
+    val keepsGroupedByLibrary = (for (r <- rows if r.libraryId.inSet(libraryIds) && r.state === KeepToLibraryStates.ACTIVE) yield r).groupBy(_.libraryId)
+    val latestAtByLibrary = keepsGroupedByLibrary.map { case (libraryId, ktls) => (libraryId, ktls.map(k => k.addedAt).max) }.list.toMap
+    libraryIds.map { libId => libId -> latestAtByLibrary.getOrElse(libId, None) }.toMap
+  }
+  def publishedLibrariesWithMostKeepsSince(limit: Limit, since: DateTime)(implicit session: RSession): Map[Id[Library], Int] = {
+    val published: LibraryVisibility = LibraryVisibility.PUBLISHED
+    val recentKeeps = for (r <- rows if r.state === KeepToLibraryStates.ACTIVE && r.addedAt > since && r.visibility === published) yield r
+    val numKeepsByLibrary = recentKeeps.groupBy(_.libraryId).map { case (libraryId, ktls) => (libraryId, ktls.length) }
+    numKeepsByLibrary.sortBy { case (libraryId, numKeeps) => (numKeeps desc, libraryId asc) }.take(limit.value).list.toMap
+  }
+  def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (libIds.isEmpty) {
+      Map.empty
+    } else {
+      val idset = libIds.map { _.id }.mkString("(", ",", ")")
+      val q = sql"""select ktl.library_id, max(bm.seq) 
+                    from keep_to_library ktl, bookmark bm
+                    where bm.id = ktl.keep_id and ktl.library_id in #${idset}
+                    group by ktl.library_id"""
+
+      q.as[(Long, Long)].list.map { case (libId, seq) => Id[Library](libId) -> SequenceNumber[Keep](seq) }.toMap
+    }
+  }
+  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select bm.note
+                  from keep_to_library ktl, bookmark bm
+                  where bm.id = ktl.keep_id and library_id = $libId and note is not null
+                  order by ktl.added_at desc
+                  limit $limit"""
+    q.as[String].list
   }
 }
