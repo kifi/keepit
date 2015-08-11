@@ -191,7 +191,7 @@ class UserCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val user = userRepo.getNoCache(userId)
 
-      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, user.primaryEmail, _))
+      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, _))
       userData.biography.foreach(updateUserBiography(userId, _))
 
       if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
@@ -276,7 +276,7 @@ class UserCommander @Inject() (
     val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
-      val emails = emailRepo.getAllByUser(user.id.get)
+      val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
 
@@ -294,12 +294,11 @@ class UserCommander @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
 
-    def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
-    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).reverse.map { email =>
+    val emailInfos = emails.sortBy { case (e, isPrimary)  => (isPrimary, !e.verified, e.id.get.id) }.reverse.map { case (email, isPrimary) =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
-        isPrimary = isPrimary(email.address),
+        isPrimary = isPrimary,
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
@@ -492,7 +491,7 @@ class UserCommander @Inject() (
   }
 
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
+  def updateEmailAddresses(userId: Id[User], firstName: String, emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val uniqueEmails = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
