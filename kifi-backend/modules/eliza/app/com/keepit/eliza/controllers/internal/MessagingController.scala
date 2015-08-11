@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.eliza.commanders.{ NotificationCommander, MessagingCommander }
+import com.keepit.eliza.commanders.{ NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.model._
 import com.keepit.common.db.{ Id }
 import com.keepit.common.db.slick.Database
@@ -40,7 +40,7 @@ class MessagingController @Inject() (
   uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
   messagingIndexCommander: MessagingIndexCommander,
-  notificationCommander: NotificationCommander)
+  notificationCommander: NotificationDeliveryCommander)
     extends ElizaServiceController with Logging {
 
   //for indexing data requests

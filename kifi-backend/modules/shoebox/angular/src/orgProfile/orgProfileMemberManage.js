@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
-  function($scope, profile, profileService, orgProfileService, modalService, Paginator) {
+  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
+  function($scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
     function memberPageAnalytics(args) {
       orgProfileService.trackEvent('user_clicked_page', organization, args);
     }
@@ -22,11 +22,15 @@ angular.module('kifi')
     }
 
     function handleErrorResponse(response) {
-      var err = 'error' in response.data ? response.data.error : null;
-      var message = null;
+      var err = (response.data && response.data.error) || response.error;
+      var message;
+
+      if (!err) {
+        return;
+      }
 
       if (err === 'insufficient_permissions') {
-        message = 'You don\'t have the privileges to remove this user.';
+        message = 'You don\'t have the privileges to modify this user.';
       }
 
       modalService.open({
@@ -37,7 +41,21 @@ angular.module('kifi')
       });
     }
 
-    function removeMember(member) {
+    $scope.removeMember = function (member) {
+      orgProfileService.removeOrgMember(organization.id, {
+          members: [{
+            userId: member.id
+          }]
+        })
+        .then(function success() {
+          var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
+          memberPageAnalytics({ action: action, orgMember: member.username });
+          removeMemberFromPage(member);
+        })
+        ['catch'](handleErrorResponse);
+    };
+
+    function removeMemberFromPage(member) {
       var index = $scope.members.indexOf(member);
       if (index > -1) {
         // Remove member from the list
@@ -49,6 +67,7 @@ angular.module('kifi')
     $scope.myMembership = $scope.membership;
     $scope.organization = organization;
     $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf('invite_members') > -1;
+    $scope.me = profileService.me;
 
     function resetAndFetch() {
       memberLazyLoader.reset();
@@ -79,17 +98,14 @@ angular.module('kifi')
     });
 
     $scope.$on('removeMember', function (e, member) {
-      orgProfileService.removeOrgMember(organization.id, {
-          members: [{
-            userId: member.id
-          }]
-        })
-        .then(function success() {
-          var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
-          memberPageAnalytics({ action: action, orgMember: member.username });
-          removeMember(member);
-        })
-        ['catch'](handleErrorResponse);
+      modalService.open({
+        template: 'orgProfile/orgProfileMemberRemoveModal.tpl.html',
+        modalData: {
+          organization: organization,
+          member: member
+        },
+        scope: $scope
+      });
     });
 
     $scope.$on('inviteMember', function (e, member, cb) {
@@ -118,7 +134,7 @@ angular.module('kifi')
       })
       .then(function success() {
         memberPageAnalytics({ action: 'clickedCancelInvite', orgMember: member.username });
-        removeMember(member);
+        removeMemberFromPage(member);
       })
       ['catch'](handleErrorResponse);
     });
@@ -161,8 +177,28 @@ angular.module('kifi')
           organization: organization,
           inviteType: inviteType,
           currentPageOrigin: 'organizationPage',
-          returnAction: function (response) {
-            var invitees = response.data.invitees;
+          returnAction: function (inviteData) {
+            var invitees = inviteData.invitees || [];
+
+            invitees.forEach(function (invitee) {
+              if (invitee.id) {
+                net.user(invitee.id).then(function (response) {
+                  var user = response.data;
+
+                  if (user) {
+                    user.lastInvitedAt = +new Date();
+                    $scope.members.push(user);
+                  }
+                });
+              } else if (invitee.email){
+                $scope.members.push({
+                  role: 'member',
+                  lastInvitedAt: +new Date(),
+                  email: invitee.email
+                });
+              }
+            });
+
             memberPageAnalytics({ action: 'clickedInvite', orgInvitees: invitees });
           }
         }

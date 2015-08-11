@@ -1,7 +1,7 @@
 @import com.keepit.common.service.IpAddress
 @(user: User,
 logs: Seq[UserIpAddress],
-sharedIpAddresses: Map[IpAddress, Map[User, Set[Organization]]]
+sharedIpAddresses: Map[IpAddress, Set[(User, Option[EmailAddress], Set[Organization])]]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @networkLogoLink(sui: SocialUserInfo) = {
@@ -19,13 +19,13 @@ sharedIpAddresses: Map[IpAddress, Map[User, Set[Organization]]]
 
 
 
-@formatListOfUsers(userData: Map[User, Set[Organization]]) = {
-    @for((user, orgs) <- userData) {
+@formatListOfUsers(userData: Set[(User, Option[EmailAddress], Set[Organization])]) = {
+    @for((user, emailAddress, orgs) <- userData) {
     <tr>
         <td><span class="badge">@user.id.get.id</span></td>
         <td>@adminHelper.userDisplay(user)</td>
         <td>@adminHelper.orgsDisplay(orgs)</td>
-        <td>@user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+        <td>@emailAddress.map(_.address).getOrElse("n/a")</td>
         <td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
     </tr>
     }

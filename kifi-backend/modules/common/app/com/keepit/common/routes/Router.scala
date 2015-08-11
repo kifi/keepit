@@ -81,7 +81,7 @@ object Shoebox extends Service {
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
-    def getPrimaryEmailAddressForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getPrimaryEmailAddressForUsers")
+    def getEmailAddressForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressForUsers")
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
     def getExperimentsByUserIds() = ServiceRoute(POST, "/internal/shoebox/database/getExperimentsByUserIds")
@@ -227,6 +227,7 @@ object Eliza extends Service {
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
     def sendGlobalNotification() = ServiceRoute(POST, "/internal/eliza/sendGlobalNotification")
     def unsendNotification(messageHandle: Id[MessageHandle]) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", messageHandle))
+    def sendNotificationEvent() = ServiceRoute(POST, "/internal/eliza/notifications/post")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
     def getNonUserThreadMuteInfo(publicId: String) = ServiceRoute(GET, "/internal/eliza/getNonUserThreadMuteInfo", Param("publicId", publicId))
@@ -324,6 +325,7 @@ object ABook extends Service {
     def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
     def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
     def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideOrganizationRecommendation", Param("irrelevantOrganizationId", irrelevantOrganizationId))
+    def fixEmailAddresses() = ServiceRoute(GET, "/internal/abook/database/fixEmailAddresses")
   }
 }
 

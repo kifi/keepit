@@ -15,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.json.Json
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
@@ -50,6 +51,7 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
     db: Database,
@@ -179,11 +181,7 @@ class AdminLibraryController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
     }
 
-    val excludeKeepStateSet = if (showInactives) {
-      Set.empty[State[Keep]]
-    } else {
-      Set(KeepStates.INACTIVE, KeepStates.DUPLICATE)
-    }
+    val excludeKeepStateSet = if (showInactives) Set.empty[State[Keep]] else Set(KeepStates.INACTIVE)
 
     val pageSize = 50
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
@@ -289,6 +287,22 @@ class AdminLibraryController @Inject() (
     Ok
   }
 
+  def unsafeAddMember = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val userId = (request.body \ "userId").as[Id[User]]
+    val libraryId = (request.body \ "libraryId").as[Id[Library]]
+    val access = (request.body \ "access").asOpt[LibraryAccess].getOrElse(LibraryAccess.READ_ONLY)
+    db.readWrite { implicit session =>
+      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
+      val newMembershipTemplate = LibraryMembership(
+        libraryId = libraryId,
+        userId = userId,
+        access = access
+      )
+      val newMembership = libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.flatMap(_.id)))
+      Ok(Json.toJson(newMembership))
+    }
+  }
+
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
@@ -305,8 +319,12 @@ class AdminLibraryController @Inject() (
           libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = None,
             visibility = LibraryVisibility.PUBLISHED, seq = SequenceNumber.ZERO))
       }
-      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).get
-      libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = newOwner, access = LibraryAccess.OWNER))
+        case Some(membership) =>
+          libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
+      }
       keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
         keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner, seq = SequenceNumber.ZERO))
       }
@@ -329,8 +347,10 @@ class AdminLibraryController @Inject() (
         case None =>
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = origLib.ownerId, access = LibraryAccess.OWNER))
         case Some(membership) =>
-          libraryMembershipRepo.save(membership.copy(libraryId = lib.id.get, seq = SequenceNumber.ZERO))
+          libraryMembershipRepo.save(membership.copy(id = None, libraryId = lib.id.get, access = LibraryAccess.OWNER, seq = SequenceNumber.ZERO))
       }
+      val image = libraryImageRepoImpl.getActiveForLibraryId(origLib.id.get).head
+      libraryImageRepoImpl.save(image.copy(id = None, libraryId = lib.id.get))
       val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
       (lib, keeps)
     }

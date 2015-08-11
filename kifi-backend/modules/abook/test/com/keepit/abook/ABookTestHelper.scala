@@ -76,7 +76,7 @@ case class ABookTestContactFactory @Inject() (
   def create(email: EmailAddress, contactEmail: EmailAddress): EContact =
     db.readWrite { implicit session =>
       val userId = Id[User](scala.util.Random.nextInt(9999999))
-      val account = EmailAccount(address = email)
+      val account = EmailAccount.create(email)
       val savedAccount = accRepo.save(account)
       val abook = ABookInfo(origin = ABookOrigins.GMAIL, userId = userId)
       val savedAbook = abookRepo.save(abook)

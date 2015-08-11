@@ -3,7 +3,7 @@ package com.keepit.social
 import java.io.File
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryPathCommander, LibraryImageCommander, KifiInstallationCommander }
+import com.keepit.commanders.{ PathCommander, LibraryImageCommander, KifiInstallationCommander }
 import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -39,7 +39,7 @@ class FakeTwitterSocialGraph @Inject() (
     basicUserRepo: BasicUserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     elizaServiceClient: ElizaServiceClient,
     s3ImageStore: S3ImageStore,
     socialRepo: SocialUserInfoRepo,

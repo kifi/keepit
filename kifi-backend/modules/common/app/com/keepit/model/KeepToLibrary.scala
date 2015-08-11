@@ -14,7 +14,14 @@ case class KeepToLibrary(
   state: State[KeepToLibrary] = KeepToLibraryStates.ACTIVE,
   keepId: Id[Keep],
   libraryId: Id[Library],
-  addedBy: Id[User])
+  addedAt: DateTime = currentDateTime,
+  addedBy: Id[User],
+  // A bunch of denormalized fields from Keep
+  uriId: Id[NormalizedURI],
+  isPrimary: Boolean = true,
+  // and from Library
+  visibility: LibraryVisibility,
+  organizationId: Option[Id[Organization]])
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
@@ -23,6 +30,30 @@ case class KeepToLibrary(
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
+}
+
+object KeepToLibrary {
+  // is_primary: trueOrNull in db
+  def applyFromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
+    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
+    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
+    KeepToLibrary(
+      id, createdAt, updatedAt, state,
+      keepId, libraryId, addedAt, addedBy,
+      uriId, isPrimary.getOrElse(false),
+      libraryVisibility, libraryOrganizationId)
+  }
+
+  def trueOrNull(b: Boolean): Option[Boolean] = if (b) Some(true) else None
+  def unapplyToDbRow(ktl: KeepToLibrary) = {
+    Some(
+      (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
+        ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
+        ktl.uriId, trueOrNull(ktl.isPrimary),
+        ktl.visibility, ktl.organizationId)
+    )
+  }
 }
 
 object KeepToLibraryStates extends States[KeepToLibrary]
@@ -48,10 +79,15 @@ sealed abstract class KeepToLibraryRequest {
   def requesterId: Id[User]
 }
 
+// Unfortunately we need the full models in order to fill in the appropriate
+// denormalized fields (libraryVisibility, keepOwner, etc)
 case class KeepToLibraryInternRequest(
-  keepId: Id[Keep],
-  libraryId: Id[Library],
-  requesterId: Id[User]) extends KeepToLibraryRequest
+    keep: Keep,
+    library: Library,
+    requesterId: Id[User]) extends KeepToLibraryRequest {
+  override def keepId = keep.id.get
+  override def libraryId = library.id.get
+}
 case class KeepToLibraryInternResponse(ktl: KeepToLibrary)
 
 case class KeepToLibraryRemoveRequest(

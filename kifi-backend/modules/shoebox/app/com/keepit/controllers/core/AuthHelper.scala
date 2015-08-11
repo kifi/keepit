@@ -65,11 +65,12 @@ class AuthHelper @Inject() (
     userValueRepo: UserValueRepo,
     passwordResetRepo: PasswordResetRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
+    orgRepo: OrganizationRepo,
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     libraryInviteCommander: LibraryInviteCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
@@ -195,10 +196,19 @@ class AuthHelper @Inject() (
 
   trait PostRegIntent
   case class AutoFollowLibrary(libraryPublicId: PublicId[Library], authToken: Option[String]) extends PostRegIntent
+  case class AutoJoinOrganization(organizationPublicId: PublicId[Organization], authToken: String) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
   case object NoIntent extends PostRegIntent
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+  def finishSignup(user: User,
+    emailAddress: EmailAddress,
+    newIdentity: Identity,
+    emailConfirmedAlready: Boolean,
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
 
     // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
     // This function does some end-of-the-line wiring after registration. We support registrations directly from an API,
@@ -209,11 +219,17 @@ class AuthHelper @Inject() (
     // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
     // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
 
-    val intentFromCookie = request.cookies.get("intent").map(_.value).flatMap {
+    val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
       case "follow" =>
         request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
           val authToken = request.cookies.get("libraryAuthToken").map(_.value)
           AutoFollowLibrary(libPubId, authToken)
+        }
+      case "joinOrg" =>
+        request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
+          request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
+            AutoJoinOrganization(orgPubId, authToken)
+          }
         }
       case "waitlist" =>
         Some(JoinTwitterWaitlist)
@@ -221,9 +237,11 @@ class AuthHelper @Inject() (
     }
 
     val intent: PostRegIntent = intentFromCookie.orElse {
-      (libraryPublicId, libAuthToken) match {
-        case (Some(libPubId), authTokenOpt) =>
+      (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
+        case (Some(libPubId), authTokenOpt, _, _) =>
           Some(AutoFollowLibrary(libPubId, authTokenOpt))
+        case (_, _, Some(orgPublicId), Some(authToken)) =>
+          Some(AutoJoinOrganization(orgPublicId, authToken))
         case _ => None
       }
     }.getOrElse(NoIntent)
@@ -257,7 +275,14 @@ class AuthHelper @Inject() (
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
-          libPathCommander.getPath(library)
+          libPathCommander.getPathForLibrary(library)
+        }.getOrElse("/")
+        url
+      case AutoJoinOrganization(orgPubId, authToken) =>
+        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
+        val url = Organization.decodePublicId(orgPubId).map { orgId =>
+          val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
+          s"/${handle.value}"
         }.getOrElse("/")
         url
       case JoinTwitterWaitlist =>
@@ -273,7 +298,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv").map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -325,18 +350,23 @@ class AuthHelper @Inject() (
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, None, None, isFinalizedImmediately = false)
+          handleSocialFinalizeInfo(sfi, None, None, None, None, isFinalizedImmediately = false)
       })
   }
 
   def doTokenFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     request.body.asOpt[TokenFinalizeInfo] match {
       case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
-      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, None, isFinalizedImmediately = false)
+      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, None, info.orgPublicId, info.orgAuthToken, isFinalizedImmediately = false)
     }
   }
 
-  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo,
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     val identity = request.identityOpt.get
@@ -347,7 +377,8 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
-    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = isFinalizedImmediately)
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken,
+      orgPublicId = orgPublicId, orgAuthToken = orgAuthToken, isFinalizedImmediately = isFinalizedImmediately)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -368,18 +399,18 @@ class AuthHelper @Inject() (
         Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
       }, {
         case efi: EmailPassFinalizeInfo =>
-          handleEmailPassFinalizeInfo(efi, None, None)
+          handleEmailPassFinalizeInfo(efi, None, None, None, None)
       }
     )
   }
 
-  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], orgPublicId: Option[PublicId[Organization]], orgAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
         val verifiedEmail = verifySignupEmail(request.userId, email, libraryPublicId, libAuthToken)
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = false)
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, orgPublicId, orgAuthToken, isFinalizedImmediately = false)
     }
   }
 

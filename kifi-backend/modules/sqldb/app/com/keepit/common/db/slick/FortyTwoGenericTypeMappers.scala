@@ -7,6 +7,7 @@ import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Timestamp }
+import com.keepit.notify.model.{ NKind, NotificationEvent, NotificationKind }
 import org.joda.time.{ LocalTime, DateTime }
 import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ GetResult, SetParameter }
@@ -62,6 +63,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
     case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }
   })
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
+  implicit val emailAddressHashMapper = MappedColumnType.base[EmailAddressHash, String](_.hash, EmailAddressHash.apply)
   implicit val normalizedHostnameMapper = MappedColumnType.base[NormalizedHostname, String](_.value, NormalizedHostname.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
@@ -97,6 +99,12 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
+
+  implicit val notificationEventMapper = MappedColumnType.base[NotificationEvent, String]({ event =>
+    Json.stringify(Json.toJson(event))
+  }, { string =>
+    Json.parse(string).as[NotificationEvent]
+  })
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),

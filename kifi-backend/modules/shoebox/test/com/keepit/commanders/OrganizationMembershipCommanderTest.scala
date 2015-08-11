@@ -11,50 +11,81 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
+import scala.util.Random
+
 class OrganizationMembershipCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   "OrganizationMembershipCommander" should {
-    "get memberships by organization id" in {
-      withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
-        val org = db.readWrite { implicit session =>
-          val owner = UserFactory.user().saved
-          val users = UserFactory.users(20).saved
-          val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withName("Luther Corp.").saved
-          org
-        }
+    "be able to list org members" in {
+      "get memberships by organization id" in {
+        withDb() { implicit injector =>
+          val orgRepo = inject[OrganizationRepo]
+          val orgMembershipRepo = inject[OrganizationMembershipRepo]
+          val org = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val users = UserFactory.users(20).saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withName("Luther Corp.").saved
+            org
+          }
 
-        val orgMembershipCommander = inject[OrganizationMembershipCommander]
-        orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Offset(0), Limit(50), includeInvitees = true).length === 21
+          val orgMembershipCommander = inject[OrganizationMembershipCommander]
+          orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Offset(0), Limit(50), includeInvitees = true).length === 21
+        }
       }
-    }
 
-    "page results" in {
-      withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
-        val orgInviteRepo = inject[OrganizationInviteRepo]
+      "page results" in {
+        withDb() { implicit injector =>
+          val orgRepo = inject[OrganizationRepo]
+          val orgMembershipRepo = inject[OrganizationMembershipRepo]
+          val orgInviteRepo = inject[OrganizationInviteRepo]
 
-        val org = db.readWrite { implicit session =>
-          val owner = UserFactory.user().saved
-          val users = UserFactory.users(19).saved
-          val invitees = Seq.fill(10)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
-          val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withInvitedEmails(invitees).withName("Luther Corp.").saved
-          org
+          val org = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val users = UserFactory.users(19).saved
+            val invitees = Seq.fill(10)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withInvitedEmails(invitees).withName("Luther Corp.").saved
+            org
+          }
+          val orgId = org.id.get
+
+          val orgMembershipCommander = inject[OrganizationMembershipCommander]
+          // limit by count
+          val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(0), Limit(10), includeInvitees = true)
+          membersLimitedByCount.length === 10
+
+          // limit with offset
+          val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(17), Limit(10), includeInvitees = true)
+          membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
+          membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
+          membersLimitedByOffset.length === 10
         }
-        val orgId = org.id.get
+      }
+      "sort the members correctly" in {
+        withDb() { implicit injector =>
+          val (org, memberships, users) = db.readWrite { implicit s =>
+            val users = Random.shuffle(UserFactory.users(100).saved)
+            val (owner, rest) = (users.head, users.tail)
+            val (admins, members) = rest.splitAt(20)
+            val org = OrganizationFactory.organization().withOwner(owner).withAdmins(admins).withMembers(members).saved
+            val memberships = inject[OrganizationMembershipRepo].getAllByOrgId(org.id.get)
+            (org, memberships, users)
+          }
 
-        val orgMembershipCommander = inject[OrganizationMembershipCommander]
-        // limit by count
-        val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(0), Limit(10), includeInvitees = true)
-        membersLimitedByCount.length === 10
+          val usersById = users.map(u => u.id.get -> u).toMap
+          def metric(om: OrganizationMembership) = {
+            val user = usersById(om.userId)
+            (user.id.get != org.ownerId, user.firstName, user.lastName)
+          }
 
-        // limit with offset
-        val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(17), Limit(10), includeInvitees = true)
-        membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
-        membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
-        membersLimitedByOffset.length === 10
+          println("org owner = " + org.ownerId)
+          val canonical = memberships.toSeq.sortBy(metric)
+          println("canonical = " + canonical.map(_.userId))
+          val extToIntMap = users.map(u => u.externalId -> u.id.get).toMap
+          val members = inject[OrganizationMembershipCommander].getMembersAndUniqueInvitees(org.id.get, Offset(10), Limit(50), includeInvitees = false).map(_.member.left.get)
+
+          val expected = canonical.drop(10).take(50)
+          members.map(bu => extToIntMap(bu.externalId)) === expected.map(_.userId)
+        }
       }
     }
 

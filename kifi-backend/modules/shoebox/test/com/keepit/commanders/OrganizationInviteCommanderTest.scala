@@ -28,8 +28,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
   def setup(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
-      userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
+      val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
+      userEmailAddressCommander.intern(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")).get
       val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
       val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
       (org, owner, membership)
@@ -131,16 +131,22 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
 
         val orgInviteCommander = inject[OrganizationInviteCommander]
-        db.readWrite { implicit session =>
-          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), Id[User](42))
+        val invitedUserId = db.readWrite { implicit session =>
+          val userId = userRepo.save(User(firstName = "Kiwi", lastName = "Kifi")).id.get
+          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), userId)
+          userId
         }
         val invites = db.readOnlyMaster { implicit session =>
           orgInviteRepo.getByEmailAddress(EmailAddress("kiwi@kifi.com"))
         }
         invites.foreach { invite =>
-          invite.userId === Some(Id[User](42))
+          invite.userId === Some(invitedUserId)
         }
         invites.length === 20
+
+        db.readOnlyMaster { implicit session =>
+          userExperimentRepo.hasExperiment(invitedUserId, UserExperimentType.ORGANIZATION) should beTrue
+        }
       }
     }
 

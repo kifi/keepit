@@ -28,7 +28,7 @@ class InviteController @Inject() (db: Database,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
     libraryRepo: LibraryRepo,
-    libPathCommander: LibraryPathCommander,
+    pathCommander: PathCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialGraphPlugin: SocialGraphPlugin,
     val userActionsHelper: UserActionsHelper,
@@ -195,7 +195,7 @@ class InviteController @Inject() (db: Database,
       val library = db.readOnlyReplica { implicit session =>
         libraryRepo.get(libId)
       }
-      val link = s"https://kifi.com${libPathCommander.getPathUrlEncoded(library)}"
+      val link = s"https://kifi.com${pathCommander.getPathForLibraryUrlEncoded(library)}"
       val title = library.name
       Ok(Json.obj(
         "is_api_deprecated" -> "yes_very_much_so",

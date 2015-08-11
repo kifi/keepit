@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.commanders.{ UserEmailAddressCommander, UserConnectionsCommander }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.time._
@@ -239,10 +239,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         // verify emails
         db.readWrite { implicit session =>
           userEmailAddressRepo.getAllByUser(user.id.get).map { em =>
-            userEmailAddressRepo.save(em.copy(verifiedAt = Some(currentDateTime)))
+            inject[UserEmailAddressCommander].saveAsVerified(em)
           }
-          userRepo.save(user.copy(primaryEmail = Some(EmailAddress(address2)))) // because email2 is pending primary
-          userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
         }
 
         // change primary to email1

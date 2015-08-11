@@ -27,7 +27,7 @@ trait UserEmailAddressCommander {
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress
   def setAsPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RWSession): Unit
   def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean // todo(Léo): remove when refactoring User.primaryEmail
-  def deactivate(emailAddress: UserEmailAddress)(implicit session: RWSession): Try[Unit]
+  def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit]
 }
 
 @Singleton
@@ -68,14 +68,14 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       case Some(email) if email.verified && email.userId != userId => Failure(new UnavailableEmailAddressException(email, userId))
       case Some(email) if email.state != UserEmailAddressStates.INACTIVE => Success {
         val isNew = email.userId != userId
-        val updatedEmail = if (isNew) email.copy(userId = userId, address = address).clearVerificationCode else email.copy(address = address)
+        val updatedEmail = if (isNew) email.copy(userId = userId).withAddress(address).clearVerificationCode else email.withAddress(address)
         val mustBeSaved = updatedEmail != email || (verified && !updatedEmail.verified)
         val interned = if (mustBeSaved) save(updatedEmail, verified) else email
         (interned, isNew)
       }
 
       case inactiveEmailOpt => Success {
-        val newEmail = UserEmailAddress(address = address, userId = userId).copy(id = inactiveEmailOpt.flatMap(_.id))
+        val newEmail = UserEmailAddress.create(userId, address).copy(id = inactiveEmailOpt.flatMap(_.id))
         (save(newEmail, verified), true)
       }
     }
@@ -89,20 +89,20 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     libraryInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
     organizationInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
-    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(state = UserEmailAddressStates.ACTIVE, verifiedAt = Some(currentDateTime))) // todo(Léo): remove state change when UNVERIFIED no longer appears in the DB
+    val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(verifiedAt = Some(currentDateTime)))
 
     lazy val isPendingPrimaryEmail = {
       val pendingEmail = userValueRepo.getValueStringOpt(verifiedEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      pendingEmail.contains(verifiedEmail.address)
+      pendingEmail.exists(_ equalsIgnoreCase verifiedEmail.address)
     }
 
     val user = userRepo.get(verifiedEmail.userId)
 
     if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) {
       updatePrimaryEmailForUser(user, verifiedEmail)
+    } else {
+      verifiedEmail
     }
-
-    verifiedEmail
   }
 
   def setAsPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
@@ -114,29 +114,38 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
-  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     require(primaryEmail.userId == user.id.get, s"Suggested primary email $primaryEmail does not belong to $user")
+
+    session.onTransactionSuccess { heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address)) }
+
     userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
     userRepo.save(user.copy(primaryEmail = Some(primaryEmail.address)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
+    userEmailAddressRepo.getPrimaryByUser(primaryEmail.userId) match {
+      case Some(existingPrimary) if existingPrimary.address equalsIgnoreCase primaryEmail.address => existingPrimary // this email is already marked as primary
+      case existingPrimaryOpt => {
+        existingPrimaryOpt.foreach(existingPrimary => userEmailAddressRepo.save(existingPrimary.copy(primary = false)))
+        userEmailAddressRepo.save(primaryEmail.copy(primary = true))
+      }
+    }
   }
 
   def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = {
     userRepo.get(emailAddress.userId).primaryEmail.exists(_ == emailAddress.address)
   }
 
-  def deactivate(emailAddress: UserEmailAddress)(implicit session: RWSession): Try[Unit] = {
+  def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit] = {
     val allEmails = userEmailAddressRepo.getAllByUser(emailAddress.userId)
     val isLast = !allEmails.exists(em => em.address != emailAddress.address)
     val isLastVerified = !allEmails.exists(em => em.address != emailAddress.address && em.verified)
 
-    if (isLast) Failure(new LastEmailAddressException(emailAddress))
-    else if (isLastVerified) Failure(new LastVerifiedEmailAddressException(emailAddress))
-    else if (isPrimaryEmail(emailAddress)) Failure(new PrimaryEmailAddressException(emailAddress))
+    if (!force && isLast) Failure(new LastEmailAddressException(emailAddress))
+    else if (!force && isLastVerified) Failure(new LastVerifiedEmailAddressException(emailAddress))
+    else if (!force && isPrimaryEmail(emailAddress)) Failure(new PrimaryEmailAddressException(emailAddress))
     else Success {
       val pendingPrimary = userValueRepo.getValueStringOpt(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      if (pendingPrimary.contains(emailAddress.address)) {
+      if (pendingPrimary.exists(_ equalsIgnoreCase emailAddress.address)) {
         userValueRepo.clearValue(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL)
       }
       userEmailAddressRepo.save(emailAddress.withState(UserEmailAddressStates.INACTIVE))

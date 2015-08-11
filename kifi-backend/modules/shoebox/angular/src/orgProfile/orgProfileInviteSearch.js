@@ -89,15 +89,6 @@ angular.module('kifi')
 
           scope.showSpinner = true;
 
-          function getFirstLibrary(libraryData) {
-            var libraries = libraryData.libraries;
-            return libraries && libraries[0];
-          }
-
-          function getSearchContacts(library) {
-            return library && libraryService.getLibraryShareContacts(library.id, opt_query);
-          }
-
           function updateContacts(contacts) {
             var newResults;
 
@@ -179,10 +170,7 @@ angular.module('kifi')
           }
 
           // Do the magic to get the contacts given the organization id.
-          orgProfileService
-            .getOrgLibraries(scope.organization.id)
-            .then(getFirstLibrary)
-            .then(getSearchContacts)
+          orgProfileService.suggestOrgMember(scope.organization.id, opt_query)
             .then(updateContacts);
         }
 

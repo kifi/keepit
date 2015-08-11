@@ -44,10 +44,18 @@ class KPrefixWeight(val query: KPrefixQuery, val searcher: IndexSearcher) extend
       case kSearcher: Searcher => kSearcher.maxPrefixLength
       case _ => Int.MaxValue
     }
+
+    val minPrefixLength = searcher match {
+      case kSearcher: Searcher => kSearcher.minPrefixLength
+      case _ => Int.MaxValue
+    }
+
     val booleanQuery = new BooleanQuery()
     query.terms.foreach { term =>
-      val termQuery = new TermQuery(new Term(query.prefixField, term.take(maxPrefixLength)))
-      booleanQuery.add(termQuery, Occur.MUST)
+      if (term.length >= minPrefixLength) {
+        val termQuery = new TermQuery(new Term(query.prefixField, term.take(maxPrefixLength)))
+        booleanQuery.add(termQuery, Occur.MUST)
+      }
     }
     booleanQuery.createWeight(searcher)
   }

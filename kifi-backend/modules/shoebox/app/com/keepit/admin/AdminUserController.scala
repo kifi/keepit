@@ -261,7 +261,7 @@ class AdminUserController @Inject() (
 
     val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
       val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
-      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId) else Seq.empty
+      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId).filter(_.state == OrganizationStates.ACTIVE) else Seq.empty
       (
         userExperimentRepo.getUserExperiments(user.id.get),
         potentialOrganizationsForUser,
@@ -276,8 +276,8 @@ class AdminUserController @Inject() (
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
-      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
+      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -296,7 +296,7 @@ class AdminUserController @Inject() (
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
     } yield {
-      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
       Ok(html.admin.user(user, chatStats, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
@@ -507,7 +507,7 @@ class AdminUserController @Inject() (
       // Deactivate other emails
       oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        userEmailAddressCommander.deactivate(removedEmail).get
+        userEmailAddressCommander.deactivate(removedEmail, force = true).get
       }
     }
 
@@ -772,7 +772,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmail.foreach { primaryEmail => properties += ("$email", primaryEmail.address) }
+        properties += ("$email", emailRepo.getByUser(userId).address)
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -999,19 +999,19 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
+    val pages: Map[IpAddress, Set[(User, Option[EmailAddress], Set[Organization])]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
   }
 
-  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+  private def usersAndOrgs(userIds: Seq[Id[User]]): Set[(User, Option[EmailAddress], Set[Organization])] = {
     db.readOnlyReplica { implicit s =>
-      val users = userRepo.getAllUsers(userIds).values.toList
-      val orgs = users map { user =>
+      val users = userRepo.getAllUsers(userIds).values.toSet
+      val emailAddresses = userIds.map { userId => userId -> Try(emailRepo.getByUser(userId)).toOption }.toMap
+      users map { user =>
         val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
-        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+        (user, emailAddresses.get(user.id.get).flatten, orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet)
       }
-      orgs.toMap
     }
   }
 
@@ -1066,5 +1066,10 @@ class AdminUserController @Inject() (
   def hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization]) = AdminUserPage { request =>
     abookClient.hideOrganizationRecommendationForUser(userId, orgId)
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
+
+  def fixEmailAddresses() = AdminUserPage { implicit request =>
+    abookClient.fixEmailAddresses()
+    Ok("It's on!")
   }
 }

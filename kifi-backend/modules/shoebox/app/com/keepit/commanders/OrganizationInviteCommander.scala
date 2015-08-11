@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -20,6 +21,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.model.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -35,7 +37,7 @@ trait OrganizationInviteCommander {
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
-
+  def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
 }
 
 @Singleton
@@ -58,6 +60,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAvatarCommander: OrganizationAvatarCommander,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
+    userExperimentRepo: UserExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -92,8 +95,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+    val hasOrgInvite = organizationInviteRepo.getByEmailAddress(emailAddress).map { invitation =>
       organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
+      invitation.state
+    } contains OrganizationInviteStates.ACTIVE
+    if (hasOrgInvite && !userExperimentRepo.hasExperiment(userId, UserExperimentType.ORGANIZATION)) {
+      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.ORGANIZATION))
     }
   }
 
@@ -233,6 +240,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       sticky = false,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
+    invitees.foreach { invitee =>
+      elizaClient.sendNotificationEvent(OrgNewInvite(
+        invitee,
+        currentDateTime,
+        inviter.id.get,
+        org.id.get
+      ))
+    }
 
     // TODO: handle push notifications to mobile.
   }
@@ -304,14 +319,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
+    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} has joined ${org.name}"
+      val title = s"${invitee.firstName} accepted your invitation to join ${org.name}!"
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"You invited ${invitee.fullName} to join ${org.name}.",
+        body = s"Click here to see ${invitee.firstName}'s profile.",
         linkText = s"See ${invitee.firstName}’s profile",
         linkUrl = s"https://www.kifi.com/${invitee.username.value}",
         imageUrl = inviteeImage,
@@ -322,6 +337,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
         ))
       )
+      elizaClient.sendNotificationEvent(OrgInviteAccepted(
+        inviterId,
+        currentDateTime,
+        invitee.id.get,
+        org.id.get
+      ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(
@@ -415,5 +436,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
         suggestedUsers ++ suggestedEmailAddresses
     }
+  }
+
+  def isAuthValid(orgId: Id[Organization], authToken: String): Boolean = {
+    db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
   }
 }

@@ -62,7 +62,7 @@ orgStats: OrganizationStatistics
             URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
             Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
             Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
-            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.membersStatistics.values.map(_.user.externalId.id).mkString(", \n"))}</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.members.map(m => orgStats.membersStatistics(m.userId).user.externalId.id).mkString(", \n"))}</textarea><br/>
             <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
     </tr>
 
@@ -91,6 +91,7 @@ orgStats: OrganizationStatistics
 <table class="org-members table table-bordered" style="width:600px">
     <tr>
         <th>Member Id</th>
+        <th>External Id</th>
         <th>Member Name</th>
         <th>Role</th>
         <th># of libraries</th>
@@ -102,6 +103,7 @@ orgStats: OrganizationStatistics
     @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
         <tr>
             <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
+            <td>@orgStats.membersStatistics(membership.userId).user.externalId.id</td>
             <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
             <td>@membership.role</td>
             <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
@@ -118,6 +120,7 @@ orgStats: OrganizationStatistics
 <table class="org-candidates table table-bordered" style="width:600px">
     <tr>
         <th>Candidate Id</th>
+        <th>External Id</th>
         <th>Candidate Name</th>
         <th># of libraries</th>
         <th># of keeps</th>
@@ -130,6 +133,7 @@ orgStats: OrganizationStatistics
     @for(candidate <- orgStats.candidates.toSeq) {
         <tr>
             <td>@candidate.userId</td>
+            <td>@orgStats.membersStatistics(candidate.userId).user.externalId.id</td>
             <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
             <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
@@ -167,7 +171,7 @@ orgStats: OrganizationStatistics
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
             <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
-            <td class="block">@{reco.user.primaryEmail}</td>
+            <td class="block">@{reco.emailAddress}</td>
             <td>@reco.score</td>
             <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
             <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>

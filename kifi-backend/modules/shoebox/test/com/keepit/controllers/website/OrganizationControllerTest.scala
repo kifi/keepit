@@ -42,7 +42,6 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
-
           response === OrganizationFail.INVALID_PUBLIC_ID
         }
       }
@@ -152,7 +151,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             val user = UserFactory.user().saved
             for (i <- 1 to 10) {
               val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i)).saved
-              LibraryFactory.libraries(i).map(_.published().withUser(user).withOrganizationIdOpt(org.id)).saved
+              LibraryFactory.libraries(i).map(_.published().withOwner(user).withOrganizationIdOpt(org.id)).saved
             }
             user
           }
@@ -176,7 +175,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             val rando = UserFactory.user().saved
             for (i <- 1 to 10) {
               val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i)).saved
-              LibraryFactory.libraries(i).map(_.published().withUser(user).withOrganizationIdOpt(org.id)).saved
+              LibraryFactory.libraries(i).map(_.published().withOwner(user).withOrganizationIdOpt(org.id)).saved
               if (i <= 5) {
                 inject[OrganizationRepo].save(org.hiddenFromNonmembers)
               }
@@ -217,9 +216,9 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           .withMembers(Seq(member))
           .saved
 
-        val publicLibs = LibraryFactory.libraries(numPublicLibs).map(_.published().withUser(owner).withOrganizationIdOpt(org.id)).saved
-        val orgLibs = LibraryFactory.libraries(numOrgLibs).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withUser(owner).withOrganizationIdOpt(org.id)).saved
-        val privateLibs = LibraryFactory.libraries(numPrivateLibs).map(_.secret().withUser(member).withOrganizationIdOpt(org.id)).saved
+        val publicLibs = LibraryFactory.libraries(numPublicLibs).map(_.published().withOwner(owner).withOrganizationIdOpt(org.id)).saved
+        val orgLibs = LibraryFactory.libraries(numOrgLibs).map(_.withVisibility(LibraryVisibility.ORGANIZATION).withOwner(owner).withOrganizationIdOpt(org.id)).saved
+        val privateLibs = LibraryFactory.libraries(numPrivateLibs).map(_.secret().withOwner(member).withOrganizationIdOpt(org.id)).saved
         (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs)
       }
 

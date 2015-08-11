@@ -20,13 +20,13 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val user1 = user().saved
           val user2 = user().saved
 
-          val user1MainLib = LibraryFactory.library().withUser(user1).discoverable().saved
-          val user1PrivateLib = LibraryFactory.library().withUser(user1).secret().saved
-          val user1PublicLib = LibraryFactory.library().withUser(user1).published().saved
+          val user1MainLib = LibraryFactory.library().withOwner(user1).discoverable().saved
+          val user1PrivateLib = LibraryFactory.library().withOwner(user1).secret().saved
+          val user1PublicLib = LibraryFactory.library().withOwner(user1).published().saved
 
-          val user2MainLib = LibraryFactory.library().withUser(user2).discoverable().saved
-          val user2PrivateLib = LibraryFactory.library().withUser(user2).secret().saved
-          val user2PublicLib = LibraryFactory.library().withUser(user2).published().saved
+          val user2MainLib = LibraryFactory.library().withOwner(user2).discoverable().saved
+          val user2PrivateLib = LibraryFactory.library().withOwner(user2).secret().saved
+          val user2PublicLib = LibraryFactory.library().withOwner(user2).published().saved
 
           val user1Keeps = keep().withUser(user1).withLibrary(user1MainLib).saved ::
             keep().withUser(user1).withLibrary(user1PrivateLib).saved ::
@@ -53,8 +53,8 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val user2 = user().saved
           val user3 = user().saved
 
-          val user1MainLib = LibraryFactory.library().withUser(user1).discoverable().saved
-          val user2MainLib = LibraryFactory.library().withUser(user2).discoverable().saved
+          val user1MainLib = LibraryFactory.library().withOwner(user1).discoverable().saved
+          val user2MainLib = LibraryFactory.library().withOwner(user2).discoverable().saved
           keep().withUser(user1).withKeptAt(new DateTime(2013, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).withLibrary(user1MainLib).saved
           keep().withUser(user1).withKeptAt(new DateTime(2014, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).withLibrary(user1MainLib).saved
           keep().withUser(user1).withKeptAt(new DateTime(2015, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).withLibrary(user1MainLib).saved

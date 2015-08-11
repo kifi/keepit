@@ -472,7 +472,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
-    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).sortBy(_.name).drop(offset.value).take(limit.value).list
+    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).sortBy(_.lastKept desc).drop(offset.value).take(limit.value).list
   }
 
   def getOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Seq[Library] = {

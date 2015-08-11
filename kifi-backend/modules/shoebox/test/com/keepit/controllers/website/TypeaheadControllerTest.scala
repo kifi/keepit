@@ -321,7 +321,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res0.length === 4
 
         val res1 = search("s") // "one letter" -- abook skipped
-        parseRes(res1) === Seq("Patrick Star", "Squidward Tentacles")
+        parseRes(res1) === Seq("Patrick Star", "Squidward Tentacles", "Spongebob Squarepants")
 
         // Make Squidward be suggested first, because of recent interactions
         val interactions2 = Seq(
@@ -331,10 +331,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         userInteractionCommander.addInteractions(u1.id.get, interactions2)
 
         val res1redux = search("s") // "one letter" -- abook skipped
-        parseRes(res1redux) === Seq("Squidward Tentacles", "Patrick Star")
+        parseRes(res1redux) === Seq("Squidward Tentacles", "Patrick Star", "Spongebob Squarepants")
 
         val res2 = search("sq")
-        parseRes(res2) === Seq("Squidward Tentacles", "SandySquirrel")
+        parseRes(res2) === Seq("Squidward Tentacles", "Spongebob Squarepants", "SandySquirrel")
 
         val res3 = search("squid")
         res3.length === 1

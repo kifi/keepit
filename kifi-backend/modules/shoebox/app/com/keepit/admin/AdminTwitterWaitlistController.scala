@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryPathCommander, TwitterWaitlistCommander }
+import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -14,6 +14,7 @@ import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 class AdminTwitterWaitlistController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -21,7 +22,7 @@ class AdminTwitterWaitlistController @Inject() (
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender,
     userValueRepo: UserValueRepo,
@@ -36,13 +37,14 @@ class AdminTwitterWaitlistController @Inject() (
 
   def acceptUser(userId: Id[User], handle: String) = AdminUserPage { implicit request =>
     val result = twitterWaitlistCommander.acceptUser(userId, handle).right.map { syncState =>
-      val (lib, owner) = db.readOnlyMaster { implicit s =>
+      val (lib, owner, email) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(syncState.libraryId)
         val owner = userRepo.get(lib.ownerId)
-        (lib, owner)
+        val email = Try(userEmailAddressRepo.getByUser(userId)).toOption
+        (lib, owner, email)
       }
-      val libraryPath = libPathCommander.getPath(lib)
-      (syncState, libraryPath, owner.primaryEmail)
+      val libraryPath = libPathCommander.getPathForLibrary(lib)
+      (syncState, libraryPath, email)
     }
     Ok(html.admin.twitterWaitlistAccept(result))
   }
@@ -56,7 +58,7 @@ class AdminTwitterWaitlistController @Inject() (
       val alreadySent = userValueRepo.getValue(user.id.get, UserValues.twitterSyncAcceptSent)
 
       val library = libraryRepo.get(sync.libraryId)
-      val libraryPath = libPathCommander.getPath(library)
+      val libraryPath = libPathCommander.getPathForLibrary(library)
 
       (user, email, libraryPath, alreadySent)
     }

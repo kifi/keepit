@@ -52,12 +52,12 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle',
+        url: '/:handle?authToken',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
             orgProfileService
-              .userOrOrg($stateParams.handle)
+              .userOrOrg($stateParams.handle, $stateParams.authToken)
               .then(function (userOrOrgData) {
                 var type = userOrOrgData.type;
                 if (type === 'user') {
@@ -70,7 +70,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle',
+        url: '/:handle?authToken',
         params: { organization: null },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -80,7 +80,7 @@ angular.module('kifi')
             function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
               return orgProfileService
-                .userOrOrg($stateParams.handle)
+                .userOrOrg($stateParams.handle, $stateParams.authToken)
                 .then(function (userOrOrgData) {
                   var type = userOrOrgData.type;
 
@@ -111,7 +111,7 @@ angular.module('kifi')
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
       .state('userProfile', {
-        url: '/:handle',
+        url: '/:handle?authToken',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
@@ -120,7 +120,7 @@ angular.module('kifi')
             function ($state, $stateParams, orgProfileService) {
               // return the Promise to make its value available to the controller
               return orgProfileService
-                .userOrOrg($stateParams.handle)
+                .userOrOrg($stateParams.handle, $stateParams.authToken)
                 .then(function (userOrOrgData) {
                   var type = userOrOrgData.type;
 

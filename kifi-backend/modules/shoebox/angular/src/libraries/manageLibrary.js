@@ -149,7 +149,8 @@ angular.module('kifi')
 
           // Create an owner object that declares the type (user/org) for backend.
           var owner;
-          if (scope.space.current.id !== scope.space.destination.id) {
+          // If the space is changing or the library is new
+          if (scope.space.current.id !== scope.space.destination.id || !scope.modalData.library) {
             owner = {};
             owner[ownerType(scope.space.destination)] = scope.space.destination.id;
           }

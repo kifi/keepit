@@ -16,9 +16,11 @@ import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 case class UserStatistics(
   user: User,
+  emailAddress: Option[EmailAddress],
   connections: Int,
   invitations: Int,
   invitedBy: Seq[User],
@@ -80,6 +82,7 @@ case class OrganizationStatistics(
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
+  emailAddress: Option[EmailAddress],
   score: Double)
 
 class UserStatisticsCommander @Inject() (
@@ -117,6 +120,7 @@ class UserStatisticsCommander @Inject() (
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
+    val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
@@ -125,6 +129,7 @@ class UserStatisticsCommander @Inject() (
 
     UserStatistics(
       user,
+      emailAddress,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
@@ -197,8 +202,10 @@ class UserStatisticsCommander @Inject() (
         }
     }.map {
       case OrganizationInviteRecommendation(Left(userId), _, score) =>
-        val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-        OrganizationMemberRecommendationInfo(user, score * 10000)
+        val (user, emailAddress) = db.readOnlyMaster { implicit session =>
+          (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
+        }
+        OrganizationMemberRecommendationInfo(user, emailAddress, score * 10000)
     })
 
     val allUsers = members.map(_.userId) | candidates.map(_.userId)
