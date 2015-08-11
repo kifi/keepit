@@ -192,14 +192,14 @@ package object performance {
             @volatile var lastAlertAt: Option[Long] = None
             @volatile var mean: Long = 0
 
-            def updateAndGetMean(sample: Long): FiniteDuration = synchronized {
+            private def updateAndGetMean(sample: Long): FiniteDuration = synchronized {
               samples = samples + 1
               lastAlertAt = Some(System.nanoTime)
               mean = mean + (sample/samples) - (mean/samples)
               Duration.fromNanos(mean)
             }
 
-            def monitor(t: Long): Unit = {
+            private def monitor(t: Long): Unit = {
               val dur = updateAndGetMean(t)
               if (samples > 10 && dur > limit && !lastAlertAt.exists(_ > System.nanoTime - 600000000000L)) { //alert if the mean is over the limit and the last alert is more than 10 minutes ago
                 airbrake.notify($message)
