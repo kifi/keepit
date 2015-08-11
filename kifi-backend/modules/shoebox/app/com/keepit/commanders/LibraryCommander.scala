@@ -18,7 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
-import com.keepit.common.performance.StatsdTiming
+import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
@@ -38,6 +38,7 @@ import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
 @json case class MarketingSuggestedLibrarySystemValue(
@@ -1585,6 +1586,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  @AlertingTimer(2 seconds)
   @StatsdTiming("LibraryCommander.createLibraryCardInfos")
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
