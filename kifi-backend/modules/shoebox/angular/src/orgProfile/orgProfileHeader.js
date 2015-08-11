@@ -110,6 +110,7 @@ angular.module('kifi')
               .acceptOrgMemberInvite(scope.profile.id, $location.search().authToken)
               .then(function () {
                 scope.acknowledgedInvite = true;
+                orgProfileService.invalidateOrgProfileCache();
                 $state.reload();
               });
           }

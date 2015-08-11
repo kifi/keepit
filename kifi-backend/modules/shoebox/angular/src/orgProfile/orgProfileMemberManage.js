@@ -15,7 +15,7 @@ angular.module('kifi')
 
     function memberSource(pageNumber, pageSize) {
       return orgProfileService
-        .getOrgMembers(organization.id, pageNumber * pageSize, pageSize) // TODO: Waiting on a fix. I shouldn't have to multiply.
+        .getOrgMembers(organization.id, pageNumber * pageSize, pageSize)
         .then(function (memberData) {
           return memberData.members;
         });
@@ -41,7 +41,17 @@ angular.module('kifi')
       });
     }
 
-    $scope.removeMember = function (member) {
+    $scope.removeOrCancelMember = function (member, action) {
+      if (action === 'cancel') {
+        cancelInvite(member);
+      } else if (action === 'remove') {
+        removeMember(member);
+      } else {
+        throw new Error('Invalid action argument in removeOrCancelMember: ' + action);
+      }
+    };
+
+    function removeMember(member) {
       orgProfileService.removeOrgMember(organization.id, {
           members: [{
             userId: member.id
@@ -53,7 +63,21 @@ angular.module('kifi')
           removeMemberFromPage(member);
         })
         ['catch'](handleErrorResponse);
-    };
+    }
+
+    function cancelInvite(member) {
+      orgProfileService.cancelOrgMemberInvite(organization.id, {
+        cancel: [{
+          id: member.id ? member.id : undefined,
+          email: member.email ? member.email : undefined
+        }]
+      })
+      .then(function success() {
+        memberPageAnalytics({ action: 'clickedCancelInvite', orgMember: member.username });
+        removeMemberFromPage(member);
+      })
+      ['catch'](handleErrorResponse);
+    }
 
     function removeMemberFromPage(member) {
       var index = $scope.members.indexOf(member);
@@ -102,7 +126,9 @@ angular.module('kifi')
         template: 'orgProfile/orgProfileMemberRemoveModal.tpl.html',
         modalData: {
           organization: organization,
-          member: member
+          member: member,
+          isMe: member.id === $scope.me.id,
+          action: 'remove'
         },
         scope: $scope
       });
@@ -126,17 +152,16 @@ angular.module('kifi')
     });
 
     $scope.$on('cancelInvite', function (e, member) {
-      orgProfileService.cancelOrgMemberInvite(organization.id, {
-        cancel: [{
-          id: member.id ? member.id : undefined,
-          email: member.email ? member.email : undefined
-        }]
-      })
-      .then(function success() {
-        memberPageAnalytics({ action: 'clickedCancelInvite', orgMember: member.username });
-        removeMemberFromPage(member);
-      })
-      ['catch'](handleErrorResponse);
+      modalService.open({
+        template: 'orgProfile/orgProfileMemberRemoveModal.tpl.html',
+        modalData: {
+          organization: organization,
+          member: member,
+          isMe: member.id === $scope.me.id,
+          action: 'cancel'
+        },
+        scope: $scope
+      });
     });
 
     $scope.$on('promoteMember', function (e, member) {
@@ -168,6 +193,25 @@ angular.module('kifi')
       ['catch'](handleErrorResponse);
     }
 
+    // Add a newly invited user to the list, but only if they aren't already present
+    function liveAddMember(newMemberObj) {
+      var shouldLiveAddMember = true;
+      var m;
+
+      for (var i = 0; i < $scope.members.length; i++) {
+        m = $scope.members[i];
+        if ((newMemberObj.id && newMemberObj.id === m.id) ||
+            (newMemberObj.email && newMemberObj.email === m.email)) {
+          shouldLiveAddMember = false;
+          break;
+        }
+      }
+
+      if (shouldLiveAddMember) {
+        $scope.members.push(newMemberObj);
+      }
+    }
+
     $scope.openInviteModal = function (inviteType) {
       memberPageAnalytics({ action: 'clickedInviteBegin' });
 
@@ -187,11 +231,11 @@ angular.module('kifi')
 
                   if (user) {
                     user.lastInvitedAt = +new Date();
-                    $scope.members.push(user);
+                    liveAddMember(user);
                   }
                 });
               } else if (invitee.email){
-                $scope.members.push({
+                liveAddMember({
                   role: 'member',
                   lastInvitedAt: +new Date(),
                   email: invitee.email
