@@ -62,6 +62,7 @@ trait ABookServiceClient extends ServiceClient {
   def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
   def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationUserMayKnow]]
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit]
+  def fixEmailAddresses(): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -271,4 +272,9 @@ class ABookServiceClientImpl @Inject() (
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit] = {
     call(ABook.internal.hideOrganizationRecommendationForUser(userId, irrelevantOrganizationId)).map(_ => ())
   }
+
+  def fixEmailAddresses(): Future[Unit] = {
+    call(ABook.internal.fixEmailAddresses()).map(_ => ())
+  }
+
 }

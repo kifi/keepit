@@ -1069,6 +1069,7 @@ class AdminUserController @Inject() (
   }
 
   def fixEmailAddresses() = AdminUserPage { implicit request =>
+    abookClient.fixEmailAddresses()
     Ok("It's on!")
   }
 }
