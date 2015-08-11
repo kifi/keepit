@@ -81,9 +81,9 @@ class UserEmailAddressRepoImpl @Inject() (
     val user = userRepo.get(userId)
     user.primaryEmail getOrElse {
       val all = getAllByUser(userId)
-      all.find(_.verified) match {
-        case Some(verifiedEmail) => verifiedEmail.address
-        case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
+      (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
+        case Some(email) => email.address
+        case None => throw new Exception(s"no emails for user $userId")
       }
     }
   }
