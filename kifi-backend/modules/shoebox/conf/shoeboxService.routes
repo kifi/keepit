@@ -738,6 +738,7 @@ GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
 
 GET     /admin/users/fixEmailAddresses         @com.keepit.controllers.admin.AdminUserController.fixEmailAddresses()
+GET     /admin/users/migratePrimaryEmails      @com.keepit.controllers.admin.AdminUserController.migratePrimaryEmails()
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
