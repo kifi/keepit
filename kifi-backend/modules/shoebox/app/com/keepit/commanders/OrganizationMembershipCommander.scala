@@ -117,7 +117,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
             } else {
               Offset(0)
             }
-            organizationInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit)
+            organizationInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit, includeAnonymous = false)
           } else Seq.empty[OrganizationInvite]
         case false => Seq.empty[OrganizationInvite]
       }
