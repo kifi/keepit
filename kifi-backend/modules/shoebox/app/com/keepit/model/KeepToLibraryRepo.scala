@@ -1,21 +1,12 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{Id, SequenceNumber, State}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
-import com.keepit.common.logging.Logging
-import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
@@ -43,6 +34,8 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary]
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary]
+  def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
 }
 
 @Singleton
@@ -179,10 +172,10 @@ class KeepToLibraryRepoImpl @Inject() (
     // This query now needs to do a 3-table join or something horrible. Rethink it.
     ???
   }
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]] = {
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary] = {
     expectedOrgId match {
-      case None => (for (ktl <- rows if ktl.libraryId === libraryId && ktl.organizationId.isDefined) yield ktl.keepId).take(limit.value).list.toSet
-      case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl.keepId).take(limit.value).list.toSet
+      case None => (for (ktl <- rows if ktl.libraryId === libraryId && ktl.organizationId.isDefined) yield ktl).take(limit.value).list.toSet
+      case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl).take(limit.value).list.toSet
     }
   }
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
@@ -193,5 +186,18 @@ class KeepToLibraryRepoImpl @Inject() (
     // TODO(ryan): rethink this query, do we acually need the load whole set of a library's keeps?
     // Can't we use `library.last_kept`?
     sql"""select b.library_id, count(*) as cnt from keep_to_library b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.added_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
+  }
+
+  def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
+    val allLibraryKeeps = for (ktl <- rows if ktl.libraryId.inSet(libraryIds) && ktl.state === KeepToLibraryStates.ACTIVE) yield ktl
+    val recentLibraryKeeps = (beforeIdOpt.map(get), afterIdOpt.map(get)) match {
+      case (None, None) =>
+        allLibraryKeeps
+      case (Some(upper), _) =>
+        allLibraryKeeps.filter(ktl => ktl.addedAt < upper.addedAt || (ktl.addedAt === upper.addedAt && ktl.keepId < upper.keepId))
+      case (None, Some(lower)) =>
+        allLibraryKeeps.filter(ktl => ktl.addedAt > lower.addedAt || (ktl.addedAt === lower.addedAt && ktl.keepId > lower.keepId))
+    }
+    recentLibraryKeeps.sortBy(ktl => (ktl.addedAt desc, ktl.keepId desc)).take(limit.value).list
   }
 }

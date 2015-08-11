@@ -11,6 +11,7 @@ import org.specs2.mutable.Specification
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 
 import scala.util.Random
 
@@ -77,9 +78,7 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
     "be backwards compatible with some KeepRepo methods" in {
       /*
       def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
-      def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
       // These ones do not yet
-      def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
       // I think these ones need to be changed or rethought:
       def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
       def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
@@ -227,6 +226,23 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
               val actual = inject[KeepToLibraryRepo].getFromLibrarySince(date, lib.id.get, max = 50)
               expected.map(_.id.get) === actual.map(_.keepId)
             }
+          }
+          1 === 1
+        }
+      }
+      "match getRecentKeepsFromFollowedLibraries" in {
+        // def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val libs = LibraryFactory.libraries(20).map(_.withOwner(UserFactory.user().saved)).saved
+            libs.foreach { lib => KeepFactory.keeps(50).map(_.withUser(lib.ownerId).withLibrary(lib)).saved }
+            val followedLibs = Random.shuffle(libs).take(libs.length / 2)
+            followedLibs.foreach { lib => LibraryMembershipFactory.membership().withLibraryFollower(lib, user).saved }
+
+            val expected = inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user.id.get, 20, None, None)
+            val actual = inject[KeepToLibraryRepo].getRecentFromLibraries(followedLibs.map(_.id.get).toSet, Limit(20), None, None)
+            expected.map(_.id.get) === actual.map(_.keepId)
           }
           1 === 1
         }
