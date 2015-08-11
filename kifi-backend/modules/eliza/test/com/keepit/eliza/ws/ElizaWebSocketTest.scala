@@ -180,9 +180,10 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         val messageContent = message(2)
         (messageContent \ "text").as[String] === "So long and thanks for all the fish"
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2
+        socket.out(0).as[String] === "notification"
+        socket.out === Json.arr("unread_notifications_count", 1, 1, 0)
         socket.close
         socket.out === Json.arr("bye", "session")
-
       }
     }
 

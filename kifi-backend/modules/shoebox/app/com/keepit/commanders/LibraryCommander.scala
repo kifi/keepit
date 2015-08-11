@@ -1396,13 +1396,13 @@ class LibraryCommanderImpl @Inject() (
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
+              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(newKeep, toLibrary, requesterId = userId))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = newKeep.id.get, libraryId = toLibraryId, requesterId = userId))
+              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = newKeep, library = toLibrary, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
@@ -1437,13 +1437,13 @@ class LibraryCommanderImpl @Inject() (
             case None =>
               val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
               keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
+              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
               Right(movedKeep)
             case Some(existingKeep) if existingKeep.isInactive =>
               val movedKeep = keepRepo.save(k.withId(existingKeep.id.get).withLibrary(toLibrary)) // clone new keep into existing keep's place, wiping out the existing keep
               keepRepo.deactivate(k) // deactivate the keep in the old library
               keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(keepId = movedKeep.id.get, libraryId = toLibraryId, requesterId = userId))
+              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>
@@ -1599,8 +1599,8 @@ class LibraryCommanderImpl @Inject() (
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
 
-        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE))
-        val followers = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY))
+        val collaborators = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_WRITE)
+        val followers = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_ONLY)
         val collabIds = collaborators.map(_.userId).toSet
         val followerIds = followers.map(_.userId).toSet
         val userSample = basicUserRepo.loadAll(followerIds ++ collabIds) //we don't care about the order now anyway

@@ -49,7 +49,7 @@ GET     /connect/:provider          @com.keepit.controllers.core.AuthController.
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -532,7 +532,7 @@ GET           /site/organizations/:id/members/suggest            @com.keepit.con
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 
-GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle)
+GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 

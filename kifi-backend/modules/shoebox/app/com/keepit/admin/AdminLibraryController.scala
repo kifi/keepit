@@ -181,11 +181,7 @@ class AdminLibraryController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
     }
 
-    val excludeKeepStateSet = if (showInactives) {
-      Set.empty[State[Keep]]
-    } else {
-      Set(KeepStates.INACTIVE, KeepStates.DUPLICATE)
-    }
+    val excludeKeepStateSet = if (showInactives) Set.empty[State[Keep]] else Set(KeepStates.INACTIVE)
 
     val pageSize = 50
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>

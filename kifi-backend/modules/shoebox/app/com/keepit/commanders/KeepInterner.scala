@@ -265,7 +265,7 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(internedKeep.id.get, internedKeep.libraryId.get, internedKeep.userId))
+    keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(internedKeep, library, internedKeep.userId))
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
