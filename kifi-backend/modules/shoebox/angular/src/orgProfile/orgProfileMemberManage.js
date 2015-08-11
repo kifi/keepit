@@ -87,7 +87,7 @@ angular.module('kifi')
       }
     }
 
-    $scope.members = [];
+    $scope.members = null;
     $scope.myMembership = $scope.membership;
     $scope.organization = organization;
     $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf('invite_members') > -1;
