@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.commanders.{ HandleOps, LibraryCommander, UserCommander }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
@@ -250,17 +250,34 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
           LibraryFactory.library().withName("Kifi Library").withSlug("kifi-lib").withOwner(user1).withOrganizationIdOpt(org.id).saved
         }
 
+        // Basic org routing
         actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
         route(FakeRequest("GET", "/kifiorghandle")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/members")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
 
+        // Org routing with handle normalization
+        status(route(FakeRequest("GET", "/kífíórghândlé")).get) === MOVED_PERMANENTLY
+        status(route(FakeRequest("GET", "/kífíórghândlé/kifi-lib")).get) === MOVED_PERMANENTLY
+        // Library slugs are not normalized, if you get it wrong you're just out of luck
+        status(route(FakeRequest("GET", "/kífíórghândlé/kífí-líb")).get) === NOT_FOUND
+
         actionsHelper.unsetUser()
         route(FakeRequest("GET", s"/kifiorghandle?authToken=$validAuth")) must beWebApp // users with a valid auth token can see the org
 
         route(FakeRequest("GET", s"/kifiorghandle?authToken=${RandomStringUtils.random(9)}")) must be404
         route(FakeRequest("GET", s"/kifiorghandle")) must be404 // non-users cannot
+
+        // Make sure org handle changes give a SEE_OTHER
+        actionsHelper.setUser(user1, experiments = Set(UserExperimentType.ORGANIZATION))
+        db.readWrite { implicit session =>
+          handleCommander.setOrganizationHandle(org, OrganizationHandle("kifiorghandle2"), overrideValidityCheck = true)
+        }
+        status(route(FakeRequest("GET", "/kifiorghandle")).get) === SEE_OTHER
+        status(route(FakeRequest("GET", "/kífíórghandlé")).get) === SEE_OTHER
+        status(route(FakeRequest("GET", "/kifiorghandle/kifi-lib")).get) === SEE_OTHER
+        route(FakeRequest("GET", "/kifiorghandle2/kifi-lib")) must beWebApp
 
         // catching mobile
         {

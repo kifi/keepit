@@ -38,7 +38,7 @@ object HandleOps {
   def isValid(handle: String): Boolean = {
     if (handleRegex.matcher(handle).matches) {
       val normalized = normalize(handle)
-      censorList.filter(w => normalized.indexOf(w) >= 0).isEmpty &&
+      !censorList.exists(w => normalized.indexOf(w) >= 0) &&
         !topDomains.contains(normalized) &&
         !commonEnglishWords.contains(normalized) &&
         !topBrands.contains(normalized)

@@ -144,18 +144,19 @@ class KifiSiteRouter @Inject() (
         val libraryOpt = libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
         libraryOpt map {
           case (library, isLibraryAlias) =>
-            val libraryHasBeenMoved = isLibraryAlias
-            val handleOwnerChangedTheirHandle = spaceRedirectStatusOpt.contains(MOVED_PERMANENTLY)
-            val wasLibrarySlugNormalized = !libraryHasBeenMoved && library.slug.value != slug
-            val wasHandleNormalized = spaceRedirectStatusOpt.contains(SEE_OTHER)
+            val libraryRedirectStatusOpt = (isLibraryAlias, library.slug.value != slug) match {
+              case (true, _) => Some(SEE_OTHER)
+              case (false, true) => Some(MOVED_PERMANENTLY)
+              case (false, false) => None
+            }
 
-            if (libraryHasBeenMoved || handleOwnerChangedTheirHandle || wasLibrarySlugNormalized || wasHandleNormalized) {
+            if (spaceRedirectStatusOpt.isDefined || libraryRedirectStatusOpt.isDefined) {
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
 
-              val status = if (handleOwnerChangedTheirHandle || libraryHasBeenMoved) {
-                MOVED_PERMANENTLY
-              } else {
+              val status = if (spaceRedirectStatusOpt.contains(SEE_OTHER) || libraryRedirectStatusOpt.contains(SEE_OTHER)) {
                 SEE_OTHER
+              } else {
+                MOVED_PERMANENTLY
               }
 
               Redirect(uri, status)
@@ -180,8 +181,11 @@ class KifiSiteRouter @Inject() (
       case (Right(user), isPrimary) =>
         val foundHandle = Handle.fromUsername(user.username)
         if (foundHandle != handle) {
-          // owner moved or handle normalization
-          Some((user, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER)))
+          // If this is a simple normalization (i.e. isPrimary == true) then let the
+          // browser cache the normalization (i.e., give back a MOVED_PERMANENTLY). If not,
+          // it means that the user has just changed their username, and someone else may eventually
+          // take over their old one. The browser should ask every time
+          Some((user, Some(if (isPrimary) MOVED_PERMANENTLY else SEE_OTHER)))
         } else {
           Some((user, None))
         }
@@ -206,7 +210,7 @@ class KifiSiteRouter @Inject() (
     handleOwnerOpt.flatMap {
       // TODO(ryan): when orgs go live, drop this flatmap
       // This flatmap serves to hide orgs from everyone except users WITH the org experiment
-      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org.id.get) => None
+      case (Left(org), _) if !userCanSeeOrg(org.id.get) => None
       case other => Some(other)
     } map {
       case (handleOwner, isPrimary) =>
@@ -217,7 +221,11 @@ class KifiSiteRouter @Inject() (
 
         if (foundHandle != handle) {
           // owner moved or handle normalization
-          (handleOwner, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER))
+          // If it IS the primary handle then this is just a case of Handle normalization
+          // and we should tell browsers to permanently store that normalization (i.e., moved permanently)
+          // Otherwise, the user has changed their handle (and someone may eventually take over their old
+          // space). Do not cache that type of redirect. Check every time.
+          (handleOwner, Some(if (isPrimary) MOVED_PERMANENTLY else SEE_OTHER))
         } else {
           (handleOwner, None)
         }
