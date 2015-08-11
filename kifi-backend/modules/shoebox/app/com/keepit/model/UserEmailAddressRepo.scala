@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.time._
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 
 import scala.concurrent.duration._
 
@@ -24,6 +24,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
+  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[UserEmailAddress]
 }
 
 @Singleton
@@ -40,11 +41,12 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
+    def hash = column[EmailAddressHash]("hash", O.NotNull)
     def primary = column[Option[Boolean]]("primary", O.Nullable)
     def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
     def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, primary, verifiedAt, lastVerificationSent,
+    def * = (id.?, createdAt, updatedAt, userId, state, address, hash, primary, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.applyFromDbRow _).tupled, UserEmailAddress.unapplyToDbRow _)
   }
 
@@ -104,6 +106,10 @@ class UserEmailAddressRepoImpl @Inject() (
     (for (e <- rows if e.state =!= UserEmailAddressStates.INACTIVE && e.verifiedAt.isEmpty && e.createdAt > from && e.createdAt < to) yield e).list
   }
 
+  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[UserEmailAddress] = {
+    val emptyHash = EmailAddressHash("")
+    (for (e <- rows if e.hash === emptyHash) yield e).take(limit).list
+  }
 }
 
 trait UserEmailAddressSeqPlugin extends SequencingPlugin

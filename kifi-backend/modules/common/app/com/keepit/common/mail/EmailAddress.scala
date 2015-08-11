@@ -1,5 +1,9 @@
 package com.keepit.common.mail
 
+import java.security.MessageDigest
+import org.apache.commons.codec.binary.Base64
+import com.keepit.common.strings._
+
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import scala.util.{ Failure, Success, Try }
@@ -103,6 +107,19 @@ object SystemEmailAddress {
 
   def isValid(email: EmailAddress): Boolean = {
     ALL_EMAILS.contains(email) || (email.address.startsWith("discuss+") && email.address.endsWith("@kifi.com"))
+  }
+}
+
+case class EmailAddressHash(hash: String) extends AnyVal {
+  override def toString: String = hash
+  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
+}
+
+object EmailAddressHash {
+  def hashEmailAddress(emailAddress: EmailAddress): EmailAddressHash = {
+    val lowerCaseAddress = emailAddress.address.toLowerCase
+    val binaryHash = MessageDigest.getInstance("MD5").digest(lowerCaseAddress)
+    EmailAddressHash(new String(new Base64().encode(binaryHash), UTF8))
   }
 }
 
