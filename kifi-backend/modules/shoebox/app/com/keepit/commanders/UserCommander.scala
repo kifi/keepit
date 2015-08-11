@@ -294,13 +294,14 @@ class UserCommander @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
 
-    val emailInfos = emails.sortBy { case (e, isPrimary)  => (isPrimary, !e.verified, e.id.get.id) }.reverse.map { case (email, isPrimary) =>
-      EmailInfo(
-        address = email.address,
-        isVerified = email.verified,
-        isPrimary = isPrimary,
-        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
-      )
+    val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
+      case (email, isPrimary) =>
+        EmailInfo(
+          address = email.address,
+          isVerified = email.verified,
+          isPrimary = isPrimary,
+          isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
+        )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
   }
@@ -318,18 +319,11 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]): User = {
+  def createUser(firstName: String, lastName: String, state: State[User]): User = {
     val newUser: User = db.readWrite(attempts = 3) { implicit session =>
-      val user = userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
-      )
-      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
-        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
-          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ORGANIZATION))
-        }
-      }
+      val user = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
       val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
-        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
+        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] SINCE WE DIDN'T FIND A USERNAME!!!")
       }
       userWithUsername
     }

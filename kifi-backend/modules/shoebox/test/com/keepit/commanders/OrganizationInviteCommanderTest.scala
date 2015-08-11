@@ -131,16 +131,22 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
 
         val orgInviteCommander = inject[OrganizationInviteCommander]
-        db.readWrite { implicit session =>
-          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), Id[User](42))
+        val invitedUserId = db.readWrite { implicit session =>
+          val userId = userRepo.save(User(firstName = "Kiwi", lastName = "Kifi")).id.get
+          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), userId)
+          userId
         }
         val invites = db.readOnlyMaster { implicit session =>
           orgInviteRepo.getByEmailAddress(EmailAddress("kiwi@kifi.com"))
         }
         invites.foreach { invite =>
-          invite.userId === Some(Id[User](42))
+          invite.userId === Some(invitedUserId)
         }
         invites.length === 20
+
+        db.readOnlyMaster { implicit session =>
+          userExperimentRepo.hasExperiment(invitedUserId, UserExperimentType.ORGANIZATION) should beTrue
+        }
       }
     }
 

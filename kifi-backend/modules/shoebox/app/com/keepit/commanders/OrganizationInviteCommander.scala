@@ -60,6 +60,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAvatarCommander: OrganizationAvatarCommander,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
+    userExperimentRepo: UserExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -94,8 +95,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+    val hasOrgInvite = organizationInviteRepo.getByEmailAddress(emailAddress).map { invitation =>
       organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
+      invitation.state
+    } contains OrganizationInviteStates.ACTIVE
+    if (hasOrgInvite && !userExperimentRepo.hasExperiment(userId, UserExperimentType.ORGANIZATION)) {
+      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.ORGANIZATION))
     }
   }
 
