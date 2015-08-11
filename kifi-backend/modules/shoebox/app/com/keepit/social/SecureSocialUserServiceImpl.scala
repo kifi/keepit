@@ -179,7 +179,7 @@ class SecureSocialUserPluginImpl @Inject() (
       val existingUserOpt = userId orElse {
         // Automatically connect accounts with existing emails
         socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
-          emailRepo.getVerifiedOwner(emailAddress) tap {
+          emailRepo.getOwner(emailAddress) tap {
             _.foreach { existingUserId =>
               log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
             }
@@ -276,7 +276,7 @@ class SecureSocialUserPluginImpl @Inject() (
           db.readWrite(attempts = 3) { implicit session =>
             for (user <- userOpt) {
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
-                val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
+                val email = socialUser.email.flatMap(EmailAddress.validate(_).toOption).getOrElse(throw new IllegalStateException(s"$user has invalid email address: ${socialUser.email}"))
                 val emailAddress = userEmailAddressCommander.intern(user.id.get, email).get
                 val cred =
                   UserCred(
