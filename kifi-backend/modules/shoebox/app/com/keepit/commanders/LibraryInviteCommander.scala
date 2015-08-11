@@ -112,14 +112,14 @@ class LibraryInviteCommanderImpl @Inject() (
         }
       if (invite.access == LibraryAccess.READ_WRITE) {
         elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
-          inviterId,
+          Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
         ))
       } else {
         elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
-          inviterId,
+          Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
@@ -339,7 +339,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     collabInviteeSet.foreach { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -364,7 +364,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     followInviteeSet.foreach { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -432,7 +432,7 @@ class LibraryInviteCommanderImpl @Inject() (
     if (collabInviteeSet.nonEmpty) {
       collabInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
-          lib.ownerId,
+          Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,
@@ -463,7 +463,7 @@ class LibraryInviteCommanderImpl @Inject() (
     if (followInviteeSet.nonEmpty) {
       followInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
-          lib.ownerId,
+          Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,

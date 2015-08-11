@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-sealed abstract class NotificationEvent(val userId: Id[User], val time: DateTime, val kind: NKind)
+sealed abstract class NotificationEvent(val recipient: Recipient, val time: DateTime, val kind: NKind)
 
 object NotificationEvent {
 
@@ -30,18 +30,18 @@ object NotificationEvent {
 }
 
 case class NewKeepActivity(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   keeperId: Id[User],
   keepId: Id[Keep],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, NewKeepActivity)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, NewKeepActivity)
 
 object NewKeepActivity extends NotificationKind[NewKeepActivity] {
 
   override val name: String = "new_keep_activity"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "keeperId").format[Id[User]] and
     (__ \ "keepId").format[Id[Keep]] and
@@ -56,17 +56,17 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
 // todo missing, system notification
 
 case class NewSocialConnection(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   friendId: Id[User],
-  networkType: Option[SocialNetworkType]) extends NotificationEvent(userId, time, NewSocialConnection)
+  networkType: Option[SocialNetworkType]) extends NotificationEvent(recipient, time, NewSocialConnection)
 
 object NewSocialConnection extends NotificationKind[NewSocialConnection] {
 
   override val name: String = "new_social_connection"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "friendId").format[Id[User]] and
     (__ \ "networkType").formatNullable[SocialNetworkType]
@@ -77,17 +77,17 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
 }
 
 case class OwnedLibraryNewFollower(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   followerId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewFollower)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, OwnedLibraryNewFollower)
 
 object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower] {
 
   override val name: String = "owned_library_new_follower"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "followerId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -98,17 +98,17 @@ object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower]
 }
 
 case class OwnedLibraryNewCollaborator(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   collaboratorId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewCollaborator)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, OwnedLibraryNewCollaborator)
 
 object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewCollaborator] {
 
   override val name: String = "owned_library_new_collaborator"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "collaboratorId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -119,18 +119,18 @@ object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewColla
 }
 
 case class LibraryNewKeep(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   keeperId: Id[User],
   keepId: Id[Keep],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, LibraryNewKeep)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, LibraryNewKeep)
 
 object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
 
   override val name: String = "library_new_keep"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "keeperId").format[Id[User]] and
     (__ \ "keepId").format[Id[Keep]] and
@@ -142,17 +142,17 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
 }
 
 case class LibraryCollabInviteAccepted(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   accepterId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, LibraryCollabInviteAccepted)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, LibraryCollabInviteAccepted)
 
 object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteAccepted] {
 
   override val name: String = "library_collab_invite_accepted"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "accepterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -163,17 +163,17 @@ object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteA
 }
 
 case class LibraryFollowInviteAccepted(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   accepterId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, LibraryFollowInviteAccepted)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, LibraryFollowInviteAccepted)
 
 object LibraryFollowInviteAccepted extends NotificationKind[LibraryFollowInviteAccepted] {
 
   override val name: String = "library_follow_invite_accepted"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "accepterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -184,17 +184,17 @@ object LibraryFollowInviteAccepted extends NotificationKind[LibraryFollowInviteA
 }
 
 case class LibraryNewCollabInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   inviterId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, LibraryNewCollabInvite)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, LibraryNewCollabInvite)
 
 object LibraryNewCollabInvite extends NotificationKind[LibraryNewCollabInvite] {
 
   override val name: String = "library_new_collab_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -205,17 +205,17 @@ object LibraryNewCollabInvite extends NotificationKind[LibraryNewCollabInvite] {
 }
 
 case class LibraryNewFollowInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   inviterId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, LibraryNewFollowInvite)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, LibraryNewFollowInvite)
 
 object LibraryNewFollowInvite extends NotificationKind[LibraryNewFollowInvite] {
 
   override val name: String = "library_new_follow_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
@@ -226,18 +226,18 @@ object LibraryNewFollowInvite extends NotificationKind[LibraryNewFollowInvite] {
 }
 
 case class OwnedLibraryNewCollabInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   inviterId: Id[User],
   inviteeId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewCollabInvite)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, OwnedLibraryNewCollabInvite)
 
 object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite] {
 
   override val name: String = "owned_library_new_collab_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "inviteeId").format[Id[User]] and
@@ -253,18 +253,18 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
 }
 
 case class OwnedLibraryNewFollowInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   inviterId: Id[User],
   inviteeId: Id[User],
-  libraryId: Id[Library]) extends NotificationEvent(userId, time, OwnedLibraryNewFollowInvite)
+  libraryId: Id[Library]) extends NotificationEvent(recipient, time, OwnedLibraryNewFollowInvite)
 
 object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
 
   override val name: String = "owned_library_new_follow_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "inviteeId").format[Id[User]] and
@@ -280,17 +280,17 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
 }
 
 case class OrgNewInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   inviterId: Id[User],
-  orgId: Id[Organization]) extends NotificationEvent(userId, time, OrgNewInvite)
+  orgId: Id[Organization]) extends NotificationEvent(recipient, time, OrgNewInvite)
 
 object OrgNewInvite extends NotificationKind[OrgNewInvite] {
 
   override val name: String = "org_new_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "orgId").format[Id[Organization]]
@@ -301,17 +301,17 @@ object OrgNewInvite extends NotificationKind[OrgNewInvite] {
 }
 
 case class OrgInviteAccepted(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   accepterId: Id[User],
-  orgId: Id[Organization]) extends NotificationEvent(userId, time, OrgInviteAccepted)
+  orgId: Id[Organization]) extends NotificationEvent(recipient, time, OrgInviteAccepted)
 
 object OrgInviteAccepted extends NotificationKind[OrgInviteAccepted] {
 
   override val name: String = "org_invite_accepted"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "accepterId").format[Id[User]] and
     (__ \ "orgId").format[Id[Organization]]
@@ -325,16 +325,16 @@ object OrgInviteAccepted extends NotificationKind[OrgInviteAccepted] {
 // todo missing, social new follower through twitter (unused?)
 
 case class SocialContactJoined(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
-  joinerId: Id[User]) extends NotificationEvent(userId, time, SocialContactJoined)
+  joinerId: Id[User]) extends NotificationEvent(recipient, time, SocialContactJoined)
 
 object SocialContactJoined extends NotificationKind[SocialContactJoined] {
 
   override val name: String = "social_contact_joined"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
@@ -344,16 +344,16 @@ object SocialContactJoined extends NotificationKind[SocialContactJoined] {
 }
 
 case class NewConnectionInvite(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
-  inviterId: Id[User]) extends NotificationEvent(userId, time, NewConnectionInvite)
+  inviterId: Id[User]) extends NotificationEvent(recipient, time, NewConnectionInvite)
 
 object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 
   override val name: String = "new_connection_invite"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
@@ -363,16 +363,16 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 }
 
 case class ConnectionInviteAccepted(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
-  accepterId: Id[User]) extends NotificationEvent(userId, time, ConnectionInviteAccepted)
+  accepterId: Id[User]) extends NotificationEvent(recipient, time, ConnectionInviteAccepted)
 
 object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepted] {
 
   override val name: String = "connection_invite_accepted"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "accepterId").format[Id[User]]
   )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
@@ -382,18 +382,18 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 }
 
 case class DepressedRobotGrumble(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   robotName: String,
   grumblingAbout: String,
-  shouldGroup: Option[Boolean] = None) extends NotificationEvent(userId, time, DepressedRobotGrumble)
+  shouldGroup: Option[Boolean] = None) extends NotificationEvent(recipient, time, DepressedRobotGrumble)
 
 object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
   override val name: String = "depressed_robot_grumble"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "robotName").format[String] and
     (__ \ "grumblingAbout").format[String] and
@@ -405,17 +405,17 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 }
 
 case class NewMessage(
-  override val userId: Id[User],
+  override val recipient: Recipient,
   override val time: DateTime,
   messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
-  messageId: Long) extends NotificationEvent(userId, time, NewMessage)
+  messageId: Long) extends NotificationEvent(recipient, time, NewMessage)
 
 object NewMessage extends NotificationKind[NewMessage] {
 
   override val name: String = "new_message"
 
   override implicit val format = (
-    (__ \ "userId").format[Id[User]] and
+    (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
     (__ \ "messageThreadId").format[Long] and
     (__ \ "messageId").format[Long]

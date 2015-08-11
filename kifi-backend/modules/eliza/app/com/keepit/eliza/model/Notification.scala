@@ -3,7 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.{ NKind, NotificationKind }
+import com.keepit.notify.model.{ Recipient, NKind, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -28,7 +28,7 @@ case class Notification(
     id: Option[Id[Notification]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    userId: Id[User],
+    recipient: Recipient,
     lastChecked: DateTime = START_OF_TIME,
     kind: NKind,
     groupIdentifier: Option[String] = None) extends Model[Notification] {
@@ -45,37 +45,37 @@ object Notification {
     (__ \ "id").formatNullable[Id[Notification]] and
     (__ \ "createdAt").format[DateTime] and
     (__ \ "updatedAt").format[DateTime] and
-    (__ \ "userId").format[Id[User]] and
     (__ \ "lastChecked").format[DateTime] and
     (__ \ "kind").format[String] and
-    (__ \ "groupIdentifier").formatNullable[String]
+    (__ \ "groupIdentifier").formatNullable[String] and
+    (__ \ "recipient").format[Recipient]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
 
   def applyFromDbRow(
     id: Option[Id[Notification]],
     createdAt: DateTime,
     updatedAt: DateTime,
-    userId: Id[User],
     lastChecked: DateTime,
     kind: String,
-    groupIdentifier: Option[String]): Notification = Notification(
+    groupIdentifier: Option[String],
+    recipient: Recipient): Notification = Notification(
     id,
     createdAt,
     updatedAt,
-    userId,
+    recipient,
     lastChecked,
     NotificationKind.getByName(kind).get,
     groupIdentifier
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Id[User], DateTime, String, Option[String])] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, DateTime, String, Option[String], Recipient)] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,
-    notification.userId,
     notification.lastChecked,
     notification.kind.name,
-    notification.groupIdentifier
+    notification.groupIdentifier,
+    notification.recipient
   )
 
 }

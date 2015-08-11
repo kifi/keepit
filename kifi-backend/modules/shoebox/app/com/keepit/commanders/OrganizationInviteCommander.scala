@@ -21,7 +21,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
-import com.keepit.notify.model.{ OrgInviteAccepted, OrgNewInvite }
+import com.keepit.notify.model.{ Recipient, OrgInviteAccepted, OrgNewInvite }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -237,7 +237,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     )
     invitees.foreach { invitee =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         org.id.get
@@ -333,7 +333,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         ))
       )
       elizaClient.sendNotificationEvent(OrgInviteAccepted(
-        inviterId,
+        Recipient(inviterId),
         currentDateTime,
         invitee.id.get,
         org.id.get

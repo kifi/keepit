@@ -41,7 +41,7 @@ class NotificationCommander @Inject() (
   private def createNewNotification(event: NotificationEvent): Notification = {
     db.readWrite { implicit session =>
       val notif = notificationRepo.save(Notification(
-        userId = event.userId,
+        recipient = event.recipient,
         kind = event.kind
       ))
       notificationItemRepo.save(NotificationItem(
@@ -65,7 +65,7 @@ class NotificationCommander @Inject() (
         }
       case None => {
         db.readOnlyMaster { implicit session =>
-          notificationRepo.getLastByUserAndKind(event.userId, event.kind)
+          notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
         } match {
           case Some(existingNotif) =>
             val notifItems = db.readOnlyMaster { implicit session =>
