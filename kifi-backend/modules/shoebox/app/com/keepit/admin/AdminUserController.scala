@@ -1069,19 +1069,6 @@ class AdminUserController @Inject() (
   }
 
   def fixEmailAddresses() = AdminUserPage { implicit request =>
-    SafeFuture {
-      val limit = 100
-      var lastFixed: Option[Int] = None
-      while (!lastFixed.contains(0)) {
-        lastFixed = Some {
-          db.readWrite { implicit sesssion =>
-            val toBeFixed = emailRepo.getWithEmptyHash(limit)
-            toBeFixed.foreach(e => emailRepo.save(e.withAddress(e.address)))
-            toBeFixed.length
-          }
-        }
-      }
-    }
     Ok("It's on!")
   }
 }
