@@ -4,7 +4,7 @@
       Continuing will remove your access to content that is only visible to {{ modalData.organization | name }} members.
       You will still have access to {{ modalData.organization | name }}'s public libraries and any content you have been explicitly invited to follow or collaborate on.
     </p>
-    <p ng-if="modalData.isMe">You can be invited back at anytime.</p>
+    <p ng-if="modalData.isMe">You can be invited back at any time.</p>
     <p ng-if="!modalData.isMe">
       Continuing will remove {{ (modalData.member.firstName || modalData.member.email) + '\'s' }} access to content that is only visible to {{ modalData.organization | name }} members.
       They will still have access to your organization's public libraries and any content they have been explicitly invited to follow or collaborate on.
