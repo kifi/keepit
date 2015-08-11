@@ -68,14 +68,14 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       case Some(email) if email.verified && email.userId != userId => Failure(new UnavailableEmailAddressException(email, userId))
       case Some(email) if email.state != UserEmailAddressStates.INACTIVE => Success {
         val isNew = email.userId != userId
-        val updatedEmail = if (isNew) email.copy(userId = userId, address = address).clearVerificationCode else email.copy(address = address)
+        val updatedEmail = if (isNew) email.copy(userId = userId).withAddress(address).clearVerificationCode else email.withAddress(address)
         val mustBeSaved = updatedEmail != email || (verified && !updatedEmail.verified)
         val interned = if (mustBeSaved) save(updatedEmail, verified) else email
         (interned, isNew)
       }
 
       case inactiveEmailOpt => Success {
-        val newEmail = UserEmailAddress(address = address, userId = userId).copy(id = inactiveEmailOpt.flatMap(_.id))
+        val newEmail = UserEmailAddress.create(userId, address).copy(id = inactiveEmailOpt.flatMap(_.id))
         (save(newEmail, verified), true)
       }
     }
