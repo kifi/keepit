@@ -5,12 +5,12 @@
     <div class="kf-flow-horizontal-right">
       <img ng-src="{{currentOwner|pic:200}}" />
       <svg
-        symbol-sprite
+        kf-symbol-sprite
         icon="arrow-right"
       ></svg>
       <img ng-src="{{member|pic:200}}" />
     </div>
-    <p>{{currentOwner|name}} will retain their admin priviliges, however.</p>
+    <p>{{currentOwner|name}} will retain their admin privileges, however.</p>
     <div class="kf-org-actions">
       <button class="opis-contact-button" ng-click="close()">Cancel</button>&nbsp;
       <button class="opis-contact-button" ng-click="transferOwner()">Yes</button>

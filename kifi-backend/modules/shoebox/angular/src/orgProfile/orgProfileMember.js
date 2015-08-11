@@ -120,6 +120,12 @@ angular.module('kifi')
       $scope.$emit('clickedAvatar', $scope.member);
     }
 
+    function _role() {
+      var $scope = this;
+      return ($scope.hasAcceptedInvite() ? '' : 'Pending') + 
+        ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
+    }
+
     return {
       restrict: 'A',
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
@@ -182,6 +188,7 @@ angular.module('kifi')
         $scope.triggerMakeOwner = _triggerMakeOwner;
         $scope.triggerPromote = _triggerPromote;
         $scope.triggerDemote = _triggerDemote;
+        $scope.role = _role;
       }
     };
   }
