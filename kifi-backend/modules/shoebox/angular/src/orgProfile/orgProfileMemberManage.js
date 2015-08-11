@@ -164,6 +164,12 @@ angular.module('kifi')
       });
     });
 
+    $scope.$on('makeOwner', function(e, member) {
+      modifyMemberRole(member, 'owner').then(function() {
+        memberPageAnalytics({ action: 'clickedMakeOwner', orgMember: member.username });
+      });
+    });
+
     $scope.$on('promoteMember', function (e, member) {
       modifyMemberRole(member, 'admin').then(function () {
         memberPageAnalytics({ action: 'clickedMakeAdmin', orgMember: member.username });
