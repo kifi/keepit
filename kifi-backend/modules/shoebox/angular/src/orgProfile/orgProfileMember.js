@@ -87,16 +87,21 @@ angular.module('kifi')
     function _triggerMakeOwner() {
       var $scope = this;
 
+      var opts = {
+        organization: $scope.organization,
+        member: $scope.member,
+        returnAction: function () {
+          $scope.$emit('resetAndFetch');
+        }
+      };
+      for (var i=0, len=$scope.members.length; i < len; i++) {
+        if ($scope.members[i].id === $scope.organization.ownerId) {
+          opts.currentOwner = $scope.members[i];
+        }
+      }
       modalService.open({
         template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
-        modalData: {
-          organization: $scope.organization,
-          member: $scope.member,
-          returnAction: function (response) {
-            var $scope = this;
-            $scope.$emit('resetAndFetch');
-          }.bind($scope)
-        }
+        modalData: opts
       });
     }
 

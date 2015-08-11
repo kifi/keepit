@@ -21,8 +21,11 @@ angular.module('kifi')
 
         $scope.close = function() {
           kfModalCtrl.close();
-        }
+        };
+
+        $scope.currentOwner = $scope.modalData.currentOwner;
+        $scope.member = $scope.modalData.member;
       }
-    }
+    };
   }
 ]);
