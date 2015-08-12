@@ -577,8 +577,6 @@ GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
-POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
 POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
