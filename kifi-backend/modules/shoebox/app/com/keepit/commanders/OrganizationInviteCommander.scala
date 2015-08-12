@@ -208,7 +208,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = s"Please join our organization ${org.name} on Kifi!",
+        subject = s"Please join our ${org.name} team on Kifi!",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.ORGANIZATION_INVITATION, _ => NotificationCategory.NonUser.ORGANIZATION_INVITATION),
         htmlTemplate = views.html.email.organizationInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken),

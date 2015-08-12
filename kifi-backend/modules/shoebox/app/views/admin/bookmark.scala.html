@@ -66,12 +66,6 @@
       </tr>
    </table>
    <p>
-     @helper.form(action = com.keepit.controllers.admin.routes.AdminBookmarksController.delete(bookmark.id.get)) {
-       <input type="submit" value="Delete">
-     }
-   </p>
-
-   <p>
      @helper.form(action = com.keepit.controllers.admin.routes.AdminBookmarksController.inactive(bookmark.id.get)){
        <input type="submit" value="Inactive">
      }

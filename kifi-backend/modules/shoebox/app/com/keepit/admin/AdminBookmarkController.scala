@@ -107,56 +107,10 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  //post request with a list of private/public and active/inactive
-  def updateBookmarks() = AdminUserPage { request =>
-    def toBoolean(str: String) = str.trim.toInt == 1
-
-    def setIsPrivate(id: Id[Keep], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = keepRepo.get(id)
-      val (mainLib, secretLib) = libraryCommander.getMainAndSecretLibrariesForUser(bookmark.userId)
-      def getLibFromPrivacy(isPrivate: Boolean) = {
-        if (isPrivate) secretLib else mainLib
-      }
-      log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      val lib = getLibFromPrivacy(isPrivate)
-      keepRepo.save(bookmark.copy(visibility = lib.visibility, libraryId = Some(lib.id.get)))
-      log.info("updated bookmark %s".format(bookmark))
-      bookmark.userId
-    }
-
-    def setIsActive(id: Id[Keep], isActive: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = keepRepo.get(id)
-      log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-      keepRepo.save(bookmark.withActive(isActive))
-      log.info("updated bookmark %s".format(bookmark))
-      bookmark.userId
-    }
-
-    db.readWrite { implicit s =>
-      request.body.asFormUrlEncoded.get foreach {
-        case (key, values) =>
-          key.split("_") match {
-            case Array("private", id) => setIsPrivate(Id[Keep](id.toInt), toBoolean(values.last))
-            case Array("active", id) => setIsActive(Id[Keep](id.toInt), toBoolean(values.last))
-          }
-      }
-    }
-    log.info("updating changed users")
-    Redirect(request.request.referer)
-  }
-
   def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
       keepRepo.save(keep.copy(state = KeepStates.INACTIVE))
-      Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
-    }
-  }
-
-  //this is an admin only task!!!
-  def delete(id: Id[Keep]) = AdminUserPage { request =>
-    db.readWrite { implicit s =>
-      keepRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
