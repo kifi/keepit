@@ -649,7 +649,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val userWidow = db.readWrite { implicit s =>
-          val user = UserFactory.user().withName("Natalia", "Romanova").withUsername("blackwidow").withEmailAddress("blackwidow@shield.com").saved
+          val user = UserFactory.user().withName("Natalia", "Romanova").withUsername("blackwidow").saved
           libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY))
           user
         }
@@ -867,7 +867,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Test Collaborators!!!! The Falcon is a collaborator to library 'Murica
         val userFalcon = db.readWrite { implicit s =>
-          val userFalcon = user().withUsername("thefalcon").withEmailAddress("samwilson@usa.gov").saved
+          val userFalcon = user().withUsername("thefalcon").saved
           membership().withLibraryCollaborator(libMurica.id.get, userFalcon.id.get).saved
           userFalcon
         }

@@ -223,7 +223,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           def generateUserAndSocialUser(uFirstName: String, uLastName: String) =
             db.readWrite { implicit rw =>
 
-              val u1 = UserFactory.user().withName(uFirstName, uLastName).withUsername("test").withEmailAddress(s"$uFirstName$uLastName@kifi.com").saved
+              val u1 = UserFactory.user().withName(uFirstName, uLastName).withUsername("test").saved
+              userEmailAddressCommander.intern(u1.id.get, EmailAddress(s"$uFirstName$uLastName@kifi.com")).get
 
               val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
                 fullName = uFirstName,

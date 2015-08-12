@@ -141,10 +141,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new EContactCache(stats, accessLog, (outerRepo, 30 day))
 
-  @Provides @Singleton
-  def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
-
   @Singleton
   @Provides
   def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

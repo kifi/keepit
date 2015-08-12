@@ -53,7 +53,7 @@ trait CuratorTestHelpers {
 
   def makeUser(num: Int, shoebox: FakeShoeboxServiceClientImpl) = {
     shoebox.saveUsers(
-      UserFactory.user().withId(num).withName("Some", "User" + num).withUsername("test").withEmailAddress(s"user$num@kifi.com").get
+      UserFactory.user().withId(num).withName("Some", "User" + num).withUsername("test").get
     )(0)
   }
 

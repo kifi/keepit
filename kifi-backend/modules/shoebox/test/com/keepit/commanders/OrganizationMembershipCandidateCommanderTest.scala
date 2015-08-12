@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
@@ -100,8 +101,10 @@ class OrganizationMembershipCandidateCommanderTest extends Specification with Sh
       withDb(modules: _*) { implicit injector =>
         val orgMembershipCandidateRepo = inject[OrganizationMembershipCandidateRepo]
         val (org, owner, users) = db.readWrite { implicit session =>
-          val owner = UserFactory.user().withEmailAddress("ryan@kifi.com").saved
-          val users = UserFactory.users(10).map(_.withEmailAddress("ryan@kifi.com")).saved
+          val owner = UserFactory.user().saved
+          userEmailAddressCommander.intern(owner.id.get, EmailAddress(s"ryan@kifi.com")).get
+          val users = UserFactory.users(10).saved
+          users.zipWithIndex.foreach { case (user, n) => userEmailAddressCommander.intern(user.id.get, EmailAddress(s"ryan$n@kifi.com")).get }
           val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).saved
           (org, owner, users)
         }

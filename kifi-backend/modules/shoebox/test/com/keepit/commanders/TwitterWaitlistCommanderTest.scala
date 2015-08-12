@@ -5,7 +5,7 @@ import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
@@ -41,7 +41,9 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         val twitterWaitlistRepo = inject[TwitterWaitlistRepo]
         val emailRepo = inject[ElectronicMailRepo]
         val user1 = db.readWrite { implicit s =>
-          user().withName("Captain", "Falcon").withUsername("cfalc").withEmailAddress("cfalc@nintendo.com").saved
+          val user1 = user().withName("Captain", "Falcon").withUsername("cfalc").saved
+          userEmailAddressCommander.intern(user1.id.get, EmailAddress("cfalc@nintendo.com")).get
+          user1
         }
 
         db.readOnlyMaster { implicit s =>

@@ -107,7 +107,7 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   private def setupUserPersona()(implicit injector: Injector) = {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
-      val user1 = user().withName("Tony", "Stark").withUsername("tonystark").withEmailAddress("tony@stark.com").saved
+      val user1 = user().withName("Tony", "Stark").withUsername("tonystark").saved
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("investor").id.get))
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("techie").id.get))
       user1
