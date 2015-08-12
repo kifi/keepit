@@ -43,6 +43,7 @@ angular.module('kifi')
       var $scope = this;
       return (
         profileService.me.id === $scope.organization.ownerId &&
+        !$scope.isMe() &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
