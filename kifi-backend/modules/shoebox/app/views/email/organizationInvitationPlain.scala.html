@@ -17,11 +17,9 @@ authToken: String
 }
 }
 
-@description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
-
 @emailMessage = {
-<p>Please join "@organization.name" on Kifi - <a href="@organizationUrl">www.kifi.com/@organization.handle.value</a>,
-    so we can collaborate together. It's a great way to organize the links that we find.</p>
+<p>Please join the <a href="@organizationUrl"><b>@organization.name</b></a> team on Kifi,
+    so you can access and build our team's knowledge.</p>
 }
 
 
@@ -34,11 +32,12 @@ authToken: String
 @if(inviteMsg.isEmpty) {
 @salutation
 @emailMessage
-@firstName(inviterId)
+- @firstName(inviterId)
 } else {
 @inviteMsg.get
+<br><br>
 <p><a href="@organizationUrl">www.kifi.com/@organization.handle.value</a></p>
-@firstName(inviterId)
+- @firstName(inviterId)
 }
 </body>
 </html>

@@ -441,7 +441,6 @@ class AuthController @Inject() (
 
   // Initial user/pass signup JSON action
   def userPasswordSignup() = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    log.warn("first")
     authHelper.userPasswordSignupAction
   }
 

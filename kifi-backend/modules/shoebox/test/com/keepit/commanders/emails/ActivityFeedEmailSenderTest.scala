@@ -73,9 +73,9 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     "work" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2) = db.readWrite { implicit rw =>
-          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
-          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
-          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
+          val u1 = user().withName("Kifi", "User1").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
+          val u2 = user().withName("Kifi", "User2").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
+          val u3 = user().withName("Kifi", "User3").withExperiments(UserExperimentType.ACTIVITY_EMAIL).saved
           keeps(20).foreach(_.withUser(u1).saved)
           keeps(20).foreach(_.withUser(u2).saved)
           keeps(2).foreach(_.withUser(u2).saved)
@@ -223,9 +223,9 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val sender = inject[ActivityFeedEmailSender]
         var (u1, u2, u3) = db.readWrite { implicit rw =>
-          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").saved
-          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").saved
-          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").saved
+          val u1 = user().withName("Kifi", "User1").saved
+          val u2 = user().withName("Kifi", "User2").saved
+          val u3 = user().withName("Kifi", "User3").saved
           keeps(20).foreach(_.withUser(u1).saved)
           keeps(20).foreach(_.withUser(u2).saved)
 

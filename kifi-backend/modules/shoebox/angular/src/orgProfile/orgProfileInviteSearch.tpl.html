@@ -24,13 +24,8 @@
               <div class="opis-contact-name" ng-bind-html="result.name"></div>
               <div class="opis-contact-network">Kifi user</div>
             </div>
-            <button ng-show="!result.sent && !((isMemberInvite() && result.isFollowing) || result.isCollaborating)" ng-click="inviteOrPromote(result)" class="opis-contact-button">
-              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
-              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              Invite
-            </button>
-            <div ng-show="result.isFollowing && isMemberInvite()" class="opis-invite-following">Following</div>
-            <div ng-show="result.isCollaborating" class="opis-invite-collaborating">Collaborating</div>
+            <button ng-show="!result.sent && !result.isInvited" ng-click="inviteKifiFriend(result)" class="opis-contact-button">Invite</button>
+            <div ng-show="!result.sent && result.isInvited" class="opis-invite-invited">Invited</div>
             <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
           </div>
 
@@ -41,11 +36,8 @@
               <div class="opis-contact-name" ng-bind-html="result.name || result.emailFormatted"></div>
               <div class="opis-contact-network" ng-bind-html="result.name ? result.emailFormatted : 'An email contact'"></div>
             </div>
-            <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="opis-contact-button">
-              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
-              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              Invite
-            </button>
+            <button ng-show="!result.sent && !result.isInvited" ng-click="inviteExistingEmail(result)" class="opis-contact-button">Invite</button>
+            <div ng-show="!result.sent && result.isInvited" class="opis-invite-sent">Invited</div>
             <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
           </div>
 
@@ -56,11 +48,8 @@
               <div class="opis-contact-name">{{query || 'Send to any email'}}</div>
               <div class="opis-contact-network">{{queryIsValidEmail ? 'An email address' : query ? 'Keep typing the email address' : 'Type the email address'}}</div>
             </div>
-            <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="opis-contact-button">
-              <span class="opis-invite-icon collaborate svg-collaborate-gray" ng-if="isOwnerInvite()"></span>
-              <span class="opis-invite-icon follow svg-share-arrow-gray" ng-if="isMemberInvite()"></span>
-              Invite
-            </button>
+            <button ng-show="!result.sent && !result.isInvited && !result.hideButton" ng-click="inviteNewEmail(result)" class="opis-contact-button">Invite</button>
+            <div ng-show="!result.sent && result.isInvited" class="opis-invite-invited">Invited</div>
             <div ng-show="result.sent" class="opis-invite-sent">Sent!</div>
           </div>
 
@@ -73,9 +62,7 @@
           </div>
         </li>
       </ul>
-
-      <textarea rows="1" class="opis-input opis-message-input" ng-model="share.message" placeholder="Write a message (optional)"></textarea>
-
+      <textarea rows="1" class="opis-input opis-message-input" ng-model="invitation.message" placeholder="Write a message (optional)"></textarea>
     </div>
   </div>
 </div>

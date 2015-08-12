@@ -30,9 +30,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
 class UserEmailAddressRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    userValueRepo: UserValueRepo,
-    userRepo: UserRepo,
-    verifiedEmailUserIdCache: VerifiedEmailUserIdCache) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
+    userRepo: UserRepo) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._
 
@@ -61,9 +59,7 @@ class UserEmailAddressRepoImpl @Inject() (
     super.save(toSave)
   }
 
-  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
-  }
+  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {}
   override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
     deleteCache(emailAddress)
   }
@@ -83,13 +79,10 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
-    val user = userRepo.get(userId)
-    user.primaryEmail getOrElse {
-      val all = getAllByUser(userId)
-      (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
-        case Some(email) => email.address
-        case None => throw new Exception(s"no emails for user $userId")
-      }
+    val all = getAllByUser(userId)
+    (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
+      case Some(email) => email.address
+      case None => throw new Exception(s"no emails for user $userId")
     }
   }
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512px" height="512px" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="member">
+            <g id="Guide" transform="translate(-3.000000, -3.000000)"></g>
+            <circle id="Oval-173" fill="#909090" cx="255" cy="123" r="44"></circle>
+            <path d="M374.9998,315.720887 C374.999933,315.647274 375,315.573645 375,315.5 C375,249.501972 321.498028,196 255.5,196 C189.501972,196 136,249.501972 136,315.5 C136,315.573645 136.000067,315.647274 136.0002,315.720887 L374.999815,315.720887 L374.9998,315.720887 Z M136,315.720887 L375,315.720887 L375,435 L136,435 L136,315.720887 Z" id="Oval-172" fill="#909090"></path>
+        </g>
+    </g>
+</svg>

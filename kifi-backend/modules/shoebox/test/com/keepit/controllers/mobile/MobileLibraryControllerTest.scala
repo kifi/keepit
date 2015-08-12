@@ -285,7 +285,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").withEmailAddress("email@gmail.com").saved
+          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").saved
           val userB = UserFactory.user().withName("Bulba", "Saur").withCreatedAt(t1).withUsername("bulbasaur").saved
 
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))

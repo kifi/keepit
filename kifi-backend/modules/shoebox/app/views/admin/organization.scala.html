@@ -51,7 +51,7 @@ orgStats: OrganizationStatistics
     <tr>
         <th>Active</th>
         <td>
-            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
                 <button type="submit" class="btn btn-default">Set inactive</button>
             </form>
         </td>

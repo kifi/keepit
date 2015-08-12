@@ -198,7 +198,7 @@ class UserPersonaControllerTest extends Specification with ShoeboxTestInjector {
   private def setupUserPersona()(implicit injector: Injector) = {
     val allPersonas = setupPersonas
     val user1 = db.readWrite { implicit s =>
-      val user1 = user().withName("Peter", "Parker").withUsername("peterparker").withEmailAddress("peterparker@gmail.com").saved
+      val user1 = user().withName("Peter", "Parker").withUsername("peterparker").saved
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("artist").id.get))
       userPersonaRepo.save(UserPersona(userId = user1.id.get, personaId = allPersonas("student").id.get))
       user1
