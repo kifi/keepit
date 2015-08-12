@@ -259,22 +259,4 @@ class ABookController @Inject() (
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
-
-  def fixEmailAddresses() = Action { request =>
-    SafeFuture {
-      val limit = 100
-      var lastFixed: Option[Int] = None
-      while (!lastFixed.contains(0)) {
-        lastFixed = Some {
-          db.readWrite { implicit sesssion =>
-            val toBeFixed = emailAccountRepo.getWithEmptyHash(limit)
-            toBeFixed.foreach(e => emailAccountRepo.save(e.withAddress(e.address)))
-            toBeFixed.length
-          }
-        }
-      }
-    }
-    Ok("It's on!")
-  }
-
 }

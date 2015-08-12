@@ -8,6 +8,7 @@ angular.module('kifi')
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
+        net.getOrgMembers,
         net.userOrOrg
       ].forEach(function (endpoint) {
         endpoint.clearCache();
@@ -16,7 +17,10 @@ angular.module('kifi')
 
     var api = {
       sendOrgMemberInvite: function (orgId, inviteFields) {
-        return net.sendOrgMemberInvite(orgId, inviteFields);
+        return net.sendOrgMemberInvite(orgId, inviteFields)
+          .then(function (response) {
+            return response.data;
+          });
       },
       acceptOrgMemberInvite: function (orgId, authToken) {
         invalidateOrgProfileCache();

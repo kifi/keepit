@@ -1068,11 +1068,6 @@ class AdminUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
-  def fixEmailAddresses() = AdminUserPage { implicit request =>
-    abookClient.fixEmailAddresses()
-    Ok("It's on!")
-  }
-
   def migratePrimaryEmails(limit: Option[Int]) = AdminUserPage { implicit request =>
     SafeFuture {
       val pageSize = 100
