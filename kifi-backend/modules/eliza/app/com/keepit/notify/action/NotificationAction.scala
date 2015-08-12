@@ -1,16 +1,17 @@
 package com.keepit.notify.action
 
+import java.nio.ByteOrder
 import java.util.UUID
 
 import akka.util.ByteStringBuilder
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.path.Path
-import com.keepit.eliza.model.{Notification, NotificationItem}
+import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.model.Library
 
-/** 
-  * Represents what the user eventually sees, as a new notification in their inbox.
-  */
+/**
+ * Represents what the user eventually sees, as a new notification in their inbox.
+ */
 trait NotificationAction {
 
   val items: Set[NotificationItem]
@@ -23,7 +24,6 @@ trait NotificationAction {
   lazy val id: ExternalId[NotificationAction] = NotificationAction.externalIdFromItems(items)
 
 }
-
 
 object NotificationAction {
 
@@ -45,6 +45,7 @@ object NotificationAction {
     val sorted = ensureSame(items)
     val longList = sorted.map(_.id.get.id)
 
+    implicit val byteOrder = ByteOrder.BIG_ENDIAN
     val builder = new ByteStringBuilder()
     for (longValue <- longList) {
       builder.putLong(longValue)
@@ -64,5 +65,4 @@ case class ViewLibrary(
   path: Path,
   imageUrl: String,
   body: String,
-  hoverText: String
-) extends NotificationAction
+  hoverText: String) extends NotificationAction

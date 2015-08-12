@@ -20,6 +20,6 @@ alter table notification add column last_event DATETIME not null;
 
 alter table notification add column disabled BOOLEAN not null default false;
 
-insert into evolutions (name, description) values('373.sql', 'Add group_identifier, recipient, last_event, and disabled to notification');
+insert into evolutions (name, description) values('374.sql', 'Add group_identifier, recipient, last_event, and disabled to notification');
 
 # --- !Downs
