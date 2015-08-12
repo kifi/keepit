@@ -28,6 +28,7 @@ object RepoModification {
 
 trait Repo[M <: Model[M]] {
   def get(id: Id[M])(implicit session: RSession): M
+  def getNoCache(id: Id[M])(implicit session: RSession): M
   def all()(implicit session: RSession): Seq[M]
   def save(model: M)(implicit session: RWSession): M
   def count(implicit session: RSession): Int
@@ -93,9 +94,11 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     for (f <- rows if f.id === id) yield f
   }
   def get(id: Id[M])(implicit session: RSession): M = {
-    val startTime = System.currentTimeMillis()
-    val model = getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException(s"can't find $id in ${_taggedTable.tableName}"))
-    model
+    getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException(s"can't find $id in ${_taggedTable.tableName}"))
+  }
+
+  final def getNoCache(id: Id[M])(implicit session: RSession): M = {
+    getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException(s"can't find $id in ${_taggedTable.tableName}"))
   }
 
   def all()(implicit session: RSession): Seq[M] = rows.list

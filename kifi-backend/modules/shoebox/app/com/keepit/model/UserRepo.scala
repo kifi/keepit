@@ -198,10 +198,6 @@ class UserRepoImpl @Inject() (
     }
   }
 
-  def getNoCache(id: Id[User])(implicit session: RSession): User = {
-    getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
-  }
-
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
       getByExtIdCompiled(id).firstOption
