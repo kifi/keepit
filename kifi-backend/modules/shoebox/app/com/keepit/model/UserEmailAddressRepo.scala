@@ -30,9 +30,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
 class UserEmailAddressRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    userValueRepo: UserValueRepo,
-    userRepo: UserRepo,
-    verifiedEmailUserIdCache: VerifiedEmailUserIdCache) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
+    userRepo: UserRepo) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._
 
@@ -61,9 +59,7 @@ class UserEmailAddressRepoImpl @Inject() (
     super.save(toSave)
   }
 
-  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
-  }
+  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {}
   override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
     deleteCache(emailAddress)
   }

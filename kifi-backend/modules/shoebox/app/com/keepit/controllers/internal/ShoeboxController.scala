@@ -74,7 +74,6 @@ class ShoeboxController @Inject() (
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
   userPersonaRepo: UserPersonaRepo,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
   rover: RoverServiceClient)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
