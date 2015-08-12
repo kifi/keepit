@@ -12,23 +12,18 @@
     margin-top: 10px
 
 .kf-org-member
+
+.kf-org-member
+  clear: both
+
   &:nth-child(odd)
     background: whitesmoke
     padding: 5px 15px
     margin-left: -15px
     margin-right: -15px
 
-.kf-org-member-invite
-  box-sizing: border-box
-  width: 100%
-  padding: 10px
-  border: 2px dashed lightgray
-  border-radius: 6px
-  background: none
-  margin-bottom: 15px
-  color: textBlackColor
-
 .kf-org-member-email
+  box-sizing: border-box
   width: 42px
   height: 42px
   background-repeat: no-repeat
@@ -36,3 +31,40 @@
   background-color: #eeeeee
   border: 1px solid #ebebeb
   border-radius: 50%
+
+.kf-org-member-invite
+  display: flex
+
+.kf-org-member-invite-button
+  display: flex
+  width: 100%
+  border: 0
+  background: 0
+  padding: 0
+
+  &:hover
+    .kf-org-member-invite-body
+    .kf-org-member-invite-face
+      background-color: rgba(255, 255, 255, .40);
+
+.kf-org-member-invite-body
+  box-sizing: border-box
+  flex-grow: 1
+  line-height: 22px
+  padding: 10px
+  border-radius: 6px
+
+.kf-org-member-invite-face
+  width: 42px
+  height: 42px
+  margin-right: 7px
+  margin-left: -2px
+  border-radius: 50%
+
+.kf-org-member-invite-body
+.kf-org-member-invite-face
+  border: 2px dashed lightgray
+  color: textBlackColor
+  font-size: 14px
+  text-align: left
+  font-weight: bold
