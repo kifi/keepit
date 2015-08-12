@@ -8,6 +8,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -62,6 +63,52 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
           val membership = contentAsJson(result).as[LibraryMembership]
           membership.userId === rando.id.get
           membership.libraryId === lib.id.get
+        }
+      }
+    }
+    "let admins move keeps in and out of libraries" in {
+      "never allow a non-admin to do anything" in {
+        withDb(modules: _*) { implicit injector =>
+          val (rando, lib) = db.readWrite { implicit session => (UserFactory.user().saved, LibraryFactory.library().saved) }
+
+          inject[FakeUserActionsHelper].setUser(rando)
+          val payload: JsValue = JsNull
+          val request = route.unsafeMoveLibraryKeeps(lib.id.get).withBody(payload)
+          val result = controller.unsafeMoveLibraryKeeps(lib.id.get)(request)
+          status(result) === FORBIDDEN
+        }
+      }
+      "migrate all the keeps from one lib into another" in {
+        withDb(modules: _*) { implicit injector =>
+          val (admin, lib1, lib2, owner) = db.readWrite { implicit session =>
+            val admin = UserFactory.user().saved
+            val owner = UserFactory.user().saved
+            val lib1 = LibraryFactory.library().withOwner(owner).saved
+            val lib2 = LibraryFactory.library().withOwner(owner).saved
+            KeepFactory.keeps(20).map(_.withLibrary(lib1).withUser(owner).saved)
+
+            inject[KeepRepo].getCountByLibrary(lib1.id.get) === 20
+            inject[KeepRepo].getCountByLibrary(lib2.id.get) === 0
+
+            (admin, lib1, lib2, owner)
+          }
+
+          inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
+          val payload: JsValue = Json.obj("toLibrary" -> lib2.id.get)
+          val request = route.unsafeMoveLibraryKeeps(lib1.id.get).withBody(payload)
+          val result = controller.unsafeMoveLibraryKeeps(lib1.id.get)(request)
+          status(result) === OK
+
+          val resultJson = contentAsJson(result)
+          val moved = (resultJson \ "moved").as[Seq[Keep]]
+          val failed = (resultJson \ "failures").as[Seq[JsValue]]
+          moved.length === 20
+          failed.length === 0
+
+          db.readOnlyMaster { implicit session =>
+            inject[KeepRepo].getCountByLibrary(lib1.id.get) === 0
+            inject[KeepRepo].getCountByLibrary(lib2.id.get) === 20
+          }
         }
       }
     }
