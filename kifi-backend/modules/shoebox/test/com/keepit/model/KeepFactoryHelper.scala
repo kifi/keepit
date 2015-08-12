@@ -46,7 +46,18 @@ object KeepFactoryHelper {
       }
       val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None))
       val library = injector.getInstance(classOf[LibraryRepo]).get(finalKeep.libraryId.get)
-      injector.getInstance(classOf[KeepToLibraryCommander]).internKeepInLibrary(KeepToLibraryInternRequest(finalKeep, library, finalKeep.userId))
+
+      val ktl = KeepToLibrary(
+        keepId = finalKeep.id.get,
+        libraryId = library.id.get,
+        addedAt = finalKeep.keptAt,
+        addedBy = finalKeep.userId,
+        uriId = finalKeep.uriId,
+        isPrimary = finalKeep.isPrimary,
+        visibility = library.visibility,
+        organizationId = library.organizationId
+      )
+      injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
       finalKeep
     }
 
