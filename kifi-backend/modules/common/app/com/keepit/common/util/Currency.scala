@@ -5,11 +5,11 @@ case class IllegalBillingCycleDivision(a: BillingCycle, b: BillingCycle) extends
 
 case class Currency(cents: Int) {
   def +(that: Currency): Currency = Currency(this.cents + that.cents)
-  def -(that: Currency): Currency = Currency(this.cents + that.cents)
+  def -(that: Currency): Currency = Currency(this.cents - that.cents)
   def *(lambda: Int): Currency = Currency(this.cents * lambda)
   def /(lambda: Int): Currency = Currency(this.cents / lambda)
   def /(bc: BillingCycle): BillingRate = BillingRate(this, bc)
-  override def toString = s"$$${cents / 100}.${cents % 100}"
+  override def toString = s"$$${cents / Currency.CENTS_PER_DOLLAR}.${cents % Currency.CENTS_PER_DOLLAR}"
 }
 
 object Currency {
