@@ -26,7 +26,7 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
       val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-      val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
+      val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
       val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
       val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.kiiifffiii.com/", Some("Kifi")))

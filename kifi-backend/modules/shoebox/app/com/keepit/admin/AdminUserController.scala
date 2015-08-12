@@ -957,7 +957,7 @@ class AdminUserController @Inject() (
 
     val user = userRepo.get(userId)
 
-    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
+    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryUsername = None)) // User
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 

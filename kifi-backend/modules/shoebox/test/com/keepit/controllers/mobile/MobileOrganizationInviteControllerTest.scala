@@ -4,7 +4,8 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactoryHelper._
@@ -17,8 +18,7 @@ import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 
 class MobileOrganizationInviteControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -273,7 +273,8 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
       def setupInviters()(implicit injector: Injector) = {
         db.readWrite { implicit session =>
           val owner = UserFactory.user().withName("The", "Unknown").saved
-          val inviter = UserFactory.user().withEmailAddress("inviter@kifi.com").saved
+          val inviter = UserFactory.user().saved
+          userEmailAddressCommander.intern(inviter.id.get, EmailAddress("inviter@kifi.com"))
           val cannot_invite = UserFactory.user().saved
           val not_a_member = UserFactory.user().saved
           val org = OrganizationFactory.organization().withName("Void").withOwner(owner).withMembers(Seq(inviter, cannot_invite)).saved

@@ -18,7 +18,6 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import org.joda.time.DateTime
 import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -74,10 +73,9 @@ class UserRepoImpl @Inject() (
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[Option[String]]("picture_name", O.Nullable)
     def userPictureId = column[Option[Id[UserPicture]]]("user_picture_id", O.Nullable)
-    def primaryEmail = column[Option[EmailAddress]]("primary_email", O.Nullable)
     def username = column[Option[Username]]("username", O.Nullable)
     def normalizedUsername = column[Option[Username]]("normalized_username", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, primaryEmail, username, normalizedUsername) <> ((User.applyFromDbRow _).tupled, User.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, username, normalizedUsername) <> ((User.applyFromDbRow _).tupled, User.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new UserTable(tag)

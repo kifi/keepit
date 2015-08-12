@@ -76,7 +76,8 @@ angular.module('kifi')
     scope: {
       action: '&',
       cancel: '&',
-      title: '@'
+      title: '@',
+      actionText: '@'
     },
     templateUrl: 'common/modal/basicModalContent.tpl.html',
     transclude: true,
