@@ -7,6 +7,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model._
+import com.keepit.social.NonUserKinds
 
 import scala.concurrent.ExecutionContext
 
@@ -50,11 +51,25 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       builder += ("inviteeId", inviteeId.map(_.toString).getOrElse(""))
       builder += ("inviteeEmail", emailOpt.map(_.address).getOrElse(""))
       builder += ("daysSinceOrganizationCreated", numDays)
-      heimdal.trackEvent(UserEvent(inviterId, builder.build, UserEventTypes.JOINED))
+      heimdal.trackEvent(UserEvent(inviterId, builder.build, UserEventTypes.INVITED))
     }
   }
 
-  def trackInvitationClicked(organization: Organization, authToken: String): Unit = {
+  def trackInvitationClicked(organization: Organization, invite: OrganizationInvite)(implicit eventContext: HeimdalContext): Unit = {
 
+    val numDays = daysSinceOrganizationCreated(organization)
+    SafeFuture {
+      val builder = new HeimdalContextBuilder
+      builder.addExistingContext(eventContext)
+      builder += ("action", "clickedOrgURL")
+      builder += ("organizationId", organization.id.get.toString)
+      builder += ("inviterId", invite.inviterId.toString)
+      builder += ("inviteeId", invite.userId.map(_.toString).getOrElse(""))
+      builder += ("inviteeEmail", invite.emailAddress.map(_.address).getOrElse(""))
+      heimdal.trackEvent(
+        invite.userId.map(id => UserEvent(id, builder.build, UserEventTypes.WAS_NOTIFIED))
+          .getOrElse(NonUserEvent("", NonUserKinds.email, eventContext, NonUserEventTypes.WAS_NOTIFIED))
+      )
+    }
   }
 }

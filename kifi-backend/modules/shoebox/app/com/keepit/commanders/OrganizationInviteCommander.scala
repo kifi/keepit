@@ -36,6 +36,7 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
 }
@@ -384,6 +385,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
       organizationInviteRepo.getAllByOrganization(orgId)
+    }
+  }
+
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
     }
   }
 
