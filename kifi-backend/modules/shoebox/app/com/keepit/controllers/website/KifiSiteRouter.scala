@@ -31,7 +31,6 @@ class KifiSiteRouter @Inject() (
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
-  organizationAnalytics: OrganizationAnalytics,
   airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper)
     extends UserActions with ShoeboxServiceController {
@@ -199,20 +198,15 @@ class KifiSiteRouter @Inject() (
 
   // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
   private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
-    def userCanSeeOrg(org: Organization) = {
-      val authTokenOpt = request.getQueryString("authToken")
-      val validAuth = authTokenOpt.exists(auth => orgInviteCommander.isAuthValid(org.id.get, auth))
-      if (validAuth) organizationAnalytics.trackInvitationClicked(org, authTokenOpt.get)
-      request match {
-        case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
-        case nonuserReq: NonUserRequest[_] => !mustBeInExperiment || validAuth
-      }
+    def userCanSeeOrg(orgId: Id[Organization]) = request match {
+      case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
+      case nonuserReq: NonUserRequest[_] => !mustBeInExperiment || nonuserReq.getQueryString("authToken").exists(auth => orgInviteCommander.isAuthValid(orgId, auth))
     }
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
     handleOwnerOpt.flatMap {
       // TODO(ryan): when orgs go live, drop this flatmap
       // This flatmap serves to hide orgs from everyone except users WITH the org experiment
-      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org) => None
+      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org.id.get) => None
       case other => Some(other)
     } map {
       case (handleOwner, isPrimary) =>

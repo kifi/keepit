@@ -11,7 +11,6 @@ import com.keepit.common.json
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser

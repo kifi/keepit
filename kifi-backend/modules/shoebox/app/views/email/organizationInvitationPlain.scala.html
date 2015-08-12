@@ -6,7 +6,7 @@ authToken: String
 )
 
 @import com.keepit.common.mail.template.helpers._
-@organizationUrl = @{htmlUrl(baseUrl + "/" + organization.handle.value + "?authToken=" + authToken + "&", "clickedOrgURL", inviteeId.nonEmpty)}
+@organizationUrl = @{htmlUrl(baseUrl + "/" + organization.handle.value + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {
@@ -36,13 +36,8 @@ authToken: String
 } else {
 @inviteMsg.get
 <br><br>
-<<<<<<< HEAD
-<p><a href="@organizationUrl">@organization.name</a></p>
-@firstName(inviterId)
-=======
 <p><a href="@organizationUrl">www.kifi.com/@organization.handle.value</a></p>
 - @firstName(inviterId)
->>>>>>> 12b72d807d4c9c4dc939d23ccc177bef18fc75db
 }
 </body>
 </html>
