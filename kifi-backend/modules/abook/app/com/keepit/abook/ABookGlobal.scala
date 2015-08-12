@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
 import com.keepit.abook.model.{ EContactSequencingPlugin, EmailAccountSequencingPlugin }
-import com.keepit.abook.commanders.{ LocalRichConnectionCommander, EmailAccountUpdaterPlugin }
+import com.keepit.abook.commanders.EmailAccountUpdaterPlugin
 import net.codingwell.scalaguice.InjectorExtensions._
 
 object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
@@ -15,7 +15,6 @@ object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
   override def onStart(app: Application) {
     startABookServices()
     super.onStart(app)
-    injector.instance[LocalRichConnectionCommander].startUpdateProcessing()
   }
 
 }

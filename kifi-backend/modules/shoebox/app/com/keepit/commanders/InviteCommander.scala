@@ -29,7 +29,6 @@ import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.Try
-import com.keepit.common.queue.{ CancelInvitation }
 import com.keepit.abook.ABookServiceClient
 
 import akka.actor.Scheduler
@@ -107,7 +106,6 @@ class InviteCommander @Inject() (
     clock: Clock,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
-    shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
     abookServiceClient: ABookServiceClient,
     emailSenderProvider: EmailSenderProvider,
     implicit val executionContext: ExecutionContext,
@@ -156,9 +154,6 @@ class InviteCommander @Inject() (
               case Some(invitedSocialAccount) =>
                 socialInvite -> invitedSocialAccount.networkType
               case None =>
-                socialInvite.senderUserId.foreach { senderId =>
-                  session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(invitedSocialUserId), None)) }
-                }
                 val invitedSocialAccount = socialUserInfoRepo.get(invitedSocialUserId)
                 val fortyTwoInvite = invitationRepo.save(socialInvite.withRecipientSocialUserId(fortyTwoSocialAccount.id))
                 fortyTwoInvite -> invitedSocialAccount.networkType
@@ -169,9 +164,6 @@ class InviteCommander @Inject() (
               case Some(invitedEmailAccount) =>
                 emailInvite -> SocialNetworks.EMAIL
               case None => {
-                emailInvite.senderUserId.foreach { senderId =>
-                  session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(invitedEmailAddress))) }
-                }
                 val fortyTwoInvite = invitationRepo.save(emailInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEmailAddress = None))
                 fortyTwoInvite -> SocialNetworks.EMAIL
               }
@@ -486,36 +478,6 @@ class InviteCommander @Inject() (
         contextBuilder += ("action", "wasInvited")
         contextBuilder += ("senderId", senderId.id)
         heimdal.trackEvent(UserEvent(receiverId, contextBuilder.build, UserEventTypes.JOINED, invite.lastSentAt getOrElse invite.createdAt))
-      }
-    }
-  }
-
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[UserInviteRecommendation]] = {
-    abook.getRipestFruits(userId, page, pageSize).map { ripestFruits =>
-      val (lastInvitedAtByEmailAddress, lastInvitedAtBySocialUserId, socialUserInfosBySocialUserId) = {
-        val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
-        val emailAddresses = emailConnections.flatMap(_.friendEmailAddress)
-        val socialUserIds = socialConnections.flatMap(_.friendSocialId)
-        db.readOnlyReplica { implicit session =>
-          (
-            invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailAddresses),
-            invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialUserIds),
-            socialUserInfoRepo.getSocialUserBasicInfos(socialUserIds)
-          )
-        }
-      }
-      ripestFruits.map { richConnection =>
-        richConnection.connectionType match {
-          case SocialNetworks.EMAIL =>
-            val emailAddress = richConnection.friendEmailAddress.get
-            UserInviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), richConnection.friendName, None, lastInvitedAtByEmailAddress.get(emailAddress), -1)
-          case socialNetwork =>
-            val socialUserId = richConnection.friendSocialId.get
-            val socialUserInfo = socialUserInfosBySocialUserId(socialUserId)
-            val name = richConnection.friendName getOrElse socialUserInfo.fullName
-            val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
-            UserInviteRecommendation(socialNetwork, Right(socialUserInfo.socialId), Some(name), pictureUrl, lastInvitedAtBySocialUserId.get(socialUserId), -1)
-        }
       }
     }
   }

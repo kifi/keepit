@@ -28,8 +28,7 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
     FakeAirbrakeModule(),
-    ABookCacheModule(HashMapMemoryCacheModule()),
-    FakeAbookRepoChangeListenerModule()
+    ABookCacheModule(HashMapMemoryCacheModule())
   )
 
   "ABook Commander" should {

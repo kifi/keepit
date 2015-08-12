@@ -1,14 +1,12 @@
 package com.keepit.abook.controllers
 
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{ ABookServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
-import scala.Some
 import java.io.File
 import scala.io.Source
 import play.api.libs.concurrent.Execution.Implicits._
@@ -17,11 +15,10 @@ import play.api.libs.json._
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.common.queue.RichConnectionUpdateMessage
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.abook.model.{ EmailAccountRepo, EContactRepo, EContact }
 import com.keepit.abook.{ ABookImporterPlugin, OAuth2TokenRepo, ABookInfoRepo }
-import com.keepit.abook.commanders.{ LocalRichConnectionCommander, ABookCommander }
+import com.keepit.abook.commanders.ABookCommander
 
 // provider-specific
 class ABookOwnerInfo(val id: Option[String], val email: Option[String] = None)
@@ -63,8 +60,7 @@ class ABookController @Inject() (
     oauth2TokenRepo: OAuth2TokenRepo,
     typeahead: EContactTypeahead,
     abookCommander: ABookCommander,
-    contactsUpdater: ABookImporterPlugin,
-    richConnectionCommander: LocalRichConnectionCommander) extends UserActions with ABookServiceController {
+    contactsUpdater: ABookImporterPlugin) extends UserActions with ABookServiceController {
 
   // gmail
   def importContacts(userId: Id[User]) = Action.async(parse.json) { request =>
@@ -217,12 +213,6 @@ class ABookController @Inject() (
     typeahead.refreshAll map { r =>
       Ok(Json.obj("code" -> "success"))
     }
-  }
-
-  def richConnectionUpdate() = Action(parse.tolerantJson) { request =>
-    val updateMessage = request.body.as[RichConnectionUpdateMessage]
-    richConnectionCommander.processUpdateImmediate(updateMessage)
-    Ok("")
   }
 
   def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>

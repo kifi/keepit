@@ -9,10 +9,8 @@ import com.keepit.common.db.Id
 import play.api.libs.json._
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import play.api.mvc.{ AnyContent, Action }
 import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
-import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.abook.controllers.ABookController
 import com.keepit.abook.model._
@@ -23,7 +21,6 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
     ABookCacheModule(HashMapMemoryCacheModule()),
     FakeABookServiceClientModule(),
     FakeShoeboxServiceModule(),
-    FakeSimpleQueueModule(),
     FakeABookImporterPluginModule(),
     FakeABookStoreModule(),
     FakeUserActionsModule(),

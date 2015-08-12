@@ -4,14 +4,10 @@ import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ABook
 import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.store.ABookProdStoreModule
-import com.keepit.common.zookeeper.ProdDiscoveryModule
-import com.keepit.common.service.ServiceType
-import com.keepit.common.queue.ProdSimpleQueueModule
 
-case class ABookProdModule() extends ABookModule(
-  userActionsModule = ProdRemoteUserActionsHelperModule(),
-  cacheModule = ABookCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  storeModule = ABookProdStoreModule(),
-  contactsUpdaterPluginModule = ProdABookImporterPluginModule(),
-  sqsModule = ProdSimpleQueueModule()
-) with CommonProdModule
+case class ABookProdModule() extends ABookModule with CommonProdModule {
+  val userActionsModule = ProdRemoteUserActionsHelperModule()
+  val cacheModule = ABookCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+  val storeModule = ABookProdStoreModule()
+  val contactsUpdaterPluginModule = ProdABookImporterPluginModule()
+}
