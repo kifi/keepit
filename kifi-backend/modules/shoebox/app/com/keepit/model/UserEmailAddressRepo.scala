@@ -79,13 +79,10 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
-    val user = userRepo.get(userId)
-    user.primaryEmail getOrElse {
-      val all = getAllByUser(userId)
-      (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
-        case Some(email) => email.address
-        case None => throw new Exception(s"no emails for user $userId")
-      }
+    val all = getAllByUser(userId)
+    (all.find(_.primary) orElse all.find(_.verified) orElse all.headOption) match {
+      case Some(email) => email.address
+      case None => throw new Exception(s"no emails for user $userId")
     }
   }
 

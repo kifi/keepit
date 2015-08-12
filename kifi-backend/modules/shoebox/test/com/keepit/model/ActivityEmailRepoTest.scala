@@ -12,7 +12,7 @@ class ActivityEmailRepoTest extends Specification with ShoeboxTestInjector {
     "save model" in {
       withDb() { implicit injector =>
         val (activityEmail, user1) = db.readWrite { implicit rw =>
-          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").saved
+          val u1 = user().withName("Kifi", "User1").saved
           val unsavedActivityEmail = ActivityEmail(
             userId = u1.id.get,
             state = ActivityEmailStates.PENDING,

@@ -27,8 +27,6 @@ object UserFactory {
     def withUsername(name: String): PartialUser = new PartialUser(user.copy(primaryUsername = Some(PrimaryUsername(Username(name), Username(name)))))
     def withPictureName(name: String) = new PartialUser(user.copy(pictureName = Some(name)))
     def withState(state: State[User]) = new PartialUser(user.copy(state = state))
-    def withEmailAddress(address: EmailAddress) = new PartialUser(user.copy(primaryEmail = Some(address)))
-    def withEmailAddress(address: String): PartialUser = this.withEmailAddress(EmailAddress(address))
     def withExperiments(experiments: UserExperimentType*) = new PartialUser(user, experiments ++ _experiments)
     def withSeq(seq: Int) = new PartialUser(user.copy(seq = SequenceNumber[User](seq)))
     def get: User = user
