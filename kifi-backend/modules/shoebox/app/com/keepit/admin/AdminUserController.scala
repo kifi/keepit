@@ -1067,4 +1067,36 @@ class AdminUserController @Inject() (
     abookClient.hideOrganizationRecommendationForUser(userId, orgId)
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
+
+  def migratePrimaryEmails(limit: Option[Int]) = AdminUserPage { implicit request =>
+    SafeFuture {
+      val pageSize = 100
+      var page = 0
+      var total = 0
+      var lastFixed: Option[Int] = None
+      while (!limit.exists(_ < total) && !lastFixed.contains(0)) {
+        lastFixed = Some {
+          db.readWrite { implicit sesssion =>
+            val users = userRepo.pageAscending(0, pageSize)
+            users.foreach { user =>
+              user.primaryEmail.foreach { primaryEmail =>
+                emailRepo.getOwner(primaryEmail) match {
+                  case Some(ownerId) if ownerId != user.id.get => log.error(s"[PrimaryEmailMigration] User.primaryEmail $primaryEmail, of user ${user.id.get} is actually owned by user $ownerId.")
+                  case _ => userEmailAddressCommander.intern(user.id.get, primaryEmail) match {
+                    case Failure(ex) => log.error(s"[PrimaryEmailMigration] Failed to intern User.primaryEmail $primaryEmail of user ${user.id.get}: $ex.")
+                    case Success((emailAddress, _)) => userEmailAddressCommander.setAsPrimaryEmail(emailAddress)
+                  }
+                }
+              }
+            }
+            page += 1
+            total += users.length
+            users.length
+          }
+        }
+        log.info(s"[PrimaryEmailMigration] Processed $total users so far.")
+      }
+    }
+    Ok("It's on!")
+  }
 }
