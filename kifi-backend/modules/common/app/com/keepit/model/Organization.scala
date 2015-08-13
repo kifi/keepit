@@ -17,6 +17,7 @@ import play.api.libs.json._
 import play.api.mvc.{ QueryStringBindable, PathBindable }
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 case class Organization(
     id: Option[Id[Organization]] = None,
@@ -62,7 +63,7 @@ case class Organization(
     }
   }
 
-  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.handle)
+  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, Try(this.handle).toOption)
 
   def isActive: Boolean = state == OrganizationStates.ACTIVE
   def isInactive: Boolean = state == OrganizationStates.INACTIVE
@@ -147,7 +148,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
-case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: OrganizationHandle)
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: Option[OrganizationHandle])
 
 object IngestableOrganization {
   implicit val format = Json.format[IngestableOrganization]
