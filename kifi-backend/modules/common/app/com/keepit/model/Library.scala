@@ -246,7 +246,7 @@ object LibrarySlug {
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
 
   private val MaxLength = 50
-  private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags")
+  private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags", "members")
   private val BeforeTruncate = Seq("[^\\w\\s-]|_" -> "", "(\\s|--)+" -> "-", "^-" -> "") map compile
   private val AfterTruncate = Seq("-$" -> "") map compile
 
