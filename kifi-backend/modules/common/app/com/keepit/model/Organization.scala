@@ -151,7 +151,15 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: Option[OrganizationHandle])
 
 object IngestableOrganization {
-  implicit val format = Json.format[IngestableOrganization]
+  implicit val format = (
+    (__ \ 'id).formatNullable[Id[Organization]] and
+    (__ \ 'state).format[State[Organization]] and
+    (__ \ 'seq).format[SequenceNumber[Organization]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'handle).formatNullable[OrganizationHandle]
+  )(IngestableOrganization.apply _, unlift(IngestableOrganization.unapply))
 }
 
 object OrganizationStates extends States[Organization]
