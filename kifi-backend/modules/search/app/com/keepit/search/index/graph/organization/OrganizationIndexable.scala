@@ -55,14 +55,14 @@ class OrganizationIndexable(organization: IngestableOrganization) extends Indexa
     doc.add(buildKeywordField(ownerField, organization.ownerId.id.toString))
     doc.add(buildIdValueField(ownerIdField, organization.ownerId))
 
-    doc.add(buildTextField(handleField, organization.handle.value, DefaultAnalyzer.getAnalyzer(lang)))
+    organization.handle.foreach(handle => doc.add(buildTextField(handleField, handle.value, DefaultAnalyzer.getAnalyzer(lang))))
     doc.add(buildBinaryDocValuesField(recordField, OrganizationRecord(organization)))
 
     doc
   }
 }
 
-case class OrganizationRecord(id: Id[Organization], name: String, description: Option[String], ownerId: Id[User], handle: OrganizationHandle)
+case class OrganizationRecord(id: Id[Organization], name: String, description: Option[String], ownerId: Id[User], handle: Option[OrganizationHandle])
 
 object OrganizationRecord {
   def apply(org: IngestableOrganization): OrganizationRecord = OrganizationRecord(org.id.get, org.name, org.description, org.ownerId, org.handle)
@@ -76,7 +76,7 @@ object OrganizationRecord {
     out.writeString(record.name)
     out.writeString(record.description.getOrElse(""))
     out.writeLong(record.ownerId.id)
-    out.writeString(record.handle.value)
+    out.writeString(record.handle.map(_.value).getOrElse(""))
 
     out.close()
     baos.close()
@@ -93,7 +93,7 @@ object OrganizationRecord {
         val name = in.readString()
         val description = Some(in.readString()).filter(_.nonEmpty)
         val ownerId = Id[User](in.readLong())
-        val handle = OrganizationHandle(in.readString())
+        val handle = Some(OrganizationHandle(in.readString())).filter(_.value.nonEmpty)
         OrganizationRecord(id, name, description, ownerId, handle)
       case _ => throw new Exception(s"invalid data [version=$version]")
     }
