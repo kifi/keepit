@@ -46,7 +46,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
-  def latestManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
@@ -505,7 +505,7 @@ class KeepRepoImpl @Inject() (
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc, b.library_id asc limit $count""".as[(Id[Library], Int)].list
   }
 
-  def latestManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+  def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     val sources: Set[KeepSource] = Set(KeepSource.keeper, KeepSource.mobile, KeepSource.email, KeepSource.site)
     rows.filter(k => k.userId === userId && k.source.inSet(sources)).map(_.keptAt).max.run
   }
