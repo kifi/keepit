@@ -151,7 +151,14 @@ class LibraryCommanderImpl @Inject() (
     clock: Clock) extends LibraryCommander with Logging {
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
-    if (limit > 0) db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
+    if (limit > 0) db.readOnlyReplicaAsync { implicit s =>
+      val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
+      val newWay = ktlRepo.getByLibraryId(libraryId, Offset(offset), Limit(limit)) |> ktlCommander.getKeeps
+      if (newWay != oldWay) {
+        log.info(s"[KTL-MATCH] getKeeps: $newWay != $oldWay")
+      }
+      oldWay
+    }
     else Future.successful(Seq.empty)
   }
 
@@ -276,9 +283,12 @@ class LibraryCommanderImpl @Inject() (
                 if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
-              case _ => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case _ =>
+                val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+                val newWay = ktlRepo.getByLibraryId(library.id.get, Offset(0), Limit(maxKeepsShown)) |> ktlCommander.getKeeps
+                if (newWay != oldWay) log.info(s"[KTL-MATCH] createFullLibraryInfos: $newWay != $oldWay")
+                oldWay
             }
-
           }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
