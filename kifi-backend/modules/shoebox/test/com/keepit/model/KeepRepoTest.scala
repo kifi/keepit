@@ -62,8 +62,8 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3)
         }
         db.readOnlyMaster { implicit s =>
-          inject[KeepRepo].latestKeep(user1.id.get).get.year().get() === 2015
-          inject[KeepRepo].latestKeep(user3.id.get) === None
+          inject[KeepRepo].latestManualKeepTime(user1.id.get).get.year().get() === 2015
+          inject[KeepRepo].latestManualKeepTime(user3.id.get) === None
         }
       }
     }

@@ -32,6 +32,7 @@ case class UserStatistics(
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
+  dateLastManualKeep: Option[DateTime],
   orgs: Seq[Organization],
   orgCandidates: Seq[Organization])
 
@@ -124,6 +125,7 @@ class UserStatisticsCommander @Inject() (
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+    val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
 
@@ -140,6 +142,7 @@ class UserStatisticsCommander @Inject() (
       kifiInstallations,
       librariesCreated,
       librariesFollowed,
+      latestManualKeepTime,
       orgs,
       orgCandidates
     )
@@ -153,7 +156,7 @@ class UserStatisticsCommander @Inject() (
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
-      val dateLastManualKeep = keepRepo.getDateLastManualKeep(userId)
+      val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
       val user = userRepo.get(userId)
       for (
         numChats <- numChatsFut

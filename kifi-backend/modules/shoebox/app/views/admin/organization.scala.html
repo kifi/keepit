@@ -94,10 +94,10 @@ orgStats: OrganizationStatistics
         <th>External Id</th>
         <th>Member Name</th>
         <th>Role</th>
+        <th>Last Keep</th>
         <th>Lib create/follow</th>
         <th>Keeps PRV/PUB</th>
         <th>Messages all/active/started</th>
-        <th>Last Keep</th>
         <th>Remove</th>
         <th>Make an owner</th>
     </tr>
@@ -107,10 +107,10 @@ orgStats: OrganizationStatistics
             <td>@orgStats.membersStatistics(membership.userId).user.externalId.id</td>
             <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
             <td>@membership.role</td>
+            <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
             <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(membership.userId).numChats</td>
-            <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
@@ -124,9 +124,10 @@ orgStats: OrganizationStatistics
         <th>Candidate Id</th>
         <th>External Id</th>
         <th>Candidate Name</th>
-        <th># of libraries</th>
-        <th># of keeps</th>
-        <th># of chats</th>
+        <th>Last Keep</th>
+        <th>libraries</th>
+        <th>keeps</th>
+        <th>Chats</th>
         <th>Remove</th>
         <th>Make a member</th>
         <th>Invite 2ba member</th>
@@ -137,6 +138,7 @@ orgStats: OrganizationStatistics
             <td>@candidate.userId</td>
             <td>@orgStats.membersStatistics(candidate.userId).user.externalId.id</td>
             <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+            <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
             <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
             <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>

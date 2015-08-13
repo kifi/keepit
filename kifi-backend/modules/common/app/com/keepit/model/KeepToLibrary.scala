@@ -27,6 +27,8 @@ case class KeepToLibrary(
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepToLibrary = this.copy(updatedAt = now)
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
+  def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
+  def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
