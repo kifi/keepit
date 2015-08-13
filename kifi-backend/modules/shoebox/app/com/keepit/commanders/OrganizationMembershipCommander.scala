@@ -278,7 +278,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val webhookUrl = "https://hooks.slack.com/services/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"
 
     val user = userRepo.get(userId)
-    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName} just joined <http://ww.kifi.com/${organization.handle.value}?kma=1|${organization.name}."
+    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just joined <http://www.kifi.com/${organization.handle.value}?kma=1|${organization.name}>."
     val message = BasicSlackMessage(text = text, channel = Some(channel))
 
     val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
