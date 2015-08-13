@@ -423,6 +423,8 @@
 
 .kifi-keep-box-lib-icon {
   display: inline-block;
+  vertical-align: middle;
+  margin-top: -1px;
 }
 
 .kifi-keep-box-lib-card {
@@ -447,6 +449,7 @@
   background-repeat: no-repeat;
   width: 11px;
   height: 11px;
+  margin-top: -2px;
 }
 .kifi-secret .kifi-keep-box-lib-icon {
   @url: %(@svgLibCardLockDataUrl, #000);
@@ -456,6 +459,17 @@
   background-repeat: no-repeat;
   width: 8px;
   height: 12px;
+}
+.kifi-keep-box-lib-organization.kifi-published .kifi-keep-box-lib-icon {
+  @url: %(@svgLibCardGlobeDataUrl, #000);
+  background-image: url(@url);
+  background-position: center;
+  background-size: 12px 12px;
+  background-repeat: no-repeat;
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+  margin-right: -2px;
 }
 
 .kifi-create .kifi-keep-box-lib-card {
