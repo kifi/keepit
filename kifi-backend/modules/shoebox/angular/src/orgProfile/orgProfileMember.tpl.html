@@ -18,7 +18,7 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button ng-if="shouldShowMakeOwner()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerMakeOwner(member)">
+      <button ng-if="shouldShowMakeOwner()" class="kf-button kf-button-small" ng-click="triggerMakeOwner(member)">
         <svg 
           kf-symbol-sprite
           icon="owner"
@@ -26,7 +26,7 @@
         ></svg>
         <span class="kf-org-member-action-title">Make owner</span>
       </button>
-      <button ng-if="shouldShowDemote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerDemote(member)">
+      <button ng-if="shouldShowDemote()" class="kf-button kf-button-small" ng-click="triggerDemote(member)">
         <svg 
           kf-symbol-sprite
           icon="demote"
@@ -34,7 +34,7 @@
         ></svg>
         <span class="kf-org-member-action-title">Demote</span>
       </button>
-      <button ng-if="shouldShowPromote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerPromote(member)">
+      <button ng-if="shouldShowPromote()" class="kf-button kf-button-small" ng-click="triggerPromote(member)">
         <svg 
           kf-symbol-sprite
           icon="admin"
