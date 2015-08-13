@@ -1,6 +1,7 @@
 package com.keepit.notify.model
 
 import com.keepit.notify.info.ReturnsInfoResult
+import com.keepit.notify.model.event._
 import play.api.libs.json._
 
 import scala.annotation.implicitNotFound

@@ -18,6 +18,7 @@ import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, P
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.notify.model._
+import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
 import play.api.http.Status._
 import play.api.libs.json.Json

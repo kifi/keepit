@@ -5,7 +5,8 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.notify.model.{ Recipient, NewKeepActivity }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewKeepActivity
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 

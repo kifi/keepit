@@ -23,7 +23,8 @@ import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationC
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
-import com.keepit.notify.model.{ Recipient, LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator, LibraryNewKeep }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers

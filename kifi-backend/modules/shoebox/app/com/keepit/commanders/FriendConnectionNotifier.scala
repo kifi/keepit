@@ -8,7 +8,8 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
-import com.keepit.notify.model.{ Recipient, NewSocialConnection }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewSocialConnection
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 

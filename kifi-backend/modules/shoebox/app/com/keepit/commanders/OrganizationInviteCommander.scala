@@ -21,7 +21,8 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
-import com.keepit.notify.model.{ Recipient, OrgInviteAccepted, OrgNewInvite }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
