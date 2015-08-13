@@ -183,7 +183,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
-    val q = for (b <- rows if b.id.inSet(ids) && b.state === KeepStates.ACTIVE) yield b
+    val q = for (b <- rows if b.id.inSet(ids)) yield b
     q.list.map { keep => (keep.id.get, keep) }.toMap
   }
 
