@@ -7,7 +7,6 @@ import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.common.queue.RichConnectionUpdateMessage
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
@@ -72,14 +71,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def refreshAllFilters(): Future[Unit] = ???
 
-  def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = ???
-
-  def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
-
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = ???
-
-  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
-
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
@@ -128,7 +119,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = Future.successful(Seq.empty)
 
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = Future.successful(())
-
-  def fixEmailAddresses(): Future[Unit] = ???
 
 }

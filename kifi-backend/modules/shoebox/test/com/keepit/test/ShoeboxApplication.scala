@@ -17,7 +17,6 @@ import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.oauth.{ FakeOAuth1ConfigurationModule, FakeOAuth2ConfigurationModule }
-import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
@@ -57,10 +56,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     AbuseControlModule(),
     FakeSchedulerModule(),
     FakeKeepImportsModule(),
-    FakeSimpleQueueModule(),
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
-    FakeShoeboxRepoChangeListenerModule(),
     FakeCryptoModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule()
@@ -86,10 +83,8 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeNormalizationServiceModule(),
     AbuseControlModule(),
     FakeSchedulerModule(),
-    FakeSimpleQueueModule(),
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
-    FakeShoeboxRepoChangeListenerModule(),
     FakeCryptoModule(),
     FakeActorSystemModule(),
     FakeSecureSocialClientIdModule(),

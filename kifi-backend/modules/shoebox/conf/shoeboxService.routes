@@ -577,8 +577,6 @@ GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
-POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
 POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
@@ -713,7 +711,7 @@ POST    /admin/organization/:id/removeMember                 @com.keepit.control
 POST    /admin/organization/:id/transferOwner                @com.keepit.controllers.admin.AdminOrganizationController.transferOwner(id: Id[Organization])
 POST    /admin/organization/:id/ownDomain                    @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
 GET     /admin/organization/:id/disownDomain/:domainHostname @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainHostname: String)
-POST    /admin/organization/:id/setInactive                  @com.keepit.controllers.admin.AdminOrganizationController.setInactive(id: Id[Organization])
+POST    /admin/organization/:id/forceDeactivate              @com.keepit.controllers.admin.AdminOrganizationController.forceDeactivate(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                                 @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
@@ -737,7 +735,6 @@ GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin
 # TEMPORARY ROUTE - remove when activity email is live
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
 
-GET     /admin/users/fixEmailAddresses         @com.keepit.controllers.admin.AdminUserController.fixEmailAddresses()
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
@@ -748,7 +745,6 @@ GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUse
 POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
-GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.triggerPush()
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
@@ -796,6 +792,7 @@ POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.
 POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
 POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
+POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()

@@ -7,7 +7,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.queue.RichConnectionUpdateMessage
 import com.keepit.common.routes.ABook
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
@@ -41,10 +40,6 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFilter(userId: Id[User]): Future[Unit]
   def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit]
   def refreshAllFilters(): Future[Unit]
-  def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
-  def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
-  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]]
@@ -62,7 +57,6 @@ trait ABookServiceClient extends ServiceClient {
   def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]]
   def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int): Future[Seq[OrganizationUserMayKnow]]
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit]
-  def fixEmailAddresses(): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -201,25 +195,6 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
-    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => () }
-  }
-
-  def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = {
-    implicit val idFormatter = Id.format[SocialUserInfo]
-    call(ABook.internal.ripestFruit(userId, howMany)).map { r =>
-      r.json.as[Seq[Id[SocialUserInfo]]]
-    }
-  }
-
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = {
-    call(ABook.internal.countInvitationsSent(userId, friend)).map(_.json.as[Int])
-  }
-
-  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = {
-    call(ABook.internal.getRipestFruits(userId, page, pageSize)).map(_.json.as[Seq[RichSocialConnection]])
-  }
-
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
   }
@@ -272,9 +247,4 @@ class ABookServiceClientImpl @Inject() (
   def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]): Future[Unit] = {
     call(ABook.internal.hideOrganizationRecommendationForUser(userId, irrelevantOrganizationId)).map(_ => ())
   }
-
-  def fixEmailAddresses(): Future[Unit] = {
-    call(ABook.internal.fixEmailAddresses()).map(_ => ())
-  }
-
 }

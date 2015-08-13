@@ -957,7 +957,7 @@ class AdminUserController @Inject() (
 
     val user = userRepo.get(userId)
 
-    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
+    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryUsername = None)) // User
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
@@ -1066,10 +1066,5 @@ class AdminUserController @Inject() (
   def hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization]) = AdminUserPage { request =>
     abookClient.hideOrganizationRecommendationForUser(userId, orgId)
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
-  }
-
-  def fixEmailAddresses() = AdminUserPage { implicit request =>
-    abookClient.fixEmailAddresses()
-    Ok("It's on!")
   }
 }

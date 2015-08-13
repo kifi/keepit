@@ -19,7 +19,6 @@ trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAc
   def getByAddresses(addresses: EmailAddress*)(implicit session: RSession): Map[EmailAddress, EmailAccount]
   def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Map[EmailAddress, EmailAccount]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
-  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[EmailAccount]
 }
 
 @Singleton
@@ -50,7 +49,8 @@ class EmailAccountRepoImpl @Inject() (
   override def invalidateCache(emailAccount: EmailAccount)(implicit session: RSession): Unit = {}
 
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount] = {
-    (for (row <- rows if row.address === address) yield row).firstOption
+    val hash = EmailAddressHash.hashEmailAddress(address)
+    (for (row <- rows if row.address === address && row.hash === hash) yield row).firstOption
   }
 
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount = {
@@ -61,7 +61,9 @@ class EmailAccountRepoImpl @Inject() (
   }
 
   def getByAddresses(addresses: EmailAddress*)(implicit session: RSession): Map[EmailAddress, EmailAccount] = {
-    (for (row <- rows if row.address inSet (addresses)) yield (row.address, row)).list.toMap
+    val hashes = addresses.map(EmailAddressHash.hashEmailAddress)
+    val lowerCasedAddresses = addresses.map(_.address.toLowerCase)
+    (for (row <- rows if row.hash inSet (hashes)) yield (row.address, row)).list.toMap.filterKeys(address => lowerCasedAddresses.contains(address.address.toLowerCase))
   }
 
   def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Map[EmailAddress, EmailAccount] = {
@@ -83,11 +85,6 @@ class EmailAccountRepoImpl @Inject() (
 
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
     getByAddress(address).filter(_.verified).flatMap(_.userId)
-  }
-
-  def getWithEmptyHash(limit: Int)(implicit session: RSession): Seq[EmailAccount] = {
-    val emptyHash = EmailAddressHash("")
-    (for (e <- rows if e.hash === emptyHash) yield e).take(limit).list
   }
 }
 

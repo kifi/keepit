@@ -20,6 +20,16 @@ angular.module('kifi')
       return !$scope.member.lastInvitedAt;
     }
 
+    function _shouldShowMakeOwner() {
+      var $scope = this;
+
+      return (
+        $scope.myMembership.role === 'owner' &&
+        $scope.member.role !== 'owner' &&
+        $scope.hasAcceptedInvite()
+      );
+    }
+
     function _shouldShowPromote() {
       var $scope = this;
       return (
@@ -33,6 +43,7 @@ angular.module('kifi')
       var $scope = this;
       return (
         profileService.me.id === $scope.organization.ownerId &&
+        !$scope.isMe() &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
@@ -72,6 +83,11 @@ angular.module('kifi')
     function _triggerRemove() {
       var $scope = this;
       $scope.$emit('removeMember', $scope.member);
+    }
+
+    function _triggerMakeOwner() {
+      var $scope = this;
+      $scope.$emit('makeOwner', $scope.member);
     }
 
     function _triggerPromote() {
@@ -138,6 +154,7 @@ angular.module('kifi')
         $scope.resentInvite = _resentInvite;
 
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
+        $scope.shouldShowMakeOwner = _shouldShowMakeOwner;
         $scope.shouldShowPromote = _shouldShowPromote;
         $scope.shouldShowDemote = _shouldShowDemote;
         $scope.shouldShowRemove = _shouldShowRemove;
@@ -147,6 +164,7 @@ angular.module('kifi')
         $scope.triggerInvite = _triggerInvite;
         $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;
+        $scope.triggerMakeOwner = _triggerMakeOwner;
         $scope.triggerPromote = _triggerPromote;
         $scope.triggerDemote = _triggerDemote;
       }

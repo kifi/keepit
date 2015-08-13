@@ -775,8 +775,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
 
         val (user1, user2, user3, lib1, lib2) = db.readWrite { implicit s =>
-          val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").withEmailAddress("aaron@kifi.com").saved
-          val user2 = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("test").withEmailAddress("bulba@yahoo.com").saved
+          val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").saved
+          val user2 = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("test").saved
           val user3 = UserFactory.user().withCreatedAt(t1).withName("Char", "Mander").withUsername("test").saved
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
@@ -845,7 +845,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          val userA = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("ahsu").withEmailAddress("email@gmail.com").saved
+          val userA = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("ahsu").saved
           val userB = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("bulbasaur").saved
 
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))

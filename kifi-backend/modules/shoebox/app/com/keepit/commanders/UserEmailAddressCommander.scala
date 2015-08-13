@@ -96,10 +96,10 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       pendingEmail.exists(_ equalsIgnoreCase verifiedEmail.address)
     }
 
-    val user = userRepo.get(verifiedEmail.userId)
+    val hasPrimaryEmail = userEmailAddressRepo.getPrimaryByUser(emailAddress.userId).isDefined
 
-    if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) {
-      updatePrimaryEmailForUser(user, verifiedEmail)
+    if (hasPrimaryEmail || isPendingPrimaryEmail) {
+      updatePrimaryEmailForUser(verifiedEmail)
     } else {
       verifiedEmail
     }
@@ -107,21 +107,18 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
   def setAsPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     if (primaryEmail.verified) {
-      val user = userRepo.get(primaryEmail.userId)
-      updatePrimaryEmailForUser(user, primaryEmail)
+      updatePrimaryEmailForUser(primaryEmail)
     } else {
       userValueRepo.setValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL, primaryEmail.address)
     }
   }
 
-  private def updatePrimaryEmailForUser(user: User, primaryEmail: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
+  private def updatePrimaryEmailForUser(primaryEmail: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
-    require(primaryEmail.userId == user.id.get, s"Suggested primary email $primaryEmail does not belong to $user")
 
     session.onTransactionSuccess { heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address)) }
 
     userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
-    userRepo.save(user.copy(primaryEmail = Some(primaryEmail.address)))
     userEmailAddressRepo.getPrimaryByUser(primaryEmail.userId) match {
       case Some(existingPrimary) if existingPrimary.address equalsIgnoreCase primaryEmail.address => existingPrimary // this email is already marked as primary
       case existingPrimaryOpt => {
@@ -131,9 +128,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = {
-    userRepo.get(emailAddress.userId).primaryEmail.exists(_ == emailAddress.address)
-  }
+  def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = { emailAddress.primary }
 
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit] = {
     val allEmails = userEmailAddressRepo.getAllByUser(emailAddress.userId)

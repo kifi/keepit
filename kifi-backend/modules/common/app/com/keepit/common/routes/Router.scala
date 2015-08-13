@@ -298,14 +298,6 @@ object ABook extends Service {
     def refreshPrefixFilter(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/refreshPrefixFilter")
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")
-    def richConnectionUpdate() = ServiceRoute(POST, s"/internal/abook/richConnectionUpdate")
-    def blockRichConnection() = ServiceRoute(POST, s"/internal/abook/blockRichConnection")
-    def ripestFruit(userId: Id[User], howMany: Int) = ServiceRoute(GET, s"/internal/abook/ripestFruit?userId=${userId.id}&howMany=$howMany")
-    def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]) = ServiceRoute(GET, s"/internal/abook/${userId}/countInvitationsSent", friend match {
-      case Left(friendSocialId) => Param("friendSocialId", friendSocialId)
-      case Right(friendEmailAddress) => Param("friendEmailAddress", friendEmailAddress)
-    })
-    def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
     def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
     def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
     def internKifiContacts(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContacts")
@@ -325,7 +317,6 @@ object ABook extends Service {
     def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
     def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
     def hideOrganizationRecommendationForUser(userId: Id[User], irrelevantOrganizationId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideOrganizationRecommendation", Param("irrelevantOrganizationId", irrelevantOrganizationId))
-    def fixEmailAddresses() = ServiceRoute(GET, "/internal/abook/database/fixEmailAddresses")
   }
 }
 

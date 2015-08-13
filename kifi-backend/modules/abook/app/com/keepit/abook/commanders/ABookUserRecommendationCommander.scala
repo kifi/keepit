@@ -35,7 +35,6 @@ class ABookUserRecommendationCommander @Inject() (
     organizationRecommendationForUserRepo: OrganizationRecommendationForUserRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
-    oldWTICommander: WTICommander,
     abookRecommendationHelper: AbookRecommendationHelper,
     clock: Clock) extends Logging {
 
@@ -69,7 +68,6 @@ class ABookUserRecommendationCommander @Inject() (
         case unsupportedNetwork => throw new IllegalArgumentException(s"Cannot hide unsupported invite recommendation: $unsupportedNetwork")
       }
     }
-    oldWTICommander.blockRichConnection(userId, irrelevantFriendId.swap)
   }
 
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[UserInviteRecommendation]] = {

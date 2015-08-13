@@ -127,8 +127,7 @@ angular.module('kifi')
         modalData: {
           organization: organization,
           member: member,
-          isMe: member.id === $scope.me.id,
-          action: 'remove'
+          isMe: member.id === $scope.me.id
         },
         scope: $scope
       });
@@ -157,10 +156,15 @@ angular.module('kifi')
         modalData: {
           organization: organization,
           member: member,
-          isMe: member.id === $scope.me.id,
-          action: 'cancel'
+          isMe: member.id === $scope.me.id
         },
         scope: $scope
+      });
+    });
+
+    $scope.$on('makeOwner', function(e, member) {
+      modifyMemberRole(member, 'owner').then(function() {
+        memberPageAnalytics({ action: 'clickedMakeOwner', orgMember: member.username });
       });
     });
 

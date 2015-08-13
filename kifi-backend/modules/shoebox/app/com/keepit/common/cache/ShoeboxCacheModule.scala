@@ -271,10 +271,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
-  @Provides @Singleton
-  def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
-
   @Singleton
   @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

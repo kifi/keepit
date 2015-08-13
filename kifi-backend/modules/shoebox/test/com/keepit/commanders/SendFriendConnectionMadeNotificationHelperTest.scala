@@ -19,8 +19,11 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
 
     db.readWrite { implicit session =>
 
-      val user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").withEmailAddress("homer@gmail.com").saved
-      val user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").withEmailAddress("peter@gmail.com").saved
+      val user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").saved
+      val user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
+
+      userEmailAddressCommander.intern(user1.id.get, EmailAddress("homer@gmail.com")).get
+      userEmailAddressCommander.intern(user2.id.get, EmailAddress("peter@gmail.com")).get
 
       (user1, user2)
     }

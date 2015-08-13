@@ -39,8 +39,7 @@ class SocialUserInfoRepoImpl @Inject() (
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
   val basicInfoCache: SocialUserBasicInfoCache,
-  val socialUserNetworkCache: SocialUserNetworkCache,
-  override protected val changeListener: Option[RepoModification.Listener[SocialUserInfo]])
+  val socialUserNetworkCache: SocialUserNetworkCache)
     extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SeqNumberDbFunction[SocialUserInfo] with SocialUserInfoRepo {
 
   import db.Driver.simple._

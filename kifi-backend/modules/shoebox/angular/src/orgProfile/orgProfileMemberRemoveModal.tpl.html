@@ -1,14 +1,10 @@
 <div kf-modal kf-width="550px">
-  <div kf-basic-modal-content title="{{ (modalData.isMe ? 'Leave ' : 'Remove ' + modalData.member.firstName + ' from ') + (modalData.organization | name) + '?' }}" centered="true" action-text="Remove" with-cancel cancel-text="Cancel" action="removeOrCancelMember(modalData.member, modalData.action)">
-    <p ng-if="modalData.isMe">
-      Continuing will remove your access to content that is only visible to {{ modalData.organization | name }} members.
-      You will still have access to {{ modalData.organization | name }}'s public libraries and any content you have been explicitly invited to follow or collaborate on.
-    </p>
-    <p ng-if="modalData.isMe">You can be invited back at any time.</p>
-    <p ng-if="!modalData.isMe">
-      Continuing will remove {{ (modalData.member.firstName || modalData.member.email) + '\'s' }} access to content that is only visible to {{ modalData.organization | name }} members.
-      They will still have access to your organization's public libraries and any content they have been explicitly invited to follow or collaborate on.
-    </p>
-    <p ng-if="!modalData.isMe">{{ modalData.member.firstName || modalData.member.email }} will not receive a notification and you can invite them back at any time.</p>
+  <div kf-org-profile-member-remove kf-basic-modal-content title="{{ modalData.title }}" centered="true" with-cancel with-warning action-text="{{ modalData.actionText }}" action="removeOrCancelMember(modalData.member, modalData.action)">
+    <div class="kf-opmr-wrapper">
+      <div class="kf-opmr-member-pic"><img ng-src="{{ modalData.member | pic }}" /></div>
+      <div class="kf-opmr-member-descriptions">
+        <p ng-repeat="description in modalData.descriptions">{{ description }}</p>
+      </div>
+    </div>
   </div>
 </div>
