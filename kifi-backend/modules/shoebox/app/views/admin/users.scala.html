@@ -123,7 +123,7 @@
           <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
           <td>@userStatistics.privateKeeps / @userStatistics.publicKeeps</td>
-          <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
+          <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
           <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>

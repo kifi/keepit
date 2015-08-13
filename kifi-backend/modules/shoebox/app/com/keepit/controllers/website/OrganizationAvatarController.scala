@@ -20,6 +20,7 @@ class OrganizationAvatarController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   val orgMembershipCommander: OrganizationMembershipCommander,
+  val orgInviteCommander: OrganizationInviteCommander,
   implicit val config: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
     extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
@@ -31,7 +32,7 @@ class OrganizationAvatarController @Inject() (
     uploadImageF.map {
       case Left(fail) => InternalServerError(Json.obj("error" -> fail.reason))
       case Right(hash) =>
-        orgAvatarCommander.getBestImage(request.orgId, OrganizationAvatarConfiguration.defaultSize) match {
+        orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize) match {
           case Some(avatar: OrganizationAvatar) =>
             Ok(Json.obj("uploaded" -> avatar.imagePath))
           case None =>

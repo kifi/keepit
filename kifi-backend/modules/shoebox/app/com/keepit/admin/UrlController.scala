@@ -468,8 +468,6 @@ class UrlController @Inject() (
             .getOrElse(Domain(hostname = domainName))
             .withManualSensitive(Some(sensitive))
           domainRepo.save(domain)
-        case (domainName, _) =>
-          log.debug("Invalid domain: %s" format domainName)
       }
       domainsToRemove.foreach { domain =>
         domainRepo.save(domain.withManualSensitive(None))

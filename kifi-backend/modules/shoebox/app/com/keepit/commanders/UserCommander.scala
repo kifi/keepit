@@ -115,7 +115,6 @@ class UserCommander @Inject() (
     libraryRepo: LibraryRepo,
     organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
-    orgInviteRepo: OrganizationInviteRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -191,7 +190,7 @@ class UserCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val user = userRepo.getNoCache(userId)
 
-      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, user.primaryEmail, _))
+      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, _))
       userData.biography.foreach(updateUserBiography(userId, _))
 
       if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
@@ -250,7 +249,7 @@ class UserCommander @Inject() (
   def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(email) if email.userId == userId => userEmailAddressCommander.deactivate(email) match {
+        case Some(email) => userEmailAddressCommander.deactivate(email) match {
           case Success(_) => Right(())
           case Failure(_: LastEmailAddressException) => Left("last email")
           case Failure(_: LastVerifiedEmailAddressException) => Left("last verified email")
@@ -276,7 +275,7 @@ class UserCommander @Inject() (
     val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
-      val emails = emailRepo.getAllByUser(user.id.get)
+      val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
 
@@ -294,14 +293,14 @@ class UserCommander @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
 
-    def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
-    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).reverse.map { email =>
-      EmailInfo(
-        address = email.address,
-        isVerified = email.verified,
-        isPrimary = isPrimary(email.address),
-        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
-      )
+    val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
+      case (email, isPrimary) =>
+        EmailInfo(
+          address = email.address,
+          isVerified = email.verified,
+          isPrimary = isPrimary,
+          isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
+        )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
   }
@@ -319,18 +318,11 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]): User = {
+  def createUser(firstName: String, lastName: String, state: State[User]): User = {
     val newUser: User = db.readWrite(attempts = 3) { implicit session =>
-      val user = userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
-      )
-      addrOpt.foreach { emailAddress => // TODO(ryan): this code is broken. that repo method doesn't check for active/inactive
-        if (orgInviteRepo.getByEmailAddress(emailAddress).nonEmpty) {
-          userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = UserExperimentType.ORGANIZATION))
-        }
-      }
+      val user = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
       val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
-        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
+        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] SINCE WE DIDN'T FIND A USERNAME!!!")
       }
       userWithUsername
     }
@@ -362,11 +354,16 @@ class UserCommander @Inject() (
 
     val newUserId = newUser.id.get
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
-      newUser.primaryEmail.map { email =>
-        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
 
+      val verifiedEmailAddresses = db.readOnlyMaster { implicit session =>
+        val allAddresses = emailRepo.getAllByUser(newUserId)
+        allAddresses.collect { case email if email.verified => email.address }
+      }
+
+      if (verifiedEmailAddresses.nonEmpty) Some {
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
         // get users who have this user's email in their contacts
-        abookServiceClient.getUsersWithContact(email) flatMap {
+        Future.sequence(verifiedEmailAddresses.map(abookServiceClient.getUsersWithContact)).imap(_.toSet.flatten) flatMap {
           case contacts if contacts.nonEmpty =>
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
@@ -408,10 +405,11 @@ class UserCommander @Inject() (
             }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
           case _ =>
-            log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
+            log.info("cannot send contact notifications: no verified email found for user.id=" + newUserId)
             Future.successful(Set.empty)
         }
       }
+      else None
     } else Option(Future.successful(Set.empty))
   }
 
@@ -492,12 +490,10 @@ class UserCommander @Inject() (
   }
 
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
+  def updateEmailAddresses(userId: Id[User], firstName: String, emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val uniqueEmails = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
-      // Remove missing emails
-      toRemove.foreach(userEmailAddressCommander.deactivate(_))
 
       // Add new emails
       val added = (uniqueEmails -- existing.map(_.address)).map { address =>
@@ -513,6 +509,9 @@ class UserCommander @Inject() (
           userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
         }
       }
+
+      // Remove missing emails
+      toRemove.foreach(userEmailAddressCommander.deactivate(_))
     }
   }
 
@@ -599,15 +598,19 @@ class UserCommander @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
-    heimdalClient.postDelightedAnswer(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName), answer) map { answerOpt =>
+    val (user, emailAddress) = db.readOnlyReplica { implicit s =>
+      (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
+    }
+    heimdalClient.postDelightedAnswer(DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName), answer) map { answerOpt =>
       answerOpt flatMap (_.answerId)
     }
   }
 
   def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
-    heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
+    val (user, emailAddress) = db.readOnlyReplica { implicit s =>
+      (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
+    }
+    heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, emailAddress, user.fullName))
   }
 
   def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {

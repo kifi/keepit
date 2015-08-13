@@ -66,7 +66,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
 
         db.readOnlyMaster { implicit s =>
-          val org1Avatars = repo.getByOrganization(org1.id.get)
+          val org1Avatars = repo.getByOrgId(org1.id.get)
           org1Avatars.length === OrganizationAvatarConfiguration.numSizes
         }
       }
@@ -88,7 +88,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
 
         db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
+          repo.getByOrgId(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
         }
 
         {
@@ -104,7 +104,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         // Only the second avatars are active
         db.readOnlyMaster { implicit s =>
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
+          repo.getByOrgId(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
           repo.count === 2 * OrganizationAvatarConfiguration.numSizes
         }
 
@@ -131,7 +131,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           repo.count === n * OrganizationAvatarConfiguration.numSizes
           repo.all.map(_.imagePath).toSet.size === n * OrganizationAvatarConfiguration.numSizes
           // Now check the actually active avatars
-          repo.getByOrganization(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
+          repo.getByOrgId(org1.id.get).length === OrganizationAvatarConfiguration.numSizes
         }
       }
     }

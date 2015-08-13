@@ -27,7 +27,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val (library) = db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
+          val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
           val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -66,7 +66,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (library) = db.readWrite { implicit s =>
             val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
+            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
             val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -102,7 +102,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (library) = db.readWrite { implicit s =>
             val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
+            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
             val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))

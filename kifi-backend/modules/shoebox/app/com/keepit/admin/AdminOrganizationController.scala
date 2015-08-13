@@ -384,13 +384,15 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
 
-  def setInactive(orgId: Id[Organization]) = AdminUserAction { implicit request =>
-    db.readWrite { implicit session =>
+  def forceDeactivate(orgId: Id[Organization]) = AdminUserAction { implicit request =>
+    val deleteResponse = db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val orgInactive = org.copy(state = OrganizationStates.INACTIVE)
-      orgRepo.save(orgInactive)
+      orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
     }
-    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
+    deleteResponse match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
+    }
   }
 
 }

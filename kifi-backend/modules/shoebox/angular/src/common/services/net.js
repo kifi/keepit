@@ -23,7 +23,8 @@ angular.module('kifi')
       createLibrary: post(shoebox, '/libraries/add'),
       modifyLibrary: post(shoebox, '/libraries/:id/modify'),
 
-      userOrOrg: get(shoebox, '/user-or-org/:handle', 30),
+      user: get(shoebox, '/user/:id', 30),
+      userOrOrg: get(shoebox, '/user-or-org/:handle?authToken=:authToken', 30),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),
       uploadOrgAvatar: post(shoebox, '/organizations/:id/avatar/upload?x=:x&y=:y&s=:sideLength'),
       getOrgMembers: get(shoebox, '/organizations/:id/members', 30),

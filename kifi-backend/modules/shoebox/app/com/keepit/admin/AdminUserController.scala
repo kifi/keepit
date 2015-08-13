@@ -507,7 +507,7 @@ class AdminUserController @Inject() (
       // Deactivate other emails
       oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        userEmailAddressCommander.deactivate(removedEmail).get
+        userEmailAddressCommander.deactivate(removedEmail, force = true).get
       }
     }
 
@@ -772,7 +772,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmail.foreach { primaryEmail => properties += ("$email", primaryEmail.address) }
+        properties += ("$email", emailRepo.getByUser(userId).address)
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -957,7 +957,7 @@ class AdminUserController @Inject() (
 
     val user = userRepo.get(userId)
 
-    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
+    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryUsername = None)) // User
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
@@ -999,19 +999,19 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
+    val pages: Map[IpAddress, Set[(User, Option[EmailAddress], Set[Organization])]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
   }
 
-  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+  private def usersAndOrgs(userIds: Seq[Id[User]]): Set[(User, Option[EmailAddress], Set[Organization])] = {
     db.readOnlyReplica { implicit s =>
-      val users = userRepo.getAllUsers(userIds).values.toList
-      val orgs = users map { user =>
+      val users = userRepo.getAllUsers(userIds).values.toSet
+      val emailAddresses = userIds.map { userId => userId -> Try(emailRepo.getByUser(userId)).toOption }.toMap
+      users map { user =>
         val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
-        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+        (user, emailAddresses.get(user.id.get).flatten, orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet)
       }
-      orgs.toMap
     }
   }
 

@@ -18,13 +18,14 @@ angular.module('kifi')
     }
 
     function resetAndFetchLibraries() {
+      $scope.libraries = null;
       orgProfileService.invalidateOrgProfileCache();
       newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }
 
-    $scope.libraries = [];
+    $scope.libraries = null;
 
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState) {
@@ -83,6 +84,16 @@ angular.module('kifi')
 
     $scope.shouldShowMoveCard = function () {
       return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
+    };
+
+    $scope.openMoveLibraryHelp = function () {
+      modalService.open({
+        template: 'common/modal/videoModal.tpl.html',
+        modalData: {
+          youtubeId: 'ixAmggSbYmg',
+          title: 'Moving Libraries'
+        }
+      });
     };
 
     resetAndFetchLibraries();

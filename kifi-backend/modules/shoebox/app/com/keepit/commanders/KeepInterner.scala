@@ -121,7 +121,7 @@ class KeepInterner @Inject() (
     if (persistedBookmarksWithUris.nonEmpty) {
       db.readWrite { implicit s =>
         libraryRepo.updateLastKept(library.id.get)
-        Try(libraryRepo.save(libraryRepo.get(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone.
+        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone.
       }
     }
     val createdKeeps = persistedBookmarksWithUris collect {
@@ -147,7 +147,7 @@ class KeepInterner @Inject() (
       }
       db.readWrite { implicit s =>
         libraryRepo.updateLastKept(library.id.get)
-        Try(libraryRepo.save(libraryRepo.get(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone. Needs to be removed.
+        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone. Needs to be removed.
       }
       (bookmark, persistedBookmarksWithUri.isNewKeep)
     }
@@ -265,7 +265,7 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    keepToLibraryCommander.internKeepToLibrary(KeepToLibraryInternRequest(internedKeep.id.get, internedKeep.libraryId.get, internedKeep.userId))
+    keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(internedKeep, library, internedKeep.userId))
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 

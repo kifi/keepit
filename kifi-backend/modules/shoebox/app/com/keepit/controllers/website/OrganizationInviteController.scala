@@ -22,8 +22,8 @@ class OrganizationInviteController @Inject() (
     userCommander: UserCommander,
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     organizationInviteCommander: OrganizationInviteCommander,
-    orgInviteCommander: OrganizationInviteCommander,
     typeaheadCommander: TypeaheadCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -106,6 +106,7 @@ class OrganizationInviteController @Inject() (
   }
 
   def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {

@@ -18,6 +18,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.oauth.{ FakeOAuth1ConfigurationModule, FakeOAuth2ConfigurationModule }
 import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
@@ -101,7 +102,8 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeSearchServiceClientModule(),
     FakeHttpClientModule(),
     DevTwilioCredentialsModule(),
-    FakeExecutionContextModule()
+    FakeExecutionContextModule(),
+    FakeSocialGraphModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]

@@ -11,6 +11,7 @@
 <div class="kf-lib-content">
   <div class="kf-lib-content-1" ui-view></div>
   <section class="kf-lib-content-2">
+    <input class="kf-lib-public-share-link" title="share link" ng-if="library.visibility === 'published'" onclick="this.select();" readonly="readonly" value="{{ 'http://www.kifi.com' + library.path }}" />
     <a class="kf-lib-tweet" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank" ng-if="library.visibility === 'published'">
       <span class="kf-lib-tweet-icon svg-twitter-white"></span>
     </a>

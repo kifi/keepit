@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.cache.TransactionalCaching.Implicits._
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
@@ -21,6 +22,7 @@ import com.kifi.macros.json
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 case class RichIpAddress(ip: IpAddress, org: Option[String], country: Option[String], region: Option[String], city: Option[String],
   lat: Option[Double], lon: Option[Double], timezone: Option[String], zip: Option[String])
@@ -78,6 +80,7 @@ class RichIpAddressCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 class UserIpAddressEventLogger @Inject() (
     db: Database,
     userRepo: UserRepo,
+    emailRepo: UserEmailAddressRepo,
     userIpAddressRepo: UserIpAddressRepo,
     userValueRepo: UserValueRepo,
     httpClient: HttpClient,
@@ -132,8 +135,8 @@ class UserIpAddressEventLogger @Inject() (
   private def linkToOrg(flag: String = "")(org: Organization): String =
     s"<http://admin.kifi.com/admin/organization/${org.id.get.id}|${org.name}$flag>"
 
-  private def formatUser(user: User, candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
-    val primaryMail = user.primaryEmail.map(_.address).getOrElse("No Primary Mail")
+  private def formatUser(user: User, email: Option[EmailAddress], candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
+    val primaryMail = email.map(_.address).getOrElse("No Primary Mail")
     s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
       s"\t$primaryMail" +
       s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
@@ -144,7 +147,7 @@ class UserIpAddressEventLogger @Inject() (
 
   private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
 
-  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
+  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): BasicSlackMessage = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
@@ -155,7 +158,7 @@ class UserIpAddressEventLogger @Inject() (
     )
 
     val userDeclarations = users.map {
-      case (user, candidateOrgs, orgs) => formatUser(user, candidateOrgs, orgs, user.id == newUserId)
+      case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id == newUserId)
     }
 
     BasicSlackMessage((clusterDeclaration ++ userDeclarations).mkString("\n"))
@@ -172,10 +175,10 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
-  def shouldIgnoreAll(clusterUsers: Seq[(User, Seq[Organization], Seq[Organization])]): Boolean =
+  def shouldIgnoreAll(clusterUsers: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])]): Boolean =
     db.readOnlyReplica { implicit s =>
       clusterUsers.forall {
-        case (user, orgs, cands) =>
+        case (user, email, orgs, cands) =>
           orgs.nonEmpty || cands.nonEmpty || userValueRepo.getValue(user.id.get, UserValues.ignoreForPotentialOrganizations)
       }
     }
@@ -187,7 +190,8 @@ class UserIpAddressEventLogger @Inject() (
       userRepo.getUsers(userIds).values.toList map { user =>
         val candidates = organizationRepo.getByIds(organizationMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
         val orgs = organizationRepo.getByIds(organizationMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
-        (user, candidates, orgs)
+        val email = Try(emailRepo.getByUser(user.id.get)).toOption
+        (user, email, candidates, orgs)
       }
     }
     getIpInfoOpt(clusterIp) map { ipInfoOpt =>

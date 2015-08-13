@@ -4,7 +4,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 import com.keepit.common.db._
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 import com.keepit.common.time._
 import com.keepit.model.UserExperimentType.{ AUTO_GEN, FAKE }
 
@@ -17,6 +17,7 @@ case class UserEmailAddress(
     userId: Id[User],
     state: State[UserEmailAddress] = UserEmailAddressStates.ACTIVE,
     address: EmailAddress,
+    hash: EmailAddressHash,
     primary: Boolean = false,
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
@@ -30,6 +31,7 @@ case class UserEmailAddress(
       lastVerificationSent = Some(now),
       verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   }
+  def withAddress(address: EmailAddress) = copy(address = address, hash = EmailAddressHash.hashEmailAddress(address))
   def clearVerificationCode = copy(lastVerificationSent = None, verificationCode = None)
   def verificationSent: Boolean = lastVerificationSent.isDefined && verificationCode.isDefined
   def verified: Boolean = (state == UserEmailAddressStates.ACTIVE) && verifiedAt.isDefined
@@ -38,22 +40,13 @@ case class UserEmailAddress(
 
 object UserEmailAddress {
   private lazy val random = new SecureRandom()
-  private val kifiDomains = Set("kifi.com", "42go.com")
-  private val testDomains = Set("tfbnw.net", "mailinator.com") // tfbnw.net is for fake facebook accounts
-  private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
 
-  def getExperiments(email: UserEmailAddress): Set[UserExperimentType] = {
-    val Array(local, host) = email.address.address.split('@')
-    val tags = tagRe.findAllIn(local).toSet
-    if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
-      Set(FAKE, AUTO_GEN)
-    } else if (kifiDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
-      Set(FAKE)
-    } else if (testDomains.contains(host)) {
-      Set(FAKE)
-    } else {
-      Set.empty
-    }
+  def create(userId: Id[User], address: EmailAddress): UserEmailAddress = {
+    UserEmailAddress(
+      userId = userId,
+      address = address,
+      hash = EmailAddressHash.hashEmailAddress(address)
+    )
   }
 
   // primary: trueOrNull in db
@@ -64,6 +57,7 @@ object UserEmailAddress {
     userId: Id[User],
     state: State[UserEmailAddress] = UserEmailAddressStates.ACTIVE,
     address: EmailAddress,
+    hash: EmailAddressHash,
     primaryOption: Option[Boolean],
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
@@ -77,6 +71,7 @@ object UserEmailAddress {
       userId,
       state,
       address,
+      hash,
       primaryOption.contains(true),
       verifiedAt,
       lastVerificationSent,
@@ -93,6 +88,7 @@ object UserEmailAddress {
       e.userId,
       e.state,
       e.address,
+      e.hash,
       if (e.primary) Some(true) else None,
       e.verifiedAt,
       e.lastVerificationSent,

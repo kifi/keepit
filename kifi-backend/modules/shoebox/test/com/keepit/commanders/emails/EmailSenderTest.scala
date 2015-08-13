@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -49,8 +50,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[InviteToKifiSender]
         val toAddress = EmailAddress("taco@gmail.com")
         val inviteId = ExternalId[Invitation]()
-        val fromUser = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("test").saved
+        val (fromUser, fromEmail) = db.readWrite { implicit rw =>
+          val user = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress("billy@gmail.com")).get._1.address
+          (user, emailAddress)
         }
         val email = Await.result(sender(toAddress, fromUser.id.get, inviteId), Duration(5, "seconds"))
         outbox.size === 1
@@ -59,7 +62,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.fromName === Some("Billy Madison (via Kifi)")
         email.from === SystemEmailAddress.INVITATION
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
-        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
+        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromEmail.address
 
         val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email", "kcid=na-vf_email-kifi_invite")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
@@ -78,7 +81,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val sender = inject[WelcomeEmailSender]
         val toUser = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("test").saved
+          val toUser = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          userEmailAddressCommander.intern(toUser.id.get, EmailAddress("billy@gmail.com")).get
+          toUser
         }
 
         val email = Await.result(sender.sendToUser(userId = toUser.id.get, isPlainEmail = false), Duration(5, "seconds"))
@@ -116,7 +121,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val sender = inject[WelcomeEmailSender]
         val toUser = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("test").saved
+          val toUser = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          userEmailAddressCommander.intern(toUser.id.get, EmailAddress("billy@gmail.com")).get
+          toUser
         }
 
         val email = Await.result(sender.sendToUser(userId = toUser.id.get, isPlainEmail = true), Duration(5, "seconds"))
@@ -152,7 +159,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       val outbox = inject[FakeOutbox]
       val sender = inject[FriendConnectionMadeEmailSender]
       val friendUser = db.readWrite { implicit rw =>
-        UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("billy").saved
+        val friendUser = UserFactory.user().withName("Billy", "Madison").withUsername("billy").saved
+        userEmailAddressCommander.intern(friendUser.id.get, EmailAddress("billy@gmail.com")).get
+        friendUser
       }
 
       val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category, network), Duration(5, "seconds"))
@@ -172,7 +181,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       "sends email" in {
         withDb(modules: _*) { implicit injector =>
           val toUser = db.readWrite { implicit rw =>
-            UserFactory.user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("test").saved
+            val toUser = UserFactory.user().withName("Johnny", "Manziel").withUsername("test").saved
+            userEmailAddressCommander.intern(toUser.id.get, EmailAddress("johnny@gmail.com")).get
+            toUser
           }
 
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -201,10 +212,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       ).map {
           case (network, networkName) => withDb(modules: _*) { implicit injector =>
             val (toUser, friends) = db.readWrite { implicit rw =>
-              (
-                UserFactory.user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("test").saved,
-                inject[ShoeboxTestFactory].createUsers()
-              )
+              val toUser = UserFactory.user().withName("Johnny", "Manziel").withUsername("test").saved
+              userEmailAddressCommander.intern(toUser.id.get, EmailAddress("johnny@gmail.com")).get
+              val friends = inject[ShoeboxTestFactory].createUsers()
+              (toUser, friends)
             }
 
             val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -231,10 +242,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       "sends the email" in {
         withDb(modules: _*) { implicit injector =>
           val (toUser, friends) = db.readWrite { implicit rw =>
-            (
-              user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("johnny").saved,
-              inject[ShoeboxTestFactory].createUsers()
-            )
+            val toUser = UserFactory.user().withName("Johnny", "Manziel").withUsername("test").saved
+            userEmailAddressCommander.intern(toUser.id.get, EmailAddress("johnny@gmail.com")).get
+            val friends = inject[ShoeboxTestFactory].createUsers()
+            (toUser, friends)
           }
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get,
@@ -260,10 +271,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val sender = inject[FriendRequestEmailSender]
         val (toUser, fromUser) = db.readWrite { implicit rw =>
-          (
-            UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("billy").saved,
-            UserFactory.user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("johnny").saved
-          )
+          val toUser = UserFactory.user().withName("Billy", "Madison").withUsername("billy").saved
+          userEmailAddressCommander.intern(toUser.id.get, EmailAddress("billy@gmail.com")).get
+          val fromUser = UserFactory.user().withName("Johnny", "Manziel").withUsername("johnny").saved
+          userEmailAddressCommander.intern(fromUser.id.get, EmailAddress("johnny@gmail.com")).get
+          (toUser, fromUser)
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
         outbox.size === 1
@@ -293,10 +305,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val sender = inject[ContactJoinedEmailSender]
         val (toUser, fromUser) = db.readWrite { implicit rw =>
-          (
-            UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("billy").saved,
-            UserFactory.user().withName("Johnny", "Manziel").withEmailAddress("johnny@gmail.com").withUsername("johnny").saved
-          )
+          val toUser = UserFactory.user().withName("Billy", "Madison").withUsername("billy").saved
+          userEmailAddressCommander.intern(toUser.id.get, EmailAddress("billy@gmail.com")).get
+          val fromUser = UserFactory.user().withName("Johnny", "Manziel").withUsername("johnny").saved
+          userEmailAddressCommander.intern(fromUser.id.get, EmailAddress("johnny@gmail.com")).get
+          (toUser, fromUser)
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
         outbox.size === 1
@@ -328,10 +341,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val passwordResetRepo = inject[PasswordResetRepo]
         val resetSender = inject[ResetPasswordEmailSender]
-        val user = db.readWrite { implicit rw =>
-          UserFactory.user().withName("Billy", "Madison").withEmailAddress("billy@gmail.com").withUsername("billy").saved
+        val (user, emailAddress) = db.readWrite { implicit rw =>
+          val user = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
+          val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress("billy@gmail.com")).get._1.address
+          (user, emailAddress)
         }
-        val email = Await.result(resetSender.sendToUser(user.id.get, user.primaryEmail.get), Duration(5, "seconds"))
+        val email = Await.result(resetSender.sendToUser(user.id.get, emailAddress), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
@@ -385,8 +400,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       val uriRepo = inject[NormalizedURIRepo]
 
       db.readWrite { implicit rw =>
-        val user1 = UserFactory.user().withName("Tom", "Brady").withUsername("tom").withEmailAddress("tombrady@gmail.com").saved
-        val user2 = UserFactory.user().withName("Aaron", "Rodgers").withUsername("aaron").withEmailAddress("aaronrodgers@gmail.com").saved
+        val user1 = UserFactory.user().withName("Tom", "Brady").withUsername("tom").saved
+        val user2 = UserFactory.user().withName("Aaron", "Rodgers").withUsername("aaron").saved
+        userEmailAddressCommander.intern(user1.id.get, EmailAddress("tombrady@gmail.com")).get
+        userEmailAddressCommander.intern(user2.id.get, EmailAddress("aaronrodgers@gmail.com")).get
         val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
           visibility = LibraryVisibility.SECRET, memberCount = 1, description = { if (withDescription) { Some("Lorem ipsum") } else { None } }))
 
@@ -621,7 +638,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[TwitterWaitlistEmailSender]
         val toEmail = EmailAddress("foo@bar.com")
         val user = db.readWrite { implicit s =>
-          UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").withEmailAddress(toEmail).saved
+          UserFactory.user().withName("Rocky", "Balboa").withUsername("tester").saved
         }
         val email = Await.result(sender.sendToUser(toEmail, user.id.get), Duration(5, "seconds"))
         outbox.size === 1
@@ -654,7 +671,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val toEmail = EmailAddress("superman@dc.com")
         val (user1, user2) = db.readWrite { implicit s =>
-          val user1 = UserFactory.user().withName("Clark", "Kent").withUsername("ckent").withEmailAddress(toEmail).saved
+          val user1 = UserFactory.user().withName("Clark", "Kent").withUsername("ckent").saved
           val user2 = UserFactory.user().withName("Bruce", "Wayne").withUsername("bwayne").saved
           connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
           val lib1 = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))

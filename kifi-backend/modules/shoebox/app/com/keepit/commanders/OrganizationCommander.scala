@@ -86,7 +86,7 @@ class OrganizationCommanderImpl @Inject() (
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
-    val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
+    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
@@ -123,7 +123,7 @@ class OrganizationCommanderImpl @Inject() (
     val ownerId = userRepo.get(org.ownerId).externalId
 
     val numMembers = orgMembershipRepo.countByOrgId(orgId)
-    val avatarPath = organizationAvatarCommander.getBestImage(orgId, ImageSize(200, 200)).map(_.imagePath)
+    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 

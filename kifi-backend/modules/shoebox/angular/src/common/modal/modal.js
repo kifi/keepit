@@ -76,7 +76,8 @@ angular.module('kifi')
     scope: {
       action: '&',
       cancel: '&',
-      title: '@'
+      title: '@',
+      actionText: '@'
     },
     templateUrl: 'common/modal/basicModalContent.tpl.html',
     transclude: true,
@@ -88,6 +89,7 @@ angular.module('kifi')
       scope.actionText = attrs.actionText;
       scope.cancelText = attrs.cancelText;
       scope.withCancel = (attrs.withCancel !== void 0) || false;
+      scope.withOk = (typeof attrs.withOk !== 'undefined' ? attrs.withOk !== 'false' : true); // default value of true
       scope.withWarning = (attrs.withWarning !== void 0) || false;
       scope.withoutButtons = 'withoutButtons' in attrs;
       scope.centered = attrs.centered;

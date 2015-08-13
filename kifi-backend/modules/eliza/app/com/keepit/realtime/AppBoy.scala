@@ -19,7 +19,8 @@ import scala.util.{ Failure, Success }
 
 object AppBoyConfig {
   val baseUrl: String = "https://api.appboy.com"
-  val appGroupId: String = "4212bbb0-d07b-4109-986a-aac019d8062a"
+  val prodAppGroupId: String = "4212bbb0-d07b-4109-986a-aac019d8062a"
+  val devAppGroupId: String = "c874c981-3cb1-45fd-9ec1-40d3eb8a73ee"
 }
 
 class AppBoy @Inject() (
@@ -61,14 +62,13 @@ class AppBoy @Inject() (
   def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
     val activeDevices = if (force) allDevices else allDevices.filter(_.state == DeviceStates.ACTIVE)
-    val deviceTypes = activeDevices.groupBy(_.deviceType).keys.toList
 
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
-        case Some(user) if deviceTypes.nonEmpty =>
-          sendNotification(user, deviceTypes, notification, force, activeDevices)
-          log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
-          deviceTypes.length
+        case Some(user) if activeDevices.nonEmpty =>
+          sendNotification(user, activeDevices, notification, force)
+          log.info(s"[AppBoy] sent user $userId push notifications to ${activeDevices.length} device types out of ${allDevices.size}. $notification")
+          activeDevices.length
         case Some(user) =>
           log.info(s"[AppBoy] no devices for $userId push notifications $allDevices devices. notification: $notification")
           0
@@ -115,11 +115,15 @@ class AppBoy @Inject() (
     }
   }
 
-  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean, devices: Seq[Device]): Unit = {
+  private def sendNotification(user: User, devices: Seq[Device], notification: PushNotification, wasForced: Boolean): Unit = {
     val userId = user.id.get
 
+    val devDevices = devices.filter(_.isDev == true)
+    val prodDevices = devices.filter(_.isDev == false)
+
     val json = Json.obj(
-      "app_group_id" -> AppBoyConfig.appGroupId,
+      // app_group_id is added before pushing to prod / dev devices so as to push
+      // to all devices able to get this push
       "external_user_ids" -> Json.toJson(Seq(user.externalId)),
       "campaign_id" -> "2c22f953-902a-4f3c-88f0-34fe07edeccf",
       "messages" -> Json.obj(
@@ -155,6 +159,19 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending MessageCountPushNotification to user $userId with $json")
     }
 
+    if (prodDevices.size > 0) {
+      val prodJson = Json.obj("app_group_id" -> AppBoyConfig.prodAppGroupId) ++ json
+      trySendNotification(userId, prodDevices, notification, prodJson, wasForced)
+    }
+
+    if (devDevices.size > 0) {
+      val devJson = Json.obj("app_group_id" -> AppBoyConfig.devAppGroupId) ++ json
+      trySendNotification(userId, devDevices, notification, devJson, wasForced)
+    }
+
+  }
+
+  private def trySendNotification(userId: Id[User], devices: Seq[Device], notification: PushNotification, json: JsObject, wasForced: Boolean): Unit = {
     RetryFuture(attempts = 3, {
       case error: Throwable =>
         log.error(s"[AppBoy] Error when pushing $notification for user $userId. Will retry. Error: ${error.getClass.getSimpleName} $error", error)
@@ -162,8 +179,8 @@ class AppBoy @Inject() (
     })(client.send(json, notification)).onComplete {
       case Success(res) if res.status / 100 == 2 =>
         log.info(s"[AppBoy] successful push notification to user $userId: ${res.body}")
-        deviceTypes.foreach { deviceType =>
-          messagingAnalytics.sentPushNotification(userId, deviceType, notification)
+        devices.foreach { device =>
+          messagingAnalytics.sentPushNotification(userId, device.deviceType, notification)
         }
       case Success(non200) =>
         if (!wasForced) airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")

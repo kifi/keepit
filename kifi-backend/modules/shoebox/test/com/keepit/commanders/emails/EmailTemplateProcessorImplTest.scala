@@ -39,7 +39,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
       withDb(modules: _*) { implicit injector =>
         val testFactory = inject[ShoeboxTestFactory]
         val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
-          testFactory.createUsers()
+          testFactory.setupUsers()
         }
 
         val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -56,6 +56,10 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
 
         val (id1, id2, id3, id4) = (user1.id.get, user2.id.get, user3.id.get, user4.id.get)
 
+        val emailAddress3 = db.readOnlyMaster { implicit session =>
+          userEmailAddressRepo.getByUser(id3)
+        }
+
         val html1 = Html(s"""
           |${firstName(id1)} ${lastName(id1)} and ${fullName(id2)} joined!
           |<img src="${avatarUrl(id1)}" alt="${fullName(id1)}"/>
@@ -68,7 +72,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |keepurl: ${keepUrl(keep.id.get, "")}
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
-          |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
+          |<a href="${unsubscribeUrl(emailAddress3)}">Unsubscribe Email</a>
         """.stripMargin)
 
         val text1 = Html(
@@ -81,7 +85,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |${avatarUrl(id3)}
           |unsub1 $unsubscribeUrl
           |unsub2 ${unsubscribeUrl(id3)}
-          |unsub3 ${unsubscribeUrl(user3.primaryEmail.get)}
+          |unsub3 ${unsubscribeUrl(emailAddress3)}
            """.stripMargin)
 
         val processor = inject[EmailTemplateProcessorImpl]
@@ -100,26 +104,26 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val outputF = processor.process(emailToSend)
         val processed = Await.result(outputF, Duration(5, "seconds"))
 
-        processed.subject === "hi Aaron and Bryan"
-        processed.fromName === Some("Bryan!!!")
+        processed.subject === "hi Tony and Steve"
+        processed.fromName === Some("Steve!!!")
 
         val output = processed.htmlBody.value
         output must contain("privacy?utm_source=aboutFriends&amp;utm_medium=email&amp;utm_campaign=socialFriendJoined&amp;utm_content=footerPrivacy")
         output must contain("<title>Test Email!!!</title>")
-        output must contain("Aaron Paul and Bryan Cranston joined!")
+        output must contain("Tony Stark and Steve Rogers joined!")
         output must contain("Join my library: Avengers Missions")
-        output must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
+        output must contain("liburl: http://dev.ezkeep.com:9000/ironman/avengers")
         output must contain("Look at this keep: Avengers$1.org")
         output must contain("keepurl: http://www.avengers.org/")
-        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
-        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
-        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
-        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
+        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Tony Stark"/>""")
+        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Steve Rogers"/>""")
+        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Nick Fury"/>""")
+        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Bruce Banner"/>""")
 
         val text = processed.textBody.get.value
-        text must contain("Bryan Cranston and Aaron Paul joined!")
+        text must contain("Steve Rogers and Tony Stark joined!")
         text must contain("Join my library: Avengers Missions")
-        text must contain("liburl: http://dev.ezkeep.com:9000/test/avengers")
+        text must contain("liburl: http://dev.ezkeep.com:9000/ironman/avengers")
         text must contain("Look at this keep: Avengers$1.org")
         text must contain("keepurl: http://www.avengers.org/")
         text must contain("https://cloudfront/users/3/pics/100/0.jpg")

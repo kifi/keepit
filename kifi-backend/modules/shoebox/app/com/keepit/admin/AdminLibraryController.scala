@@ -21,6 +21,7 @@ import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.Future
 import scala.util.Try
 
 case class LibraryStatistic(
@@ -181,11 +182,7 @@ class AdminLibraryController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
     }
 
-    val excludeKeepStateSet = if (showInactives) {
-      Set.empty[State[Keep]]
-    } else {
-      Set(KeepStates.INACTIVE, KeepStates.DUPLICATE)
-    }
+    val excludeKeepStateSet = if (showInactives) Set.empty[State[Keep]] else Set(KeepStates.INACTIVE)
 
     val pageSize = 50
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
@@ -364,6 +361,21 @@ class AdminLibraryController @Inject() (
         throw new Exception(s"can't copy keep $keep : $libraryError")
     }
     Redirect(routes.AdminLibraryController.libraryView(lib.id.get))
+  }
+
+  def unsafeMoveLibraryKeeps = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val fromLibraryId = (request.body \ "fromLibrary").as[Id[Library]]
+    val toLibraryId = (request.body \ "toLibrary").as[Id[Library]]
+    val userId = db.readOnlyReplica { implicit session =>
+      val (fromLib, toLib) = (libraryRepo.get(fromLibraryId), libraryRepo.get(toLibraryId))
+      require(fromLib.ownerId == toLib.ownerId)
+      fromLib.ownerId
+    }
+    implicit val context = HeimdalContext.empty
+    Future {
+      val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
+      Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))
+    }
   }
 
 }

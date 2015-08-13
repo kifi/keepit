@@ -252,7 +252,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
       def setupInviters()(implicit injector: Injector) = {
         db.readWrite { implicit session =>
           val owner = UserFactory.user().withName("The", "Unknown").saved
-          val inviter = UserFactory.user().withEmailAddress("inviter@kifi.com").saved
+          val inviter = UserFactory.user().saved
+          userEmailAddressCommander.intern(inviter.id.get, EmailAddress("inviter@kifi.com")).get
           val cannot_invite = UserFactory.user().saved
           val not_a_member = UserFactory.user().saved
           val org = OrganizationFactory.organization().withName("Void").withOwner(owner).withMembers(Seq(inviter, cannot_invite)).saved

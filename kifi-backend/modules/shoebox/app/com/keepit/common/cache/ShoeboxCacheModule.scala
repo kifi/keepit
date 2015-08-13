@@ -38,6 +38,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def organizationAvatarCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationAvatarCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def usernameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UsernameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
@@ -266,14 +271,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
-  @Provides @Singleton
-  def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
-
   @Singleton
   @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibraryIdCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+    new LibraryIdCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -401,7 +402,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def organizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+    new OrganizationCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 14 days))
 
   @Provides @Singleton
   def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

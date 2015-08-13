@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContext
 class MobileOrganizationController @Inject() (
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
@@ -63,7 +64,7 @@ class MobileOrganizationController @Inject() (
     }
   }
 
-  def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+  def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
     Ok(Json.toJson(organizationView))
   }

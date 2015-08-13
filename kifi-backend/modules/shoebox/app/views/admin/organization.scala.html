@@ -51,7 +51,7 @@ orgStats: OrganizationStatistics
     <tr>
         <th>Active</th>
         <td>
-            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setInactive(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
                 <button type="submit" class="btn btn-default">Set inactive</button>
             </form>
         </td>
@@ -173,7 +173,7 @@ orgStats: OrganizationStatistics
     @for(reco <- orgStats.memberRecommendations) {
         <tr>
             <td class="block">@{adminHelper.userDisplay(reco.user)}</td>
-            <td class="block">@{reco.user.primaryEmail}</td>
+            <td class="block">@{reco.emailAddress}</td>
             <td>@reco.score</td>
             <td><input type="button" value="Add candidate" onclick="addCandidate(@{orgStats.orgId}, @{reco.user.id.get})"></td>
             <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>

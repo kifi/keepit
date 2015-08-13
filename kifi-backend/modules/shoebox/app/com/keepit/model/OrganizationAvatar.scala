@@ -1,11 +1,15 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.{ Id, Model, State, States }
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class OrganizationAvatar(
     id: Option[Id[OrganizationAvatar]] = None,
@@ -48,3 +52,12 @@ object OrganizationAvatar {
 }
 
 object OrganizationAvatarStates extends States[OrganizationAvatar]
+
+case class OrganizationAvatarKey(orgId: Id[Organization]) extends Key[Seq[OrganizationAvatar]] {
+  override val version = 1
+  val namespace = "organization_avatar"
+  def toKey(): String = orgId.toString
+}
+
+class OrganizationAvatarCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationAvatarKey, Seq[OrganizationAvatar]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

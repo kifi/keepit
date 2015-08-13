@@ -10,7 +10,7 @@ import com.keepit.model._
 
 @ImplementedBy(classOf[KeepToLibraryCommanderImpl])
 trait KeepToLibraryCommander {
-  def internKeepToLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
+  def internKeepInLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
   def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse]
 }
 
@@ -40,12 +40,20 @@ class KeepToLibraryCommanderImpl @Inject() (
     }
   }
 
-  def internKeepToLibrary(request: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse] = {
+  def internKeepInLibrary(request: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse] = {
     getValidationError(request).map(Left(_)).getOrElse {
       val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId, excludeStates = Set.empty) match {
         case Some(existingKtl) if existingKtl.isActive => existingKtl
         case existingKtlOpt =>
-          val newKtlTemplate = KeepToLibrary(keepId = request.keepId, libraryId = request.libraryId, addedBy = request.requesterId) // no id yet
+          val newKtlTemplate = KeepToLibrary(
+            keepId = request.keepId,
+            libraryId = request.libraryId,
+            addedBy = request.requesterId,
+            uriId = request.keep.uriId,
+            isPrimary = request.keep.isPrimary,
+            visibility = request.library.visibility,
+            organizationId = request.library.organizationId
+          )
           keepToLibraryRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
       }
       Right(KeepToLibraryInternResponse(ktl))

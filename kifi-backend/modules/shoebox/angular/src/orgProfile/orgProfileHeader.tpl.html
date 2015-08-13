@@ -22,10 +22,10 @@
     <div kf-profile-image readonly="readonly" profile="profile" upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
-        <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" readonly="readonly"></div>
-        <div class="kf-oph-description" kf-click-to-edit on-save="save" input-placeholder="'Description'" value="profile.description" readonly="readonly"></div>
+        <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" class-name="'kf-oph-input'" readonly="readonly"></div>
+        <div class="kf-oph-description" kf-click-to-edit on-save="save" class-name="'kf-oph-input'" input-placeholder="'Description'" value="profile.description" readonly="readonly"></div>
         <p class="kf-oph-url">
-          <span kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
+          <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
         </p>
       </div>
       <nav class="kf-oph-stats">
