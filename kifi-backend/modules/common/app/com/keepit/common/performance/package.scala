@@ -190,12 +190,17 @@ package object performance {
             val limit: FiniteDuration = $limit
             @volatile var samples: Long = 0
             @volatile var lastAlertAt: Option[Long] = None
-            @volatile var mean: Long = 0
+            @volatile var total: Long = 0
 
             private def updateAndGetMean(sample: Long): FiniteDuration = synchronized {
+              if (samples > 1000) {
+                samples = 0
+                total = 0
+              }
               samples = samples + 1
               lastAlertAt = Some(System.nanoTime)
-              mean = mean + (sample/samples) - (mean/samples)
+              total = total + sample
+              val mean = total/samples
               Duration.fromNanos(mean)
             }
 
