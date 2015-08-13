@@ -204,7 +204,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     toRecipientOpt map { toRecipient =>
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
-      val fromAddress = db.readOnlyReplica { implicit session => userEmailAddressRepo.getByUser(invite.inviterId).address }
       val authToken = invite.authToken
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
@@ -215,7 +214,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         htmlTemplate = views.html.email.organizationInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken),
         textTemplate = Some(views.html.email.organizationInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),
         channel = Some("vf_email"),
         source = Some("organization_invite")
