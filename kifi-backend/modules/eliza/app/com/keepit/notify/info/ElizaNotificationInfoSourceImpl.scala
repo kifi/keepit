@@ -7,12 +7,11 @@ import com.keepit.model.{ User, Library }
 import com.keepit.notify.model.NotificationEvent
 import com.keepit.shoebox.ShoeboxServiceClient
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class ElizaNotificationInfoSourceImpl @Inject() (
-  shoeboxServiceClient: ShoeboxServiceClient,
-  implicit val executionContext: ExecutionContext
-) extends NotificationInfoSource {
+    shoeboxServiceClient: ShoeboxServiceClient,
+    implicit val executionContext: ExecutionContext) extends NotificationInfoSource {
 
   override def userImage(id: Id[User], width: Int): Future[String] = shoeboxServiceClient.getUserImageUrl(id, width)
 
