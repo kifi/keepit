@@ -132,7 +132,7 @@ class KeepsCommander @Inject() (
         }
         val newWay = keepRepo.getOpt(keepExtId) match {
           case Some(k) if ktlCommander.isKeepInLibrary(k.id.get, libraryId) => Right(k)
-          case None => Left(NOT_FOUND, "keep_not_found")
+          case _ => Left(NOT_FOUND, "keep_not_found")
         }
         if (newWay != oldWay) log.info(s"[KTL-MATCH] getKeep: $newWay != $oldWay")
 
