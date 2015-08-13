@@ -14,6 +14,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
+import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -56,8 +57,7 @@ case class MemberStatistics(
   numLibrariesCollaborating: Int,
   numLibrariesFollowing: Int,
 
-  numSharedChats: Int,
-  numSharedLibraries: Int)
+  dateLastManualKeep: Option[DateTime])
 
 case class OrganizationStatistics(
   org: Organization,
@@ -148,6 +148,7 @@ class UserStatisticsCommander @Inject() (
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
+      val dateLastManualKeep = keepRepo.getDateLastManualKeep(userId)
       val user = userRepo.get(userId)
       for (
         numChats <- numChatsFut
@@ -159,8 +160,7 @@ class UserStatisticsCommander @Inject() (
           numLibrariesCreated = numLibrariesCreated,
           numLibrariesCollaborating = numLibrariesCollaborating,
           numLibrariesFollowing = numLibrariesFollowing,
-          numSharedLibraries = 0, //TODO(ryan): fix
-          numSharedChats = 0 // TODO(ryan): fix
+          dateLastManualKeep = dateLastManualKeep
         )
       }
     }

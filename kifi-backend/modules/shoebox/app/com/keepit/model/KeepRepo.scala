@@ -65,6 +65,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
+  def getDateLastManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
   // I think these ones need to be changed:
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
@@ -510,6 +511,7 @@ class KeepRepoImpl @Inject() (
     val res = sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[DateTime].first
     Option(res)
   }
+
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
     val keepsGroupedByLibrary = (for (r <- rows if r.libraryId.inSet(libraryIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.libraryId)
     val map = keepsGroupedByLibrary.map { case (libraryId, keeps) => (libraryId, keeps.map(k => k.keptAt).max) }.list
@@ -518,6 +520,11 @@ class KeepRepoImpl @Inject() (
           (libraryId, maxKeptAt)
       }.toMap
     libraryIds.map { libId => libId -> map.getOrElse(libId, None) }.toMap
+  }
+
+  def getDateLastManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select max(kept_at) from bookmark where user_id = $userId and source in ('keeper', 'mobile', 'email', 'site')""".as[DateTime].firstOption
   }
 
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep] = {

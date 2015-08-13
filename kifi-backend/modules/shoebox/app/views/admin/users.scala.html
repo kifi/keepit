@@ -96,7 +96,6 @@
       </form>
       <table class="table table-bordered">
         <tr>
-          <th>#</th>
           <th>Id</th>
           <th>User</th>
           <th>org mem/cand</th>
@@ -106,16 +105,14 @@
           <th>Messages all/active/started</th>
           <th>Lib create/follow</th>
           <th>Network</th>
+          <th>Keeps PRV/PUB</th>
           <th>Email Address</th>
-          <th>Private Keeps</th>
-          <th>Public Keeps</th>
+          <th>Version</th>
           <th>Date Joined</th>
           <th>Experiment</th>
-          <th>Version</th>
         </tr>
-      @for((userStatistics, i) <- userData.users.zipWithIndex) {
+      @for(userStatistics <- userData.users) {
         <tr>
-          <td>@{i+1}</td>
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
           <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
@@ -125,12 +122,11 @@
           <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
           <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+          <td>@userStatistics.privateKeeps / @userStatistics.publicKeeps</td>
           <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
-          <td>@userStatistics.privateKeeps</td>
-          <td>@userStatistics.publicKeeps</td>
+          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>
-          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
         </tr>
       }
       </table>
