@@ -9,7 +9,7 @@ angular.module('util', [])
     var hyphensToMakeNonBreakingRe = /( \S{1,10})-(?=\S{1,10} )/g;
     var punctuationRe = /[!-\/:-@[-`{-~]/;
 
-    var RESERVED_SLUGS = ['libraries', 'connections', 'followers', 'keeps', 'tags'];
+    var RESERVED_SLUGS = ['libraries', 'connections', 'followers', 'keeps', 'tags', 'members'];
 
     var util = {
       startsWith: function (str, prefix) {
