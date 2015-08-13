@@ -148,8 +148,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val inviter = userRepo.get(inviterId)
             (org, owner, inviter)
           }
+          invites.foreach { invite =>
+            invite.userId.foreach { id =>
+              db.readWrite { implicit session =>
+                if (!userExperimentRepo.hasExperiment(id, UserExperimentType.ORGANIZATION)) {
+                  userExperimentRepo.save(UserExperiment(userId = id, experimentType = UserExperimentType.ORGANIZATION))
+                }
+              }
+            }
+          }
           val persistedInvites = invites.flatMap(persistInvitation)
-
           sendInvitationEmails(persistedInvites, org, owner, inviter)
           organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
 
