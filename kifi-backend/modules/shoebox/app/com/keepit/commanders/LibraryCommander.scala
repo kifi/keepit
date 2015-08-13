@@ -156,7 +156,7 @@ class LibraryCommanderImpl @Inject() (
       val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
       val newWay = ktlRepo.getByLibraryId(libraryId, Offset(offset), Limit(limit)) |> ktlCommander.getKeeps
       if (newWay != oldWay) {
-        log.info(s"[KTL-MATCH] getKeeps: $newWay != $oldWay")
+        log.info(s"[KTL-MATCH] getKeeps($libraryId): ${newWay.map(_id.get)} != ${oldWay.map(_.id.get)}")
       }
       oldWay
     }
@@ -287,7 +287,7 @@ class LibraryCommanderImpl @Inject() (
               case _ =>
                 val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
                 val newWay = ktlRepo.getByLibraryId(library.id.get, Offset(0), Limit(maxKeepsShown)) |> ktlCommander.getKeeps
-                if (newWay != oldWay) log.info(s"[KTL-MATCH] createFullLibraryInfos: $newWay != $oldWay")
+                if (newWay != oldWay) log.info(s"[KTL-MATCH] createFullLibraryInfos(${library.id.get}): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
                 oldWay
             }
           }
