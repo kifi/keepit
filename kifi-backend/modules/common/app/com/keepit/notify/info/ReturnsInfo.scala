@@ -36,16 +36,18 @@ case class AndThen[A, B](previous: ReturnsInfo[A], f: A => ReturnsInfo[B]) exten
 
 trait ArgAction[+A] extends ReturnsInfo[A] {
 
-  val arg: String
+  val argName: String
 
   def fromSource(source: NotificationInfoSource): Future[A]
+
+  def arg(newArgName: String): this.type
 
 }
 
 object ArgAction {
 
   def unapply[A](that: ArgAction[A]): Option[(String, NotificationInfoSource => Future[A])] = Some(
-    that.arg,
+    that.argName,
     that.fromSource _
   )
 
@@ -55,20 +57,28 @@ object ReturnsInfo {
 
   case class PickOne[E <: NotificationEvent](events: Set[E]) extends ReturnsInfo[E]
 
-  case class GetUser(id: Id[User], arg: String = "") extends ArgAction[User] {
+  case class GetUser(id: Id[User], argName: String = "") extends ArgAction[User] {
     def fromSource(source: NotificationInfoSource) = source.user(id)
+
+    def arg(newArgName: String) = copy(argName = newArgName)
   }
 
-  case class GetLibrary(id: Id[Library], arg: String = "") extends ArgAction[Library] {
+  case class GetLibrary(id: Id[Library], argName: String = "") extends ArgAction[Library] {
     def fromSource(source: NotificationInfoSource) = source.library(id)
+
+    def arg(newArgName: String) = copy(argName = newArgName)
   }
 
-  case class GetUserImage(id: Id[User], width: Int, arg: String = "") extends ArgAction[String] {
+  case class GetUserImage(id: Id[User], width: Int, argName: String = "") extends ArgAction[String] {
     def fromSource(source: NotificationInfoSource) = source.userImage(id, width)
+
+    def arg(newArgName: String) = copy(argName = newArgName)
   }
 
-  case class GetLibraryPath(id: Id[Library], arg: String = "") extends ArgAction[EncodedPath] {
+  case class GetLibraryPath(id: Id[Library], argName: String = "") extends ArgAction[EncodedPath] {
     def fromSource(source: NotificationInfoSource) = source.libraryPath(id)
+
+    def arg(newArgName: String) = copy(argName = newArgName)
   }
 
 }
