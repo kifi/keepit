@@ -50,9 +50,7 @@ class LibraryInviteEmailSender @Inject() (
       val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, UserExperimentType.PLAIN_EMAIL) }.getOrElse(false)
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
-      val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
       val authToken = invite.authToken
-      val subjectAction = if (invite.access == LibraryAccess.READ_ONLY) "follow" else "collaborate on"
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
@@ -68,7 +66,6 @@ class LibraryInviteEmailSender @Inject() (
         },
         textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)),
         templateOptions = Seq(CustomLayout).toMap,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),
         channel = Some("vf_email"),
         source = Some("library_invite")
