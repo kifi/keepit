@@ -46,7 +46,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
-  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def latestManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
@@ -67,7 +67,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
-  def getDateLastManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def deactivate(model: Keep)(implicit session: RWSession): Unit
 }
 
@@ -506,10 +505,9 @@ class KeepRepoImpl @Inject() (
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc, b.library_id asc limit $count""".as[(Id[Library], Int)].list
   }
 
-  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val res = sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[DateTime].first
-    Option(res)
+  def latestManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+    val sources: Set[KeepSource] = Set(KeepSource.keeper, KeepSource.mobile, KeepSource.email, KeepSource.site)
+    rows.filter(k => k.userId === userId && k.source.inSet(sources)).map(_.keptAt).max.run
   }
 
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
@@ -520,12 +518,6 @@ class KeepRepoImpl @Inject() (
           (libraryId, maxKeptAt)
       }.toMap
     libraryIds.map { libId => libId -> map.getOrElse(libId, None) }.toMap
-  }
-
-  def getDateLastManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    //going around a (maybe slick's bug?) that this query will always return a value, may be null. Doing a firstOption may return a Some(null) value
-    Option(sql"""select max(kept_at) from bookmark where user_id = $userId and source in ('keeper', 'mobile', 'email', 'site')""".as[DateTime].first)
   }
 
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep] = {
