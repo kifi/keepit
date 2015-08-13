@@ -847,35 +847,6 @@ class AdminUserController @Inject() (
     }
   }
 
-  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminUserPage.async { request =>
-    SafeFuture {
-      val toBeCreated = db.readWrite { implicit session =>
-        userConnectionRepo.all().collect {
-          case activeConnection if {
-            val user1State = userRepo.get(activeConnection.user1).state
-            val user2State = userRepo.get(activeConnection.user2).state
-            activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
-          } =>
-            val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
-              if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
-              Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
-            } else None
-        }.flatten
-      }
-
-      implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
-      implicit val userIdFormat = Id.format[User]
-      val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2) })
-      val title = "FortyTwo Connections to be created"
-      val msg = toBeCreated.mkString("\n")
-      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
-        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
-      Ok(json)
-    }
-  }
-
   def deactivate(userId: Id[User]) = AdminUserPage.async { request =>
     SafeFuture {
       val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")

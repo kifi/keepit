@@ -735,7 +735,6 @@ GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin
 # TEMPORARY ROUTE - remove when activity email is live
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
 
-GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
 POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
