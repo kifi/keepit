@@ -56,7 +56,7 @@ class UserOrOrganizationController @Inject() (
           bodyTry match {
             case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
             case Failure(ex) =>
-              airbrake.notify("Could not parse the body in getByHandle: " + ex)
+              airbrake.notify(s"Could not parse the body in getByHandle($handle): $ex")
               BadRequest
           }
         }
