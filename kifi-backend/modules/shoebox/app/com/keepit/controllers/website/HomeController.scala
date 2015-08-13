@@ -99,7 +99,7 @@ class HomeController @Inject() (
   }
 
   def getKeepsCount = Action.async {
-    keepsCommander.getKeepsCountFuture imap { count =>
+    keepsCommander.getKeepsCountFuture() imap { count =>
       Ok(count.toString)
     }
   }
