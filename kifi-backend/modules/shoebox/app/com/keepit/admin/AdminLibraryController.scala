@@ -21,6 +21,7 @@ import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.Future
 import scala.util.Try
 
 case class LibraryStatistic(
@@ -362,7 +363,8 @@ class AdminLibraryController @Inject() (
     Redirect(routes.AdminLibraryController.libraryView(lib.id.get))
   }
 
-  def unsafeMoveLibraryKeeps(fromLibraryId: Id[Library]) = AdminUserAction(parse.tolerantJson) { implicit request =>
+  def unsafeMoveLibraryKeeps = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val fromLibraryId = (request.body \ "fromLibrary").as[Id[Library]]
     val toLibraryId = (request.body \ "toLibrary").as[Id[Library]]
     val userId = db.readOnlyReplica { implicit session =>
       val (fromLib, toLib) = (libraryRepo.get(fromLibraryId), libraryRepo.get(toLibraryId))
@@ -370,8 +372,10 @@ class AdminLibraryController @Inject() (
       fromLib.ownerId
     }
     implicit val context = HeimdalContext.empty
-    val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
-    Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))
+    Future {
+      val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
+      Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))
+    }
   }
 
 }

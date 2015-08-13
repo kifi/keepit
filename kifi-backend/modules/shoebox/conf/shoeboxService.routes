@@ -793,7 +793,7 @@ POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.
 POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
 POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
-POST    /admin/libraries/:id/forceMoveKeeps             @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps(id: Id[Library])
+POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
