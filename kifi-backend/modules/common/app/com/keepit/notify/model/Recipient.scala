@@ -25,8 +25,8 @@ case class EmailRecipient(address: EmailAddress) extends Recipient {
 object Recipient {
 
   def apply(str: String): Recipient = {
-    val colonIndex = str.indexOf('|')
-    val (kind, rest) = (str.substring(0, colonIndex), str.substring(colonIndex + 1))
+    val pipeIndex = str.indexOf('|')
+    val (kind, rest) = (str.substring(0, pipeIndex), str.substring(pipeIndex + 1))
 
     kind match {
       case "user" => UserRecipient(Id(rest.toLong))
