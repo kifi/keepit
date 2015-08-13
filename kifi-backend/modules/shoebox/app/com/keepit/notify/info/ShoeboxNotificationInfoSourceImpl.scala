@@ -10,8 +10,6 @@ import scala.util.{ Failure, Try }
 
 class ShoeboxNotificationInfoSourceImpl extends NotificationInfoSource {
 
-  override def pickOne[E <: NotificationEvent](events: Set[E]): Future[E] = Future.fromTry(Try { events.head })
-
   override def userImage(id: Id[User]): Future[String] = ???
 
   override def libraryPath(id: Id[Library]): Future[EncodedPath] = ???

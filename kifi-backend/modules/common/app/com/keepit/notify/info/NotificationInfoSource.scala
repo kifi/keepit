@@ -9,8 +9,6 @@ import scala.concurrent.Future
 
 trait NotificationInfoSource {
 
-  def pickOne[E <: NotificationEvent](events: Set[E]): Future[E]
-
   def user(id: Id[User]): Future[User]
 
   def library(id: Id[Library]): Future[Library]

@@ -9,8 +9,6 @@ import scala.concurrent.Future
 
 class ElizaNotificationInfoSourceImpl extends NotificationInfoSource {
 
-  override def pickOne[E <: NotificationEvent](events: Set[E]): Future[E] = ???
-
   override def userImage(id: Id[User]): Future[String] = ???
 
   override def libraryPath(id: Id[Library]): Future[EncodedPath] = ???
