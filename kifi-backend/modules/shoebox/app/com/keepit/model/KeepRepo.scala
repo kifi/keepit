@@ -524,7 +524,8 @@ class KeepRepoImpl @Inject() (
 
   def getDateLastManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""select max(kept_at) from bookmark where user_id = $userId and source in ('keeper', 'mobile', 'email', 'site')""".as[DateTime].firstOption
+    //going around a (maybe slick's bug?) that this query will always return a value, may be null. Doing a firstOption may return a Some(null) value
+    Option(sql"""select max(kept_at) from bookmark where user_id = $userId and source in ('keeper', 'mobile', 'email', 'site')""".as[DateTime].first)
   }
 
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep] = {
