@@ -13,7 +13,6 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -37,7 +36,6 @@ class HeimdalApplication(overridingModules: Module*)(implicit path: File = new F
     HeimdalCacheModule(HashMapMemoryCacheModule()),
     FakeUserActionsModule(),
     FakeSchedulerModule(),
-    FakeSimpleQueueModule(),
     AwsModule(),
     FakeCryptoModule()
   ))
@@ -57,7 +55,6 @@ trait HeimdalTestInjector extends TestInjector with DbInjectionHelper with Heimd
     FakeSlickModule(TestDbInfo.dbInfo),
     HeimdalCacheModule(HashMapMemoryCacheModule()),
     FakeSchedulerModule(),
-    FakeSimpleQueueModule(),
     AwsModule(),
     FakeCryptoModule(),
     FakeActorSystemModule(),

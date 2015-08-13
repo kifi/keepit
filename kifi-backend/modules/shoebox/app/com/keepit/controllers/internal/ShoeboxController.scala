@@ -58,7 +58,6 @@ class ShoeboxController @Inject() (
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
-  orgInviteRepo: OrganizationInviteRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,

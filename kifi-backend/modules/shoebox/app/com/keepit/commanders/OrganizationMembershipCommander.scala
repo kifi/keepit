@@ -4,13 +4,16 @@ import com.keepit.common.cache._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
+import com.keepit.common.net.{ NonOKResponseException, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -20,6 +23,7 @@ import play.api.libs.json._
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 import scala.util.control.NoStackTrace
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: OrganizationRole, lastInvitedAt: Option[DateTime])
@@ -59,6 +63,7 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    organizationCommander: OrganizationCommander,
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
@@ -70,7 +75,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
+    httpClient: HttpClient,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
+
+  private val httpLock = new ReactiveLock(5)
 
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
     primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
@@ -221,13 +229,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
         val newMembership = targetOpt match {
           case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
           case inactiveMembershipOpt => {
-            session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
+            session.onTransactionSuccess {
+              refreshOrganizationMembersTypeahead(request.orgId)
+            }
             val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
             val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
             val savedMembership = organizationMembershipRepo.save(newMembership)
             organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId) match {
               case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
               case None => //whatever
+            }
+            if (!organizationCommander.hasFakeExperiment(org.id.get) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
+              notifySlackOfNewMember(org, request.targetId)
             }
             savedMembership
           }
@@ -258,6 +271,25 @@ class OrganizationMembershipCommanderImpl @Inject() (
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         organizationMembershipRepo.deactivate(membership)
         Right(OrganizationMembershipRemoveResponse(request))
+    }
+  }
+  private def notifySlackOfNewMember(organization: Organization, userId: Id[User])(implicit session: RSession): Unit = {
+    val channel = "#org-members"
+    val webhookUrl = "https://hooks.slack.com/services/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"
+
+    val user = userRepo.get(userId)
+    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName} just joined <http://ww.kifi.com/${organization.handle.value}?kma=1|${organization.name}."
+    val message = BasicSlackMessage(text = text, channel = Some(channel))
+
+    val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
+
+    response.onComplete {
+      case Success(res) =>
+        log.info(s"[notifySlackOfNewMember] Slack message to $channel succeeded.")
+      case Failure(t: NonOKResponseException) =>
+        log.warn(s"[notifySlackOfNewMember] Slack info invalid for channel=$channel. Make sure the webhookUrl matches.")
+      case _ =>
+        log.error(s"[notifySlackOfNewMember] Slack message request failed.")
     }
   }
 

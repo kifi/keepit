@@ -745,7 +745,6 @@ GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUse
 POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
-GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.triggerPush()
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
@@ -793,6 +792,7 @@ POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.
 POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
 POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
+POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()

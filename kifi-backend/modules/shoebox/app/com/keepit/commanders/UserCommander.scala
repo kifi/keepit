@@ -115,7 +115,6 @@ class UserCommander @Inject() (
     libraryRepo: LibraryRepo,
     organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
-    orgInviteRepo: OrganizationInviteRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,

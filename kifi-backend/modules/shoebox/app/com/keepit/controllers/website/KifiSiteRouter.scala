@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.mvc.{ ActionFilter, Result }
@@ -31,7 +32,9 @@ class KifiSiteRouter @Inject() (
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
+  organizationAnalytics: OrganizationAnalytics,
   airbrake: AirbrakeNotifier,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper)
     extends UserActions with ShoeboxServiceController {
 
@@ -198,15 +201,24 @@ class KifiSiteRouter @Inject() (
 
   // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
   private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
-    def userCanSeeOrg(orgId: Id[Organization]) = request match {
-      case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
-      case nonuserReq: NonUserRequest[_] => !mustBeInExperiment || nonuserReq.getQueryString("authToken").exists(auth => orgInviteCommander.isAuthValid(orgId, auth))
+    implicit val heimdalContext = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    def userCanSeeOrg(org: Organization) = {
+      val authTokenOpt = request.getQueryString("authToken")
+      val inviteOpt = authTokenOpt.flatMap { authToken =>
+        db.readOnlyMaster { implicit session => orgInviteCommander.getInviteByOrganizationIdAndAuthToken(org.id.get, authToken) }
+      }
+      if (inviteOpt.isDefined) organizationAnalytics.trackInvitationClicked(org, inviteOpt.get)
+
+      request match {
+        case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
+        case nonuserReq: NonUserRequest[_] => !mustBeInExperiment || inviteOpt.isDefined
+      }
     }
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
     handleOwnerOpt.flatMap {
       // TODO(ryan): when orgs go live, drop this flatmap
       // This flatmap serves to hide orgs from everyone except users WITH the org experiment
-      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org.id.get) => None
+      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org) => None
       case other => Some(other)
     } map {
       case (handleOwner, isPrimary) =>

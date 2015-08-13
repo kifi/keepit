@@ -60,8 +60,7 @@ class PeopleRecommendationController @Inject() (
       socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO - SocialNetworks.LINKEDIN - SocialNetworks.TWITTER + SocialNetworks.EMAIL
     }*/
     val futureInviteRecommendations = {
-      abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks) // Graph based recommendations
-      //  inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)  RichConnection based recommendations
+      abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks)
     }
     futureInviteRecommendations.imap(recommendations => Ok(Json.toJson(recommendations)))
   }

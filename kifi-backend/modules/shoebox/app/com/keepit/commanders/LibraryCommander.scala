@@ -18,7 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
-import com.keepit.common.performance.StatsdTiming
+import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
@@ -38,6 +38,7 @@ import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
 @json case class MarketingSuggestedLibrarySystemValue(
@@ -86,6 +87,7 @@ trait LibraryCommander {
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
+  def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
@@ -121,7 +123,8 @@ class LibraryCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
-    keepToLibraryCommander: KeepToLibraryCommander,
+    ktlRepo: KeepToLibraryRepo,
+    ktlCommander: KeepToLibraryCommander,
     keepDecorator: KeepDecorator,
     countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
@@ -149,7 +152,14 @@ class LibraryCommanderImpl @Inject() (
     clock: Clock) extends LibraryCommander with Logging {
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
-    if (limit > 0) db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
+    if (limit > 0) db.readOnlyReplicaAsync { implicit s =>
+      val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
+      val newWay = ktlRepo.getByLibraryId(libraryId, Offset(offset), Limit(limit)) |> ktlCommander.getKeeps
+      if (newWay != oldWay) {
+        log.info(s"[KTL-MATCH] getKeeps($libraryId): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
+      }
+      oldWay
+    }
     else Future.successful(Seq.empty)
   }
 
@@ -274,9 +284,12 @@ class LibraryCommanderImpl @Inject() (
                 if (ownerHasAllKeepsViewExperiment) { //cached
                   keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
-              case _ => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case _ =>
+                val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+                val newWay = ktlRepo.getByLibraryId(library.id.get, Offset(0), Limit(maxKeepsShown)) |> ktlCommander.getKeeps
+                if (newWay != oldWay) log.info(s"[KTL-MATCH] createFullLibraryInfos(${library.id.get}): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
+                oldWay
             }
-
           }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
         } else Future.successful(Seq.empty)
@@ -818,7 +831,7 @@ class LibraryCommanderImpl @Inject() (
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) => // TODO(ryan): Can this session be made implicit?
-        keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = keep.id.get, libraryId = libraryId, requesterId = userId))(s)
+        ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = keep.id.get, libraryId = libraryId, requesterId = userId))(s)
         keepRepo.deactivate(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
@@ -1396,13 +1409,13 @@ class LibraryCommanderImpl @Inject() (
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
-              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(newKeep, toLibrary, requesterId = userId))
+              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(newKeep, toLibrary, requesterId = userId))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = newKeep, library = toLibrary, requesterId = userId))
+              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = newKeep, library = toLibrary, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) =>
@@ -1418,6 +1431,13 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+    val keeps = db.readOnlyReplica { implicit session =>
+      val keepIds = ktlRepo.getAllByLibraryId(fromLibraryId).map(_.keepId).toSet
+      keepRepo.getByIds(keepIds).values.toSeq
+    }
+    moveKeeps(userId, toLibraryId, keeps)
+  }
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
@@ -1436,14 +1456,14 @@ class LibraryCommanderImpl @Inject() (
           existingKeepOpt match {
             case None =>
               val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
-              keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
+              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
+              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
               Right(movedKeep)
             case Some(existingKeep) if existingKeep.isInactive =>
               val movedKeep = keepRepo.save(k.withId(existingKeep.id.get).withLibrary(toLibrary)) // clone new keep into existing keep's place, wiping out the existing keep
               keepRepo.deactivate(k) // deactivate the keep in the old library
-              keepToLibraryCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              keepToLibraryCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
+              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
+              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>
@@ -1585,6 +1605,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
+  @AlertingTimer(2 seconds)
   @StatsdTiming("LibraryCommander.createLibraryCardInfos")
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet

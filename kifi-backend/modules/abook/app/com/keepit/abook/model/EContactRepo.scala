@@ -34,8 +34,7 @@ trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
 class EContactRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    econtactCache: EContactCache,
-    override protected val changeListener: Option[RepoModification.Listener[EContact]]) extends DbRepo[EContact] with SeqNumberDbFunction[EContact] with EContactRepo with Logging {
+    econtactCache: EContactCache) extends DbRepo[EContact] with SeqNumberDbFunction[EContact] with EContactRepo with Logging {
 
   import DBSession._
   import db.Driver.simple._
