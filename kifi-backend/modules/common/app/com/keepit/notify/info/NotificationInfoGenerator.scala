@@ -48,7 +48,7 @@ class NotificationInfoGenerator @Inject() (
 
   }
 
-  def runFully[A](that: ReturnsInfo[A], args: Args = Map()): Future[A] = run(that, args, pickedOne = alse).map { result =>
+  def runFully[A](that: ReturnsInfo[A], args: Args = Map()): Future[A] = run(that, args, pickedOne = false).map { result =>
     result.value
   }
 

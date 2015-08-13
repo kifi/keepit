@@ -7,6 +7,13 @@ import com.keepit.notify.model.NotificationEvent
 
 import scala.concurrent.Future
 
+/**
+ * Represents a monad that essentially wraps [[Future]] and [[InfoResult]], representing the method by which notification
+ * events can obtain notification information. The reason this exists is because notification information can be generated
+ * on the shoebox side or the eliza side, when the event is generated or when it is emitted, respectively. In order to
+ * prevent unnecessary requests across services, information associated with the notification event is cached when the
+ * event is first built and sent to Eliza, where Eliza can decide to keep it if it send the notification immediately.
+ */
 sealed trait ReturnsInfo[+A] {
 
   def map[B](that: A => B): ReturnsInfo[B] = AndThen(this, (a: A) =>

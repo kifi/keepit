@@ -6,6 +6,6 @@ package object info {
 
   type ReturnsInfoResult = ReturnsInfo[NotificationInfo]
 
-  type Args = Map[String, Object]
+  type Args = Map[String, Any]
 
 }
