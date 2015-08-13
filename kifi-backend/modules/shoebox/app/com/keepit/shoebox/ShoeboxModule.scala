@@ -4,6 +4,7 @@ import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.controllers.internal.DataPipelineExecutorModule
+import com.keepit.notify.NotifyModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.rover.RoverServiceClientModule
@@ -45,6 +46,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val storeModule: ShoeboxStoreModule
   val sqsModule: SimpleQueueModule
   val normalizationQueueModule: NormalizationUpdateJobQueueModule
+  val notifyModule: NotifyModule
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule
