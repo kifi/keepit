@@ -81,6 +81,7 @@ class AdminUserController @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgInviteRepo: OrganizationInviteRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -954,6 +955,11 @@ class AdminUserController @Inject() (
     kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
     userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
     emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
+
+    // Organizations Data
+    orgMembershipRepo.getAllByUserId(userId).foreach { membership => orgMembershipRepo.save(membership.withState(OrganizationMembershipStates.INACTIVE)) }
+    orgInviteRepo.getAllByUserId(userId).foreach { invite => orgInviteRepo.save(invite.withState(OrganizationInviteStates.INACTIVE)) }
+    orgMembershipCandidateRepo.getAllByUserId(userId).foreach { candidacy => orgMembershipCandidateRepo.save(candidacy.withState(OrganizationMembershipCandidateStates.INACTIVE)) }
 
     val user = userRepo.get(userId)
 
