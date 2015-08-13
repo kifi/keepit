@@ -508,8 +508,6 @@ class KeepRepoImpl @Inject() (
   def latestManualKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     val sources: Set[KeepSource] = Set(KeepSource.keeper, KeepSource.mobile, KeepSource.email, KeepSource.site)
     rows.filter(k => k.userId === userId && k.source.inSet(sources)).map(_.keptAt).max.run
-    //    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    //    sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[Option[DateTime]].first
   }
 
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
