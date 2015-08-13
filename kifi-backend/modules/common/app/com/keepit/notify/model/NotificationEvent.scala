@@ -3,6 +3,7 @@ package com.keepit.notify.model
 import com.keepit.common.db.Id
 import com.keepit.model.{ Organization, Keep, Library, User }
 import com.keepit.common.time._
+import com.keepit.notify.info.{ReturnsInfo, GetUser, ReturnsInfoResult}
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -59,6 +60,18 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
   override def shouldGroupWith(newEvent: NewKeepActivity, existingEvents: Set[NewKeepActivity]): Boolean = false
+
+  override def info(event: NewKeepActivity): ReturnsInfoResult = for {
+    library <- ReturnsInfo.library(event.libraryId)
+    user <- ReturnsInfo.user(event.)
+    path <- ReturnsInfo.libraryPath(event.libraryId)
+    userImage <- ReturnsInfo.userImage(event.keeperId)
+  } yield NotificationInfo(
+      path = path,
+      imageUrl = userImage,
+      title = s"New keep in ${library.name}",
+      body = s"${libMessage.owner.firstName} has just kept ${libMessage.newKeep.title.getOrElse("a new item")}"
+    )
 
 }
 

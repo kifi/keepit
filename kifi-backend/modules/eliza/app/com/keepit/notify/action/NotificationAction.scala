@@ -5,7 +5,6 @@ import java.util.UUID
 
 import akka.util.ByteStringBuilder
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.path.Path
 import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.model.Library
 
@@ -15,11 +14,7 @@ import com.keepit.model.Library
 trait NotificationAction {
 
   val items: Set[NotificationItem]
-  val notificationId: ExternalId[Notification]
-  val path: Path
-  val imageUrl: String
-  val body: String
-  val hoverText: String
+  val notificationId: Notification
 
   lazy val id: ExternalId[NotificationAction] = NotificationAction.externalIdFromItems(items)
 
@@ -57,12 +52,3 @@ object NotificationAction {
   }
 
 }
-
-case class ViewLibrary(
-  library: Id[Library],
-  items: Set[NotificationItem],
-  notificationId: ExternalId[Notification],
-  path: Path,
-  imageUrl: String,
-  body: String,
-  hoverText: String) extends NotificationAction

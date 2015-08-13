@@ -1,5 +1,6 @@
 package com.keepit.notify.model
 
+import com.keepit.notify.info.ReturnsInfoResult
 import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
@@ -36,6 +37,8 @@ trait NotificationKind[N <: NotificationEvent] {
    * @return True if the events should be grouped together, false otherwise
    */
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
+
+  def info(event: N): ReturnsInfoResult
 
 }
 
