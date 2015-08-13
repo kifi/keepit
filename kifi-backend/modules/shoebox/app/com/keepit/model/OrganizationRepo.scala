@@ -14,6 +14,7 @@ import com.keepit.common.time.Clock
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def allActive(implicit session: RSession): Seq[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
+  def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
   def getOrgByName(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Option[Organization]
   def searchOrgsByNameFuzzy(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Seq[Organization]
@@ -77,6 +78,11 @@ class OrganizationRepoImpl @Inject() (
       val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }) } yield row }
       q.list.map { x => orgId2Key(x.id.get) -> x }.toMap
     }.map { case (key, org) => key.id -> org }
+  }
+
+  def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization] = {
+    val q = for (row <- rows if row.ownerId === ownerId && row.state =!= excludeStateOpt.orNull) yield row
+    q.list.toSet
   }
 
   def deactivate(model: Organization)(implicit session: RWSession): Unit = {
