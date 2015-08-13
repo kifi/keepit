@@ -26,6 +26,13 @@
         </form>
     </div>
 
+    <div>
+        <p>Move all of a library's keeps</p>
+        <input type="text" name="name" id="lib-keep-move-from" placeholder="Move keeps from here">
+        <input type="text" name="name" id="lib-keep-move-to" placeholder="to here">
+        <button id="lib-keep-move-button" class="btn btn-default">Move Keeps</button>
+    </div>
+
   <h2>Showing @libraryList.size Libraries</h2>
   <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraries()"
   method="POST">
@@ -80,5 +87,18 @@
           return false;
         });
       });
+
+    $(document).ready(function() {
+        $('#lib-keep-move-button').on('click', function() {
+            moveLibraryKeeps( parseInt($('#lib-keep-move-from').val(), 10),
+                              parseInt($('#lib-keep-move-to').val(), 10) );
+        });
+    });
+    function moveLibraryKeeps(fromId, toId) {
+        $.post("@com.keepit.controllers.admin.routes.AdminLibraryController.unsafeMoveLibraryKeeps", JSON.stringify({
+            "fromLibrary": fromId,
+            "toLibrary": toId
+        }));
+    };
   </script>
 }

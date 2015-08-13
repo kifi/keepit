@@ -69,12 +69,12 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
     "let admins move keeps in and out of libraries" in {
       "never allow a non-admin to do anything" in {
         withDb(modules: _*) { implicit injector =>
-          val (rando, lib) = db.readWrite { implicit session => (UserFactory.user().saved, LibraryFactory.library().saved) }
+          val rando = db.readWrite { implicit session => UserFactory.user().saved }
 
           inject[FakeUserActionsHelper].setUser(rando)
           val payload: JsValue = JsNull
-          val request = route.unsafeMoveLibraryKeeps(lib.id.get).withBody(payload)
-          val result = controller.unsafeMoveLibraryKeeps(lib.id.get)(request)
+          val request = route.unsafeMoveLibraryKeeps.withBody(payload)
+          val result = controller.unsafeMoveLibraryKeeps(request)
           status(result) === FORBIDDEN
         }
       }
@@ -94,9 +94,9 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
           }
 
           inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
-          val payload: JsValue = Json.obj("toLibrary" -> lib2.id.get)
-          val request = route.unsafeMoveLibraryKeeps(lib1.id.get).withBody(payload)
-          val result = controller.unsafeMoveLibraryKeeps(lib1.id.get)(request)
+          val payload: JsValue = Json.obj("fromLibrary" -> lib1.id.get, "toLibrary" -> lib2.id.get)
+          val request = route.unsafeMoveLibraryKeeps.withBody(payload)
+          val result = controller.unsafeMoveLibraryKeeps(request)
           status(result) === OK
 
           val resultJson = contentAsJson(result)
