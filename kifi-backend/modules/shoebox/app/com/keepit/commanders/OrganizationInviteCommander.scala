@@ -32,10 +32,11 @@ trait OrganizationInviteCommander {
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
 }
@@ -281,7 +282,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
@@ -299,6 +300,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
           OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
         }
+
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership)
           .find(_.isRight)
         firstSuccess.map(_.right.map(_.membership))
@@ -308,9 +310,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       // on success accept invitations
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
+        val organization = organizationRepo.get(orgId)
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
+          if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
         }
       }
       success
@@ -381,6 +385,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
       organizationInviteRepo.getAllByOrganization(orgId)
+    }
+  }
+
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
     }
   }
 
