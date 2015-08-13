@@ -1,10 +1,7 @@
 package com.keepit.abook.commanders
 
-import java.text.Normalizer
-
-import com.amazonaws.services.cognitoidentity.model.NotAuthorizedException
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.abook.model.{ OrganizationMemberRecommendation, UserInviteRecommendation, EContact, EmailAccountInfo, EmailAccount, IrrelevantPeopleForOrg, OrganizationInviteRecommendation, OrganizationMemberRecommendationRepo, UserEmailInviteRecommendationRepo, TwitterInviteRecommendationRepo, LinkedInInviteRecommendationRepo, FacebookInviteRecommendationRepo, FriendRecommendationRepo, EContactRepo, EmailAccountRepo }
+import com.keepit.abook.model.{ EContact, EmailAccountInfo, EmailAccount, IrrelevantPeopleForOrg, OrganizationInviteRecommendation, OrganizationMemberRecommendationRepo, UserEmailInviteRecommendationRepo, TwitterInviteRecommendationRepo, LinkedInInviteRecommendationRepo, FacebookInviteRecommendationRepo, FriendRecommendationRepo, EContactRepo, EmailAccountRepo }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -14,9 +11,8 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.graph.GraphServiceClient
 import com.keepit.graph.model.SociallyRelatedEntitiesForOrg
-import com.keepit.model.{ Invitation, UserExperimentType, UserExperiment, OrganizationInviteView, User, Organization }
+import com.keepit.model.{ OrganizationInviteView, User, Organization }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.SocialNetworks
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -36,7 +32,6 @@ class AbookOrganizationRecommendationCommander @Inject() (
     orgMembershipRecommendationRepo: OrganizationMemberRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
-    oldWTICommander: WTICommander,
     abookRecommendationHelper: AbookRecommendationHelper,
     clock: Clock) extends Logging {
 

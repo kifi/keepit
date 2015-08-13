@@ -22,7 +22,6 @@ import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.{ HeimdalServiceClientModule }
 import com.keepit.abook.{ ABookServiceClientModule }
 import com.keepit.common.integration.ReaperModule
-import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{ LibrarySuggestedSearchQueueModule, NormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.{ CortexServiceClientModule }
@@ -43,7 +42,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val reaperModule: ReaperModule
   val siteMapModule: SiteMapGeneratorModule
   val storeModule: ShoeboxStoreModule
-  val sqsModule: SimpleQueueModule
   val normalizationQueueModule: NormalizationUpdateJobQueueModule
 
   // Shoebox Functional Modules
@@ -75,8 +73,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
-
-  val repoChangeListenerModule = ShoeboxRepoChangeListenerModule()
 
   val dbSequencingModule = ShoeboxDbSequencingModule()
 
