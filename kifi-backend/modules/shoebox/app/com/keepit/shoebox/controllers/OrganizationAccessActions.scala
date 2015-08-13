@@ -60,7 +60,7 @@ trait OrganizationAccessActions {
               } else {
                 Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
               }
-            case request: NonUserRequest[_] =>
+            case request: NonUserRequest[_] if authTokenOpt.isDefined =>
               if (authTokenOpt.exists(authToken => orgInviteCommander.isAuthValid(orgId, authToken))) {
                 val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
