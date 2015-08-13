@@ -31,7 +31,7 @@ angular.module('kifi')
             )
           ];
           modalData.action = 'remove';
-          modalData.actionText = 'Leave';
+          modalData.actionText = 'Leave Organization';
         } else {
           modalData.title = 'Remove ' + modalData.member.firstName + ' from ' + modalData.organization.name + '?';
           modalData.descriptions = [
@@ -46,7 +46,7 @@ angular.module('kifi')
             )
           ];
           modalData.action = 'remove';
-          modalData.actionText = 'Remove';
+          modalData.actionText = 'Remove Member';
         }
       }
     };
