@@ -397,7 +397,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
     val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
-      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit)))
+      case None =>
+        val memberCount = db.readOnlyMaster { implicit s => organizationMembershipRepo.countByOrgId(orgId) }
+        Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit + memberCount)))
     }
     val activeInvites = db.readOnlyMaster { implicit session =>
       organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING, InvitationDecision.DECLINED))
@@ -444,7 +446,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           }
           MaybeOrganizationMember(Right(contact), role, lastInvitedAt)
         }
-        suggestedUsers ++ suggestedEmailAddresses
+        (suggestedUsers ++ suggestedEmailAddresses).take(limit)
     }
   }
 
