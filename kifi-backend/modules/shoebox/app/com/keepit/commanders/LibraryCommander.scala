@@ -156,7 +156,7 @@ class LibraryCommanderImpl @Inject() (
       val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
       val newWay = ktlRepo.getByLibraryId(libraryId, Offset(offset), Limit(limit)) |> ktlCommander.getKeeps
       if (newWay != oldWay) {
-        log.info(s"[KTL-MATCH] getKeeps($libraryId): ${newWay.map(_id.get)} != ${oldWay.map(_.id.get)}")
+        log.info(s"[KTL-MATCH] getKeeps($libraryId): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
       }
       oldWay
     }
