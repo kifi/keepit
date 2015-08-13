@@ -12,6 +12,10 @@ import com.keepit.model._
 trait KeepToLibraryCommander {
   def internKeepInLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
   def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse]
+
+  // Fun helper methods
+  def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
+  def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -20,13 +24,13 @@ class KeepToLibraryCommanderImpl @Inject() (
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
-  keepToLibraryRepo: KeepToLibraryRepo,
+  ktlRepo: KeepToLibraryRepo,
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
   private def getValidationError(request: KeepToLibraryRequest)(implicit session: RSession): Option[KeepToLibraryFail] = {
     def userCanWrite = libraryMembershipRepo.getWithLibraryIdAndUserId(request.libraryId, request.requesterId).exists(_.canWrite)
-    def keepIsActive = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).exists(ktl => ktl.isActive)
+    def keepIsActive = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).exists(ktl => ktl.isActive)
 
     request match {
       case _: KeepToLibraryInternRequest =>
@@ -42,7 +46,7 @@ class KeepToLibraryCommanderImpl @Inject() (
 
   def internKeepInLibrary(request: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse] = {
     getValidationError(request).map(Left(_)).getOrElse {
-      val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId, excludeStates = Set.empty) match {
+      val ktl = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId, excludeStates = Set.empty) match {
         case Some(existingKtl) if existingKtl.isActive => existingKtl
         case existingKtlOpt =>
           val newKtlTemplate = KeepToLibrary(
@@ -54,7 +58,7 @@ class KeepToLibraryCommanderImpl @Inject() (
             visibility = request.library.visibility,
             organizationId = request.library.organizationId
           )
-          keepToLibraryRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
+          ktlRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
       }
       Right(KeepToLibraryInternResponse(ktl))
     }
@@ -62,9 +66,17 @@ class KeepToLibraryCommanderImpl @Inject() (
 
   def removeKeepFromLibrary(request: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse] = {
     getValidationError(request).map(Left(_)).getOrElse {
-      val ktl = keepToLibraryRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).get // Guaranteed to return an active link
-      keepToLibraryRepo.deactivate(ktl)
+      val ktl = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).get // Guaranteed to return an active link
+      ktlRepo.deactivate(ktl)
       Right(KeepToLibraryRemoveResponse())
     }
+  }
+
+  def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
+    ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId).isDefined
+  }
+  def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep] = {
+    val keepsByIds = keepRepo.getByIds(ktls.map(_.keepId).toSet)
+    ktls.map(ktl => keepsByIds(ktl.keepId))
   }
 }

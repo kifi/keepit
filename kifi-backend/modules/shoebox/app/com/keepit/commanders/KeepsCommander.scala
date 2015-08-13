@@ -77,6 +77,8 @@ class KeepsCommander @Inject() (
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
+    ktlCommander: KeepToLibraryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
@@ -98,7 +100,7 @@ class KeepsCommander @Inject() (
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
-  def getKeepsCountFuture(): Future[Int] = {
+  def getKeepsCountFuture: Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
@@ -124,10 +126,17 @@ class KeepsCommander @Inject() (
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
     db.readOnlyMaster { implicit session =>
       if (libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).isDefined) {
-        keepRepo.getByExtIdandLibraryId(keepExtId, libraryId) match {
+        val oldWay = keepRepo.getByExtIdandLibraryId(keepExtId, libraryId) match {
           case Some(k) => Right(k)
           case None => Left(NOT_FOUND, "keep_not_found")
         }
+        val newWay = keepRepo.getOpt(keepExtId) match {
+          case Some(k) if ktlCommander.isKeepInLibrary(k.id.get, libraryId) => Right(k)
+          case None => Left(NOT_FOUND, "keep_not_found")
+        }
+        if (newWay != oldWay) log.info(s"[KTL-MATCH] getKeep: $newWay != $oldWay")
+
+        oldWay
       } else {
         Left(FORBIDDEN, "library_access_denied")
       }
