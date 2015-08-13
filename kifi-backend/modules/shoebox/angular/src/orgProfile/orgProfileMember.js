@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  'profileService', 'modalService',
-  function (profileService, modalService) {
+  'profileService',
+  function (profileService) {
     function _isMe() {
       var $scope = this;
       return $scope.member.id === profileService.me.id;
@@ -24,8 +24,8 @@ angular.module('kifi')
       var $scope = this;
 
       return (
-        $scope.organization.ownerId === $scope.me.id &&
-        $scope.organization.ownerId !== $scope.member.id &&
+        $scope.myMembership.role === 'owner' &&
+        $scope.member.role !== 'owner' &&
         $scope.hasAcceptedInvite()
       );
     }
@@ -43,6 +43,7 @@ angular.module('kifi')
       var $scope = this;
       return (
         profileService.me.id === $scope.organization.ownerId &&
+        !$scope.isMe() &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
@@ -86,23 +87,7 @@ angular.module('kifi')
 
     function _triggerMakeOwner() {
       var $scope = this;
-
-      var opts = {
-        organization: $scope.organization,
-        member: $scope.member,
-        returnAction: function () {
-          $scope.$emit('resetAndFetch');
-        }
-      };
-      for (var i=0, len=$scope.members.length; i < len; i++) {
-        if ($scope.members[i].id === $scope.organization.ownerId) {
-          opts.currentOwner = $scope.members[i];
-        }
-      }
-      modalService.open({
-        template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
-        modalData: opts
-      });
+      $scope.$emit('makeOwner', $scope.member);
     }
 
     function _triggerPromote() {
@@ -118,12 +103,6 @@ angular.module('kifi')
     function _triggerClickedAvatar() {
       var $scope = this;
       $scope.$emit('clickedAvatar', $scope.member);
-    }
-
-    function _role() {
-      var $scope = this;
-      return ($scope.hasAcceptedInvite() ? '' : 'Pending') + 
-        ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
     }
 
     return {
@@ -188,7 +167,6 @@ angular.module('kifi')
         $scope.triggerMakeOwner = _triggerMakeOwner;
         $scope.triggerPromote = _triggerPromote;
         $scope.triggerDemote = _triggerDemote;
-        $scope.role = _role;
       }
     };
   }
