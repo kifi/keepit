@@ -12,7 +12,7 @@ class NotificationInfoGenerator @Inject() (
     source: NotificationInfoSource,
     implicit val executionContext: ExecutionContext) {
 
-  private def runAndThen[A, B](andThen: AndThen[A, B], args: Map[String, Object], pickedOne: Boolean): Future[InfoResult[B]] = {
+  private def runAndThen[A, B](andThen: AndThen[A, B], args: Args, pickedOne: Boolean): Future[InfoResult[B]] = {
     run(andThen.previous, args, pickedOne).map { result =>
       (andThen.f(result.value), result)
     }.flatMap {
@@ -20,7 +20,7 @@ class NotificationInfoGenerator @Inject() (
     }
   }
 
-  private def getArgs[E](args: Map[String, Object], keyIn: String, pickedOneIn: Boolean): Option[E] = for {
+  private def getArgs[E](args: Args, keyIn: String, pickedOneIn: Boolean): Option[E] = for {
     picked <- Option(pickedOneIn)
     if picked
     key <- Option(keyIn)
@@ -30,7 +30,7 @@ class NotificationInfoGenerator @Inject() (
     res.asInstanceOf[E]
   }
 
-  def run[A](that: ReturnsInfo[A], args: Map[String, Object], pickedOne: Boolean): Future[InfoResult[A]] = that match {
+  def run[A](that: ReturnsInfo[A], args: Args, pickedOne: Boolean): Future[InfoResult[A]] = that match {
 
     case Returns(a) => Future.successful(InfoResult(a, args, pickedOne))
 
@@ -48,10 +48,10 @@ class NotificationInfoGenerator @Inject() (
 
   }
 
-  def runFully[A](that: ReturnsInfo[A], args: Map[String, Object] = Map()): Future[A] = run(that, args, false).map { result =>
+  def runFully[A](that: ReturnsInfo[A], args: Args = Map()): Future[A] = run(that, args, pickedOne = alse).map { result =>
     result.value
   }
 
 }
 
-case class InfoResult[A](value: A, args: Map[String, Object], pickedOne: Boolean)
+case class InfoResult[A](value: A, args: Args, pickedOne: Boolean)

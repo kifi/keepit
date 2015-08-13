@@ -1,4 +1,4 @@
-package com.keepit.notify.model
+package com.keepit.notify.info
 
 import com.keepit.common.path.Path
 import play.api.libs.json.JsObject

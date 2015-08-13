@@ -5,7 +5,7 @@ import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, Keep, Library, User }
 import com.keepit.common.time._
 import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, GetUser, PickOne }
-import com.keepit.notify.info.{ ReturnsInfo, ReturnsInfoResult }
+import com.keepit.notify.info.{Args, NotificationInfo, ReturnsInfo, ReturnsInfoResult}
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -76,21 +76,6 @@ case class NewSocialConnection(
 
   val kind = NewSocialConnection
 
-  def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
-    event <- PickOne(events)
-    friend <- GetUser(event.friendId, "friend")
-    image <- GetUserImage(event.friendId, 0, "userImage")
-  } yield NotificationInfo(
-    path = Path(friend.username.value),
-    imageUrl = image,
-    title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
-    body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
-    linkText = "Invite more friends to kifi",
-    extraJson = Some(Json.obj(
-      "friend" -> BasicUser.fromUser(friend)
-    ))
-  )
-
 }
 
 object NewSocialConnection extends NotificationKind[NewSocialConnection] {
@@ -105,6 +90,34 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
   override def shouldGroupWith(newEvent: NewSocialConnection, existingEvents: Set[NewSocialConnection]): Boolean = false
+
+  def build(
+    recipient: Recipient,
+    time: DateTime,
+    friend: User,
+    friendImage: String,
+    networkType: Option[SocialNetworkType]): (NewSocialConnection, Args) = (
+      NewSocialConnection(recipient, time, friend.id.get, networkType),
+      Map(
+        "friend" -> friend,
+        "firendImage" -> friendImage
+      )
+    )
+
+  override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
+    event <- PickOne(events)
+    friend <- GetUser(event.friendId, "friend")
+    image <- GetUserImage(event.friendId, 0, "friendImage")
+  } yield NotificationInfo(
+      path = Path(friend.username.value),
+      imageUrl = image,
+      title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
+      body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
+      linkText = "Invite more friends to kifi",
+      extraJson = Some(Json.obj(
+        "friend" -> BasicUser.fromUser(friend)
+      ))
+    )
 
 }
 
