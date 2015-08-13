@@ -6,7 +6,7 @@ import java.net.URLEncoder
 
 sealed class Path(private val value: String) {
 
-  def encode: Path = new EncodedPath(value)
+  def encode: EncodedPath = new EncodedPath(value)
   def decode: Path = this
 
   def isEncoded: Boolean = false
@@ -21,7 +21,7 @@ sealed class Path(private val value: String) {
 
 class EncodedPath(private val value: String) extends Path(URLEncoder.encode(value, UTF8)) {
 
-  override def encode: Path = this
+  override def encode: EncodedPath = this
 
   override def decode: Path = new Path(value)
 

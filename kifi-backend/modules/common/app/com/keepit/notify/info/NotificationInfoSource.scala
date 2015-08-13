@@ -13,7 +13,7 @@ trait NotificationInfoSource {
 
   def library(id: Id[Library]): Future[Library]
 
-  def userImage(id: Id[User]): Future[String]
+  def userImage(id: Id[User], width: Int): Future[String]
 
   def libraryPath(id: Id[Library]): Future[EncodedPath]
 

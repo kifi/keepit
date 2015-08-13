@@ -45,27 +45,19 @@ object Recipient {
   )
 
   trait AsRecipient[T] {
-
     def recipient: Recipient
-
   }
 
   implicit class UserIdAsRecipient(user: Id[User]) extends AsRecipient[Id[User]] {
-
     def recipient = Recipient(user)
-
   }
 
   implicit class UserAsRecipient(user: User) extends AsRecipient[User] {
-
     def recipient = user.id.get.recipient
-
   }
 
   implicit class EmailAddressAsRecipient(email: EmailAddress) extends AsRecipient[EmailAddress] {
-
     def recipient = Recipient(email)
-
   }
 
 }
