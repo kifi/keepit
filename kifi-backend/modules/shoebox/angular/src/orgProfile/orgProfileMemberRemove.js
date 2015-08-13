@@ -16,7 +16,7 @@ angular.module('kifi')
             'Canceling this invitation will prevent ' + (modalData.member.firstName || modalData.member.email) +
             ' from joining the organization. They will not be notified. You can re-invite them at any time.'
           )];
-          modalData.actionText = 'Cancel Invite';
+          modalData.actionText = 'Cancel Invitation';
           modalData.action = 'cancel';
         } else if (modalData.isMe) {
           modalData.title = 'Leave ' + modalData.organization.name + '?';
