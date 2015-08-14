@@ -55,9 +55,7 @@ class AdminOrganizationController @Inject() (
     val orgsCount = filteredOrgs.length
     val startingIndex = page * pageSize
     val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
-    db.readOnlyReplica { implicit s =>
-      Future.sequence(orgsPage.map(org => statsCommander.organizationStatisticsOverview(org)))
-    }.map { orgsStats =>
+    Future.sequence(orgsPage.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
       (orgsCount, orgsStats)
     }
   }
@@ -196,9 +194,7 @@ class AdminOrganizationController @Inject() (
         "error" -> s"No results for '$orgName' found"
       ))
     } else {
-      db.readOnlyReplica { implicit session =>
-        Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org)))
-      }.map { orgs =>
+      Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgs =>
         Ok(html.admin.organizations(
           orgs,
           s"Results for '$orgName'",
