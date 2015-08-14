@@ -263,17 +263,18 @@ class UserStatisticsCommander @Inject() (
       allMemberChatStats = allMemberChatStats
     )
   }
-  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): Future[OrganizationStatisticsOverview] = {
+
+  def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val (allUsers, libraries, members, candidates, domains) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.getAllByOrgId(orgId)
+      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+      val allUsers = members.map(_.userId) | candidates.map(_.userId)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).filterNot(_.kind == LibraryKind.SYSTEM_GUIDE)
+      (allUsers, libraries, members, candidates, domains)
+    }
     val numKeeps = libraries.map(_.keepCount).sum
-
-    val members = orgMembershipRepo.getAllByOrgId(orgId)
-    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-    val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-
-    val allUsers = members.map(_.userId) | candidates.map(_.userId)
 
     val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
 
