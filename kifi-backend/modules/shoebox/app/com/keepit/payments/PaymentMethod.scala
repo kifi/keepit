@@ -8,16 +8,6 @@ import scala.slick.lifted.MappedTo
 
 import org.joda.time.DateTime
 
-//Put this in a common package?
-//The only thing that distinguishes this from a regular boolen, is that at the DB level "false" will be stored as "null"
-//thus allowing "only-one-true" constriants. See the corresponding type mapper.
-case class TrueOrNull(v: Boolean)
-
-object TrueOrNull {
-  implicit def toBoolean(t: TrueOrNull): Boolean = t.v
-  implicit def fromBoolean(b: Boolean): TrueOrNull = TrueOrNull(b)
-}
-
 case class StripeToken(token: String)
 
 case class PaymentMethod(
@@ -26,13 +16,21 @@ case class PaymentMethod(
     updatedAt: DateTime = currentDateTime,
     state: State[PaymentMethod] = PaymentMethodStates.ACTIVE,
     accountId: Id[PaidAccount],
-    default: TrueOrNull,
+    default: Boolean,
     stripeToken: StripeToken) extends ModelWithState[PaymentMethod] {
 
   def withId(id: Id[PaymentMethod]): PaymentMethod = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaymentMethod = this.copy(updatedAt = now)
 }
 
-object PaymentMethodStates extends States[PaymentMethod] {
-  val test: TrueOrNull = false
+object PaymentMethod {
+  def applyFromDbRow(id: Option[Id[PaymentMethod]], createdAt: DateTime, updatedAt: DateTime, state: State[PaymentMethod], accountId: Id[PaidAccount], default: Option[Boolean], stripeToken: StripeToken) = {
+    PaymentMethod(id, createdAt, updatedAt, state, accountId, default.exists(b => b), stripeToken)
+  }
+
+  def unapplyFromDbRow(obj: PaymentMethod) = {
+    Some((obj.id, obj.createdAt, obj.updatedAt, obj.state, obj.accountId, if (obj.default) Some(true) else None, obj.stripeToken))
+  }
 }
+
+object PaymentMethodStates extends States[PaymentMethod]
