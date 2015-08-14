@@ -148,9 +148,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val inviter = userRepo.get(inviterId)
             (org, owner, inviter)
           }
-          invites.foreach { invite =>
-            invite.userId.foreach { id =>
-              db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
+            invites.foreach { invite =>
+              invite.userId.foreach { id =>
                 if (!userExperimentRepo.hasExperiment(id, UserExperimentType.ORGANIZATION)) {
                   userExperimentRepo.save(UserExperiment(userId = id, experimentType = UserExperimentType.ORGANIZATION))
                 }
@@ -158,7 +158,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             }
           }
           val persistedInvites = invites.flatMap(persistInvitation)
-          sendInvitationEmails(persistedInvites, org, owner, inviter)
+
+          sendInvitationEmailsAndNotifications(persistedInvites, org, owner, inviter)
           organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
 
           Right(inviteeInfos)
@@ -189,12 +190,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvitationEmails(persistedInvites: Set[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+  def sendInvitationEmailsAndNotifications(persistedInvites: Set[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
     val (inviteesById, _) = persistedInvites.partition(_.userId.nonEmpty)
 
     // send notifications to kifi users only
     if (inviteesById.nonEmpty) {
-      notifyInviteeAboutInvitationToJoinOrganization(org, owner, inviter, inviteesById.flatMap(_.userId).toSet)
+      notifyInviteeAboutInvitationToJoinOrganization(org, owner, inviter, inviteesById.flatMap(_.userId))
     }
 
     // send emails to both users & non-users
@@ -237,7 +238,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val orgLink = s"""https://www.kifi.com/${org.name}"""
+    val orgLink = s"""https://www.kifi.com/${org.handle.value}"""
 
     elizaClient.sendGlobalNotification( //push sent
       userIds = invitees,
