@@ -101,7 +101,8 @@ object OrganizationRole {
     }
   }
 
-  def all: Seq[OrganizationRole] = Seq(ADMIN, MEMBER)
+  def all: Set[OrganizationRole] = Set(ADMIN, MEMBER)
+  def allOpts: Set[Option[OrganizationRole]] = all.map(Some(_)) ++ Set(None)
 }
 
 case class IngestableOrganizationMembership(

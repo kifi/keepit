@@ -19,7 +19,7 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
             if (articleInfo.uriId == uriId) articleInfo else {
               airbrake.notify(s"Found ArticleInfo $kind for url $url with inconsistent uriId: expected $uriId, found ${articleInfo.uriId}.")
               articleInfoRepo.deleteCache(articleInfo)
-              articleImageRepo.getByArticleInfo(articleInfo).foreach(articleImage => articleImageRepo.save(articleImage.copy(uriId = uriId)))
+              articleImageRepo.getByArticleInfo(articleInfo, excludeState = None).foreach(articleImage => articleImageRepo.save(articleImage.copy(uriId = uriId)))
               articleInfoRepo.save(articleInfo.copy(uriId = uriId))
             }
           }

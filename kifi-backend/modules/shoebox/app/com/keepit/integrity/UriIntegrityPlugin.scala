@@ -76,14 +76,14 @@ class UriIntegrityActor @Inject() (
             keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(helpers.improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
             (Some(oldBm), None)
-          case Some(currentPrimary) => {
-
+          case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
-              val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
-              val deadBm = keepRepo.save(
-                duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
-              )
-              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)))
+              // TODO(ryan): This is just killing the old keep. We ought to check if the Keep metadata can be merged
+              // If it can be merged, do the merge. If it can't, let both continue to exist.
+              // Eventually this is going to need to deal with the possibility of more than one Keep/(URI, Library) pair
+              // It will need to check every single Keep to see if the metadata can be merged.
+              val deadBm = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
+              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
               keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
               (Some(deadBm), Some(liveBm))
             }
@@ -109,16 +109,14 @@ class UriIntegrityActor @Inject() (
                 // oldBm is already inactive or duplicate, do nothing
                 (None, None)
             }
-          }
         }
       }
     }
 
-    val collectionsToUpdate = deactivatedBms.map {
-      case (Some(oldBm), None) => {
+    val collectionsToUpdate = deactivatedBms.flatMap {
+      case (Some(oldBm), None) =>
         keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
-      }
-      case (Some(oldBm), Some(newBm)) => {
+      case (Some(oldBm), Some(newBm)) =>
         var collections = Set.empty[Id[Collection]]
         keepToCollectionRepo.getByKeep(oldBm.id.get, excludeState = None).foreach { ktc =>
           collections += ktc.collectionId
@@ -133,11 +131,9 @@ class UriIntegrityActor @Inject() (
           }
         }
         collections
-      }
-      case _ => {
+      case _ =>
         Set.empty[Id[Collection]]
-      }
-    }.flatten
+    }
 
     collectionsToUpdate.foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = true))
   }
@@ -153,7 +149,7 @@ class UriIntegrityActor @Inject() (
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
       if (oldUriId == newUriId) {
         db.readWrite { implicit s =>
-          changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+          changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.INACTIVE))
         }
       }
     } else {
@@ -192,7 +188,7 @@ class UriIntegrityActor @Inject() (
 
       // some additional sanity check right away!
       db.readWrite(attempts = 3) { implicit s =>
-        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
+        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.nonEmpty)
       }
 
       db.readWrite(attempts = 3) { implicit s =>
@@ -239,18 +235,18 @@ class UriIntegrityActor @Inject() (
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
 
-    if (toMerge.size == 0) {
+    if (toMerge.isEmpty) {
       log.debug("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
       val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
       val applied = db.readOnlyReplica { implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED) }
       if (applied.size == batchSize) { // make sure a full batch of applied ones
-        applied.sortBy(_.seq).lastOption.map { x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
+        applied.sortBy(_.seq).lastOption.foreach { x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
         log.info(s"${applied.size} applied changed_uris are found!")
       }
       return applied.size
     }
 
-    toMerge.map { change =>
+    toMerge.foreach { change =>
       try {
         handleURIMigration(change)
       } catch {
@@ -268,7 +264,7 @@ class UriIntegrityActor @Inject() (
       }
     }
 
-    toMerge.sortBy(_.seq).lastOption.map { x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
+    toMerge.sortBy(_.seq).lastOption.foreach { x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
     log.info(s"batch merge uris completed in database: ${toMerge.size} pairs of uris merged. zookeeper seqNum updated.")
     toMerge.size
   }
@@ -297,7 +293,7 @@ class UriIntegrityActor @Inject() (
       }
     }
 
-    toMigrate.sortBy(_.seq).lastOption.map { x => centralConfig.update(URLMigrationSeqNumKey, x.seq) }
+    toMigrate.sortBy(_.seq).lastOption.foreach { x => centralConfig.update(URLMigrationSeqNumKey, x.seq) }
     log.info(s"${toMigrate.size} urls renormalized.")
   }
 

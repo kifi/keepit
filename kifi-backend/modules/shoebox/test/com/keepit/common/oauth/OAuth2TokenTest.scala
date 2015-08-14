@@ -29,6 +29,7 @@ import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, SocialU
 import KifiSession._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory
+import com.keepit.common.time._
 
 import scala.concurrent.Future
 
@@ -47,7 +48,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         Some(oauth2Info), None)
 
       val user = UserFactory.user().withName("Foo", "Bar").withUsername("foo-bar").saved
-      val userEmail = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, state = UserEmailAddressStates.VERIFIED, address = EmailAddress(email)))
+      userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress(email), verified = true).get
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Foo Bar", state = SocialUserInfoStates.CREATED, socialId = SocialId(identityId.userId), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
       (socialUser, user, sui)
     }

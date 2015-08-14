@@ -1,12 +1,12 @@
 <li class="kf-org-member">
   <div class="kf-org-member-upper clearfix">
     <div class="kf-org-member-upper-left">
-      <a href="{{member|profileUrl}}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="triggerClickedAvatar()">
+      <a href="{{ member.id ? (member|profileUrl) : '#' }}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="member.id ? triggerClickedAvatar() : null">
         <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">
           <p class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</p>
-          <p class="kf-org-member-info-role">{{ (hasAcceptedInvite() ? '' : 'Pending ') + (member.role === 'admin' ? 'Admin' : 'Member') }}</p>
+          <p class="kf-org-member-info-role">{{ role() }}</p>
         </div>
       </a>
     </div>
@@ -18,8 +18,30 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button ng-if="shouldShowDemote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerDemote(member)">Demote</button>
-      <button ng-if="shouldShowPromote()" class="kf-org-member-action-button kf-org-member-admin-action" ng-click="triggerPromote(member)">Make admin</button>
+      <button ng-if="shouldShowMakeOwner()" class="kf-button kf-button-small" ng-click="triggerMakeOwner(member)">
+        <svg 
+          kf-symbol-sprite
+          icon="owner"
+          class="kf-org-member-action-icon"
+        ></svg>
+        <span class="kf-org-member-action-title">Make owner</span>
+      </button>
+      <button ng-if="shouldShowDemote()" class="kf-button kf-button-small" ng-click="triggerDemote(member)">
+        <svg 
+          kf-symbol-sprite
+          icon="demote"
+          class="kf-org-member-action-icon"
+        ></svg>
+        <span class="kf-org-member-action-title">Demote</span>
+      </button>
+      <button ng-if="shouldShowPromote()" class="kf-button kf-button-small" ng-click="triggerPromote(member)">
+        <svg 
+          kf-symbol-sprite
+          icon="admin"
+          class="kf-org-member-action-icon"
+        ></svg>
+        <span class="kf-org-member-action-title">Make admin</span>
+      </button>
     </div>
     <div class="kf-org-member-lower-right">
       <button ng-if="shouldShowAcceptInvite()" class="kf-org-member-action-button kf-org-membership-action" ng-click="triggerAcceptInvite(member)">accept invite</button>

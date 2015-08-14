@@ -1,6 +1,6 @@
 package com.keepit.eliza.controllers.site
 
-import com.keepit.eliza.commanders.{ NotificationCommander, MessagingCommander }
+import com.keepit.eliza.commanders.{ NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
 import com.keepit.heimdal._
@@ -12,7 +12,7 @@ import com.google.inject.Inject
 
 class WebsiteMessagingController @Inject() (
     messagingCommander: MessagingCommander,
-    notificationCommander: NotificationCommander,
+    notificationCommander: NotificationDeliveryCommander,
     val userActionsHelper: UserActionsHelper,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends UserActions with ElizaServiceController {
 

@@ -8,10 +8,9 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
-import com.keepit.rover.article.content.{ NormalizationInfo, LinkedInProfile, LinkedInProfileContent }
+import com.keepit.rover.article.content.{ HttpInfo, NormalizationInfo, LinkedInProfile, LinkedInProfileContent }
 import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.article.{ DefaultArticle, ArticleKind, Article, LinkedInProfileArticle }
-import com.keepit.rover.fetcher.FetchContext
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -43,7 +42,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
           overview = "",
           sections = ""
         ),
-        http = FetchContext.ok(url),
+        http = HttpInfo.ok,
         normalization = NormalizationInfo(
           canonicalUrl = Some(url),
           openGraphUrl = Some(url),

@@ -1,5 +1,9 @@
 package com.keepit.common.mail
 
+import java.security.MessageDigest
+import org.apache.commons.codec.binary.Base64
+import com.keepit.common.strings._
+
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import scala.util.{ Failure, Success, Try }
@@ -90,12 +94,12 @@ object SystemEmailAddress {
   val SUPPORT = EmailAddress("support@kifi.com")
   val OLD_SUPPORT = EmailAddress("support@42go.com") //keep for serialization of mail
   val FEED_QA = EmailAddress("feed-qa@kifi.com")
-  val ASHLEY = EmailAddress("ashley@kifi.com")
   val SALES = EmailAddress("sales@kifi.com")
+  val ASHLEY = EmailAddress("ashley@kifi.com") //keep it around for twitter communication
   val CONGRATS = EmailAddress("congrats@kifi.com")
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH, CAM)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, ASHLEY, EISHAY_PUBLIC, SALES)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, EISHAY_PUBLIC, SALES, ASHLEY)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 
@@ -103,6 +107,19 @@ object SystemEmailAddress {
 
   def isValid(email: EmailAddress): Boolean = {
     ALL_EMAILS.contains(email) || (email.address.startsWith("discuss+") && email.address.endsWith("@kifi.com"))
+  }
+}
+
+case class EmailAddressHash(hash: String) extends AnyVal {
+  override def toString: String = hash
+  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
+}
+
+object EmailAddressHash {
+  def hashEmailAddress(emailAddress: EmailAddress): EmailAddressHash = {
+    val lowerCaseAddress = emailAddress.address.toLowerCase
+    val binaryHash = MessageDigest.getInstance("MD5").digest(lowerCaseAddress)
+    EmailAddressHash(new String(new Base64().encode(binaryHash), UTF8))
   }
 }
 

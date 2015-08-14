@@ -12,7 +12,7 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.social.{ BasicUserUserIdCache }
-import com.keepit.classify.{ DomainHashCache, DomainCache }
+import com.keepit.classify.{ DomainCache }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
@@ -35,6 +35,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def libraryImageCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new LibraryImageCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def organizationAvatarCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationAvatarCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -233,11 +238,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def domainHashCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new DomainHashCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new InitialSearchIdCache(stats, accessLog, (outerRepo, 1 hour))
 
@@ -271,14 +271,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
-  @Provides @Singleton
-  def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
-
   @Singleton
   @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibraryIdCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+    new LibraryIdCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -406,7 +402,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def organizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+    new OrganizationCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 14 days))
 
   @Provides @Singleton
   def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

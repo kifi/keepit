@@ -1,6 +1,6 @@
 package com.keepit.test
 
-import com.keepit.commanders.{ HandleCommanderImpl, HandleCommander }
+import com.keepit.commanders.{ UserEmailAddressCommander, HandleCommanderImpl, HandleCommander }
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -14,6 +14,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
   def userEmailAddressRepo(implicit injector: Injector) = inject[UserEmailAddressRepo]
+  def userEmailAddressCommander(implicit injector: Injector) = inject[UserEmailAddressCommander]
   def userCredRepo(implicit injector: Injector) = inject[UserCredRepo]
   def rawKeepRepo(implicit injector: Injector) = inject[RawKeepRepo]
   def userPictureRepo(implicit injector: Injector) = inject[UserPictureRepo]
@@ -30,7 +31,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
   def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
-  def emailAddressRepo(implicit injector: Injector) = inject[UserEmailAddressRepo]
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]

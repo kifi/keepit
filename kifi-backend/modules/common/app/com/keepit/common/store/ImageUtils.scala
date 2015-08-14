@@ -14,8 +14,12 @@ import java.awt.Color
 import play.api.libs.functional.syntax._
 
 case class ImageOffset(x: Int, y: Int)
-
 case class ImageSize(width: Int, height: Int)
+case class ImageCropRegion(offset: ImageOffset, size: ImageSize)
+case class SquareImageCropRegion(offset: ImageOffset, s: Int) {
+  def size: ImageSize = ImageSize(s, s)
+}
+
 object ImageSize {
   implicit val format = (
     (__ \ 'width).format[Int] and

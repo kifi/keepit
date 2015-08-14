@@ -1,7 +1,5 @@
 package com.keepit.controllers.core
 
-import java.util.UUID
-
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -9,9 +7,8 @@ import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
-import org.apache.commons.lang3.RandomStringUtils
-import play.api.Play
-import play.api.libs.oauth.RequestToken
+import play.api.Mode
+import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
 import securesocial.core._
@@ -37,7 +34,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ SecureSocialHelper, MaybeUserRequest, UserRequest, KifiSession }
+import com.keepit.common.controller.{ MaybeUserRequest, UserRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -46,8 +43,6 @@ import com.keepit.common.performance._
 import scala.concurrent.{ Await, Future }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.core._
-import scala.concurrent.duration._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -70,11 +65,12 @@ class AuthHelper @Inject() (
     userValueRepo: UserValueRepo,
     passwordResetRepo: PasswordResetRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
+    orgRepo: OrganizationRepo,
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     libraryInviteCommander: LibraryInviteCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
@@ -83,7 +79,8 @@ class AuthHelper @Inject() (
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val config: PublicIdConfiguration,
     resetPasswordEmailSender: ResetPasswordEmailSender,
-    fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
+    fortytwoConfig: FortyTwoConfig,
+    mode: Mode) extends HeaderNames with Results with Status with Logging {
 
   def connectOptionView(email: EmailAddress, providerId: String) = {
     log.info(s"[connectOptionView] $email matches some kifi user, but no (social) user exists given $providerId")
@@ -103,8 +100,8 @@ class AuthHelper @Inject() (
   def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
       socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
-        emailAddressRepo.getByAddressOpt(email).map {
-          case emailAddr if emailAddr.state == UserEmailAddressStates.VERIFIED =>
+        emailAddressRepo.getByAddress(email).map {
+          case emailAddr if emailAddr.verified =>
             (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
           case emailAddr =>
             // Someone is trying to register with someone else's unverified + non-login email address.
@@ -199,10 +196,19 @@ class AuthHelper @Inject() (
 
   trait PostRegIntent
   case class AutoFollowLibrary(libraryPublicId: PublicId[Library], authToken: Option[String]) extends PostRegIntent
+  case class AutoJoinOrganization(organizationPublicId: PublicId[Organization], authToken: String) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
   case object NoIntent extends PostRegIntent
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+  def finishSignup(user: User,
+    emailAddress: EmailAddress,
+    newIdentity: Identity,
+    emailConfirmedAlready: Boolean,
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
 
     // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
     // This function does some end-of-the-line wiring after registration. We support registrations directly from an API,
@@ -213,11 +219,17 @@ class AuthHelper @Inject() (
     // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
     // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
 
-    val intentFromCookie = request.cookies.get("intent").map(_.value).flatMap {
+    val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
       case "follow" =>
         request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
           val authToken = request.cookies.get("libraryAuthToken").map(_.value)
           AutoFollowLibrary(libPubId, authToken)
+        }
+      case "joinOrg" =>
+        request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
+          request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
+            AutoJoinOrganization(orgPubId, authToken)
+          }
         }
       case "waitlist" =>
         Some(JoinTwitterWaitlist)
@@ -225,9 +237,11 @@ class AuthHelper @Inject() (
     }
 
     val intent: PostRegIntent = intentFromCookie.orElse {
-      (libraryPublicId, libAuthToken) match {
-        case (Some(libPubId), authTokenOpt) =>
+      (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
+        case (Some(libPubId), authTokenOpt, _, _) =>
           Some(AutoFollowLibrary(libPubId, authTokenOpt))
+        case (_, _, Some(orgPublicId), Some(authToken)) =>
+          Some(AutoJoinOrganization(orgPublicId, authToken))
         case _ => None
       }
     }.getOrElse(NoIntent)
@@ -238,19 +252,18 @@ class AuthHelper @Inject() (
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
         if (!emailConfirmedAlready) {
-          val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
-          if (Play.isProd) {
+          val unverifiedEmail = newIdentity.email.flatMap(EmailAddress.validate(_).toOption).getOrElse(emailAddress)
+          if (mode == Prod) {
             // Do not sent the email in dev
             SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
           }
         } else {
           db.readWrite { implicit session =>
-            emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
-              userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
+            emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
+              userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
             }
-            userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
           }
-          if (Play.isProd) {
+          if (mode == Prod) {
             // Do not sent the email in dev
             SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
           }
@@ -262,7 +275,14 @@ class AuthHelper @Inject() (
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
-          libPathCommander.getPath(library)
+          libPathCommander.getPathForLibrary(library)
+        }.getOrElse("/")
+        url
+      case AutoJoinOrganization(orgPubId, authToken) =>
+        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
+        val url = Organization.decodePublicId(orgPubId).map { orgId =>
+          val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
+          s"/${handle.value}"
         }.getOrElse("/")
         url
       case JoinTwitterWaitlist =>
@@ -278,7 +298,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv").map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -330,18 +350,23 @@ class AuthHelper @Inject() (
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, None, None, isFinalizedImmediately = false)
+          handleSocialFinalizeInfo(sfi, None, None, None, None, isFinalizedImmediately = false)
       })
   }
 
   def doTokenFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     request.body.asOpt[TokenFinalizeInfo] match {
       case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
-      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, None, isFinalizedImmediately = false)
+      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, None, info.orgPublicId, info.orgAuthToken, isFinalizedImmediately = false)
     }
   }
 
-  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo,
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     val identity = request.identityOpt.get
@@ -352,7 +377,8 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
-    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = isFinalizedImmediately)
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken,
+      orgPublicId = orgPublicId, orgAuthToken = orgAuthToken, isFinalizedImmediately = isFinalizedImmediately)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -373,70 +399,64 @@ class AuthHelper @Inject() (
         Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
       }, {
         case efi: EmailPassFinalizeInfo =>
-          handleEmailPassFinalizeInfo(efi, None, None)
+          handleEmailPassFinalizeInfo(efi, None, None, None, None)
       }
     )
   }
 
-  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], orgPublicId: Option[PublicId[Organization]], orgAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
-        val verifiedEmail = verifySignupEmail(email, libraryPublicId, libAuthToken).nonEmpty
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = false)
+        val verifiedEmail = verifySignupEmail(request.userId, email, libraryPublicId, libAuthToken)
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, orgPublicId, orgAuthToken, isFinalizedImmediately = false)
     }
   }
 
-  private def verifySignupEmail(email: EmailAddress, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String]): Option[UserEmailAddress] = {
-    libAuthToken.flatMap { authToken =>
-      libraryPublicId.flatMap { publicLibId =>
-        Library.decodePublicId(publicLibId) match {
-          case Success(libId) =>
-            db.readWrite { implicit session =>
-              if (libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists(_.emailAddress.contains(email))) {
-                // we found an invite with lib / email / authToken, this email is verified.
-                emailAddressRepo.getByAddressOpt(email).map(userEmailAddressCommander.saveAsVerified(_))
-              } else {
-                None
+  private def verifySignupEmail(userId: Id[User], email: EmailAddress, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String]): Boolean = {
+    libAuthToken.exists { authToken =>
+      libraryPublicId.exists { publicLibId =>
+        Library.decodePublicId(publicLibId).toOption.exists { libId =>
+          db.readWrite { implicit session =>
+            libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
+              libraryInvite.emailAddress.exists { sentTo =>
+                (sentTo == email) && emailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
+                  userEmailAddressCommander.saveAsVerified(emailRecord)
+                  true
+                }
               }
             }
-          case Failure(_) => None
+          }
         }
       }
     }
   }
 
-  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
-    val email = EmailAddress(emailAddrStr)
+  private def getResetEmailAddresses(email: EmailAddress): Option[(Id[User], Option[EmailAddress])] = {
     db.readOnlyMaster { implicit s =>
-      val emailAddrOpt = emailAddressRepo.getByAddressOpt(email, excludeState = None) // TODO: exclude INACTIVE records
-      emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
-        emailAddrOpt.filter(_.verified) map { _ =>
-          (userId, None)
-        } getOrElse {
-          // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(_.address))
-        }
+      emailAddressRepo.getByAddress(email).map(_.userId) map { userId =>
+        (userId, Try(emailAddressRepo.getByUser(userId)).toOption)
       }
     }
   }
 
   def doForgotPassword(implicit request: Request[JsValue]): Future[Result] = {
-    (request.body \ "email").asOpt[String] map { emailAddrStr =>
+    (request.body \ "email").asOpt[EmailAddress].map { suppliedEmailAddress =>
       db.readOnlyMaster { implicit session =>
-        getResetEmailAddresses(emailAddrStr)
+        getResetEmailAddresses(suppliedEmailAddress)
       } match {
-        case Some((userId, verifiedEmailAddressOpt)) =>
-          val emailAddresses = Set(EmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
+        case Some((userId, resetEmailAddressOpt)) =>
+          val emailAddresses = Set(suppliedEmailAddress) ++ resetEmailAddressOpt
           val emailsF = Future.sequence(emailAddresses.map { email => resetPasswordEmailSender.sendToUser(userId, email) }.toSeq)
           emailsF.map { e =>
-            Ok(Json.obj("addresses" -> emailAddresses.map { email =>
-              if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
+            Ok(Json.obj("addresses" -> emailAddresses.map {
+              case email if email == suppliedEmailAddress => suppliedEmailAddress.address
+              case email => AuthController.obscureEmailAddress(email.address)
             }))
           }
         case _ =>
-          log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
+          log.warn(s"Could not reset password because supplied email address $suppliedEmailAddress not found.")
           Future.successful(BadRequest(Json.obj("error" -> "no_account")))
       }
     } getOrElse Future.successful(BadRequest("0"))
@@ -449,8 +469,8 @@ class AuthHelper @Inject() (
     } yield {
       db.readWrite { implicit s =>
         passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-            val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+          case Some(pr) if passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)) =>
+            emailAddressRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
               UserService.save(UserIdentity(
@@ -496,46 +516,34 @@ class AuthHelper @Inject() (
 
   def doVerifyEmail(code: String)(implicit request: MaybeUserRequest[_]): Result = {
     db.readWrite { implicit s =>
-      emailAddressRepo.getByCode(code).map { address =>
-        lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-          pendingEmail.isDefined && address.address == pendingEmail.get
-        }
-        val user = userRepo.get(address.userId)
-        val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
-        verifiedEmailOpt.collect {
-          case verifiedEmail if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
-            userCommander.updateUserPrimaryEmail(verifiedEmail)
-        }
-
-        (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
-          case (true, _) if user.state == UserStates.PENDING =>
-            Redirect(s"/?m=1")
-          case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
-            // first time being used, not logged in OR logged in as correct user
-            authenticateUser(address.userId,
-              error => throw error,
-              authenticator => {
-                val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                  Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
-                } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
-                  // user has no installations
-                  Redirect("/install")
-                } else {
-                  Redirect(s"/?m=1")
-                }
-                resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
+      userEmailAddressCommander.verifyEmailAddress(code) map {
+        case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>
+          Redirect(s"/?m=1")
+        case (address, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
+          // first time being used, not logged in OR logged in as correct user
+          authenticateUser(address.userId,
+            error => throw error,
+            authenticator => {
+              val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+                Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
+              } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                // user has no installations
+                Redirect("/install")
+              } else {
+                Redirect(s"/?m=1")
               }
-            )
-          case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
-            Redirect(s"/?m=1")
-          case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
-        }
-      }.getOrElse {
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
+              resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                .withCookies(authenticator.toCookie)
+            }
+          )
+        case (address, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
+          Redirect(s"/?m=1")
+        case (address, _) =>
+          val user = userRepo.get(address.userId)
+          Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
       }
+    }.getOrElse {
+      BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
     }
   }
 

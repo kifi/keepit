@@ -17,6 +17,7 @@ import play.api.libs.json._
 import play.api.mvc.{ QueryStringBindable, PathBindable }
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 case class Organization(
     id: Option[Id[Organization]] = None,
@@ -62,11 +63,15 @@ case class Organization(
     }
   }
 
-  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, this.handle)
+  def toIngestableOrganization = IngestableOrganization(id, state, seq, name, description, ownerId, Try(this.handle).toOption)
 
+  def isActive: Boolean = state == OrganizationStates.ACTIVE
+  def isInactive: Boolean = state == OrganizationStates.INACTIVE
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
+    primaryHandle = None,
+    basePermissions = Organization.totallyInvisiblePermissions,
     description = None
   )
 }
@@ -88,6 +93,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         OrganizationPermission.ADD_LIBRARIES
       )
     ))
+  val totallyInvisiblePermissions: BasePermissions =
+    BasePermissions(OrganizationRole.allOpts.map(_ -> Set.empty[OrganizationPermission]).toMap)
 
   implicit val format: Format[Organization] = (
     (__ \ 'id).formatNullable[Id[Organization]] and
@@ -141,10 +148,18 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
-case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: OrganizationHandle)
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: Option[OrganizationHandle])
 
 object IngestableOrganization {
-  implicit val format = Json.format[IngestableOrganization]
+  implicit val format = (
+    (__ \ 'id).formatNullable[Id[Organization]] and
+    (__ \ 'state).format[State[Organization]] and
+    (__ \ 'seq).format[SequenceNumber[Organization]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'handle).formatNullable[OrganizationHandle]
+  )(IngestableOrganization.apply _, unlift(IngestableOrganization.unapply))
 }
 
 object OrganizationStates extends States[Organization]

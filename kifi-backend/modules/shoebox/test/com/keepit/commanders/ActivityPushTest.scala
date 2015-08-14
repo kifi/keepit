@@ -43,7 +43,7 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           user().saved
           user().saved
           user().saved
-          val lib1 = library().withUser(user1).saved
+          val lib1 = library().withOwner(user1).saved
           keep().withLibrary(lib1).saved
           repo.all().size === 0
           repo.getByUser(user1.id.get) === None

@@ -10,8 +10,9 @@ angular.module('kifi')
       scope: {
         value: '=',
         inputPlaceholder: '=',
-        textarea: '=',
         onSave: '=',
+        linkable: '=',
+        className: '=',
         readonly: '='
       },
       replace: true,
@@ -30,8 +31,8 @@ angular.module('kifi')
           if (textarea && span) {
             // Show an element that matches the textarea's styling to determine
             // how high it should be to show all of textarea's text.
+            span.width(textarea.css('width')); // This must be first.
             $scope.view.textareaHeight = {'height': span.css('height') };
-            $scope.view.textareaWidth = {'width': textarea.css('width') };
           }
         };
 
@@ -56,7 +57,7 @@ angular.module('kifi')
         // Called only when blurring without save
         $scope.disableEditor = function() {
           $scope.saveable = false;
-          $element.find('input')[0].blur();
+          $element.find('textarea')[0].blur();
         };
 
         $scope.save = function () {

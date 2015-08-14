@@ -18,8 +18,10 @@ object OrganizationFactoryHelper {
       val userRepo = injector.getInstance(classOf[UserRepo])
       assume(userRepo.get(org.ownerId).id.isDefined)
       val orgMemRepo = injector.getInstance(classOf[OrganizationMembershipRepo])
-      val admin = orgMemRepo.save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
-      assume(admin.id.isDefined)
+      orgMemRepo.save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
+      for (admin <- partialOrganization.admins) {
+        orgMemRepo.save(org.newMembership(admin.id.get, OrganizationRole.ADMIN))
+      }
       for (member <- partialOrganization.members) {
         orgMemRepo.save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
       }

@@ -32,7 +32,7 @@ class FeedCommander @Inject() (
     keepRepo: KeepRepo,
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     libraryCommander: PageMetaTagsCommander,
     rover: RoverServiceClient) extends Logging {
 
@@ -77,7 +77,7 @@ class FeedCommander @Inject() (
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(_.imagePath.getUrl(s3ImageConfig)), keeps, libraryCreator)
     }
-    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPathUrlEncoded(library)}"
+    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPathForLibraryUrlEncoded(library)}"
 
     val descriptionsFuture = db.readOnlyMaster { implicit s => rover.getUriSummaryByUris(keeps.map(_.uriId).toSet) }
     descriptionsFuture map { descriptions =>
@@ -138,7 +138,7 @@ class FeedCommander @Inject() (
         val metaTags = idToMetaTags(lib.id.get)
         val owner = owners(lib.ownerId)
         val libImg = metaTags.images.headOption.getOrElse(logo)
-        val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPath(lib)}"
+        val itemUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPathForLibrary(lib)}"
         val desc = Unparsed(
           s"""
                |<![CDATA[

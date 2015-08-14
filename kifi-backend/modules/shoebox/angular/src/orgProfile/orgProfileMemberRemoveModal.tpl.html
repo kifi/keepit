@@ -1,0 +1,10 @@
+<div kf-modal kf-width="550px">
+  <div kf-org-profile-member-remove kf-basic-modal-content title="{{ modalData.title }}" centered="true" with-cancel with-warning action-text="{{ modalData.actionText }}" action="removeOrCancelMember(modalData.member, modalData.action)">
+    <div class="kf-opmr-wrapper">
+      <div class="kf-opmr-member-pic"><img ng-src="{{ modalData.member | pic }}" /></div>
+      <div class="kf-opmr-member-descriptions">
+        <p ng-repeat="description in modalData.descriptions">{{ description }}</p>
+      </div>
+    </div>
+  </div>
+</div>

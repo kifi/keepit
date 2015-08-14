@@ -5,11 +5,11 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded', 'profile',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, libraryImageLoaded, profile) {
+    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -77,7 +77,6 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
-    $scope.profile = profile;
     $scope.libraryImageLoaded = libraryImageLoaded === true; // can also be an object containing a promise
     $scope.scrollDistance = '100%';
     $scope.loading = true;  // whether keeps are currently loading

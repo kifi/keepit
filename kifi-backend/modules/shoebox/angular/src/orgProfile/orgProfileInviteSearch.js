@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteSearch', [
-  'libraryService', 'profileService', 'orgProfileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
-  function (libraryService, profileService, orgProfileService, socialService, $timeout, util, KEY, net) {
+  'profileService', 'orgProfileService', 'socialService', '$timeout', 'util', 'KEY',
+  function (profileService, orgProfileService, socialService, $timeout, util, KEY) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -17,40 +17,33 @@ angular.module('kifi')
         var resultIndex = -1;
         var searchInput = element.find('.opis-search-input');
         var contactList = element.find('.opis-contact-list');
-        var inviteAccess = {
-          // collaborate: 'read_write',
-          // follow: 'read_only'
-          own: 'admin',
-          join: 'member'
-        };
 
         //
         // Scope data.
         //
         scope.results = [];
         scope.search = {};
-        scope.share = {};
+        scope.invitation = {};
         scope.showSpinner = false;
         scope.query = '';
         scope.queryIsValidEmail = true;
         scope.inviter = profileService.me;
         scope.organization = scope.modalData.organization;
-        scope.inviteType = scope.modalData.inviteType || 'join';
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
 
-        function shareLibrary(opts) {
-          if (scope.share.message) {
-            opts.message = scope.share.message;
+        function inviteMember(opts) {
+          if (scope.invitation.message) {
+            opts.message = scope.invitation.message;
           }
 
           return orgProfileService.sendOrgMemberInvite(scope.organization.id, opts).then(scope.modalData.returnAction);
         }
 
-        // function trackShareEvent(eventName, attr) {
-        //   var type = scope.currentPageOrigin === 'recommendationsPage' ? 'recommendations' : 'library';
-        //   var attributes = _.extend({ type: type }, attr || {});
-        //   libraryService.trackEvent(eventName, scope.library, attributes);
-        // }
+        function trackInviteEvent(eventName, attr) {
+          var type = 'organization_members';
+          var attributes = _.extend({ type: type }, attr || {});
+          orgProfileService.trackEvent(eventName, scope.organization, attributes);
+        }
 
         function clearSelection () {
           scope.results.forEach(function (result) {
@@ -89,15 +82,6 @@ angular.module('kifi')
 
           scope.showSpinner = true;
 
-          function getFirstLibrary(libraryData) {
-            var libraries = libraryData.libraries;
-            return libraries && libraries[0];
-          }
-
-          function getSearchContacts(library) {
-            return library && libraryService.getLibraryShareContacts(library.id, opt_query);
-          }
-
           function updateContacts(contacts) {
             var newResults;
 
@@ -106,7 +90,7 @@ angular.module('kifi')
               if (!opt_query) {
                 // remove any contacts who are already following (anybody who has an access, but no lastInvitedAt field)
                 // only if there's no query
-                _.remove(contacts, function(c) { return c.membership && !c.lastInvitedAt; });
+                _.remove(contacts, function (c) { return c.membership && !c.lastInvitedAt; });
               }
 
               // Clone deeply; otherwise, the data augmentation we do on individual contacts
@@ -116,8 +100,6 @@ angular.module('kifi')
               newResults.forEach(function (result) {
                 if (result.id) {
                   result.isInvited = !!result.lastInvitedAt;
-                  result.isFollowing = (result.membership === 'read_only') && !result.isInvited;
-                  result.isCollaborating = (result.membership === 'read_write' || result.membership === 'admin') && !result.isInvited;
                   result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
@@ -179,17 +161,13 @@ angular.module('kifi')
           }
 
           // Do the magic to get the contacts given the organization id.
-          orgProfileService
-            .getOrgLibraries(scope.organization.id)
-            .then(getFirstLibrary)
-            .then(getSearchContacts)
+          orgProfileService.suggestOrgMember(scope.organization.id, opt_query)
             .then(updateContacts);
         }
 
         //
         // Scope functions
         //
-
         scope.onSearchInputChange = _.debounce(function () {
           populateDropDown(scope.search.name);
         }, 200);
@@ -234,11 +212,11 @@ angular.module('kifi')
                 var result = scope.results[resultIndex];
 
                 if (result.id) {
-                  scope.shareLibraryKifiFriend(result);
+                  scope.inviteKifiFriend(result);
                 } else if (result.email) {
-                  scope.shareLibraryExistingEmail(result);
+                  scope.inviteExistingEmail(result);
                 } else if (result.custom === 'email') {
-                  scope.shareLibraryNewEmail(result);
+                  scope.inviteNewEmail(result);
                 } else if (result.custom === 'importGmail') {
                   scope.importGmail();
                 }
@@ -256,60 +234,46 @@ angular.module('kifi')
           kfModalCtrl.close();
         };
 
-        function  shareLibraryKifiFriend(result) {
-          //trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'kifiFriend' });
+        scope.inviteKifiFriend = function (result) {
+          trackInviteEvent('user_clicked_page', { action: 'clickedContact', subAction: 'kifiFriend' });
 
-          return shareLibrary({
+          return inviteMember({
             invites: [{
               type: 'user',
               id: result.id,
-              role: inviteAccess[scope.inviteType]
+              role: 'member'
             }]
           }).then(function () {
             result.sent = true;
           });
-        }
-
-        function promoteToCollaborator(result) {
-          return net.updateLibraryMembership(scope.library.id, result.id, {access: 'read_write'}).then(function () {
-            result.isCollaborating = true;
-          });
-        }
-
-        scope.inviteOrPromote = function (result) {
-          if (result.isFollowing) {
-            return promoteToCollaborator(result);
-          } else {
-            return shareLibraryKifiFriend(result);
-          }
         };
 
-        scope.shareLibraryExistingEmail = function (result) {
-          //trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'existingEmail' });
+        scope.inviteExistingEmail = function (result) {
+          trackInviteEvent('user_clicked_page', { action: 'clickedContact', subAction: 'existingEmail' });
 
-          return shareLibrary({
+          return inviteMember({
             invites: [{
               type: 'email',
               email: result.email,
-              role: inviteAccess[scope.inviteType]
+              role: 'member'
             }]
           }).then(function () {
             result.sent = true;
           });
         };
 
-        scope.shareLibraryNewEmail = function (result) {
+        scope.inviteNewEmail = function (result) {
           if (!util.validateEmail(scope.search.name)) {
             return;
           }
 
-          //trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'newEmail' });
+          trackInviteEvent('user_clicked_page', { action: 'clickedContact', subAction: 'newEmail' });
 
-          return shareLibrary({
+          return inviteMember({
             invites: [{
               type: 'email',
               email: scope.search.name,
-              role: inviteAccess[scope.inviteType]
+              role: 'member'
             }]
           }).then(function () {
             result.sent = true;
@@ -320,26 +284,9 @@ angular.module('kifi')
           socialService.importGmail();
         };
 
-        scope.toggleSelector = function () {
-          if (scope.inviteType === 'own') {
-            scope.inviteType = 'join';
-          } else {
-            scope.inviteType = 'own';
-          }
-        };
-
-        scope.isOwnerInvite = function () {
-          return scope.inviteType === 'own';
-        };
-
-        scope.isMemberInvite = function () {
-          return scope.inviteType === 'join';
-        };
-
         //
         // Initialize.
         //
-
         $timeout(function () {
           searchInput.focus();
           populateDropDown();

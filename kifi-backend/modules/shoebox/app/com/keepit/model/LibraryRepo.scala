@@ -63,7 +63,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
   // Org Library methods
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int
-  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library]
+  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
+  def getOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Seq[Library]
 
   // other
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
@@ -72,6 +73,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
+  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
 }
 
 @Singleton
@@ -455,30 +457,27 @@ class LibraryRepoImpl @Inject() (
   }
 
   // Organization Library Repo methods
-  // TODO(ryan): I hate this method, and it's ugly code-duplication. If someone can fix it I will be so happy.
-  private def visibleOrganizationLibrariesHelper(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession) = {
-    if (includeOrgVisibleLibraries) {
-      for {
-        lib <- rows if lib.state === LibraryStates.ACTIVE && lib.orgId === orgId && (
-          (lib.visibility === (LibraryVisibility.ORGANIZATION: LibraryVisibility)) ||
-          (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
-          lib.id.inSet(viewerLibraryMemberships) // user's can see any library they are a member of
-        )
-      } yield lib
-    } else {
-      for {
-        lib <- rows if lib.state === LibraryStates.ACTIVE && lib.orgId === orgId && (
-          (lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility)) ||
-          lib.id.inSet(viewerLibraryMemberships)
-        )
-      } yield lib
-    }
+  private def visibleOrganizationLibrariesHelper(orgId: Id[Organization], includeOrgVisibleLibraries: Column[Boolean], viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession) = {
+    val orgVisible: LibraryVisibility = LibraryVisibility.ORGANIZATION
+    val published: LibraryVisibility = LibraryVisibility.PUBLISHED
+    for {
+      lib <- rows if lib.state === LibraryStates.ACTIVE && lib.orgId === orgId && (
+        (includeOrgVisibleLibraries && (lib.visibility === orgVisible)) ||
+        (lib.visibility === published) ||
+        lib.id.inSet(viewerLibraryMemberships) // user's can see any library they are a member of
+      )
+    } yield lib
   }
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int = {
     visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).length.run
   }
-  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Set[Library] = {
-    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).drop(offset.value).take(limit.value).list.toSet
+
+  def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
+    visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).sortBy(_.lastKept desc).drop(offset.value).take(limit.value).list
+  }
+
+  def getOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Seq[Library] = {
+    (for (r <- rows if r.orgId === orgId) yield r).list
   }
 
   def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]] = {
@@ -506,6 +505,13 @@ class LibraryRepoImpl @Inject() (
     (for {
       t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE && t.memberCount >= minCount
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
+  }
+
+  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
+    import StaticQuery.interpolation
+    val q = sql"""select organization_id, count(*) from library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'active' and experiment_type = 'fake') and kind = 'user_created' group by organization_id order by count(*) desc"""
+    val res = q.as[(Long, Int)].list
+    res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
 
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {

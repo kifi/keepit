@@ -56,7 +56,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
   def setUp()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user1 = UserFactory.user().withName("Foo", "Foo").withUsername("test").saved
-      val email1 = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = senderEmail))
+      val email1 = userEmailAddressCommander.intern(userId = user1.id.get, address = senderEmail).get._1
       val pwdInfo = PasswordInfo("bcrypt", BCrypt.hashpw("random_pwd", BCrypt.gensalt()))
       val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
       val socialUserInfoRepo = inject[SocialUserInfoRepo]
@@ -124,8 +124,8 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
         // README: if you get a 404 here make sure you have pulled the marketing submodule modules/shoebox/marketing
         // 1) run from repository root: git submodule update --init
         // 2) cd to modules/shoebox/marketing and run: npm install
-        // 3) run "mkt" in SBT to generate the file this test depends on (you should only have to do this once)
-        code === 200
+        // 3) run "mkt" in SBT from /kifi-backend/ to generate the file this test depends on (you should only have to do this once)
+        code === OK
 
         // landing page at this point -- we'll make sure cookie is set
         val invCookie = cookies(result).get("inv")

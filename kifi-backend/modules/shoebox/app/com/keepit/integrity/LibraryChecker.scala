@@ -91,13 +91,13 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private def updateKeep(id: Id[Keep], mutator: Keep => Keep)(implicit session: RWSession) = {
     // same as below
-    keepRepo.save(mutator(keepRepo.get(id)))
+    keepRepo.save(mutator(keepRepo.getNoCache(id)))
   }
 
   private def updateLibrary(id: Id[Library], mutator: Library => Library) = db.readWrite { implicit session =>
     /* Since we can be processing hundreds of libraries, the library can be out of date by the time we get to actually updating it with our plugin.
     Do not overwrite new data with old; Instead just refetch the library and update it. */
-    libraryRepo.save(mutator(libraryRepo.get(id)))
+    libraryRepo.save(mutator(libraryRepo.getNoCache(id)))
   }
 
   def syncLibraryLastKeptAndKeepCount() {

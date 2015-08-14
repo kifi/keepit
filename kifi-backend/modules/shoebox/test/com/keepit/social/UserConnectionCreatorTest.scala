@@ -54,7 +54,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
       val (myUser, mySocialUser) = db.readWrite { implicit s =>
         val u = UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
 
-        emailAddressRepo.save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
+        userEmailAddressCommander.intern(userId = u.id.get, address = EmailAddress("andrew@gmail.com")).get
 
         val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
           fullName = "Andrew Conner",
@@ -75,7 +75,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           socialId = SocialId("gsmith"),
           networkType = SocialNetworks.FACEBOOK
         ).withUser(user))
-        emailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("greg@gmail.com")))
+        userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("greg@gmail.com")).get
         (user, socialUserInfo)
       }
 
@@ -169,8 +169,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u2))
 
-          emailAddressRepo.save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
-          emailAddressRepo.save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
+          userEmailAddressCommander.intern(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")).get
+          userEmailAddressCommander.intern(userId = u2.id.get, address = EmailAddress("igor@gmail.com")).get
 
           su1
         }
@@ -185,7 +185,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             socialId = SocialId("bsmith"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(user))
-          emailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
+          userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("bob@gmail.com")).get
           (user, socialUserInfo)
         }
 
@@ -223,7 +223,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           def generateUserAndSocialUser(uFirstName: String, uLastName: String) =
             db.readWrite { implicit rw =>
 
-              val u1 = UserFactory.user().withName(uFirstName, uLastName).withUsername("test").withEmailAddress(s"$uFirstName$uLastName@kifi.com").saved
+              val u1 = UserFactory.user().withName(uFirstName, uLastName).withUsername("test").saved
+              userEmailAddressCommander.intern(u1.id.get, EmailAddress(s"$uFirstName$uLastName@kifi.com")).get
 
               val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
                 fullName = uFirstName,

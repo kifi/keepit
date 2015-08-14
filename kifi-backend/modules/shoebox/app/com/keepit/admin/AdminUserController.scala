@@ -81,11 +81,13 @@ class AdminUserController @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgInviteRepo: OrganizationInviteRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     emailRepo: UserEmailAddressRepo,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
@@ -260,7 +262,7 @@ class AdminUserController @Inject() (
 
     val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
       val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
-      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId) else Seq.empty
+      val potentialOrganizationsForUser = if (!ignore4orgs) orgRepo.getPotentialOrganizationsForUser(userId).filter(_.state == OrganizationStates.ACTIVE) else Seq.empty
       (
         userExperimentRepo.getUserExperiments(user.id.get),
         potentialOrganizationsForUser,
@@ -275,8 +277,8 @@ class AdminUserController @Inject() (
 
     val (bookmarkCount, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
-      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList
+      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
       val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
@@ -295,7 +297,7 @@ class AdminUserController @Inject() (
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
     } yield {
-      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)) }
+      val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
       Ok(html.admin.user(user, chatStats, bookmarkCount, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
@@ -496,20 +498,17 @@ class AdminUserController @Inject() (
 
     db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
-      val newEmails = (emailList map { address =>
-        val email = emailRepo.getByAddressOpt(address)
-        email match {
-          case Some(addr) => addr // We're good! It already exists
-          case None => // Create a new one
-            log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            emailRepo.save(UserEmailAddress(address = address, userId = userId))
-        }
-      }).toSet
 
-      // Set state of removed email addresses to INACTIVE
-      (oldEmails -- newEmails) map { removedEmail =>
+      // Intern required emails
+      emailList map { address =>
+        log.info("Interning email address %s to userId %s".format(address, userId.toString))
+        userEmailAddressCommander.intern(userId, address).get
+      }
+
+      // Deactivate other emails
+      oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        emailRepo.save(removedEmail.withState(UserEmailAddressStates.INACTIVE))
+        userEmailAddressCommander.deactivate(removedEmail, force = true).get
       }
     }
 
@@ -774,7 +773,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmail.foreach { primaryEmail => properties += ("$email", primaryEmail.address) }
+        properties += ("$email", emailRepo.getByUser(userId).address)
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -949,7 +948,9 @@ class AdminUserController @Inject() (
     // Libraries Data
     libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites
     libraryMembershipRepo.getWithUserId(userId).foreach { membership => libraryMembershipRepo.save(membership.withState(LibraryMembershipStates.INACTIVE)) } // Library Memberships
-    libraryRepo.getAllByOwner(userId).foreach { library => libraryRepo.save(library.withState(LibraryStates.INACTIVE)) } // Libraries
+    val ownedLibraries = libraryRepo.getAllByOwner(userId).map(_.id.get)
+    val ownsCollaborativeLibs = libraryMembershipRepo.getCollaboratorsByLibrary(ownedLibraries.toSet).exists { case (_, collaborators) => collaborators.size > 1 }
+    assert(!ownsCollaborativeLibs, "cannot deactivate a user if they own a library with collaborators: either delete the library or transfer its ownership")
 
     // Personal Info
     userSessionRepo.invalidateByUser(userId) // User Session
@@ -957,9 +958,15 @@ class AdminUserController @Inject() (
     userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
     emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
 
+    // Organizations Data
+    orgMembershipRepo.getAllByUserId(userId).foreach { membership => orgMembershipRepo.save(membership.withState(OrganizationMembershipStates.INACTIVE)) }
+    orgInviteRepo.getAllByUserId(userId).foreach { invite => orgInviteRepo.save(invite.withState(OrganizationInviteStates.INACTIVE)) }
+    orgMembershipCandidateRepo.getAllByUserId(userId).foreach { candidacy => orgMembershipCandidateRepo.save(candidacy.withState(OrganizationMembershipCandidateStates.INACTIVE)) }
+    assert(orgRepo.getAllByOwnerId(userId).isEmpty, "cannot deactivate a user if they own an org: either delete the org or transfer its ownership")
+
     val user = userRepo.get(userId)
 
-    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
+    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryUsername = None)) // User
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
@@ -968,7 +975,7 @@ class AdminUserController @Inject() (
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
+      userEmailAddressCommander.deactivate(userEmail).get
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
@@ -1001,19 +1008,19 @@ class AdminUserController @Inject() (
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 100)
     val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
-    val pages: Map[IpAddress, Map[User, Set[Organization]]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
+    val pages: Map[IpAddress, Set[(User, Option[EmailAddress], Set[Organization])]] = sharedIpAddresses.map { case (ip, userIds) => ip -> usersAndOrgs(userIds) }.toMap
     Ok(html.admin.userIpAddresses(owner, logs, pages))
   }
 
-  private def usersAndOrgs(userIds: Seq[Id[User]]) = {
+  private def usersAndOrgs(userIds: Seq[Id[User]]): Set[(User, Option[EmailAddress], Set[Organization])] = {
     db.readOnlyReplica { implicit s =>
-      val users = userRepo.getAllUsers(userIds).values.toList
-      val orgs = users map { user =>
+      val users = userRepo.getAllUsers(userIds).values.toSet
+      val emailAddresses = userIds.map { userId => userId -> Try(emailRepo.getByUser(userId)).toOption }.toMap
+      users map { user =>
         val orgsCandidates = orgMembershipCandidateRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
         val orgMembers = orgMembershipRepo.getByUserId(user.id.get, Limit(10000), Offset(0)).map(_.organizationId).toSet
-        user -> orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet
+        (user, emailAddresses.get(user.id.get).flatten, orgRepo.getByIds(orgsCandidates ++ orgMembers).values.toSet)
       }
-      orgs.toMap
     }
   }
 

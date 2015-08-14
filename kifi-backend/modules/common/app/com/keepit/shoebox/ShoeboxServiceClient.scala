@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.classify.{ DomainInfo, Domain }
+import com.keepit.classify.{ NormalizedHostname, DomainInfo, Domain }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
@@ -49,8 +49,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
-  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
-  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
+  def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
+  def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -124,7 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
   def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
   def getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int): Future[Seq[IngestableOrganizationMembershipCandidate]]
-  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]]
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]]
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]]
   def getOrganizationInviteViews(orgId: Id[Organization]): Future[Set[OrganizationInviteView]]
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
@@ -308,20 +308,19 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
+  def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
     redundantDBConnectionCheck(userIds)
-    implicit val idFormat = Id.format[User]
-    val payload = JsArray(userIds.map { x => Json.toJson(x) })
+    val payload = Json.toJson(userIds)
     call(Shoebox.internal.getEmailAddressesForUsers(), payload, callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { res =>
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
 
-  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]] = {
+  def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]] = {
     redundantDBConnectionCheck(userIds)
     val payload = Json.toJson(userIds)
-    call(Shoebox.internal.getPrimaryEmailAddressForUsers(), payload) map { _.json.as[Map[Id[User], Option[EmailAddress]]] }
+    call(Shoebox.internal.getEmailAddressForUsers(), payload) map { _.json.as[Map[Id[User], Option[EmailAddress]]] }
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)) { key =>
@@ -770,9 +769,9 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize), routingStrategy = offlinePriority).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
 
-  def internDomainsByDomainNames(domainNames: Set[String]): Future[Map[String, DomainInfo]] = {
+  def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]] = {
     val payload = Json.obj("domainNames" -> domainNames)
-    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]] }
+    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo } }
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {

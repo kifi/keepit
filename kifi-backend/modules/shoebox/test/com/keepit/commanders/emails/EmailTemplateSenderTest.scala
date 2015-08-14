@@ -42,7 +42,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
     def sendAndTestEmail(tips: Seq[EmailTip] = Seq.empty)(implicit injector: Injector) = {
       val testFactory = inject[ShoeboxTestFactory]
       val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
-        testFactory.createUsers()
+        testFactory.setupUsers()
       }
       val (id1, id2, id3, id4) = (user1.id.get, user2.id.get, user3.id.get, user4.id.get)
 
@@ -82,15 +82,15 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
 
         val freshEmail = emailRepo.get(email.id.get)
         freshEmail === email
-        email.subject === "hi from Aaron Paul"
-        email.to === Seq(EmailAddress("test@gmail.com"))
+        email.subject === "hi from Tony Stark"
+        email.to === Seq(EmailAddress("samuelljackson@shield.com"))
         email.cc === Seq(SystemEmailAddress.ENG)
         email.from === SystemEmailAddress.NOTIFICATIONS
-        email.fromName === Some("Aaron Paul (via Kifi)")
+        email.fromName === Some("Tony Stark (via Kifi)")
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
         val html = email.htmlBody.value
         html must contain("<title>Testing!!!</title>")
-        html must contain("Hello, Bryan Cranston")
+        html must contain("Hello, Steve Rogers")
       }
 
       heimdal.eventCount === 1
@@ -122,11 +122,11 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
           val email = inject[ElectronicMailRepo].all().head
           val html = email.htmlBody.value
           html must contain("https://cloudfront/users/1/pics/100/0.jpg")
-          html must contain("alt=\"Aaron Paul\"")
+          html must contain("alt=\"Tony Stark\"")
           html must contain("https://cloudfront/users/2/pics/100/0.jpg")
-          html must contain("alt=\"Bryan Cranston\"")
+          html must contain("alt=\"Steve Rogers\"")
           html must contain("https://cloudfront/users/4/pics/100/0.jpg")
-          html must contain("alt=\"Dean Norris\"")
+          html must contain("alt=\"Bruce Banner\"")
         }
       }
     }

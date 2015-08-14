@@ -270,7 +270,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>
-          library().withName("Healthy Habits").withSlug("healthy-habits").withUser(user1).withKind(LibraryKind.SYSTEM_PERSONA).saved
+          library().withName("Healthy Habits").withSlug("healthy-habits").withOwner(user1).withKind(LibraryKind.SYSTEM_PERSONA).saved
         }
         val pubLib2 = Library.publicId(personaLib.id.get)(inject[PublicIdConfiguration])
         val result2 = getLibraryById(user1, pubLib2)
@@ -285,7 +285,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").withEmailAddress("email@gmail.com").saved
+          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").saved
           val userB = UserFactory.user().withName("Bulba", "Saur").withCreatedAt(t1).withUsername("bulbasaur").saved
 
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
@@ -769,7 +769,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val user1 = user().withUsername("nickfury").saved
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
-          val lib1 = library().withUser(user1).saved // user1 owns lib1
+          val lib1 = library().withOwner(user1).saved // user1 owns lib1
           membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
@@ -798,9 +798,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val user1 = user().withUsername("nickfury").saved
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
-          val lib1a = library().withUser(user1).withSlug("secret-shield-stuff").withVisibility(LibraryVisibility.SECRET).saved // user1 owns secret lib1a
+          val lib1a = library().withOwner(user1).withSlug("secret-shield-stuff").withVisibility(LibraryVisibility.SECRET).saved // user1 owns secret lib1a
           membership().withLibraryCollaborator(lib1a, user2).saved // user2 is a collaborator lib1 (has read_write access)
-          val lib1b = library().withUser(user1).withSlug("public-shield-stuff").withVisibility(LibraryVisibility.PUBLISHED).saved // user1 owns publish lib1b
+          val lib1b = library().withOwner(user1).withSlug("public-shield-stuff").withVisibility(LibraryVisibility.PUBLISHED).saved // user1 owns publish lib1b
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1a.id.get, user1.id.get).get.access === LibraryAccess.OWNER
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1a.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE

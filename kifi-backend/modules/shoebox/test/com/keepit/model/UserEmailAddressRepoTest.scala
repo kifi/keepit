@@ -15,9 +15,9 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
         val now = clock.now
         val (user, address) = db.readWrite { implicit s =>
           val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
-          userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shachaf@gmail.com"), createdAt = now.minusDays(3)))
-          val address = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shanee@gmail.com"), createdAt = now.minusDays(1).minusHours(6)))
-          userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("dafna@gmail.com"), createdAt = now.minusHours(3)))
+          userEmailAddressRepo.save(UserEmailAddress.create(user.id.get, EmailAddress("shachaf@gmail.com")).copy(createdAt = now.minusDays(3)))
+          val address = userEmailAddressRepo.save(UserEmailAddress.create(user.id.get, EmailAddress("shanee@gmail.com")).copy(createdAt = now.minusDays(1).minusHours(6)))
+          userEmailAddressRepo.save(UserEmailAddress.create(user.id.get, EmailAddress("dafna@gmail.com")).copy(createdAt = now.minusHours(3)))
           //should not be shown
           (user, address)
         }
@@ -32,7 +32,7 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
           unverified.size === 3
         }
         db.readWrite { implicit s =>
-          userEmailAddressRepo.save(address.withState(UserEmailAddressStates.VERIFIED))
+          userEmailAddressRepo.save(address.copy(verifiedAt = Some(now)))
         }
         db.readOnlyMaster { implicit s =>
           val unverified = userEmailAddressRepo.getUnverified(now.minusDays(10), now)

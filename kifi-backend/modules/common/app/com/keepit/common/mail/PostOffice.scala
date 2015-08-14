@@ -21,7 +21,7 @@ trait RemotePostOffice {
 
 object PostOffice {
   object Headers {
-    val ALL = Seq[String]("Reply-To", "List-Unsubscribe", "Precedence")
+    val ALL = Seq(REPLY_TO, LIST_UNSUBSCRIBE, PRECEDENCE)
     val REPLY_TO = "Reply-To"
     val LIST_UNSUBSCRIBE = "List-Unsubscribe"
     val PRECEDENCE = "Precedence"

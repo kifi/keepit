@@ -1,5 +1,58 @@
 .kf-org-profile-libraries
   margin: 15px
 
+.kf-upl-move-card-title
 .kf-upl-create-card-text
+  font-size: 14px
   text-transform: uppercase
+
+.kf-upl-card.kf-opl-move-libraries
+  position: relative
+  background-color: #e7e7e7
+  border: 2px dashed #979797
+  line-height: 23px
+  box-sizing: border-box
+
+  .kf-opl-move-libraries-wrapper
+    display: flex
+    width: 100%
+    height: 100%
+    justify-content: center
+    align-items: center
+
+  .kf-opl-move-libraries-description
+    font-size: 0.80rem;
+    padding: 0 10px;
+
+.kf-opl-move-libraries-box
+  display: block
+  width: 60px
+  height: 60px
+  margin: 0 auto
+
+.kf-opl-move-libraries-more-info
+  height: 30px
+  padding: 0 20px
+  border: 0
+  border-radius: 15px
+  background: rgba(0, 0, 0, .5)
+  color: #fff
+  font-weight: 500
+  font-size: 11px
+  line-height: 30px
+  text-transform: uppercase
+  text-shadow: 0 0 1px rgba(0,0,0,.4)
+  letter-spacing: .4px
+  text-align: center
+
+  &:hover
+    background: rgba(0, 0, 0, 0.3)
+
+
+.kf-opl-empty
+  padding: 30px
+  font-size: 16px
+  color: #777
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    font-size: 12px

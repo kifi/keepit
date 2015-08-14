@@ -9,6 +9,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.IndexedSeq
+import scala.util.Random
 
 class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -92,13 +93,44 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
       }
     }
 
+    "get list of members sorted by 1) owner, members, pending invites, 2) first name, last name alphabetically" in {
+      withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
+        val (org, owner, members) = db.readWrite { implicit session =>
+          val owner = user().withName("Zyxwv", "Utsr").saved
+          val members = Random.shuffle(Seq(user().withName("Aaron", "Aaronson"), user().withName("Barry", "Barnes"), user().withName("Carl", "Carson"), user().withName("Carl", "Junior"))).map(_.saved)
+          val org = organization().withOwner(owner).withMembers(members).saved
+          (org, owner, members)
+        }
+        val allMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getAllByOrgId(org.id.get) }.toSeq
+        val sortedMembers = db.readOnlyMaster { implicit session => orgMemberRepo.getSortedMembershipsByOrgId(org.id.get, Offset(0), Limit(Int.MaxValue)) }
+
+        db.readOnlyMaster { implicit s => orgMemberRepo.getByOrgIdAndUserId(org.id.get, owner.id.get) }.isDefined === true
+
+        val userById = members.+:(owner).map(u => u.id.get -> u).toMap
+
+        implicit def membershipOrdering = new Ordering[OrganizationMembership] {
+          def compare(x: OrganizationMembership, y: OrganizationMembership): Int = {
+            if (x.userId == owner.id.get) -1
+            else if (y.userId == owner.id.get) +1
+            else userById(x.userId).fullName.compareTo(userById(y.userId).fullName)
+          }
+        }
+
+        sortedMembers.exists(_.userId == owner.id.get) === true
+        sortedMembers === allMembers.sorted
+      }
+    }
+
     "deactivate" in {
       withDb() { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val membership = db.readWrite { implicit session =>
-          val org = organization.withOwner(user().saved).saved
+          val org = organization().withOwner(user().saved).saved
           orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = user().saved.id.get))
         }
 

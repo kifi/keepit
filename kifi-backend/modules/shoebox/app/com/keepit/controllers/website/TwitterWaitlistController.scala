@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryPathCommander, TwitterWaitlistCommander }
+import com.keepit.commanders.{ PathCommander, TwitterWaitlistCommander }
 import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -19,7 +19,7 @@ class TwitterWaitlistController @Inject() (
     commander: TwitterWaitlistCommander,
     socialRepo: SocialUserInfoRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
-    libPathCommander: LibraryPathCommander,
+    libPathCommander: PathCommander,
     db: Database,
     airbrakeNotifier: AirbrakeNotifier,
     socialGraphPlugin: SocialGraphPlugin,
@@ -126,7 +126,7 @@ class TwitterWaitlistController @Inject() (
     }
 
     var times = 0
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 600)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 700)
     def pollCheck(): Future[Option[String]] = {
       timeoutF.flatMap { _ =>
         checkStatusOfTwitterUser() match {
@@ -164,16 +164,16 @@ class TwitterWaitlistController @Inject() (
           val library = db.readOnlyReplica { implicit session =>
             libraryRepo.get(existingSync.get.libraryId)
           }
-          Redirect(libPathCommander.getPath(library))
+          Redirect(libPathCommander.getPathForLibrary(library))
         } else {
-          pollDbForTwitterHandle(ur.userId, iterations = 60).map { twRes =>
+          pollDbForTwitterHandle(ur.userId, iterations = 75).map { twRes =>
             twRes match {
               case Some(handle) =>
                 commander.addEntry(ur.userId, handle)
               case None => // we failed :(
                 log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
                 socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
-                  pollDbForTwitterHandle(ur.userId, iterations = 60).onComplete {
+                  pollDbForTwitterHandle(ur.userId, iterations = 75).onComplete {
                     case Success(Some(handle)) =>
                       commander.addEntry(ur.userId, handle)
                     case fail => // we failed :(

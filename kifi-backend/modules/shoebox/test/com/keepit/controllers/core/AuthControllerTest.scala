@@ -54,10 +54,8 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit rw =>
           val user = UserFactory.user().withName("Elaine", "Benes").withUsername("test").saved
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
-            address = EmailAddress("elaine@gmail.com")))
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
-            address = EmailAddress("dancing@gmail.com")))
+          userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("elaine@gmail.com")).get._1
+          userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress("dancing@gmail.com")).get._1
           user
         }
         inject[FakeUserActionsHelper].setUser(user)
@@ -76,9 +74,10 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
         val result2 = ctrl.forgotPassword()(FakeRequest(call).withBody(Json.obj("email" -> "dancing@gmail.com")))
         Await.ready(result2, Duration(5, "seconds"))
 
-        outbox.size === 2
+        outbox.size === 3
         outbox(1).to === Seq(EmailAddress("dancing@gmail.com"))
-        Json.parse(contentAsString(result2)) === Json.obj("addresses" -> Json.toJson(Seq("dancing@gmail.com")))
+        outbox(2).to === Seq(EmailAddress("elaine@gmail.com"))
+        Json.parse(contentAsString(result2)) === Json.obj("addresses" -> Json.toJson(Seq("dancing@gmail.com", "e...@gmail.com")))
         status(result2) === OK
       }
     }

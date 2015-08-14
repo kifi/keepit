@@ -52,26 +52,26 @@
           </a>
         </h1>
         <table class="stats">
-          <tr>
+          <tr class="stats-row">
             <td>
-              <a href="{{ org | profileUrl }}" class="stat" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
+              <a href="{{ org | profileUrl }}" class="stat-number" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
                 {{org.numLibraries}}
               </a>
             </td>
             <td>
-              <a href="{{ org | profileUrl }}" class="stat" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
+              <a href="{{ org | profileUrl }}" class="stat-title" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
                 Libraries
               </a>
             </td>
           </tr>
-          <tr>
+          <tr class="stats-row">
             <td>
-              <a href="{{ org | profileUrl:'members' }}" class="stat" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
+              <a href="{{ org | profileUrl:'members' }}" class="stat-number" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
                 {{org.numMembers}}
               </a>
             </td>
             <td>
-              <a href="{{ org | profileUrl:'members' }}" class="stat" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
+              <a href="{{ org | profileUrl:'members' }}" class="stat-title" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
                 Members
               </a>
             </td>

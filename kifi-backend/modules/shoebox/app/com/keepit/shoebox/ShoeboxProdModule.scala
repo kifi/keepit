@@ -18,7 +18,6 @@ import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
-import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.{ ProdLibrarySuggestedSearchQueueModule, ProdNormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.curator.ProdCuratorServiceClientModule
@@ -31,7 +30,6 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val reaperModule = ProdReaperModule()
   val siteMapModule = ProdSiteMapGeneratorModule()
   val storeModule = ShoeboxProdStoreModule()
-  val sqsModule = ProdSimpleQueueModule()
   val normalizationQueueModule = ProdNormalizationUpdateJobQueueModule()
   val activityEmailActorModule = ProdActivityEmailQueueModule()
   val suggestedSearchTermsModule = ProdLibrarySuggestedSearchQueueModule()

@@ -182,7 +182,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           state = KeepStates.INACTIVE))
 
         shoebox.saveBookmarks(user1Keeps(1).copy(
-          state = KeepStates.DUPLICATE))
+          state = KeepStates.INACTIVE))
 
         shoebox.saveBookmarks(user1Keeps(2).copy(
           state = KeepStates.ACTIVE))
@@ -197,7 +197,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         db.readOnlyMaster { implicit session =>
           keepInfoRepo.all().length === 60
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value === KeepStates.INACTIVE.value
-          keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
+          keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.INACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
           seedItemRepo.getByUriId(user1Keeps(0).uriId).length === 0
@@ -224,7 +224,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         }
 
         shoebox.saveBookmarks(user1Keeps(0).copy(
-          state = KeepStates.DUPLICATE))
+          state = KeepStates.INACTIVE))
 
         shoebox.saveBookmarks(user1Keeps(1).copy(
           state = KeepStates.ACTIVE))

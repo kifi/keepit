@@ -378,8 +378,6 @@ class TypeaheadCommander @Inject() (
     (users, contacts)
   }
 
-  def searchWritableLibraries(userId: Id[User], query: String): Seq[AliasContactResult] = Seq.empty // todo: Make this work :)
-
   def searchFriendsAndContacts(userId: Id[User], query: String, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
@@ -394,13 +392,12 @@ class TypeaheadCommander @Inject() (
   }
 
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
-    val (friendsAndContactsF, aliasF) = query.trim match {
+    val friendsAndContactsF = query.trim match {
       case q if q.isEmpty =>
-        (Future.successful(suggestFriendsAndContacts(userId, limit)), Future.successful(Seq.empty))
+        (Future.successful(suggestFriendsAndContacts(userId, limit)))
       case q =>
         // Start futures
         val friends = searchFriendsAndContacts(userId, q, limit)
-        val aliases = Future.successful(searchWritableLibraries(userId, query))
 
         val startTime = System.currentTimeMillis()
 
@@ -419,16 +416,15 @@ class TypeaheadCommander @Inject() (
             val sortedContacts = contacts.sortBy(c => contactOrder(c))
             (sortedUsers, sortedContacts)
         }
-        (rankedFriends, aliases)
+        rankedFriends
     }
 
     for {
-      alias <- aliasF
       (users, contacts) <- friendsAndContactsF
     } yield {
       val userResults = users.map { case (_, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
       val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
-      userResults ++ emailResults ++ alias
+      userResults ++ emailResults
     }
   }
 

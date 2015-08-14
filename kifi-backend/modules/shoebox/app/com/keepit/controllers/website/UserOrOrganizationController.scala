@@ -22,6 +22,7 @@ class UserOrOrganizationController @Inject() (
     db: Database,
     orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
+    val orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryController: LibraryController,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -40,14 +41,14 @@ class UserOrOrganizationController @Inject() (
 
   def getHandleOwnerObjectOpt(handle: Handle): Option[(Either[Organization, User], Boolean)] = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
 
-  def getByHandle(handle: Handle) = MaybeUserAction.async { request =>
+  def getByHandle(handle: Handle, authToken: Option[String]) = MaybeUserAction.async { request =>
     val handleOwnerObjectOpt = getHandleOwnerObjectOpt(handle)
     handleOwnerObjectOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "handle_not_found")))
       case Some(handleOwnerObject) =>
         val (action, actionType) = handleOwnerObject match {
           case (Left(org), _) =>
-            (orgController.getOrganization(Organization.publicId(org.id.get)), "org")
+            (orgController.getOrganization(Organization.publicId(org.id.get), authToken), "org")
           case (Right(user), _) =>
             (userProfileController.getProfile(user.username), "user")
         }
@@ -55,7 +56,7 @@ class UserOrOrganizationController @Inject() (
           bodyTry match {
             case Success(body) => Ok(Json.obj("type" -> actionType, "result" -> body))
             case Failure(ex) =>
-              airbrake.notify("Could not parse the body in getByHandle: " + ex)
+              airbrake.notify(s"Could not parse the body in getByHandle($handle): $ex")
               BadRequest
           }
         }

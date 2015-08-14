@@ -259,6 +259,7 @@ k.keepBox = k.keepBox || (function () {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
               libs.forEach(setExtraInfo);
+              $box.data('filter_libraries', libs);
               (libs[0] || {}).highlighted = true;
               showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
@@ -473,7 +474,7 @@ k.keepBox = k.keepBox || (function () {
   function chooseLibrary(el, trigger, guided) {
     var libraryId = el.dataset.id;
     if (libraryId) {
-      var library = $box.data('libraries').find(idIs(libraryId));
+      var library = $box.data('libraries').find(idIs(libraryId)) || $box.data('filter_libraries').find(idIs(libraryId));
       var $head = $([el, el.parentNode]).prevAll('.kifi-keep-box-lib-head').first();
       var subsource =
         $head.length === 0 ? (el[matches]('.kifi-keep-box-libs.kifi-filtered *') ? 'libraryFiltered' : 'libraryNoGroup') :

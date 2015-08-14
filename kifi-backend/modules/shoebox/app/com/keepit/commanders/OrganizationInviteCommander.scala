@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -20,6 +21,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.model.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -30,10 +32,13 @@ trait OrganizationInviteCommander {
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
+  def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
 }
 
 @Singleton
@@ -54,7 +59,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     emailTemplateSender: EmailTemplateSender,
     kifiInstallationCommander: KifiInstallationCommander,
     organizationAvatarCommander: OrganizationAvatarCommander,
+    typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
+    userExperimentRepo: UserExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -89,8 +96,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+    val hasOrgInvite = organizationInviteRepo.getByEmailAddress(emailAddress).map { invitation =>
       organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
+      invitation.state
+    } contains OrganizationInviteStates.ACTIVE
+    if (hasOrgInvite && !userExperimentRepo.hasExperiment(userId, UserExperimentType.ORGANIZATION)) {
+      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.ORGANIZATION))
     }
   }
 
@@ -193,18 +204,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     toRecipientOpt map { toRecipient =>
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
-      val fromAddress = db.readOnlyReplica { implicit session => userEmailAddressRepo.getByUser(invite.inviterId).address }
       val authToken = invite.authToken
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = s"Please join our organization ${org.name} on Kifi!",
+        subject = s"Please join our ${org.name} team on Kifi!",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.ORGANIZATION_INVITATION, _ => NotificationCategory.NonUser.ORGANIZATION_INVITATION),
         htmlTemplate = views.html.email.organizationInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken),
         textTemplate = Some(views.html.email.organizationInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),
         channel = Some("vf_email"),
         source = Some("organization_invite")
@@ -230,6 +239,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       sticky = false,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
+    invitees.foreach { invitee =>
+      elizaClient.sendNotificationEvent(OrgNewInvite(
+        invitee,
+        currentDateTime,
+        inviter.id.get,
+        org.id.get
+      ))
+    }
 
     // TODO: handle push notifications to mobile.
   }
@@ -263,7 +280,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
@@ -281,6 +298,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
           OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
         }
+
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership)
           .find(_.isRight)
         firstSuccess.map(_.right.map(_.membership))
@@ -290,9 +308,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       // on success accept invitations
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
+        val organization = organizationRepo.get(orgId)
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
+          if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
         }
       }
       success
@@ -301,14 +321,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
+    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} has joined ${org.name}"
+      val title = s"${invitee.firstName} accepted your invitation to join ${org.name}!"
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"You invited ${invitee.fullName} to join ${org.name}.",
+        body = s"Click here to see ${invitee.firstName}'s profile.",
         linkText = s"See ${invitee.firstName}’s profile",
         linkUrl = s"https://www.kifi.com/${invitee.username.value}",
         imageUrl = inviteeImage,
@@ -319,6 +339,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
         ))
       )
+      elizaClient.sendNotificationEvent(OrgInviteAccepted(
+        inviterId,
+        currentDateTime,
+        invitee.id.get,
+        org.id.get
+      ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(
@@ -358,5 +384,71 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     db.readOnlyReplica { implicit session =>
       organizationInviteRepo.getAllByOrganization(orgId)
     }
+  }
+
+  def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+    }
+  }
+
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
+    val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
+      case None =>
+        val memberCount = db.readOnlyMaster { implicit s => organizationMembershipRepo.countByOrgId(orgId) }
+        Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit + memberCount)))
+    }
+    val activeInvites = db.readOnlyMaster { implicit session =>
+      organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING, InvitationDecision.DECLINED))
+    }
+
+    val invitedUsers = activeInvites.groupBy(_.userId).collect {
+      case (Some(userId), invites) =>
+        val access = invites.map(_.role).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        userId -> (access, lastInvitedAt)
+    }
+
+    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
+      case (Some(emailAddress), invites) =>
+        val access = invites.map(_.role).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        emailAddress -> (access, lastInvitedAt)
+    }
+
+    friendsAndContactsFut.map {
+      case (users, contacts) =>
+        val existingMembers = {
+          val userIds = users.map(_._1).toSet
+          db.readOnlyMaster { implicit session =>
+            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds)
+          }.map(_.userId).toSet
+        }
+        val suggestedUsers = users.collect {
+          case (userId, basicUser) if !existingMembers.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered (they may be promoted via an invite)
+            val (role, lastInvitedAt) = invitedUsers.get(userId) match {
+              case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+              case None => invitedUsers.get(userId) match {
+                case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+                case None => (OrganizationRole.MEMBER, None) // default invite role
+              }
+            }
+            MaybeOrganizationMember(Left(basicUser), role, lastInvitedAt)
+        }
+
+        val suggestedEmailAddresses = contacts.map { contact =>
+          val (role, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
+            case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
+            case None => (OrganizationRole.MEMBER, None)
+          }
+          MaybeOrganizationMember(Right(contact), role, lastInvitedAt)
+        }
+        (suggestedUsers ++ suggestedEmailAddresses).take(limit)
+    }
+  }
+
+  def isAuthValid(orgId: Id[Organization], authToken: String): Boolean = {
+    db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
   }
 }

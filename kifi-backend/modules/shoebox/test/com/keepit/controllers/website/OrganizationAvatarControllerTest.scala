@@ -52,14 +52,14 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
           val pubId = Organization.publicId(org.id.get)
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val route = com.keepit.controllers.website.routes.OrganizationAvatarController.uploadAvatar(pubId)
+          val route = com.keepit.controllers.website.routes.OrganizationAvatarController.uploadAvatar(pubId, 15, 23, 50)
           val request = FakeRequest(route.method, route.url).withBody(fakeFile)
-          val result = inject[OrganizationAvatarController].uploadAvatar(pubId)(request)
+          val result = inject[OrganizationAvatarController].uploadAvatar(pubId, 15, 23, 50)(request)
 
           status(result) === OK
-          Json.parse(contentAsString(result)) === Json.parse("""{"uploaded": "oa/26dbdc56d54dbc94830f7cfc85031481_200x200_c.png"}""")
+          Json.parse(contentAsString(result)) === Json.parse("""{"uploaded": "oa/26dbdc56d54dbc94830f7cfc85031481_50x50-15x23-200x200_cs.png"}""")
 
-          inject[OrganizationAvatarCommander].getBestImage(org.id.get, OrganizationAvatarConfiguration.defaultSize) must haveClass[Some[OrganizationAvatar]]
+          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize) must haveClass[Some[OrganizationAvatar]]
         }
       }
       "forbid a non-member from uploading an organization avatar" in {
@@ -68,12 +68,12 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
           val pubId = Organization.publicId(org.id.get)
 
           inject[FakeUserActionsHelper].setUser(rando)
-          val route = com.keepit.controllers.website.routes.OrganizationAvatarController.uploadAvatar(pubId)
+          val route = com.keepit.controllers.website.routes.OrganizationAvatarController.uploadAvatar(pubId, 15, 23, 50)
           val request = FakeRequest(route.method, route.url).withBody(fakeFile)
-          val result = inject[OrganizationAvatarController].uploadAvatar(pubId)(request)
+          val result = inject[OrganizationAvatarController].uploadAvatar(pubId, 15, 23, 50)(request)
 
           status(result) === FORBIDDEN
-          inject[OrganizationAvatarCommander].getBestImage(org.id.get, OrganizationAvatarConfiguration.defaultSize).isEmpty === true
+          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).isEmpty === true
         }
       }
     }

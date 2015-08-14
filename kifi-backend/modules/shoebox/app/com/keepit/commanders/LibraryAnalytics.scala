@@ -67,6 +67,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
@@ -99,6 +100,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -407,8 +409,8 @@ class LibraryAnalytics @Inject() (
     val contextBuilder = new HeimdalContextBuilder
     if (library.kind == LibraryKind.SYSTEM_PERSONA) {
       contextBuilder += ("libraryKind", "personaCreated")
-    } else if (library.kind == LibraryKind.SYSTEM_READ_IT_LATER) {
-      contextBuilder += ("libraryKind", "readItLaterCreated")
+    } else if (library.kind == LibraryKind.SYSTEM_GUIDE) {
+      contextBuilder += ("libraryKind", "guideCreated")
     } else if (library.kind == LibraryKind.USER_CREATED) {
       contextBuilder += ("libraryKind", "userCreated")
     }

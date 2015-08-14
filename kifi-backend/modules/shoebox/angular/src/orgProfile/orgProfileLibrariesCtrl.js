@@ -18,17 +18,18 @@ angular.module('kifi')
     }
 
     function resetAndFetchLibraries() {
+      $scope.libraries = null;
+      orgProfileService.invalidateOrgProfileCache();
       newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
     }
 
-    $scope.libraries = [];
+    $scope.libraries = null;
 
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-        if (/^orgProfile\.libraries\./.test(toState.name)) {
-          //$scope.libraryType = toState.name.split('.').pop();
+        if (/^orgProfile\.libraries/.test(toState.name)) {
           resetAndFetchLibraries();
         }
       }),
@@ -42,7 +43,9 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.userProfile = profileService.me;
+    $scope.organization = organization;
+
+    $scope.me = profileService.me;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -73,6 +76,22 @@ angular.module('kifi')
             // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(0, 0, newLibrary);
           }
+        }
+      });
+    };
+
+    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
+
+    $scope.shouldShowMoveCard = function () {
+      return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
+    };
+
+    $scope.openMoveLibraryHelp = function () {
+      modalService.open({
+        template: 'common/modal/videoModal.tpl.html',
+        modalData: {
+          youtubeId: 'ixAmggSbYmg',
+          title: 'Moving Libraries'
         }
       });
     };

@@ -9,7 +9,6 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        forceClose: '=',
         disableScroll: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
@@ -57,10 +56,8 @@ angular.module('kifi')
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 
-        scope.$watch('forceClose', function (newVal, oldVal) {
-          if (!oldVal && newVal) {
-            scope.close();
-          }
+        scope.$on('forceCloseModal', function () {
+          scope.close();
         });
 
         if (!scope.disableScroll) {
@@ -79,7 +76,8 @@ angular.module('kifi')
     scope: {
       action: '&',
       cancel: '&',
-      title: '@'
+      title: '@',
+      actionText: '@'
     },
     templateUrl: 'common/modal/basicModalContent.tpl.html',
     transclude: true,
@@ -91,6 +89,7 @@ angular.module('kifi')
       scope.actionText = attrs.actionText;
       scope.cancelText = attrs.cancelText;
       scope.withCancel = (attrs.withCancel !== void 0) || false;
+      scope.withOk = (typeof attrs.withOk !== 'undefined' ? attrs.withOk !== 'false' : true); // default value of true
       scope.withWarning = (attrs.withWarning !== void 0) || false;
       scope.withoutButtons = 'withoutButtons' in attrs;
       scope.centered = attrs.centered;

@@ -30,7 +30,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
 
     db.readWrite { implicit rw =>
       val user = UserFactory.user().withName("John", "Doe").withUsername("test").saved
-      val emailAddr = emailAddrRepo.save(UserEmailAddress(address = EmailAddress("johndoe@gmail.com"), userId = user.id.get))
+      val emailAddr = userEmailAddressCommander.intern(address = EmailAddress("johndoe@gmail.com"), userId = user.id.get).get._1
       val email = emailRepo.save(ElectronicMail(
         from = SystemEmailAddress.ENG,
         to = List(EmailAddress("johndoe@gmail.com")),
@@ -167,48 +167,6 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
             optOutRepo.hasOptedOut(emailAddr.address) should beFalse
             commander.processNewEvents(Seq(sgEvent))
             optOutRepo.hasOptedOut(emailAddr.address) should beTrue
-          }
-        }
-      }
-
-      "click events ignore confirmed emails" in {
-        withDb(modules: _*) { implicit injector =>
-          val commander = inject[SendgridCommander]
-          val emailAddrRepo = inject[UserEmailAddressRepo]
-
-          val (user, emailAddr, email) = setup(db)
-          val sgEvent = mockSendgridEvent(email.externalId)
-
-          val verifiedEmail = db.readWrite { implicit session =>
-            emailAddrRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED))
-          }
-
-          commander.processNewEvents(Seq(sgEvent))
-
-          db.readOnlyMaster { implicit session =>
-            val fetchedEmailAddr = emailAddrRepo.get(emailAddr.id.get)
-            verifiedEmail.seq === fetchedEmailAddr.seq
-            verifiedEmail.updatedAt === fetchedEmailAddr.updatedAt
-          }
-        }
-      }
-
-      "click events confirm unconfirmed emails" in {
-        withDb(modules: _*) { implicit injector =>
-          val commander = inject[SendgridCommander]
-          val emailAddrRepo = inject[UserEmailAddressRepo]
-
-          val (user, emailAddr, email) = setup(db)
-          val sgEvent = mockSendgridEvent(email.externalId)
-
-          commander.processNewEvents(Seq(sgEvent))
-
-          db.readOnlyMaster { implicit session =>
-            val fetchedEmailAddr = emailAddrRepo.get(emailAddr.id.get)
-            fetchedEmailAddr.seq mustNotEqual emailAddr.seq
-            fetchedEmailAddr.verified must beTrue
-            fetchedEmailAddr.verifiedAt must beSome
-            fetchedEmailAddr.state === UserEmailAddressStates.VERIFIED
           }
         }
       }

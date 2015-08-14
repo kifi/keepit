@@ -16,7 +16,7 @@ import play.api.mvc.Action
 import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
-import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationCommander, ElizaStatsCommander }
+import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationDeliveryCommander, ElizaStatsCommander }
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.common.db.slick._
 

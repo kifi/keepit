@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'modalService',
+  function (profileService, modalService) {
     function _isMe() {
       var $scope = this;
       return $scope.member.id === profileService.me.id;
@@ -18,6 +18,16 @@ angular.module('kifi')
     function _hasAcceptedInvite() {
       var $scope = this;
       return !$scope.member.lastInvitedAt;
+    }
+
+    function _shouldShowMakeOwner() {
+      var $scope = this;
+
+      return (
+        $scope.organization.ownerId === $scope.me.id &&
+        $scope.organization.ownerId !== $scope.member.id &&
+        $scope.hasAcceptedInvite()
+      );
     }
 
     function _shouldShowPromote() {
@@ -74,6 +84,27 @@ angular.module('kifi')
       $scope.$emit('removeMember', $scope.member);
     }
 
+    function _triggerMakeOwner() {
+      var $scope = this;
+
+      var opts = {
+        organization: $scope.organization,
+        member: $scope.member,
+        returnAction: function () {
+          $scope.$emit('resetAndFetch');
+        }
+      };
+      for (var i=0, len=$scope.members.length; i < len; i++) {
+        if ($scope.members[i].id === $scope.organization.ownerId) {
+          opts.currentOwner = $scope.members[i];
+        }
+      }
+      modalService.open({
+        template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
+        modalData: opts
+      });
+    }
+
     function _triggerPromote() {
       var $scope = this;
       $scope.$emit('promoteMember', $scope.member);
@@ -87,6 +118,12 @@ angular.module('kifi')
     function _triggerClickedAvatar() {
       var $scope = this;
       $scope.$emit('clickedAvatar', $scope.member);
+    }
+
+    function _role() {
+      var $scope = this;
+      return ($scope.hasAcceptedInvite() ? '' : 'Pending') + 
+        ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
     }
 
     return {
@@ -138,6 +175,7 @@ angular.module('kifi')
         $scope.resentInvite = _resentInvite;
 
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
+        $scope.shouldShowMakeOwner = _shouldShowMakeOwner;
         $scope.shouldShowPromote = _shouldShowPromote;
         $scope.shouldShowDemote = _shouldShowDemote;
         $scope.shouldShowRemove = _shouldShowRemove;
@@ -147,8 +185,10 @@ angular.module('kifi')
         $scope.triggerInvite = _triggerInvite;
         $scope.triggerCancelInvite = _triggerCancelInvite;
         $scope.triggerRemove = _triggerRemove;
+        $scope.triggerMakeOwner = _triggerMakeOwner;
         $scope.triggerPromote = _triggerPromote;
         $scope.triggerDemote = _triggerDemote;
+        $scope.role = _role;
       }
     };
   }

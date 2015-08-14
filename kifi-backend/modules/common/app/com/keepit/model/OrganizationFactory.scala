@@ -18,6 +18,7 @@ object OrganizationFactory {
 
   case class PartialOrganization private[OrganizationFactory] (
       org: Organization,
+      admins: Seq[User] = Seq.empty[User],
       members: Seq[User] = Seq.empty[User],
       invitedUsers: Seq[User] = Seq.empty[User],
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress]) {
@@ -26,9 +27,10 @@ object OrganizationFactory {
     def withOwner(newOwner: User) = this.copy(org = org.withOwner(newOwner.id.get))
     def withOwner(newOwner: Id[User]) = this.copy(org = org.withOwner(newOwner))
     def withOwner(newOwner: Int) = this.copy(org = org.withOwner(Id[User](newOwner)))
-    def withMembers(newMembers: Seq[User]) = this.copy(members = members ++ newMembers)
-    def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = invitedUsers ++ newInvitedUsers)
-    def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = invitedEmails ++ newInvitedEmails)
+    def withAdmins(newAdmins: Seq[User]) = this.copy(admins = newAdmins)
+    def withMembers(newMembers: Seq[User]) = this.copy(members = newMembers)
+    def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = newInvitedUsers)
+    def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle) = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
     def withBasePermissions(newBasePermissions: BasePermissions) = this.copy(org = org.withBasePermissions(newBasePermissions))
     def secret() = this.copy(org = org.hiddenFromNonmembers)

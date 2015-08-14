@@ -1,9 +1,22 @@
 <div class="kf-org-profile-libraries" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
   <div class="kf-upl-card-list">
-    <button class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
+    <button ng-if="canCreateLibraries" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
       <span class="kf-upl-create-card-add-icon svg-create-library"></span>
-      <div class="kf-upl-create-card-text">Create a Library</div>
+      <span class="kf-upl-create-card-text">Create a Library</span>
     </button>
-    <div kf-user-profile-library-card="::library" ng-repeat="library in libraries" profile-id="{{::userProfile.id}}"></div>
+    <div ng-if="libraries.length > 0" kf-user-profile-library-card="::library" ng-repeat="library in libraries" profile-id="{{::me.id}}"></div>
+    <div ng-show="shouldShowMoveCard()" class="kf-upl-card kf-opl-move-libraries ng-hide">
+      <div class="kf-opl-move-libraries-wrapper">
+        <div class="kf-opl-move-libraries-text">
+          <svg class="kf-opl-move-libraries-box" kf-symbol-sprite icon="box-open"></svg>
+          <span class="kf-upl-move-card-title">Move a Library</span>
+          <p class="kf-opl-move-libraries-description">Go to <a href="{{ me | profileUrl }}">your profile</a> to move libraries into this team.</p>
+          <button class="kf-opl-move-libraries-more-info" ng-click="openMoveLibraryHelp()">More Info</button>
+        </div>
+      </div>
+    </div>
+    <div class="kf-opl-empty" ng-if="libraries.length === 0">
+      {{ profile | name }} has not created any publicly viewable libraries.
+    </div>
   </div>
 </div>

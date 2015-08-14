@@ -30,7 +30,6 @@ case class User(
     pictureName: Option[String] = None, // denormalized UserPicture.name
     userPictureId: Option[Id[UserPicture]] = None,
     seq: SequenceNumber[User] = SequenceNumber.ZERO,
-    primaryEmail: Option[EmailAddress] = None,
     primaryUsername: Option[PrimaryUsername] = None) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -43,6 +42,8 @@ case class User(
     case Some(originalUsername) => originalUsername
     case None => throw Username.UndefinedUsernameException(this) // rare occurence, .username should be safe to use
   }
+  def isActive: Boolean = state == UserStates.ACTIVE
+  def isInactive: Boolean = state == UserStates.INACTIVE
   override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",username=$primaryUsername, state=$state]"""
 }
 
@@ -61,7 +62,6 @@ object User {
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.format[User]) and
-    (__ \ 'primaryEmail).formatNullable[EmailAddress] and
     (__ \ 'username).formatNullable[Username] and
     (__ \ 'normalizedUsername).formatNullable[Username]
   )(User.applyFromDbRow, unlift(User.unapplyToDbRow))
@@ -77,14 +77,13 @@ object User {
     pictureName: Option[String],
     userPictureId: Option[Id[UserPicture]],
     seq: SequenceNumber[User],
-    primaryEmail: Option[EmailAddress],
     username: Option[Username],
     normalizedUsername: Option[Username]) = {
     val primaryUsername = for {
       original <- username
       normalized <- normalizedUsername
     } yield PrimaryUsername(original, normalized)
-    User(id, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, primaryEmail, primaryUsername)
+    User(id, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, primaryUsername)
   }
 
   def unapplyToDbRow(user: User) = {
@@ -98,7 +97,6 @@ object User {
       user.pictureName,
       user.userPictureId,
       user.seq,
-      user.primaryEmail,
       user.primaryUsername.map(_.original),
       user.primaryUsername.map(_.normalized)))
   }
@@ -134,6 +132,7 @@ object Username {
   }
 
   case class UndefinedUsernameException(user: User) extends Exception(s"No username for $user")
+
 }
 
 case class PrimaryUsername(original: Username, normalized: Username)
@@ -188,12 +187,3 @@ object UserStates extends States[User] {
   val BLOCKED = State[User]("blocked")
   val INCOMPLETE_SIGNUP = State[User]("incomplete_signup")
 }
-
-case class VerifiedEmailUserIdKey(address: EmailAddress) extends Key[Id[User]] {
-  override val version = 2
-  val namespace = "user_id_by_verified_email"
-  def toKey(): String = address.address
-}
-
-class VerifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[VerifiedEmailUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Id.format[User])

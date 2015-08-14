@@ -3,6 +3,10 @@ package com.keepit.model
 import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 
 import scala.collection.immutable.IndexedSeq
 
@@ -25,19 +29,49 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
     "get by inviter id" in {
       withDb() { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
-        val inviterId = Id[User](1)
-        val userIds: IndexedSeq[Some[Id[User]]] = 10 to 20 map (i => Some(Id[User](i)))
-        db.readWrite { implicit s =>
-          for (inviteeId <- userIds) {
-            orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = inviterId,
-              userId = inviteeId, role = OrganizationRole.MEMBER))
+        val (inviter, users) = db.readWrite { implicit session =>
+          val inviter = user().saved
+          val org = organization().withOwner(inviter).saved
+          val users = UserFactory.users(10).saved
+          users.foreach { invitee =>
+            orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get,
+              userId = invitee.id, role = OrganizationRole.MEMBER))
           }
+          (inviter, users)
         }
 
-        val invitesById = db.readOnlyMaster { implicit session => orgInviteRepo.getByInviter(inviterId) }
-        invitesById.length === userIds.length
-        invitesById.map(_.inviterId).toSet === Set(inviterId)
-        invitesById.map(_.userId).diff(userIds) === List.empty[Id[User]]
+        val invitesById = db.readOnlyMaster { implicit session => orgInviteRepo.getByInviter(inviter.id.get) }
+        invitesById.length === users.length
+        invitesById.map(_.inviterId).toSet === Set(inviter.id.get)
+        invitesById.map(_.userId).diff(users.map(_.id)) === List.empty[Id[User]]
+      }
+    }
+
+    "ignore anonymous invites when getting pending invitees" in {
+      withDb() { implicit injector =>
+        val orgInviteRepo = inject[OrganizationInviteRepo]
+        val org = db.readWrite { implicit session =>
+          val inviter = user().saved
+          val org = organization().withOwner(inviter).saved
+          val users = UserFactory.users(10).saved
+          users.foreach { invitee =>
+            orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get,
+              userId = invitee.id, role = OrganizationRole.MEMBER))
+          }
+          orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = None, emailAddress = None, role = OrganizationRole.MEMBER))
+          org
+        }
+        val directInvites = db.readOnlyMaster { implicit session =>
+          orgInviteRepo.getByOrganizationAndDecision(organizationId = org.id.get, decision = InvitationDecision.PENDING, offset = Offset(0), limit = Limit(Int.MaxValue), includeAnonymous = false)
+        }
+        directInvites.length === 10
+        directInvites.exists(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty) === false
+
+        val allInvites = db.readOnlyMaster { implicit session =>
+          orgInviteRepo.getByOrganizationAndDecision(organizationId = org.id.get, decision = InvitationDecision.PENDING, offset = Offset(0), limit = Limit(Int.MaxValue), includeAnonymous = true)
+        }
+        allInvites.length === 11
+        allInvites.exists(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty) === true
       }
     }
   }

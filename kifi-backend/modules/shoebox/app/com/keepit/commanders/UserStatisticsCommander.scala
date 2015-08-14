@@ -14,11 +14,14 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
+import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 case class UserStatistics(
   user: User,
+  emailAddress: Option[EmailAddress],
   connections: Int,
   invitations: Int,
   invitedBy: Seq[User],
@@ -29,6 +32,7 @@ case class UserStatistics(
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
+  dateLastManualKeep: Option[DateTime],
   orgs: Seq[Organization],
   orgCandidates: Seq[Organization])
 
@@ -56,14 +60,13 @@ case class MemberStatistics(
   numLibrariesCollaborating: Int,
   numLibrariesFollowing: Int,
 
-  numSharedChats: Int,
-  numSharedLibraries: Int)
+  dateLastManualKeep: Option[DateTime])
 
 case class OrganizationStatistics(
   org: Organization,
   orgId: Id[Organization],
   pubId: PublicId[Organization],
-  ownerId: Id[User],
+  owner: User,
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
@@ -80,6 +83,7 @@ case class OrganizationStatistics(
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
+  emailAddress: Option[EmailAddress],
   score: Double)
 
 class UserStatisticsCommander @Inject() (
@@ -117,14 +121,17 @@ class UserStatisticsCommander @Inject() (
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
+    val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+    val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
 
     UserStatistics(
       user,
+      emailAddress,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
@@ -135,6 +142,7 @@ class UserStatisticsCommander @Inject() (
       kifiInstallations,
       librariesCreated,
       librariesFollowed,
+      latestManualKeepTime,
       orgs,
       orgCandidates
     )
@@ -148,6 +156,7 @@ class UserStatisticsCommander @Inject() (
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
+      val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
       val user = userRepo.get(userId)
       for (
         numChats <- numChatsFut
@@ -159,8 +168,7 @@ class UserStatisticsCommander @Inject() (
           numLibrariesCreated = numLibrariesCreated,
           numLibrariesCollaborating = numLibrariesCollaborating,
           numLibrariesFollowing = numLibrariesFollowing,
-          numSharedLibraries = 0, //TODO(ryan): fix
-          numSharedChats = 0 // TODO(ryan): fix
+          dateLastManualKeep = dateLastManualKeep
         )
       }
     }
@@ -197,8 +205,10 @@ class UserStatisticsCommander @Inject() (
         }
     }.map {
       case OrganizationInviteRecommendation(Left(userId), _, score) =>
-        val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-        OrganizationMemberRecommendationInfo(user, score * 10000)
+        val (user, emailAddress) = db.readOnlyMaster { implicit session =>
+          (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
+        }
+        OrganizationMemberRecommendationInfo(user, emailAddress, score * 10000)
     })
 
     val allUsers = members.map(_.userId) | candidates.map(_.userId)
@@ -237,7 +247,7 @@ class UserStatisticsCommander @Inject() (
       org = org,
       orgId = orgId,
       pubId = Organization.publicId(orgId),
-      ownerId = org.ownerId,
+      owner = membersStats(org.ownerId).user,
       handle = org.handle,
       name = org.name,
       description = org.description,
@@ -253,17 +263,18 @@ class UserStatisticsCommander @Inject() (
       allMemberChatStats = allMemberChatStats
     )
   }
-  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): Future[OrganizationStatisticsOverview] = {
+
+  def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val (allUsers, libraries, members, candidates, domains) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.getAllByOrgId(orgId)
+      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+      val allUsers = members.map(_.userId) | candidates.map(_.userId)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).filterNot(_.kind == LibraryKind.SYSTEM_GUIDE)
+      (allUsers, libraries, members, candidates, domains)
+    }
     val numKeeps = libraries.map(_.keepCount).sum
-
-    val members = orgMembershipRepo.getAllByOrgId(orgId)
-    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-    val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-
-    val allUsers = members.map(_.userId) | candidates.map(_.userId)
 
     val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
 

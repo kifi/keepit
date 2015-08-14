@@ -126,6 +126,7 @@ cardBorderRadius = 16px
   right: 0
   bottom: 0
   user-select: none
+  z-index: 9
 
 .kf-upl-card-icon
   position: absolute
@@ -149,6 +150,7 @@ cardBorderRadius = 16px
   background-position: center
   background-size: 15px 15px
   background-repeat: no-repeat
+  z-index: 10
 
   :not(:hover)>&
     display: none
@@ -242,6 +244,7 @@ owner-pic-diam = 32px
   font-style: italic
   font-smoothing: antialiased
   margin-right: 5px
+  color: white
 
 .kf-upl-card-by-name
   display: inline-block
@@ -254,6 +257,7 @@ owner-pic-diam = 32px
   letter-spacing: .2px
   overflow: hidden
   text-overflow: ellipsis
+  color: white
 
   [href]:hover>&
     text-decoration: underline
@@ -298,6 +302,9 @@ lockRadius = 14px
   &.kf-can-write
     top: 179px
 
+  [data-kf-tooltip]
+    display: inline-block
+
 .kf-upl-card-collab
   display: inline-block
   vertical-align: middle
@@ -309,18 +316,23 @@ lockRadius = 14px
   opacity: .8
 
 .kf-upl-card-private
+.kf-upl-card-public
   display: inline-block
   vertical-align: middle
-  width: 2 * lockRadius
-  height: 2 * lockRadius
-  border-radius: lockRadius
-  background-color: libraryRed
+  width: 22px
+  height: 22px
+  border-radius: 50%
   background-position: center 6px
   background-size: auto 14px
   background-repeat: no-repeat
+  fill: white
 
   &:not(:first-child)
     margin-left: 8px
+
+.kf-upl-card-private
+  background-color: libraryRed
+  padding: 2px
 
 .kf-upl-count
   vertical-align: middle
@@ -349,6 +361,7 @@ subsDur = .3s
   padding: 0
   border-radius: (followHeight / 2)
   transition: width (subsDur * .8)
+  z-index: 9
 
   &.kf-following
     width: 100px
@@ -512,6 +525,7 @@ subsDur = .3s
   font-smoothing: antialiased
   color: alpha(#fff, .6)
   text-shadow: 0 0 6px alpha(#000, .2)
+  z-index: 9
 
 follower-pic-diameter = 23px
 

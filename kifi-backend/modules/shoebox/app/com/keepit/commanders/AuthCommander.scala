@@ -117,6 +117,8 @@ class AuthCommander @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
@@ -127,7 +129,7 @@ class AuthCommander @Inject() (
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
     db.readOnlyMaster { implicit s =>
-      emailAddressRepo.getByAddressOpt(addr).isDefined
+      emailAddressRepo.getByAddress(addr).isDefined
     }
   }
 
@@ -259,7 +261,7 @@ class AuthCommander @Inject() (
         }
 
         val informationalMessage = s"""
-          UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}, Email: ${user.primaryEmail}""
+          UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}""
         """
         amazonSimpleMailProvider.sendMail(ElectronicMail(
           from = SystemEmailAddress.ENG,
@@ -459,11 +461,27 @@ class AuthCommander @Inject() (
       implicit val context = HeimdalContext(Map())
       libraryCommander.joinLibrary(userId, libId, authToken).fold(
         { libFail =>
-          airbrake.notify(s"[finishSignup] auto-join failed. $libFail")
+          airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")
           false
         },
         { library =>
           log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+          true
+        }
+      )
+    }.getOrElse(false)
+  }
+
+  def autoJoinOrg(userId: Id[User], orgPubId: PublicId[Organization], authToken: String): Boolean = {
+    Organization.decodePublicId(orgPubId).map { orgId =>
+      implicit val context = HeimdalContext.empty
+      orgInviteCommander.acceptInvitation(orgId, userId, authToken).fold(
+        { orgFail =>
+          airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
+          false
+        },
+        { org =>
+          log.info(s"[finishSignup] user(id=$userId) has successfully joined organization $org")
           true
         }
       )

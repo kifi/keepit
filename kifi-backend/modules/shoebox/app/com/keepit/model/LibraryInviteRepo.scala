@@ -23,7 +23,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getByEmailAddress(email: EmailAddress, excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]
-  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
+  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
@@ -139,9 +139,9 @@ class LibraryInviteRepoImpl @Inject() (
   def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])] = {
     val invitees = {
       val invitesGroupedByInvitee = (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates)) yield r).groupBy(r => (r.userId, r.emailAddress))
-      val inviteesWithLastInvitedAt = invitesGroupedByInvitee.map { case ((userId, emailAddress), invites) => (userId, emailAddress, invites.map(_.createdAt).min) }
-      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isDefined, firstInvitedAt) }
-      sortedInvitees.drop(offset).take(limit).map { case (userId, emailAddress, firstInvitedAt) => (userId, emailAddress) }.list
+      val inviteesWithLastInvitedAt = invitesGroupedByInvitee.map { case ((userId, emailAddress), invites) => (userId, emailAddress, invites.map(_.id).min) }
+      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, lowestId) => (userId.isDefined, lowestId) }
+      sortedInvitees.drop(offset).take(limit).map { case (userId, emailAddress, lowestId) => (userId, emailAddress) }.list
     }
 
     val (userIds, emailAddresses) = {
@@ -165,7 +165,7 @@ class LibraryInviteRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.inviterId === inviterId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt)
   }
 
-  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite] = {
+  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     getByLibraryIdAndInviterIdCompiled(libraryId, inviterId, includeStates).list
   }
 
