@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.common.time._
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
 import org.joda.time.DateTime
 
@@ -17,6 +18,8 @@ object KeepFactory {
       urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
+      title = Some(RandomStringUtils.randomAlphabetic(20)),
+      keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = userId,
       source = KeepSource.keeper,
       libraryId = None,

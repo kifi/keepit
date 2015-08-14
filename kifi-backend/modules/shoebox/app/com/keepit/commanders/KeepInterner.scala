@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import java.util.UUID
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -26,8 +26,18 @@ import com.keepit.common.akka.SafeFuture
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
+@ImplementedBy(classOf[KeepInternerImpl])
+trait KeepInterner {
+  private[commanders] def deDuplicateRawKeep(rawKeeps: Seq[RawKeep]): Seq[RawKeep]
+  private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
+  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation])
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation])
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
+}
+
 @Singleton
-class KeepInterner @Inject() (
+class KeepInternerImpl @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
@@ -54,7 +64,7 @@ class KeepInterner @Inject() (
   sourceAttrRepo: KeepSourceAttributionRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
-    extends Logging {
+    extends KeepInterner with Logging {
 
   implicit private val fj = ExecutionContext.fj
 
