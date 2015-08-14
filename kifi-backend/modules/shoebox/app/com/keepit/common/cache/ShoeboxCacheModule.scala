@@ -402,11 +402,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def organizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationCache(stats, accessLog, (innerRepo, 20 seconds), (outerRepo, 14 days))
+    new OrganizationCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
   def primaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+    new PrimaryOrgForUserCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
   def organizationExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
@@ -414,5 +414,5 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def organizationDomainOwnershipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationDomainOwnershipAllCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+    new OrganizationDomainOwnershipAllCache(stats, accessLog, (outerRepo, 14 days))
 }
