@@ -2,7 +2,7 @@
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
   <a class="kf-upl-card-setting svg-settings-gear" ng-if="::myProfile && isOwner && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
   <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
-    <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::lib.kind.lastIndexOf('system', 0) === 0"></div>
+    <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::(lib.kind === 'system_main' || lib.kind === 'system_secret')"></div>
     <div class="kf-upl-card-cover">
       <div class="kf-upl-card-cover-image" style="{{::lib.image|bgImageAndPos}}" ng-if="::lib.image"></div>
     </div>
