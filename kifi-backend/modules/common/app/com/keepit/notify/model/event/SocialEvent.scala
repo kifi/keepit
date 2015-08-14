@@ -49,7 +49,7 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
   override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
     event <- PickOne(events)
     friend <- GetUser(event.friendId, "friend")
-    image <- GetUserImage(event.friendId, 0, "friendImage")
+    image <- GetUserImage(event.friendId, "friendImage")
   } yield NotificationInfo(
     path = Path(friend.username.value),
     imageUrl = image,

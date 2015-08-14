@@ -4,6 +4,8 @@ import com.keepit.classify.{ NormalizedHostname, DomainInfo, Domain }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.model.NotificationEvent
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -130,6 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
+  def generateNotificationInfos(events: Set[NotificationEvent]): Future[NotificationInfo]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -799,5 +802,9 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
+  }
+
+  def generateNotificationInfos(events: Set[NotificationEvent]): Future[NotificationInfo] = {
+    call(Shoebox.internal.generateNotificationInfos()).map(_.json.as[NotificationInfo])
   }
 }

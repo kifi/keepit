@@ -5,12 +5,17 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
+import com.keepit.notify.delivery.WsNotificationDelivery
 import com.keepit.notify.model.{ NotificationKind, NotificationEvent }
+
+import scala.concurrent.ExecutionContext
 
 class NotificationProcessing @Inject() (
     db: Database,
     notificationRepo: NotificationRepo,
-    notificationItemRepo: NotificationItemRepo) extends Logging {
+    notificationItemRepo: NotificationItemRepo,
+    delivery: WsNotificationDelivery,
+    implicit val executionContext: ExecutionContext) extends Logging {
 
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
     val kind = event.kind.asInstanceOf[NotificationKind[NotificationEvent]]
@@ -53,7 +58,7 @@ class NotificationProcessing @Inject() (
 
   def processNewEvent(event: NotificationEvent): Notification = {
     val groupIdentifier = getGroupIdentifier(event)
-    groupIdentifier match {
+    val notif = groupIdentifier match {
       case Some(identifier) =>
         db.readOnlyMaster { implicit session =>
           notificationRepo.getByKindAndGroupIdentifier(event.kind, identifier)
@@ -78,6 +83,11 @@ class NotificationProcessing @Inject() (
         }
       }
     }
+    val events = db.readOnlyMaster { implicit session =>
+      notificationItemRepo.getAllForNotification(notif.id.get)
+    }.map(_.event).toSet
+    delivery.deliver(events)
+    notif
   }
 
 }

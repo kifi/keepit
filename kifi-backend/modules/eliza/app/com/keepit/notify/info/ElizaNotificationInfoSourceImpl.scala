@@ -13,12 +13,12 @@ class ElizaNotificationInfoSourceImpl @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     implicit val executionContext: ExecutionContext) extends NotificationInfoSource {
 
-  override def userImage(id: Id[User], width: Int): Future[String] = shoeboxServiceClient.getUserImageUrl(id, width)
+  override def userImage(id: Id[User]): Future[String] = Future.failed(new UnsupportedOperationException)
 
-  override def libraryPath(id: Id[Library]): Future[EncodedPath] = ???
+  override def libraryPath(id: Id[Library]): Future[EncodedPath] = Future.failed(new UnsupportedOperationException)
 
   override def user(id: Id[User]): Future[User] = shoeboxServiceClient.getUser(id).map(_.get)
 
-  override def library(id: Id[Library]): Future[Library] = ???
+  override def library(id: Id[Library]): Future[Library] = Future.failed(new UnsupportedOperationException)
 
 }

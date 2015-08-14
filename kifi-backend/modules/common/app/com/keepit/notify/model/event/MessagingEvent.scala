@@ -1,5 +1,7 @@
 package com.keepit.notify.model.event
 
+import com.keepit.notify.info.ReturnsInfo.PickOne
+import com.keepit.notify.info.{ ReturnsInfo, ReturnsInfoResult, NotificationInfo }
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -36,4 +38,12 @@ object NewMessage extends NotificationKind[NewMessage] {
     existing.messageThreadId == newEvent.messageThreadId
   }
 
+  //  override def info(events: Set[NewMessage]): ReturnsInfo[ElizaMessageNotificationInfo] = for {
+  //    event <- PickOne(events)
+  //  } yield ElizaMessageNotificationInfo()
+
 }
+
+//case class ElizaMessageNotificationInfo() extends NotificationInfo(null, null, null, null, null, null)
+
+case class ElizaMessageInfo()

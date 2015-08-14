@@ -63,8 +63,8 @@ object ReturnsInfo {
     def fromSource(source: NotificationInfoSource) = source.library(id)
   }
 
-  case class GetUserImage(id: Id[User], width: Int, arg: String = "") extends ArgAction[String] {
-    def fromSource(source: NotificationInfoSource) = source.userImage(id, width)
+  case class GetUserImage(id: Id[User], arg: String = "") extends ArgAction[String] {
+    def fromSource(source: NotificationInfoSource) = source.userImage(id)
   }
 
   case class GetLibraryPath(id: Id[Library], arg: String = "") extends ArgAction[EncodedPath] {
