@@ -445,16 +445,19 @@ exports.xhr = require('sdk/net/xhr').XMLHttpRequest;
 
 tabs
 .on('open', errors.wrap(function onTabOpen(tab) {
+  // We suspect this is not called anymore.
   log('[tabs.open]', tab.id, tab.url);
   tabsById[tab.id] = tab;
 }))
 .on('close', errors.wrap(function onTabClose(tab) {
   log('[tabs.close]', tab.id, tab.url);
   onPageHide(tab.id);
+  delete pages[tabId];
   delete tabsById[tab.id];
 }))
 .on('activate', errors.wrap(function onTabActivate(tab) {
   var page = pages[tab.id];
+  tabsById[tab.id] = tab; // because tabs.on('open') isn't working
   if (!page || !page.active) {
     log('[tabs.activate]', tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
@@ -483,6 +486,7 @@ tabs
   }
 }))
 .on('ready', errors.wrap(function onTabReady(tab) {
+  tabsById[tab.id] = tab; // because tabs.on('open') isn't working
   log('[tabs.ready]', tab.id, tab.url);
 }));
 
@@ -606,7 +610,6 @@ function getPageOrHideOldAndCreatePage(tab) {
 function onPageHide(tabId) {
   const page = pages[tabId];
   if (page) {
-    delete pages[tabId];
     if (httpRe.test(page.url)) {
       exports.tabs.on.unload.dispatch(page);
     }

@@ -2,27 +2,13 @@
 'use strict';
 
 const ICON_ID = 'kifi-urlbar-icon';
-const {BrowserWindow} = require('sdk/windows');
-const {windows} = require('sdk/window/utils');
-
-function getXpcomWindow(win) {
-  for (let w of windows('navigator:browser')) {
-    if (BrowserWindow({window: w}) === win) {
-      return w;
-    }
-  }
-}
+const { viewFor } = require('sdk/view/core');
 
 exports.addToWindow = function(win, click) {
-  // TODO: detect whether the window supports tabs and only add icon if it does?
-  // for each (let n in xpcomWin.document.querySelector('#TabsToolbar').childNodes) {
-  //   console.log('#############', n && n.nodeName, n && n.id);
-  // }
-
-  const xpcomWin = getXpcomWindow(win);
-  const tb = xpcomWin.document.getElementById('urlbar-icons');
+  const domWin = viewFor(win);
+  const tb = domWin.document.getElementById('urlbar-icons');
   if (tb) {
-    const iconEl = xpcomWin.document.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'image');
+    const iconEl = domWin.document.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'image');
     tb.insertBefore(iconEl, tb.firstChild);
     iconEl.setAttribute('id', ICON_ID);
     iconEl.setAttribute('height', 19);
@@ -42,8 +28,8 @@ exports.addToWindow = function(win, click) {
 };
 
 exports.show = function(win, uri) {
-  const xpcomWin = getXpcomWindow(win);
-  const iconEl = xpcomWin && xpcomWin.document.getElementById(ICON_ID);
+  const domWin = viewFor(win);
+  const iconEl = domWin && domWin.document.getElementById(ICON_ID);
   if (iconEl) {
     iconEl.setAttribute('src', uri);
     iconEl.removeAttribute('collapsed');
@@ -51,8 +37,8 @@ exports.show = function(win, uri) {
 };
 
 exports.hide = function(win) {
-  const xpcomWin = getXpcomWindow(win);
-  const iconEl = xpcomWin && xpcomWin.document.getElementById(ICON_ID);
+  const domWin = viewFor(win);
+  const iconEl = domWin && domWin.document.getElementById(ICON_ID);
   if (iconEl) {
     iconEl.setAttribute('collapsed', true);
   }
