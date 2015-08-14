@@ -10,6 +10,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 @ImplementedBy(classOf[PaymentMethodRepoImpl])
 trait PaymentMethodRepo extends Repo[PaymentMethod] {
   def getByAccountId(accountId: Id[PaidAccount], excludeStates: Set[State[PaymentMethod]] = Set(PaymentMethodStates.INACTIVE))(implicit session: RSession): Seq[PaymentMethod]
+  def getDefault(accountId: Id[PaidAccount])(implicit session: RSession): Option[PaymentMethod]
 }
 
 @Singleton
@@ -39,6 +40,10 @@ class PaymentMethodRepoImpl @Inject() (
 
   def getByAccountId(accountId: Id[PaidAccount], excludeStates: Set[State[PaymentMethod]] = Set(PaymentMethodStates.INACTIVE))(implicit session: RSession): Seq[PaymentMethod] = {
     (for (row <- rows if row.accountId === accountId && !row.state.inSet(excludeStates)) yield row).list
+  }
+
+  def getDefault(accountId: Id[PaidAccount])(implicit session: RSession): Option[PaymentMethod] = {
+    (for (row <- rows if row.accountId === accountId && row.default === true) yield row).firstOption
   }
 
 }

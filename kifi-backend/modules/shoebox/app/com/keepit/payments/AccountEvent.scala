@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
@@ -10,6 +11,10 @@ import com.kifi.macros.json
 import play.api.libs.json.{ JsValue, JsNull, Json }
 
 import org.joda.time.DateTime
+
+import javax.crypto.spec.IvParameterSpec
+
+case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
 trait AccountEventAction {
   def eventType: String
@@ -92,7 +97,7 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
   }
 
   @json
-  case class DefaultPaymentMethodChanged(from: Id[PaymentMethod], to: Id[PaymentMethod]) extends AccountEventAction {
+  case class DefaultPaymentMethodChanged(from: Option[Id[PaymentMethod]], to: Id[PaymentMethod]) extends AccountEventAction {
     def eventType: String = "default_payment_method_changed"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }
@@ -128,6 +133,12 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
 
 case class EventGroup(id: Long) extends AnyVal
 
+object EventGroup {
+  def apply(): EventGroup = {
+    EventGroup(scala.util.Random.nextLong)
+  }
+}
+
 case class AccountEvent(
     id: Option[Id[AccountEvent]] = None,
     createdAt: DateTime = currentDateTime,
@@ -141,16 +152,19 @@ case class AccountEvent(
     whoDunnitExtra: JsValue,
     kifiAdminInvolved: Option[Id[User]],
     action: AccountEventAction,
-    creditChange: DollarAmount, //in cents
+    creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
-    paymentCharge: Option[DollarAmount], //in cents
-    memo: Option[String]) extends ModelWithState[AccountEvent] {
+    paymentCharge: Option[DollarAmount],
+    memo: Option[String]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
 }
 
-object AccountEvent {
+object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
+
+  protected[this] val publicIdPrefix = "ae"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
   def applyFromDbRow(
     id: Option[Id[AccountEvent]],
