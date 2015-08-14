@@ -22,11 +22,13 @@ class PaidAccountRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
+  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_Account") {
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
-    def credit = column[Int]("credit", O.NotNull)
+    def credit = column[DollarAmount]("credit", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)

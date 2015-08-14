@@ -14,7 +14,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[AccountEventRepoImpl])
 trait AccountEventRepo extends Repo[AccountEvent] {
-  def getByGroupId(groupId: Long, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+  def getByGroupId(group: EventGroup, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
@@ -30,9 +30,12 @@ class AccountEventRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
+  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, Long](_.id, EventGroup(_))
+
   type RepoImpl = AccountEventTable
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "paid_plan") {
-    def eventGroup = column[Long]("event_group", O.NotNull)
+    def eventGroup = column[EventGroup]("event_group", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
     def billingRelated = column[Boolean]("billing_related", O.NotNull)
@@ -41,9 +44,9 @@ class AccountEventRepoImpl @Inject() (
     def kifiAdminInvolved = column[Id[User]]("kifi_admin_involved", O.Nullable)
     def eventType = column[String]("event_type", O.NotNull)
     def eventTypeExtras = column[JsValue]("event_type_extras", O.NotNull)
-    def creditChange = column[Int]("credit_change", O.NotNull)
+    def creditChange = column[DollarAmount]("credit_change", O.NotNull)
     def paymentMethod = column[Id[PaymentMethod]]("payment_method", O.Nullable)
-    def paymentCharge = column[Int]("payment_charge", O.Nullable)
+    def paymentCharge = column[DollarAmount]("payment_charge", O.Nullable)
     def memo = column[String]("memo", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, eventGroup, eventTime, accountId, billingRelated, whoDunnit.?, whoDunnitExtra, kifiAdminInvolved.?, eventType, eventTypeExtras, creditChange, paymentMethod.?, paymentCharge.?, memo.?) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
@@ -55,8 +58,8 @@ class AccountEventRepoImpl @Inject() (
 
   override def invalidateCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
 
-  def getByGroupId(groupId: Long, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.eventGroup === groupId && !row.state.inSet(excludeStates)) yield row).list
+  def getByGroupId(group: EventGroup, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+    (for (row <- rows if row.eventGroup === group && !row.state.inSet(excludeStates)) yield row).list
   }
 
   def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {

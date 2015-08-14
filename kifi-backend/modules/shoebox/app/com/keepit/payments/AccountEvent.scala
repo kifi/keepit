@@ -126,12 +126,14 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
 
 }
 
+case class EventGroup(id: Long) extends AnyVal
+
 case class AccountEvent(
     id: Option[Id[AccountEvent]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
-    eventGroup: Long,
+    eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
     billingRelated: Boolean,
@@ -139,9 +141,9 @@ case class AccountEvent(
     whoDunnitExtra: JsValue,
     kifiAdminInvolved: Option[Id[User]],
     action: AccountEventAction,
-    creditChange: Int, //in cents
+    creditChange: DollarAmount, //in cents
     paymentMethod: Option[Id[PaymentMethod]],
-    paymentCharge: Option[Int], //in cents
+    paymentCharge: Option[DollarAmount], //in cents
     memo: Option[String]) extends ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
@@ -155,7 +157,7 @@ object AccountEvent {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[AccountEvent],
-    eventGroup: Long,
+    eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
     billingRelated: Boolean,
@@ -164,9 +166,9 @@ object AccountEvent {
     kifiAdminInvolved: Option[Id[User]],
     eventType: String,
     eventTypeExtras: JsValue,
-    creditChange: Int, //in cents
+    creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
-    paymentCharge: Option[Int], //in cents
+    paymentCharge: Option[DollarAmount],
     memo: Option[String]): AccountEvent = {
     AccountEvent(
       id,

@@ -7,6 +7,8 @@ import com.keepit.common.mail.EmailAddress
 
 import org.joda.time.DateTime
 
+case class DollarAmount(cents: Int) extends AnyVal
+
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
     createdAt: DateTime = currentDateTime,
@@ -14,7 +16,7 @@ case class PaidAccount(
     state: State[PaidAccount] = PaidAccountStates.ACTIVE,
     orgId: Id[Organization],
     planId: Id[PaidPlan],
-    credit: Int, //in cents
+    credit: DollarAmount,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress]) extends ModelWithState[PaidAccount] {
 
