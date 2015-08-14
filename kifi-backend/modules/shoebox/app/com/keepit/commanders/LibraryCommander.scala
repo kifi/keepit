@@ -122,6 +122,7 @@ class LibraryCommanderImpl @Inject() (
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    keepCommander: KeepsCommander,
     keepToCollectionRepo: KeepToCollectionRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,
@@ -771,7 +772,7 @@ class LibraryCommanderImpl @Inject() (
           if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
               implicit val session: RWSession = s
-              keepRepo.save(k.copy(visibility = curViz))
+              keepCommander.changeVisibility(k, curViz)
               ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
                 ktlCommander.changeVisibility(_, curViz)
               }
@@ -1265,8 +1266,8 @@ class LibraryCommanderImpl @Inject() (
   // thing.
   private def convertKeepOwnershipToLibraryOwner(userId: Id[User], library: Library) = {
     db.readWrite { implicit s =>
-      keepRepo.getByUserIdAndLibraryId(userId, library.id.get).map { keep =>
-        keepRepo.save(keep.copy(userId = library.ownerId))
+      keepRepo.getByUserIdAndLibraryId(userId, library.id.get).foreach { keep =>
+        keepCommander.changeOwner(keep, library.ownerId)
       }
       ktlRepo.getByUserIdAndLibraryId(userId, library.id.get).foreach {
         ktlCommander.changeOwner(_, library.ownerId)
@@ -1410,21 +1411,27 @@ class LibraryCommanderImpl @Inject() (
           implicit val session = s
 
           val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+          val newKeep = k.copy(
+            id = None,
+            userId = userId,
+            libraryId = Some(toLibraryId),
+            visibility = toLibrary.visibility,
+            source = withSource.getOrElse(k.source),
+            originalKeeperId = k.originalKeeperId.orElse(Some(userId))
+          )
 
           // TODO(ryan): just use a single function that creates new keeps, and handle the attachment to a library in there
           currentKeepOpt match {
             case None =>
-              val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
-              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(newKeep, toLibrary, requesterId = userId))
-              combineTags(k.id.get, newKeep.id.get)
-              Right(newKeep)
+              val persistedKeep = keepCommander.createKeep(newKeep)
+              combineTags(k.id.get, persistedKeep.id.get)
+              Right(persistedKeep)
+
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
-                source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
-              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = newKeep, library = toLibrary, requesterId = userId))
-              combineTags(k.id.get, existingKeep.id.get)
-              Right(newKeep)
+              val persistedKeep = keepCommander.createKeep(newKeep.withId(existingKeep.id.get))
+              combineTags(k.id.get, persistedKeep.id.get)
+              Right(persistedKeep)
+
             case Some(existingKeep) =>
               combineTags(k.id.get, existingKeep.id.get)
               Left(LibraryError.AlreadyExistsInDest)
@@ -1462,15 +1469,12 @@ class LibraryCommanderImpl @Inject() (
 
           existingKeepOpt match {
             case None =>
-              val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
-              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
+              ktlCommander.moveKeep(KeepToLibraryMoveRequest(keepId = k.id.get, fromLibrary = k.libraryId.get, toLibrary = toLibraryId, requesterId = userId))
+              val movedKeep = keepCommander.moveKeep(k, toLibrary) // TODO(ryan): this can go, keeps don't need to know about where they're being moved
               Right(movedKeep)
             case Some(existingKeep) if existingKeep.isInactive =>
-              val movedKeep = keepRepo.save(k.withId(existingKeep.id.get).withLibrary(toLibrary)) // clone new keep into existing keep's place, wiping out the existing keep
-              keepRepo.deactivate(k) // deactivate the keep in the old library
-              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keepId = k.id.get, libraryId = k.libraryId.get, requesterId = userId))
-              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep = movedKeep, library = toLibrary, requesterId = userId))
+              ktlCommander.moveKeep(KeepToLibraryMoveRequest(keepId = k.id.get, fromLibrary = k.libraryId.get, toLibrary = toLibraryId, requesterId = userId))
+              val movedKeep = keepCommander.moveKeep(k, toLibrary) // TODO(ryan): this can go, keeps don't need to know about where they're being moved
               combineTags(k.id.get, existingKeep.id.get)
               Right(movedKeep)
             case Some(existingKeep) =>

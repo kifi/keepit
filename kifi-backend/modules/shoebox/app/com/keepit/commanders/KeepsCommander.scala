@@ -337,7 +337,7 @@ class KeepsCommander @Inject() (
           // Save keeps as INACTIVE
           val inactivatedKeeps = keeps.map { k =>
             ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, libId, userId))
-            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None))
+            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None)) // TODO(ryan): remove this, don't kill keeps when you detach them
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -450,7 +450,7 @@ class KeepsCommander @Inject() (
             val noteStr = targetKeep.note.getOrElse("")
             val persistedNote = Some(Hashtags.addNewHashtagsToString(noteStr, Seq(collection.name))).filter(_.nonEmpty)
             if (persistedNote != targetKeep.note) {
-              val updatedKeep = keepRepo.save(targetKeep.copy(note = persistedNote)) // notify keep index
+              val updatedKeep = updateNote(targetKeep, persistedNote) // notify keep index
               libraryAnalytics.taggedPage(updatedCollection, updatedKeep, context, taggingAt)
             }
           }
@@ -483,7 +483,7 @@ class KeepsCommander @Inject() (
         val editedNote = targetKeep.note.map { noteStr =>
           Hashtags.removeHashtagsFromString(noteStr, Set(collection.name))
         }.filterNot(_.isEmpty)
-        val updatedKeep = keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
+        val updatedKeep = updateNote(targetKeep, editedNote) // notify keep index
         libraryAnalytics.untaggedPage(collection, updatedKeep, context, removedAt)
       }
       removed.toSet
@@ -626,7 +626,7 @@ class KeepsCommander @Inject() (
     val noteWithHashtagsAppended = Hashtags.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    val updatedKeep = keepRepo.save(keep.copy(note = finalNote))
+    val updatedKeep = updateNote(keep, finalNote)
     libraryAnalytics.updatedKeep(keep, updatedKeep, context)
   }
 
@@ -728,6 +728,19 @@ class KeepsCommander @Inject() (
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
+  def updateNote(keep: Model, newNote: Option[String])(implicit session: RWSession): Keep = {
+    keepRepo.save(keep.withNote(newNote))
+  }
+  def changeVisibility(keep: Model, newVisibility: LibraryVisibility)(implicit session: RWSession): Keep = {
+    keepRepo.save(keep.withVisibility(newVisibility))
+  }
+  def changeOwner(keep: Model, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
+    keepRepo.save(keep.withOwner(newOwnerId))
+  }
+  def deactivateKeep(keep: Model)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
+    keepRepo.deactivate(keep)
+  }
 }
 
 sealed trait HelpRankSelector { val name: String }

@@ -44,6 +44,9 @@ case class Keep(
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
+  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
