@@ -16,6 +16,7 @@ case class KeepToCollection(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime) extends ModelWithState[KeepToCollection] {
   def isActive: Boolean = state == KeepToCollectionStates.ACTIVE
+  def isInactive: Boolean = state == KeepToCollectionStates.INACTIVE
   def withId(id: Id[KeepToCollection]): KeepToCollection = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepToCollection = this.copy(updatedAt = now)
   def inactivate(): KeepToCollection = this.copy(state = KeepToCollectionStates.INACTIVE)

@@ -472,7 +472,7 @@ class KeepsCommanderImpl @Inject() (
             keepToCollectionRepo.insertAll(newK2C.toSeq)
           }
           val activated = existing collect {
-            case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
+            case ktc if ktc.isInactive && keepsById.contains(ktc.keepId) =>
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
           }
 
@@ -833,7 +833,7 @@ class KeepsCommanderImpl @Inject() (
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
 
-      case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
+      case Some(existingKeep) if existingKeep.isInactive =>
         val persistedKeep = createKeep(newKeep.withId(existingKeep.id.get))
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
@@ -849,13 +849,12 @@ class KeepsCommanderImpl @Inject() (
     val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
     val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
     val tagsToAdd = oldSet.diff(existingSet)
-    tagsToAdd.map { tagId =>
-      keepToCollectionRepo.getOpt(newKeepId, tagId) match {
-        case None =>
-          keepToCollectionRepo.save(KeepToCollection(keepId = newKeepId, collectionId = tagId))
-        case Some(ktc) if ktc.state == KeepToCollectionStates.INACTIVE =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-        case _ =>
+    tagsToAdd.foreach { tagId =>
+      val newKtc = KeepToCollection(keepId = newKeepId, collectionId = tagId)
+      val ktcOpt = keepToCollectionRepo.getOpt(newKeepId, tagId)
+      if (!ktcOpt.exists(_.isActive)) {
+        // either overwrite (if the dead one exists) or create a new one
+        keepToCollectionRepo.save(newKtc.copy(id = ktcOpt.map(_.id.get)))
       }
     }
   }
