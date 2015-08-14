@@ -96,7 +96,7 @@ trait KeepsCommander {
   def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
   def assembleKeepExport(keepExports: Seq[KeepExport]): String
   def numKeeps(userId: Id[User]): Int
-  def createKeep(k: Keep)(implicit session: RWSession): Keep
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
   def changeVisibility(keep: Keep, newVisibility: LibraryVisibility)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
@@ -372,7 +372,7 @@ class KeepsCommanderImpl @Inject() (
 
           // Save keeps as INACTIVE
           val inactivatedKeeps = keeps.map { k =>
-            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, libId, userId))
+            ktlCommander.removeKeepFromLibrary(k.id.get, libId)
             keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None)) // TODO(ryan): remove this, don't kill keeps when you detach them
           }
           finalizeUnkeeping(keeps, userId)
@@ -764,9 +764,10 @@ class KeepsCommanderImpl @Inject() (
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
-  def createKeep(k: Keep)(implicit session: RWSession): Keep = {
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
     val keep = keepRepo.save(k)
-    ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, libraryRepo.get(keep.libraryId.get), keep.userId))
+    // TODO(ryan): drop this once keeps don't need to exist in libraries
+    ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
     keep
   }
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
@@ -794,17 +795,17 @@ class KeepsCommanderImpl @Inject() (
     existingKeepOpt match {
       case None =>
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
-        ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, k.libraryId.get, userId))
-        ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(k, toLibrary, userId))
+        ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
+        ktlCommander.internKeepInLibrary(k, toLibrary, userId)
         Right(movedKeep)
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
 
         keepRepo.deactivate(k) // TODO(ryan): don't deactivate keeps here
-        ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, k.libraryId.get, userId))
+        ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
 
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
-        ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(movedKeep, toLibrary, userId))
+        ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
 
         Right(movedKeep)
       case Some(existingKeep) =>
@@ -812,7 +813,7 @@ class KeepsCommanderImpl @Inject() (
           Left(LibraryError.AlreadyExistsInDest)
         } else {
           keepRepo.deactivate(k)
-          ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, k.libraryId.get, userId))
+          ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
           combineTags(k.id.get, existingKeep.id.get)
           Left(LibraryError.AlreadyExistsInDest)
         }
@@ -831,12 +832,12 @@ class KeepsCommanderImpl @Inject() (
 
     currentKeepOpt match {
       case None =>
-        val persistedKeep = createKeep(newKeep)
+        val persistedKeep = persistKeep(newKeep)
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
 
       case Some(existingKeep) if existingKeep.isInactive =>
-        val persistedKeep = createKeep(newKeep.withId(existingKeep.id.get))
+        val persistedKeep = persistKeep(newKeep.withId(existingKeep.id.get))
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
 

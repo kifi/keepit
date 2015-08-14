@@ -20,94 +20,59 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
   def modules = Seq()
 
   "KeepToLibraryCommander" should {
-    "attach keeps to libraries" in {
-      "properly process an attach request" in {
+    "intern keeps in libraries" in {
+      "add a keep if it isn't in the library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, keep, otherLib) = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withLibrary(userLib).saved
 
             val otherLib = LibraryFactory.library().withOwner(user).saved
-            (user, keep, otherLib)
-          }
+            val ktl = ktlCommander.internKeepInLibrary(keep, otherLib, user.id.get)
 
-          val ktl = db.readWrite { implicit session =>
-            val maybeAttachResponse = ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, otherLib, user.id.get))
-            maybeAttachResponse.isRight === true
-            maybeAttachResponse.right.get.ktl
-          }
-
-          ktl.keepId === keep.id.get
-          ktl.addedBy === user.id.get
-          ktl.libraryId === otherLib.id.get
-        }
-      }
-      "bail if the user doesn't have write permission" in {
-        withDb(modules: _*) { implicit injector =>
-          val (user, keep, libs) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val userLib = LibraryFactory.library().withOwner(user).saved
-            val keep = KeepFactory.keep().withLibrary(userLib).saved
-
-            val rando = UserFactory.user().saved
-            val randoOrg = OrganizationFactory.organization().withOwner(rando).saved
-            val randoSecretLib = LibraryFactory.library().withOwner(rando).secret().saved
-            val randoPublicLib = LibraryFactory.library().withOwner(rando).published().saved
-            val randoOrgLib = LibraryFactory.library().withOwner(rando).withOrganization(randoOrg).orgVisible().saved
-            (user, keep, Seq(randoPublicLib, randoSecretLib, randoOrgLib))
-          }
-
-          db.readWrite { implicit session =>
-            for (lib <- libs) {
-              ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib, user.id.get)) must beLeft
-            }
+            ktl.keepId === keep.id.get
+            ktl.addedBy === user.id.get
+            ktl.libraryId === otherLib.id.get
           }
           1 === 1
         }
       }
       "do nothing if the keep is already in the target library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user1, user2, keep, lib) = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val user1 = UserFactory.user().saved
             val user2 = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user1).withCollaborators(Seq(user2)).saved
             val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).saved
-            (user1, user2, keep, lib)
-          }
 
-          db.readWrite { implicit session =>
             // user1 re-interns the keep
-            ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib, user1.id.get)) must beRight
+            ktlCommander.internKeepInLibrary(keep, lib, user1.id.get).addedBy === user1.id.get
             ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
 
             // user2 re-interns the keep
-            ktlCommander.internKeepInLibrary(KeepToLibraryInternRequest(keep, lib, user2.id.get)) must beRight
+            ktlCommander.internKeepInLibrary(keep, lib, user2.id.get).addedBy === user1.id.get
             ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
           }
           1 === 1
         }
       }
     }
-    "detach keeps from libraries" in {
-      "properly process a detach request" in {
+    "remove keeps from libraries" in {
+      "remove a keep from a library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, keep, userLib) = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
-            (user, keep, userLib)
-          }
-
-          db.readWrite { implicit session =>
-            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, userLib.id.get, user.id.get)) must beRight
+            ktlCommander.removeKeepFromLibrary(keep.id.get, userLib.id.get) must beSuccessfulTry
           }
           1 === 1
         }
       }
       "bail if the keep isn't in the library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, keep, libs) = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val userLib = LibraryFactory.library().withOwner(user).saved
             val keep = KeepFactory.keep().withUser(user).withLibrary(userLib).saved
@@ -117,12 +82,9 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val randoSecretLib = LibraryFactory.library().withOwner(rando).secret().saved
             val randoPublicLib = LibraryFactory.library().withOwner(rando).published().saved
             val randoOrgLib = LibraryFactory.library().withOwner(rando).withOrganization(randoOrg).orgVisible().saved
-            (user, keep, Seq(randoPublicLib, randoSecretLib, randoOrgLib))
-          }
 
-          db.readWrite { implicit session =>
-            for (lib <- libs) {
-              ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(keep.id.get, lib.id.get, user.id.get)) must beLeft
+            for (lib <- Seq(randoPublicLib, randoSecretLib, randoOrgLib)) {
+              ktlCommander.removeKeepFromLibrary(keep.id.get, lib.id.get) must beFailedTry(KeepToLibraryFail.NOT_IN_LIBRARY)
             }
           }
           1 === 1
