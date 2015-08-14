@@ -337,7 +337,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"Click here to view ${org.name}'s libraries.",
+        body = s"Click here to view ${org.name}’s libraries.",
         linkText = s"See ${org.name}’s libraries",
         linkUrl = s"https://www.kifi.com/${org.handle.value}",
         imageUrl = inviteeImage,
