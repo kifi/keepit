@@ -19,14 +19,13 @@ import views.html
 import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.time._
 
-import scala.io.Source
-
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
+    libRepo: LibraryRepo,
     userExperimentRepo: UserExperimentRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -55,9 +54,7 @@ class AdminOrganizationController @Inject() (
     val orgsCount = filteredOrgs.length
     val startingIndex = page * pageSize
     val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
-    db.readOnlyReplica { implicit s =>
-      Future.sequence(orgsPage.map(org => statsCommander.organizationStatisticsOverview(org)))
-    }.map { orgsStats =>
+    Future.sequence(orgsPage.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
       (orgsCount, orgsStats)
     }
   }
@@ -74,6 +71,25 @@ class AdminOrganizationController @Inject() (
           count,
           pageSize
         ))
+    }
+  }
+
+  def liveOrganizationsView() = AdminUserPage.async { implicit request =>
+    val orgs = db.readOnlyReplica { implicit s =>
+      val orgIds = libRepo.orgsWithMostLibs().map(_._1)
+      val allOrgs = orgRepo.getByIds(orgIds.toSet)
+      orgIds.map(id => allOrgs(id))
+    }
+    Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
+      Ok(html.admin.organizations(
+        orgStats,
+        "Top Live Organizations",
+        fakeOwnerId,
+        (com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView _).andThen(asPlayHtml),
+        1,
+        orgs.size,
+        pageSize
+      ))
     }
   }
 
@@ -196,9 +212,7 @@ class AdminOrganizationController @Inject() (
         "error" -> s"No results for '$orgName' found"
       ))
     } else {
-      db.readOnlyReplica { implicit session =>
-        Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org)))
-      }.map { orgs =>
+      Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgs =>
         Ok(html.admin.organizations(
           orgs,
           s"Results for '$orgName'",
