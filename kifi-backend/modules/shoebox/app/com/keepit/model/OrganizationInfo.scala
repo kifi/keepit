@@ -109,16 +109,20 @@ case class OrganizationInitialValues(name: String, description: Option[String] =
     )
   }
 }
+
 object OrganizationInitialValues {
   private val defaultReads: Reads[OrganizationInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String]
+    (__ \ 'site).readNullable[String].map {
+      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
+      case Some(site) => Some(site)
+      case None => None
+    }
   )(OrganizationInitialValues.apply _)
 
   val website = defaultReads
   val mobileV1 = defaultReads
-
 }
 
 case class OrganizationModifications(
@@ -131,7 +135,11 @@ object OrganizationModifications {
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
     (__ \ 'basePermissions).readNullable[BasePermissions] and
-    (__ \ 'site).readNullable[String]
+    (__ \ 'site).readNullable[String].map {
+      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
+      case Some(site) => Some(site)
+      case None => None
+    }
   )(OrganizationModifications.apply _)
 
   val website = defaultReads

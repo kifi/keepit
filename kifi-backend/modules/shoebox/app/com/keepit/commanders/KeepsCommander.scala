@@ -336,6 +336,7 @@ class KeepsCommander @Inject() (
 
           // Save keeps as INACTIVE
           val inactivatedKeeps = keeps.map { k =>
+            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, libId, userId))
             keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None))
           }
           finalizeUnkeeping(keeps, userId)

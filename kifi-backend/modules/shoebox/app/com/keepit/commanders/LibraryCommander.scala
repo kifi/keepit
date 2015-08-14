@@ -762,7 +762,7 @@ class LibraryCommanderImpl @Inject() (
         }
 
         // Update visibility of keeps
-        // TODO(ryan): We need to find a new way of describing keep visibility. Denormalizing is no longer possible because it's different for different users
+        // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
         def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
           val (keeps, curViz) = db.readOnlyMaster { implicit s =>
             val viz = libraryRepo.get(targetLib.id.get).visibility // It may have changed, re-check
@@ -771,7 +771,11 @@ class LibraryCommanderImpl @Inject() (
           }
           if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
-              keepRepo.save(k.copy(visibility = curViz))(s)
+              implicit val session: RWSession = s
+              keepRepo.save(k.copy(visibility = curViz))
+              ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
+                ktlCommander.changeVisibility(_, curViz)
+              }
             }
             if (iter < 200) { // to prevent infinite loops if there's an issue updating keeps.
               updateKeepVisibility(changedVisibility, iter + 1)
@@ -917,7 +921,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = { //ZZZ
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = {
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
       val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
@@ -1265,6 +1269,9 @@ class LibraryCommanderImpl @Inject() (
       keepRepo.getByUserIdAndLibraryId(userId, library.id.get).map { keep =>
         keepRepo.save(keep.copy(userId = library.ownerId))
       }
+      ktlRepo.getByUserIdAndLibraryId(userId, library.id.get).foreach {
+        ktlCommander.changeOwner(_, library.ownerId)
+      }
     }
   }
 
@@ -1472,6 +1479,7 @@ class LibraryCommanderImpl @Inject() (
                 Left(LibraryError.AlreadyExistsInDest)
               } else {
                 keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+                ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, k.libraryId.get, userId))
                 combineTags(k.id.get, existingKeep.id.get)
                 Left(LibraryError.AlreadyExistsInDest)
               }

@@ -49,8 +49,6 @@ class InviteToKifiSender @Inject() (
   }
 
   private def buildEmailToSend(toAddress: EmailAddress, fromUserId: Id[User], emailData: InviteEmailData): EmailToSend = {
-    val fromAddress = db.readOnlyReplica(3) { emailAddressRepo.getByUser(fromUserId)(_) }
-
     EmailToSend(
       fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.INVITATION,
@@ -59,7 +57,6 @@ class InviteToKifiSender @Inject() (
       category = NotificationCategory.NonUser.INVITATION,
       htmlTemplate = emailData.htmlTemplate,
       textTemplate = emailData.textTemplate,
-      extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress.address)),
       auxiliaryData = {
         val builder = new HeimdalContextBuilder
         builder += ("emailAbCode", emailData.abCode)

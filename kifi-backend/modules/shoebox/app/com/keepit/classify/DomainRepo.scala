@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
 
 @ImplementedBy(classOf[DomainRepoImpl])
 trait DomainRepo extends Repo[Domain] {
@@ -82,10 +83,15 @@ class DomainRepoImpl @Inject() (
         case DomainStates.ACTIVE => domain.hostname -> domain
       }
     }.toMap
-
     val newDomainByName = toBeInserted.map { hostname =>
-      hostname -> save(Domain(hostname = hostname))
-    }.toMap
+      try {
+        hostname -> save(Domain(hostname = hostname))
+      } catch {
+        case e: MySQLIntegrityConstraintViolationException =>
+          log.error(s"[internDomains]$hostname already exists. Existing=${existingHostnames.map(_.value)}. Desired=${domainNames.map(_.value)}")
+          throw e
+      }
+    }
 
     existingDomainByName ++ newDomainByName
   }

@@ -77,7 +77,7 @@ object NormalizedHostname extends Logging {
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
     def reads(json: JsValue): JsResult[NormalizedHostname] = {
       val trimmed = json.as[String].trim
-      NormalizedHostname.fromHostname(trimmed).map(JsSuccess(_)).getOrElse { log.error("[NormalizedHostname] invalid hostname: $trimmed"); JsError("invalid_hostname") }
+      NormalizedHostname.fromHostname(trimmed).map(JsSuccess(_)).getOrElse { log.error(s"[NormalizedHostname] invalid hostname: $trimmed"); JsError("invalid_hostname") }
     }
     def writes(o: NormalizedHostname) = JsString(o.value)
   }

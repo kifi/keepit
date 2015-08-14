@@ -32,6 +32,7 @@ case class UserStatistics(
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
   librariesFollowed: Int,
+  dateLastManualKeep: Option[DateTime],
   orgs: Seq[Organization],
   orgCandidates: Seq[Organization])
 
@@ -124,6 +125,7 @@ class UserStatisticsCommander @Inject() (
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+    val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
 
@@ -140,6 +142,7 @@ class UserStatisticsCommander @Inject() (
       kifiInstallations,
       librariesCreated,
       librariesFollowed,
+      latestManualKeepTime,
       orgs,
       orgCandidates
     )
@@ -153,7 +156,7 @@ class UserStatisticsCommander @Inject() (
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
-      val dateLastManualKeep = keepRepo.latestManualKeep(userId)
+      val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
       val user = userRepo.get(userId)
       for (
         numChats <- numChatsFut
@@ -260,17 +263,18 @@ class UserStatisticsCommander @Inject() (
       allMemberChatStats = allMemberChatStats
     )
   }
-  def organizationStatisticsOverview(org: Organization)(implicit session: RSession): Future[OrganizationStatisticsOverview] = {
+
+  def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+    val (allUsers, libraries, members, candidates, domains) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.getAllByOrgId(orgId)
+      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
+      val allUsers = members.map(_.userId) | candidates.map(_.userId)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).filterNot(_.kind == LibraryKind.SYSTEM_GUIDE)
+      (allUsers, libraries, members, candidates, domains)
+    }
     val numKeeps = libraries.map(_.keepCount).sum
-
-    val members = orgMembershipRepo.getAllByOrgId(orgId)
-    val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-    val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-    val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-
-    val allUsers = members.map(_.userId) | candidates.map(_.userId)
 
     val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
 

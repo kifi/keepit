@@ -21,7 +21,7 @@ object SearchConfig {
     Map[String, String](
       // Common Query Parser
       "titleBoost" -> "2.0",
-      "prefixBoost" -> "0.0",
+      "prefixBoost" -> "0.5",
       "trailingPrefixBoost" -> "0.8",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",

@@ -1,0 +1,21 @@
+<div class="dialog-body-wrap">
+  <h1 class="dialog-header">Are you sure?</h1>
+  <div class="dialog-body">
+    <p>Transferring ownership to {{member|name}} will remove ownership privileges from {{currentOwner|name}}</p>
+    <div class="kf-flow-horizontal-right">
+      <img ng-src="{{currentOwner|pic:200}}" />
+      <svg
+        kf-symbol-sprite
+        icon="arrow-right"
+      ></svg>
+      <img ng-src="{{member|pic:200}}" />
+    </div>
+    <p>{{currentOwner|name}} will retain their admin privileges, however.</p>
+    <div class="kf-org-actions">
+      <button class="opis-contact-button" ng-click="close()">Cancel</button>&nbsp;
+      <button class="opis-contact-button" ng-click="transferOwner()">Yes</button>
+    </div>
+  </div>
+</div>
+
+

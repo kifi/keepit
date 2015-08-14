@@ -720,6 +720,7 @@ GET     /admin/fakeOrganizations                             @com.keepit.control
 GET     /admin/fakeOrganizations/:page                       @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int)
 GET     /admin/realOrganizations                             @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int = 0)
 GET     /admin/realOrganizations/:page                       @com.keepit.controllers.admin.AdminOrganizationController.realOrganizationsView(page: Int)
+GET     /admin/liveOrganizations                             @com.keepit.controllers.admin.AdminOrganizationController.liveOrganizationsView()
 GET     /admin/findOrganizationByName                        @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByName(orgName: String)
 GET     /admin/findOrganizationByNameJson                    @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByNameJson(orgName: String)
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()

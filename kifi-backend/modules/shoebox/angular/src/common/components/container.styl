@@ -1,0 +1,46 @@
+.kf-container
+  border: defaultBorder
+  padding: defaultPadding
+  border-radius: defaultBorderRadius
+  background: white
+
+.kf-container-header
+.kf-container-footer
+  margin: -(defaultPadding)
+  padding: (defaultPadding/2) defaultPadding
+  display: flex
+  justify-content: space-between
+  align-items: center
+
+.kf-container-header
+  border-top-left-radius: defaultBorderRadius
+  border-top-right-radius: defaultBorderRadius
+  border-bottom: 1px solid textLightGrey
+  margin-bottom: defaultPadding
+
+  h1
+    heading_rg()
+    margin-bottom: 0
+    font-weight: bold
+    color: textGreyColor
+
+.kf-container-header-right // Right-aligned alternative
+  justify-content: flex-end
+
+.kf-container-main
+  margin: -(defaultPadding)
+  padding: defaultPadding
+
+.kf-container-footer
+  margin-top: defaultPadding
+  border-bottom-left-radius: defaultBorderRadius
+  border-bottom-right-radius: defaultBorderRadius
+  background: lightGray
+
+.kf-container-menu
+  li
+    display: inline-block
+    vertical-align: middle
+
+    + li
+      margin-left: 10px
