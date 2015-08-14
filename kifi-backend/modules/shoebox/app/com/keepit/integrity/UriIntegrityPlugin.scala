@@ -48,11 +48,11 @@ class UriIntegrityActor @Inject() (
     helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
-  private def handleBookmarks(keeps: Seq[Keep])(implicit session: RWSession): Unit = {
+  private def handleBookmarks(oldKeeps: Seq[Keep])(implicit session: RWSession): Unit = {
 
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
-    val deactivatedBms = keeps.map { keep =>
+    val deactivatedKeeps = oldKeeps.map { keep =>
 
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val newUri = urlToUriMap.getOrElse(keep.url, {
@@ -76,8 +76,8 @@ class UriIntegrityActor @Inject() (
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
-            keepRepo.save(helpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
-            ktlCommander.changeUriIdForKeep(keep, newUriId)
+            val newKeep = keepRepo.save(helpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
+            ktlCommander.changeUriIdForKeep(newKeep, newUriId)
             (Some(keep), None)
           case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
@@ -118,7 +118,7 @@ class UriIntegrityActor @Inject() (
       }
     }
 
-    val collectionsToUpdate = deactivatedBms.flatMap {
+    val collectionsToUpdate = deactivatedKeeps.flatMap {
       case (Some(oldBm), None) =>
         keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
       case (Some(oldBm), Some(newBm)) =>
