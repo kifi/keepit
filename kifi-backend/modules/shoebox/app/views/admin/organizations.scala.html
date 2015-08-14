@@ -16,8 +16,8 @@
 @views.html.admin.admin(paginationCount + " " + title, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
    In the @orgs.size orgs below there are:
    <ul>
-       <li>Members: @orgs.map(_.members).flatten.toSet.size</li>
-       <li>Candidates: @orgs.map(_.candidates).flatten.toSet.size</li>
+       <li>Members: @orgs.map(_.members).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
+       <li>Candidates: @orgs.map(_.candidates).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
        <li>Libraries: @orgs.map(_.numLibraries).sum</li>
        <li>Keeps: @orgs.map(_.numKeeps).sum</li>
        <li>Internal Chats: @orgs.map(_.internalMemberChatStats).sum</li>
