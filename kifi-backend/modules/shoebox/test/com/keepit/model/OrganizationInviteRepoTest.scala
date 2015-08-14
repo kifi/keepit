@@ -16,12 +16,16 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
     "save invites and get them by id" in {
       withDb() { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
-        val org = db.readWrite { implicit s =>
-          orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = Id[User](1), userId = Some(Id[User](10)), role = OrganizationRole.ADMIN))
+        val invite = db.readWrite { implicit s =>
+          val owner = UserFactory.user().withName("Benjamin", "Button").saved
+          val org = OrganizationFactory.organization().withOwner(owner).saved
+          val invitee = UserFactory.user().withName("Carol", "Cardigan").saved
+          val invite = orgInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = Some(invitee.id.get), role = OrganizationRole.ADMIN))
+          invite
         }
 
         db.readOnlyMaster { implicit s =>
-          orgInviteRepo.get(org.id.get) === org
+          orgInviteRepo.get(invite.id.get) === invite
         }
       }
     }
