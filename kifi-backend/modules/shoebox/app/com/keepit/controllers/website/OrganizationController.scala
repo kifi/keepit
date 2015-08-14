@@ -7,7 +7,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContextBuilderFactory }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
@@ -28,6 +28,7 @@ class OrganizationController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       request.body.validate[OrganizationInitialValues](OrganizationInitialValues.website) match {
@@ -46,6 +47,7 @@ class OrganizationController @Inject() (
   }
 
   def modifyOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     request.body.validate[OrganizationModifications](OrganizationModifications.website) match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate modify request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
@@ -61,6 +63,7 @@ class OrganizationController @Inject() (
   }
 
   def transferOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     (request.body \ "newOwner").validate[ExternalId[User]] match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate transfer request from ${request.request.userId}: ${request.body}", new JsResultException(errs))
@@ -76,6 +79,7 @@ class OrganizationController @Inject() (
   }
 
   def deleteOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val deleteRequest = OrganizationDeleteRequest(requesterId = request.request.userId, orgId = request.orgId)
     orgCommander.deleteOrganization(deleteRequest) match {
       case Left(fail) => fail.asErrorResponse
