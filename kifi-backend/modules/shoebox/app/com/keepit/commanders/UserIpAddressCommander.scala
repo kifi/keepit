@@ -16,6 +16,7 @@ import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.{ DateTime, Period }
+import play.api.{Mode, Play}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
@@ -121,7 +122,7 @@ class UserIpAddressEventLogger @Inject() (
     }
 
     if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
-      && !Set("108.60.110.146").contains(event.ip.ip)) {
+      && !Set("108.60.110.146").contains(event.ip.ip) && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
