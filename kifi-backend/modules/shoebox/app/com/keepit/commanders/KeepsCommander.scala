@@ -5,7 +5,7 @@ import java.util.concurrent.{ Callable, TimeUnit }
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 
 import com.google.common.cache.{ CacheBuilder, Cache }
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -69,8 +69,44 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply _, unlift(BulkKeepSelection.unapply))
 }
 
+@ImplementedBy(classOf[KeepsCommanderImpl])
+trait KeepsCommander {
+  def getKeepsCountFuture(): Future[Int]
+  def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
+  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
+  def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep]
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]])
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])]
+  def updateKeepInLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext)
+  def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int
+  def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection]
+  def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection]
+  def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext): Unit
+  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep])
+  def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection
+  def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit
+  def clearTags(url: String, userId: Id[User]): Unit
+  def tagsByUrl(url: String, userId: Id[User]): Seq[Collection]
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String], socialShare: SocialShare)(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])]
+  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext)
+  def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
+  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
+  def assembleKeepExport(keepExports: Seq[KeepExport]): String
+  def numKeeps(userId: Id[User]): Int
+  def createKeep(k: Keep)(implicit session: RWSession): Keep
+  def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
+  def changeVisibility(keep: Keep, newVisibility: LibraryVisibility)(implicit session: RWSession): Keep
+  def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
+  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
+  def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
+  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
+}
+
 @Singleton
-class KeepsCommander @Inject() (
+class KeepsCommanderImpl @Inject() (
     db: Database,
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
@@ -98,7 +134,7 @@ class KeepsCommander @Inject() (
     facebookPublishingCommander: FacebookPublishingCommander,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
     implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends KeepsCommander with Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
