@@ -5,7 +5,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.notify.info.NotificationInfo
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.{ NotificationId, NotificationEvent, notificationIdMapFormat }
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -132,7 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
-  def generateNotificationInfos(events: Set[NotificationEvent]): Future[NotificationInfo]
+  def generateNotificationInfos(notifs: Map[NotificationId, Set[NotificationEvent]]): Future[Map[NotificationId, NotificationInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -804,8 +804,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def generateNotificationInfos(events: Set[NotificationEvent]): Future[NotificationInfo] = {
-    val payload = Json.toJson(events)
-    call(Shoebox.internal.generateNotificationInfos(), payload).map(_.json.as[NotificationInfo])
+  def generateNotificationInfos(notifs: Map[NotificationId, Set[NotificationEvent]]): Future[Map[NotificationId, NotificationInfo]] = {
+    val payload = Json.toJson(notifs)
+    call(Shoebox.internal.generateNotificationInfos(), payload).map(_.json.as[Map[NotificationId, NotificationInfo]])
   }
 }

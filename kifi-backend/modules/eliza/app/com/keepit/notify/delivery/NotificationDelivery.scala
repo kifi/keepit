@@ -1,21 +1,22 @@
 package com.keepit.notify.delivery
 
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.eliza.model.NotificationItem
+import com.keepit.notify.model.{ Recipient, NotificationEvent }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 trait NotificationDelivery {
 
-  def deliver(events: Set[NotificationEvent])(implicit ec: ExecutionContext): Future[Unit]
+  def deliver(recipient: Recipient, items: Set[NotificationItem])(implicit ec: ExecutionContext): Future[Unit]
 
 }
 
 object NotificationDelivery {
 
   def both(first: NotificationDelivery, second: NotificationDelivery) = new NotificationDelivery {
-    override def deliver(events: Set[NotificationEvent])(implicit ec: ExecutionContext): Future[Unit] = {
-      val f1 = first.deliver(events)
-      val f2 = second.deliver(events)
+    override def deliver(recipient: Recipient, items: Set[NotificationItem])(implicit ec: ExecutionContext): Future[Unit] = {
+      val f1 = first.deliver(recipient, items)
+      val f2 = second.deliver(recipient, items)
       for {
         _ <- f1
         _ <- f2

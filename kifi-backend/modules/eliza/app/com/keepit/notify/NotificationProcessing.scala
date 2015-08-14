@@ -83,10 +83,10 @@ class NotificationProcessing @Inject() (
         }
       }
     }
-    val events = db.readOnlyMaster { implicit session =>
+    val items = db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notif.id.get)
-    }.map(_.event).toSet
-    delivery.deliver(events)
+    }.toSet
+    delivery.deliver(notif.recipient, items)
     notif
   }
 

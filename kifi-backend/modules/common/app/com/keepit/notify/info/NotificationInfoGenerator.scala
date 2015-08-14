@@ -4,6 +4,7 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.model.{ User, Library }
 import com.keepit.notify.info.ReturnsInfo.PickOne
+import com.keepit.notify.model.{ NotificationKind, NotificationEvent, NotificationId }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -50,6 +51,21 @@ class NotificationInfoGenerator @Inject() (
 
   def runFully[A](that: ReturnsInfo[A], args: Args = Map()): Future[A] = run(that, args, pickedOne = false).map { result =>
     result.value
+  }
+
+  def runIdMap(map: Map[NotificationId, Set[NotificationEvent]], args: Args = Map()): Future[Map[NotificationId, NotificationInfo]] = {
+    val futureList = map.toSeq.map {
+      case (id, events) => (id, events, events.head.asInstanceOf[NotificationKind[NotificationEvent]])
+    }.map {
+      case (id, events, kind) => (id, runFully(kind.info(events), args))
+    }.map {
+      case (id, fut) => fut.map(result => Some(id, result)).fallbackTo(Future.successful(None))
+    }
+    Future.sequence(futureList).map { results =>
+      results.collect {
+        case Some(result) => result
+      }.toMap
+    }
   }
 
 }

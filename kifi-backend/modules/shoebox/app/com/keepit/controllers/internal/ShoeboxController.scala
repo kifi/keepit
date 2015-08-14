@@ -18,7 +18,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.notify.info.NotificationInfoGenerator
-import com.keepit.notify.model.{ NotificationKind, NotificationEvent }
+import com.keepit.notify.model.{ NotificationId, NotificationKind, NotificationEvent }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -519,10 +519,9 @@ class ShoeboxController @Inject() (
   }
 
   def generateNotificationInfos = Action.async(parse.tolerantJson) { request =>
-    val events = request.body.as[Set[NotificationEvent]]
-    val kind = events.head.kind.asInstanceOf[NotificationKind[NotificationEvent]]
-    notificationInfoGenerator.runFully(kind.info(events), Map()).map { info =>
-      Ok(Json.toJson(info))
+    val events = request.body.as[Map[NotificationId, Set[NotificationEvent]]]
+    notificationInfoGenerator.runIdMap(events).map { result =>
+      Ok(Json.toJson(result))
     }
   }
 }
