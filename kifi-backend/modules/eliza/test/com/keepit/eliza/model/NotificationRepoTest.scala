@@ -13,8 +13,7 @@ import org.specs2.mutable.Specification
 class NotificationRepoTest extends Specification with ElizaTestInjector {
 
   val modules = Seq(
-    ElizaCacheModule(),
-    FakeShoeboxServiceModule()
+    ElizaCacheModule()
   )
 
   "NotificationRepo" should {
