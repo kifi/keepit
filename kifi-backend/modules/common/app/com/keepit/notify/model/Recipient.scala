@@ -49,7 +49,7 @@ object Recipient {
   }
 
   implicit class UserIdAsRecipient(user: Id[User]) extends AsRecipient[Id[User]] {
-    def recipient = Recipient(user)
+    def recipient = UserRecipient(user)
   }
 
   implicit class UserAsRecipient(user: User) extends AsRecipient[User] {
@@ -57,7 +57,7 @@ object Recipient {
   }
 
   implicit class EmailAddressAsRecipient(email: EmailAddress) extends AsRecipient[EmailAddress] {
-    def recipient = Recipient(email)
+    def recipient = EmailRecipient(email)
   }
 
 }
