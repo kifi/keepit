@@ -699,7 +699,8 @@ POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.A
 POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
 
 
-GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization], numMemberRecos: Int ?= 60)
+GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
+GET     /admin/organization/id/:id                           @com.keepit.controllers.admin.AdminOrganizationController.organizationViewBy(id: Id[Organization], numMemberRecos: Int ?= 60)
 POST    /admin/organization/:id/setName                      @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
 POST    /admin/organization/:id/setHandle                    @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription               @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
