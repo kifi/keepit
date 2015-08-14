@@ -55,7 +55,7 @@ class NotificationInfoGenerator @Inject() (
 
   def runIdMap(map: Map[NotificationId, Set[NotificationEvent]], args: Args = Map()): Future[Map[NotificationId, NotificationInfo]] = {
     val futureList = map.toSeq.map {
-      case (id, events) => (id, events, events.head.asInstanceOf[NotificationKind[NotificationEvent]])
+      case (id, events) => (id, events, events.head.kind.asInstanceOf[NotificationKind[NotificationEvent]])
     }.map {
       case (id, events, kind) => (id, runFully(kind.info(events), args))
     }.map {

@@ -1,8 +1,8 @@
 package com.keepit.notify
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.model.UserExperimentType
-import com.keepit.notify.model.{EmailRecipient, Recipient, UserRecipient}
+import com.keepit.notify.model.{ EmailRecipient, Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.Await
@@ -14,9 +14,8 @@ import scala.concurrent.duration._
  */
 @Singleton
 class NotifExperimentCheck @Inject() (
-  shoeboxServiceClient: ShoeboxServiceClient
-) {
-  
+    shoeboxServiceClient: ShoeboxServiceClient) {
+
   def checkExperiment(recipient: Recipient): (Boolean, Recipient) = recipient match {
 
     case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
@@ -35,11 +34,11 @@ class NotifExperimentCheck @Inject() (
   }
 
   def ifExperiment(recipient: Recipient)(f: (Recipient) => Unit): Recipient = {
-    val (experiment, recipient) = checkExperiment(recipient)
+    val (experiment, newRecipient) = checkExperiment(recipient)
     if (experiment) {
-      f(recipient)
+      f(newRecipient)
     }
-    recipient
+    newRecipient
   }
 
 }

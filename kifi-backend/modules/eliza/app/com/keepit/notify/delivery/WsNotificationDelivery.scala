@@ -26,7 +26,7 @@ class WsNotificationDelivery @Inject() (
       info <- Future.fromTry(Try { infoMap.get(id).get })
     } yield {
       recipient match {
-        case UserRecipient(userId) => deliveryCommander.createGlobalNotification(
+        case UserRecipient(userId, _) => deliveryCommander.createGlobalNotification(
           userIds = Set(userId),
           title = info.title,
           body = info.body,
