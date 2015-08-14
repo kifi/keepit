@@ -25,7 +25,7 @@ class PaymentMethodRepoImpl @Inject() (
   type RepoImpl = PaymentMethodTable
   class PaymentMethodTable(tag: Tag) extends RepoTable[PaymentMethod](db, tag, "paid_plan") {
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
-    def default = column[Boolean]("default", O.Nullable)
+    def default = column[Boolean]("default_method", O.Nullable)
     def stripeToken = column[StripeToken]("stripe_token", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, accountId, default.?, stripeToken) <> ((PaymentMethod.applyFromDbRow _).tupled, PaymentMethod.unapplyFromDbRow _)
   }

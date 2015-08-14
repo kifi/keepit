@@ -8,10 +8,10 @@ CREATE TABLE payment_method (
     updated_at datetime NOT NULL,
     state varchar(20) NOT NULL,
     account_id bigint(20) NOT NULL,
-    default boolean NULL,
+    default_method boolean default NULL,
     stripe_token varchar(1024) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE INDEX payment_method_u_account_id_default (account_id, default)
+    UNIQUE INDEX payment_method_u_account_id_default (account_id, default_method)
 );
 
 
