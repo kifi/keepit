@@ -73,6 +73,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
+  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
 }
 
 @Singleton
@@ -504,6 +505,13 @@ class LibraryRepoImpl @Inject() (
     (for {
       t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE && t.memberCount >= minCount
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
+  }
+
+  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
+    import StaticQuery.interpolation
+    val q = sql"""select organization_id, count(*) from library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'active' and experiment_type = 'fake') and kind = 'user_created' group by organization_id order by count(*) desc"""
+    val res = q.as[(Long, Int)].list
+    res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
 
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {

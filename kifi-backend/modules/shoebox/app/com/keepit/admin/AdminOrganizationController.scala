@@ -19,14 +19,13 @@ import views.html
 import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.time._
 
-import scala.io.Source
-
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
+    libRepo: LibraryRepo,
     userExperimentRepo: UserExperimentRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -72,6 +71,25 @@ class AdminOrganizationController @Inject() (
           count,
           pageSize
         ))
+    }
+  }
+
+  def liveOrganizationsView() = AdminUserPage.async { implicit request =>
+    val orgs = db.readOnlyReplica { implicit s =>
+      val orgIds = libRepo.orgsWithMostLibs().map(_._1)
+      val allOrgs = orgRepo.getByIds(orgIds.toSet)
+      orgIds.map(id => allOrgs(id))
+    }
+    Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
+      Ok(html.admin.organizations(
+        orgStats,
+        "Top Live Organizations",
+        fakeOwnerId,
+        (com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView _).andThen(asPlayHtml),
+        1,
+        orgs.size,
+        pageSize
+      ))
     }
   }
 
