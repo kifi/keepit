@@ -271,7 +271,7 @@ class UserStatisticsCommander @Inject() (
       val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
       val allUsers = members.map(_.userId) | candidates.map(_.userId)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).filterNot(_.kind == LibraryKind.SYSTEM_GUIDE)
       (allUsers, libraries, members, candidates, domains)
     }
     val numKeeps = libraries.map(_.keepCount).sum

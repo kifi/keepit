@@ -14,6 +14,15 @@
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @views.html.admin.admin(paginationCount + " " + title, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+   In the @orgs.size orgs below there are:
+   <ul>
+       <li>Members: @orgs.map(_.members).flatten.toSet.size</li>
+       <li>Candidates: @orgs.map(_.candidates).flatten.toSet.size</li>
+       <li>Libraries: @orgs.map(_.numLibraries).sum</li>
+       <li>Keeps: @orgs.map(_.numKeeps).sum</li>
+       <li>Internal Chats: @orgs.map(_.internalMemberChatStats).sum</li>
+       <li>All Chats: @orgs.map(_.allMemberChatStats).sum</li>
+   </ul>
     <form action="/admin/findOrganizationByName" method="GET" class="form-inline">
         <input name="orgName" type="text">
         <button type="submit" class="btn btn-primary">Search all organizations by name</button>
@@ -22,10 +31,10 @@
         <table class="orgs-summary table table-bordered">
             <tr><th>Id</th>
                 <th>Name</th>
-                <th># of members</th>
-                <th># of membership candidates</th>
-                <th># of org libraries</th>
-                <th># of org keeps</th>
+                <th>Members</th>
+                <th>Membership candidates</th>
+                <th>Org libraries</th>
+                <th>Org keeps</th>
                 <th>Chats between members</th>
                 <th>All member chats</th>
                 <th>Creation date</th>
@@ -34,8 +43,8 @@
                 <tr>
                     <td>@orgStats.orgId</td>
                     <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
-                    <td>@orgStats.members.size</td>
-                    <td>@orgStats.candidates.size</td>
+                    <td>@orgStats.members.filterNot(_.id == fakeOwnerId).size</td>
+                    <td>@orgStats.candidates.filterNot(_.id == fakeOwnerId).size</td>
                     <td>@orgStats.numLibraries</td>
                     <td>@orgStats.numKeeps</td>
                     <td>@orgStats.internalMemberChatStats</td>

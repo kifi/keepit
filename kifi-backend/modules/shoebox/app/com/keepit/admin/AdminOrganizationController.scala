@@ -3,7 +3,6 @@ package com.keepit.controllers.admin
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
-import com.keepit.classify.{ NormalizedHostname, Domain }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -18,6 +17,10 @@ import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.time._
+
+object AdminOrganizationController {
+  val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
+}
 
 class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -40,7 +43,7 @@ class AdminOrganizationController @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
-  private val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
+  import AdminOrganizationController.fakeOwnerId
   private val pageSize = 30
 
   // needed to coerce the passed in Int => Call to Int => Html
