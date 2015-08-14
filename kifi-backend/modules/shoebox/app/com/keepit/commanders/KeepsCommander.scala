@@ -779,9 +779,11 @@ class KeepsCommanderImpl @Inject() (
     keepRepo.save(keep.withOwner(newOwnerId))
   }
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
+    ktlCommander.removeKeepFromAllLibraries(keep)
     keepRepo.deactivate(keep)
   }
+
+  // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep] = {
     val oldWay = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
     val newWay = ktlRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
@@ -798,7 +800,7 @@ class KeepsCommanderImpl @Inject() (
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
 
-        keepRepo.deactivate(k)
+        keepRepo.deactivate(k) // TODO(ryan): don't deactivate keeps here
         ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, k.libraryId.get, userId))
 
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
