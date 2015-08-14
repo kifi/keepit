@@ -29,6 +29,7 @@ case class KeepToLibrary(
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
+  def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE

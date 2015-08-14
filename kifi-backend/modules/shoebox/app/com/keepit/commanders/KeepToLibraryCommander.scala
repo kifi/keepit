@@ -12,12 +12,14 @@ import com.keepit.model._
 trait KeepToLibraryCommander {
   def internKeepInLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
   def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse]
+  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit
 
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
   def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep]
   def changeVisibility(ktl: KeepToLibrary, newVisibility: LibraryVisibility)(implicit session: RWSession): KeepToLibrary
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
+  def changeUriIdForKeep(keep: Keep, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -73,6 +75,9 @@ class KeepToLibraryCommanderImpl @Inject() (
       Right(KeepToLibraryRemoveResponse())
     }
   }
+  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
+  }
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId).isDefined
@@ -87,5 +92,11 @@ class KeepToLibraryCommanderImpl @Inject() (
   }
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.save(ktl.withAddedBy(newOwnerId))
+  }
+  def changeUriIdForKeep(keep: Keep, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
+    require(keep.uriId == newUriId, "URI and Keep don't match.")
+    ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl =>
+      ktlRepo.save(ktl.withUriId(newUriId))
+    }
   }
 }
