@@ -100,7 +100,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
 
-  implicit val recipientMapper = MappedColumnType.base[Recipient, String](_.toString, Recipient.apply)
+  implicit val recipientMapper = MappedColumnType.base[Recipient, String](recip => Recipient.unapply(recip).get, Recipient.apply)
 
   implicit val notificationEventMapper = MappedColumnType.base[NotificationEvent, String]({ event =>
     Json.stringify(Json.toJson(event))

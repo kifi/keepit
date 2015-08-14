@@ -31,11 +31,11 @@ class NotificationRepoImpl @Inject() (
     def recipient = column[Recipient]("recipient", O.NotNull)
     def lastChecked = column[DateTime]("last_checked", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
-    def groupIdentifier = column[String]("group_identifier", O.Nullable)
+    def groupIdentifier = column[Option[String]]("group_identifier", O.Nullable)
     def lastEvent = column[DateTime]("last_event", O.NotNull)
     def disabled = column[Boolean]("disabled", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier.?, recipient, lastEvent, disabled) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
 

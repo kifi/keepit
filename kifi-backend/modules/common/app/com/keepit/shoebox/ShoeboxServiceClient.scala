@@ -805,6 +805,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def generateNotificationInfos(events: Set[NotificationEvent]): Future[NotificationInfo] = {
-    call(Shoebox.internal.generateNotificationInfos()).map(_.json.as[NotificationInfo])
+    val payload = Json.toJson(events)
+    call(Shoebox.internal.generateNotificationInfos(), payload).map(_.json.as[NotificationInfo])
   }
 }

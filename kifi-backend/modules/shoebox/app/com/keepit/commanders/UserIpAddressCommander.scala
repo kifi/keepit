@@ -16,7 +16,7 @@ import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.{ DateTime, Period }
-import play.api.{Mode, Play}
+import play.api.{ Mode, Play }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
