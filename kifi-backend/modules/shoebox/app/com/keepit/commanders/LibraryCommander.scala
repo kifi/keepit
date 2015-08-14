@@ -1407,7 +1407,8 @@ class LibraryCommanderImpl @Inject() (
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       case Some(_) =>
-        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), (k, s) => keepCommander.copyKeep(k, toLibrary, userId, withSource)(s))
+        val sortedKeeps = keeps.sortBy(k => (k.keptAt, k.id.get))
+        val keepResults = applyToKeeps(userId, toLibraryId, sortedKeeps, Set(), (k, s) => keepCommander.copyKeep(k, toLibrary, userId, withSource)(s))
         Future {
           libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
         }
