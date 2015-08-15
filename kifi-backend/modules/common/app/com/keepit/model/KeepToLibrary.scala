@@ -32,12 +32,9 @@ case class KeepToLibrary(
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
-  def nonPrimary: KeepToLibrary = this.copy(isPrimary = false)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
-
-  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE).nonPrimary()
 }
 
 object KeepToLibrary {
