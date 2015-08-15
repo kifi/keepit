@@ -256,6 +256,8 @@ object KeepSource {
 
   val discrete = Set(keeper, site, mobile, email, twitterSync)
 
+  val manual = Set(keeper, site, mobile, email)
+
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper
     case KeepSource("INIT_LOAD") => bookmarkImport
