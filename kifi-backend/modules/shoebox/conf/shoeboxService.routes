@@ -729,7 +729,8 @@ POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.control
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 
 
-GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
+GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
+GET     /admin/usersPotentialOrgs       @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
 GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
 GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
