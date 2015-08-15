@@ -20,9 +20,9 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
 
-  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, billingFilter: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
 
-  def getEvents(accountId: Id[PaidAccount], limit: Int, billingFilter: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
 
 }
 
@@ -74,17 +74,17 @@ class AccountEventRepoImpl @Inject() (
     (for (row <- rows if row.accountId === accountId && row.state === state) yield row).list
   }
 
-  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, billingFilterOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    billingFilterOpt.map { billingFilter =>
-      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === billingFilter) yield row).sortBy(_.eventTime desc).take(limit).list
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
+      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(_.eventTime desc).take(limit).list
     } getOrElse {
       (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(_.eventTime desc).take(limit).list
     }
   }
 
-  def getEvents(accountId: Id[PaidAccount], limit: Int, billingFilterOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    billingFilterOpt.map { billingFilter =>
-      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === billingFilter) yield row).sortBy(_.eventTime desc).take(limit).list
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
+      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(_.eventTime desc).take(limit).list
     } getOrElse {
       (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(_.eventTime desc).take(limit).list
     }

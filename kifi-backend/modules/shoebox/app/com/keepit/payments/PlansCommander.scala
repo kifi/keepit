@@ -48,7 +48,7 @@ trait PlanManagementCommander {
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): Unit
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Unit
 
-  def getAccountEvents(orgId: Id[Organization], before: Option[DateTime], max: Int, billingFilter: Option[Boolean]): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], before: Option[DateTime], max: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent]
 }
 
 class PlanManagementCommanderImpl @Inject() (
@@ -405,12 +405,12 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def getAccountEvents(orgId: Id[Organization], beforeOpt: Option[DateTime], limit: Int, billingFilter: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], beforeOpt: Option[DateTime], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
     beforeOpt.map { before =>
-      accountEventRepo.getEventsBefore(accountId, before, limit, billingFilter)
+      accountEventRepo.getEventsBefore(accountId, before, limit, onlyRelatedToBilling)
     } getOrElse {
-      accountEventRepo.getEvents(accountId, limit, billingFilter)
+      accountEventRepo.getEvents(accountId, limit, onlyRelatedToBilling)
     }
   }
 
