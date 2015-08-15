@@ -143,7 +143,7 @@ class KeepToLibraryRepoImpl @Inject() (
     save(model.withState(KeepToLibraryStates.ACTIVE))
   }
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {
-    save(model.sanitizeForDelete)
+    save(model.withState(KeepToLibraryStates.INACTIVE))
   }
 
   /**
