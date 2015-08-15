@@ -57,6 +57,7 @@ class PlanManagementCommanderImpl @Inject() (
   accountEventRepo: AccountEventRepo,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
+  clock: Clock,
   implicit val defaultContext: ExecutionContext)
     extends PlanManagementCommander with Logging {
 
@@ -88,7 +89,7 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent(
       state = AccountEventStates.PENDING,
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -106,7 +107,7 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent(
       state = AccountEventStates.PENDING,
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -123,7 +124,7 @@ class PlanManagementCommanderImpl @Inject() (
   def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -140,7 +141,7 @@ class PlanManagementCommanderImpl @Inject() (
   def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -164,7 +165,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = updatedAccount.id.get,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -188,7 +189,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = updatedAccount.id.get,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -212,7 +213,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = updatedAccount.id.get,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -236,7 +237,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = updatedAccount.id.get,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -267,7 +268,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(account.copy(credit = account.credit + amount))
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = account.id.get,
       billingRelated = false,
       whoDunnit = None,
@@ -336,7 +337,7 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent(
       state = AccountEventStates.PENDING,
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = account.id.get,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -363,7 +364,7 @@ class PlanManagementCommanderImpl @Inject() (
     ))
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = accountId,
       billingRelated = false,
       whoDunnit = attribution.user,
@@ -391,7 +392,7 @@ class PlanManagementCommanderImpl @Inject() (
     }
     accountEventRepo.save(AccountEvent(
       eventGroup = EventGroup(),
-      eventTime = currentDateTime,
+      eventTime = clock.now,
       accountId = accountId,
       billingRelated = false,
       whoDunnit = attribution.user,
