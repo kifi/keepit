@@ -37,7 +37,7 @@ case class KeepToLibrary(
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
 
-  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE).nonPrimary()
+  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE).nonPrimary
 }
 
 object KeepToLibrary {
