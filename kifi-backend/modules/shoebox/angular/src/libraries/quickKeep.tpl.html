@@ -1,4 +1,4 @@
-<div class="kf-quick-add-keep" ng-show="::isOwnerOrCollaborator()">
+<div class="kf-quick-add-keep" ng-show="::showQuickAdd">
   <div class="kf-quick-add-keep-explain">Add a Link to this library: {{something}}</div>
   <div>
     <input class="kf-quick-add-keep-input" placeholder="http://..." ng-model="quickKeep.url" ng-change="checkQuickKeepUrl()"></input> <button class="kf-quick-add-keep-button" ng-click="doQuickKeep()"><span class="svg-hearts-white"></span>Keep It</button>
