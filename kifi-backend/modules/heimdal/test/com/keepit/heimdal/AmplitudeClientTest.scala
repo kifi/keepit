@@ -49,6 +49,8 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val visitorViewedLib: VisitorEvent = new VisitorEvent(heimdalContext(), VisitorEventTypes.VIEWED_LIBRARY)
       val anonKept: AnonymousEvent = new AnonymousEvent(heimdalContext(), AnonymousEventTypes.KEPT)
       val pingdomEvent = new VisitorEvent(heimdalContext("userAgent" -> ContextStringData("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)")), VisitorEventTypes.VIEWED_LIBRARY)
+      val userRegistered = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("registered")), UserEventTypes.JOINED, now)
+      val userInstalled = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("installed")), UserEventTypes.JOINED, now)
 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
@@ -64,7 +66,15 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
         amplitude.track(nonUserMessaged) map { case _: AmplitudeEventSent => () },
         amplitude.track(visitorViewedLib) map { case _: AmplitudeEventSent => () },
         amplitude.track(anonKept) map { case _: AmplitudeEventSkipped => () },
-        amplitude.track(pingdomEvent) map { case _: AmplitudeEventSkipped => () }
+        amplitude.track(pingdomEvent) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(userRegistered) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_registered")
+        },
+        amplitude.track(userInstalled) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_installed")
+        }
       )
 
       val eventsF = Future.sequence(eventsFList)

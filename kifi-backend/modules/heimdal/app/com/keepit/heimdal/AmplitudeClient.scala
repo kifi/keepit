@@ -24,9 +24,9 @@ object AmplitudeClient {
 
   // do not record any of the events that that return true from any of these functions
   val skipEventFilters: Seq[AmplitudeEventBuilder[_] => Boolean] = Seq(
-    (eb: AmplitudeEventBuilder[_]) => eb.getEventType().startsWith("anonymous_"),
+    (eb: AmplitudeEventBuilder[_]) => eb.eventType.startsWith("anonymous_"),
     (eb: AmplitudeEventBuilder[_]) => eb.heimdalContext.get[String]("userAgent").exists(_.startsWith("Pingdom")),
-    (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.getEventType())
+    (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.eventType)
   )
 
   private val experimentsToTrack: Set[String] = UserExperimentType._TRACK_FOR_ANALYTICS.map(_.value)
@@ -47,6 +47,12 @@ object AmplitudeClient {
     "firstName", "lastName", "$email",
     "keeps", "kifiConnections", "privateKeeps", "publicKeeps", "socialConnections", "tags",
     "daysSinceLibraryCreated", "daysSinceUserJoined")
+
+  // rename events with these names
+  val simpleEventRenames: Map[String, String] = Map(
+    "user_modified_library" -> "user_created_library",
+    "user_changed_setting" -> "user_changed_settings"
+  )
 }
 
 trait AmplitudeClient {
@@ -67,7 +73,7 @@ class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider
   def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[AmplitudeEventResult] = {
     val eventBuilder = new AmplitudeEventBuilder(event, primaryOrgProvider)
 
-    if (AmplitudeClient.skipEventFilters.exists(fn => fn(eventBuilder))) Future.successful(AmplitudeEventSkipped(eventBuilder.getEventType()))
+    if (AmplitudeClient.skipEventFilters.exists(fn => fn(eventBuilder))) Future.successful(AmplitudeEventSkipped(eventBuilder.eventType))
     else new SafeFuture({
       eventBuilder.build() flatMap { eventData =>
         val eventJson = Json.stringify(eventData)
@@ -80,7 +86,7 @@ class AmplitudeClientImpl(apiKey: String, primaryOrgProvider: PrimaryOrgProvider
           case _ => AmplitudeEventSent(eventData)
         }
       }
-    }, Some(s"AmplitudeClientImpl.track(event=${eventBuilder.getEventType()})"))
+    }, Some(s"AmplitudeClientImpl.track(event=${eventBuilder.eventType})"))
   }
 
   def setUserProperties(userId: Id[User], context: HeimdalContext) = {
@@ -214,8 +220,16 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, val primaryOrgProvi
     case _ => None
   }
 
-  def getEventType(): String = {
-    s"${companion.typeCode}_${event.eventType.name}"
+  lazy val eventType: String = {
+    val origEventName = s"${companion.typeCode}_${event.eventType.name}"
+
+    AmplitudeClient.simpleEventRenames.getOrElse(origEventName, {
+      // specific rules for renaming event types
+      // TODO(josh) after amplitude is in prod, change these events at their source
+      if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("registered")) "user_registered"
+      else if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("installed")) "user_installed"
+      else origEventName
+    })
   }
 
   def build(): Future[JsObject] = {
@@ -224,7 +238,7 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E, val primaryOrgProvi
         Json.obj(
           "user_id" -> getUserId(),
           "device_id" -> getDistinctId(),
-          "event_type" -> getEventType(),
+          "event_type" -> eventType,
           "time" -> event.time.getMillis / 1000,
           "event_properties" -> Json.toJson(eventProperties),
           "user_properties" -> Json.toJson(userProperties),
