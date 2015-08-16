@@ -9,6 +9,7 @@ import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientMo
 import com.keepit.social.NonUserKinds
 import com.keepit.test.{ FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
+import play.api.libs.json.JsString
 import play.api.test.Helpers._
 
 import scala.concurrent.duration.Duration
@@ -28,8 +29,9 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
 
   def heimdalContext(data: (String, ContextData)*) = {
     val builder = new HeimdalContextBuilder
-    builder += ("fooBarBaz", "yay")
     builder += ("agentVersion", "1.2.3")
+    builder += ("kifiInstallationId", "123")
+    builder += ("userCreatedAt", "2015-06-22T06:59:01")
     builder.addExperiments(Set(UserExperimentType.ADMIN))
     builder ++= data.toMap
     builder.build
@@ -51,7 +53,11 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
         // testing 2 events for the same user recorded at the same time
-        amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userKept) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \\ "installation_id" === Seq(JsString("123"))
+            dat.eventData \\ "created_at" === Seq(JsString("2015-06-22T06:59:01"))
+        },
         amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
         amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
         amplitude.track(userUsedKifi) map { case _: AmplitudeEventSkipped => () },
