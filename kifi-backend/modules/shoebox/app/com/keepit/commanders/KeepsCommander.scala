@@ -823,6 +823,7 @@ class KeepsCommanderImpl @Inject() (
     val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
     val newKeep = k.copy(
       id = None,
+      externalId = ExternalId(),
       userId = userId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
