@@ -39,7 +39,7 @@ class OrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt.map(Left(_)))
               Ok(Json.toJson(organizationView))
           }
       }
@@ -56,7 +56,7 @@ class OrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt.map(Left(_)))
             Ok(Json.toJson(organizationView))
         }
     }
@@ -88,7 +88,12 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization], authTokenOpt: Option[String] = None) = OrganizationAction(pubId, authTokenOpt, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    val viewerInfoOpt: Option[Either[Id[User], String]] = (request.request.userIdOpt, authTokenOpt) match {
+      case (Some(userId), _) => Some(Left(userId))
+      case (_, Some(authToken)) => Some(Right(authToken)) // non-user with valid invite
+      case (None, None) => None // non-user without a valid invite
+    }
+    val organizationView = orgCommander.getOrganizationView(request.orgId, viewerInfoOpt)
     Ok(Json.toJson(organizationView))
   }
 

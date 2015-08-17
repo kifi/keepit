@@ -20,7 +20,7 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
+  def getOrganizationView(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
@@ -28,7 +28,6 @@ trait OrganizationCommander {
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
-
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
   def hasFakeExperiment(org: Id[Organization]): Boolean
 }
@@ -39,6 +38,7 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteRepo: OrganizationInviteRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -55,10 +55,10 @@ class OrganizationCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
+  def getOrganizationView(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
-      val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
-      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt)
+      val organizationInfo = getOrganizationInfoHelper(orgId, viewerInfoOpt.flatMap(_.left.toOption))
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerInfoOpt)
       OrganizationView(organizationInfo, membershipInfo)
     }
   }
@@ -106,12 +106,12 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numLibraries)
   }
 
-  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MembershipInfo = {
-    viewerIdOpt.map { userId =>
-      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
-      MembershipInfo(isInvited = invites.nonEmpty, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
-    }.getOrElse(MembershipInfo(isInvited = false, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]])(implicit session: RSession): OrganizationMembershipInfo = {
+    viewerInfoOpt.map { userIdOrAuthToken =>
+      val membershipOpt = userIdOrAuthToken.left.toOption.flatMap(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId))
+      val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, userIdOrAuthToken)
+      OrganizationMembershipInfo(invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    }.getOrElse(OrganizationMembershipInfo(invite = None, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
@@ -216,7 +216,7 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            userExperimentRepo.save(UserExperiment(userId = request.requesterId, experimentType = UserExperimentType.ORGANIZATION))
+            userExperimentRepo.ensureUserHasExperiment(request.requesterId, experimentType = UserExperimentType.ORGANIZATION)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
