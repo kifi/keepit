@@ -5,9 +5,19 @@ angular.module('kifi')
 .directive('kfOrgMember', [
   'profileService', 'modalService',
   function (profileService, modalService) {
+
     function _isMe() {
       var $scope = this;
       return $scope.member.id === profileService.me.id;
+    }
+
+    function _isMeAndOwner() {
+      var $scope = this;
+
+      return (
+        profileService.me.id === $scope.organization.ownerId &&
+        profileService.me.id === $scope.member.id
+      );
     }
 
     function _resentInvite() {
@@ -32,6 +42,7 @@ angular.module('kifi')
 
     function _shouldShowPromote() {
       var $scope = this;
+
       return (
         $scope.myMembership.role === 'admin' &&
         $scope.member.role !== 'admin' &&
@@ -41,7 +52,9 @@ angular.module('kifi')
 
     function _shouldShowDemote() {
       var $scope = this;
+
       return (
+        !$scope.isMeAndOwner() &&
         profileService.me.id === $scope.organization.ownerId &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
@@ -50,8 +63,20 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      var hasCorrectPermission = ($scope.myMembership.role === 'admin' && $scope.member.role !== 'admin') || (profileService.me.id === $scope.profile.ownerId);
-      return $scope.hasAcceptedInvite() && (hasCorrectPermission || $scope.isMe());
+      var hasCorrectPermission = (
+        (
+          $scope.myMembership.role === 'admin' &&
+          $scope.member.role !== 'admin'
+        ) || (
+          profileService.me.id === $scope.profile.ownerId
+        )
+      );
+
+      return (
+        !$scope.isMeAndOwner() &&
+        $scope.hasAcceptedInvite() &&
+        ($scope.isMe() || hasCorrectPermission)
+      );
     }
 
     function _shouldShowInvite() {
@@ -122,7 +147,7 @@ angular.module('kifi')
 
     function _role() {
       var $scope = this;
-      return ($scope.hasAcceptedInvite() ? '' : 'Pending') + 
+      return ($scope.hasAcceptedInvite() ? '' : 'Pending') +
         ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
     }
 
@@ -171,6 +196,7 @@ angular.module('kifi')
         };
 
         $scope.isMe = _isMe;
+        $scope.isMeAndOwner = _isMeAndOwner;
 
         $scope.resentInvite = _resentInvite;
 
