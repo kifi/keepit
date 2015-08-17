@@ -77,7 +77,7 @@ class UriIntegrityActor @Inject() (
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
             val newKeep = keepRepo.save(helpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
-            ktlCommander.changeUriIdForKeep(newKeep, newUriId)
+            ktlCommander.syncKeep(newKeep)
             (Some(keep), None)
           case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
@@ -86,9 +86,10 @@ class UriIntegrityActor @Inject() (
               // Eventually this is going to need to deal with the possibility of more than one Keep/(URI, Library) pair
               // It will need to check every single Keep to see if the metadata can be merged.
               val deadKeep = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
+              ktlCommander.syncKeep(deadKeep)
               ktlCommander.removeKeepFromAllLibraries(deadKeep)
               val liveKeep = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
-              ktlCommander.changeUriIdForKeep(liveKeep, newUriId)
+              ktlCommander.syncKeep(liveKeep)
               keepUriUserCache.remove(KeepUriUserKey(deadKeep.uriId, deadKeep.userId))
               (Some(deadKeep), Some(liveKeep))
             }
