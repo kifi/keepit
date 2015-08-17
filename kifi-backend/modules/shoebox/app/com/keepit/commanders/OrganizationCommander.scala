@@ -110,8 +110,8 @@ class OrganizationCommanderImpl @Inject() (
     viewerInfoOpt.map { userIdOrAuthToken =>
       val membershipOpt = userIdOrAuthToken.left.toOption.flatMap(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId))
       val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, userIdOrAuthToken)
-      OrganizationMembershipInfo(invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
-    }.getOrElse(OrganizationMembershipInfo(invite = None, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
+      OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    }.getOrElse(OrganizationMembershipInfo(isInvited = false, invite = None, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
@@ -216,7 +216,6 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            userExperimentRepo.ensureUserHasExperiment(request.requesterId, experimentType = UserExperimentType.ORGANIZATION)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
