@@ -86,72 +86,40 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent(
-      state = AccountEventStates.PENDING,
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
+      attribution = attribution,
       action = AccountEventAction.UserAdded(userId),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      pending = true
     ))
   }
 
   def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent(
-      state = AccountEventStates.PENDING,
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
+      attribution = attribution,
       action = AccountEventAction.UserRemoved(userId),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      pending = true
     ))
   }
 
   def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AdminAdded(userId),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AdminAdded(userId)
     ))
   }
 
   def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AdminRemoved(userId),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AdminRemoved(userId)
     ))
   }
 
@@ -163,19 +131,11 @@ class PlanManagementCommanderImpl @Inject() (
       case None => throw new InvalidChange("account_does_not_exists")
     }
     paidAccountRepo.save(updatedAccount)
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = updatedAccount.id.get,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = Some(userId), emailAdded = None, emailRemoved = None),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = Some(userId), emailAdded = None, emailRemoved = None)
     ))
   }
 
@@ -187,19 +147,11 @@ class PlanManagementCommanderImpl @Inject() (
       case None => throw new InvalidChange("account_does_not_exists")
     }
     paidAccountRepo.save(updatedAccount)
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = updatedAccount.id.get,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = None, emailRemoved = Some(emailAddress)),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = None, emailRemoved = Some(emailAddress))
     ))
   }
 
@@ -211,19 +163,11 @@ class PlanManagementCommanderImpl @Inject() (
       case None => throw new InvalidChange("account_does_not_exists")
     }
     paidAccountRepo.save(updatedAccount)
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = updatedAccount.id.get,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AccountContactsChanged(userAdded = Some(userId), userRemoved = None, emailAdded = None, emailRemoved = None),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AccountContactsChanged(userAdded = Some(userId), userRemoved = None, emailAdded = None, emailRemoved = None)
     ))
   }
 
@@ -235,19 +179,11 @@ class PlanManagementCommanderImpl @Inject() (
       case None => throw new InvalidChange("account_does_not_exists")
     }
     paidAccountRepo.save(updatedAccount)
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = updatedAccount.id.get,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = Some(emailAddress), emailRemoved = None),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = Some(emailAddress), emailRemoved = None)
     ))
   }
 
@@ -266,19 +202,11 @@ class PlanManagementCommanderImpl @Inject() (
       case None => throw new InvalidChange("account_does_not_exists")
     }
     paidAccountRepo.save(account.copy(credit = account.credit + amount))
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = account.id.get,
-      billingRelated = false,
-      whoDunnit = None,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = adminWho,
-      action = AccountEventAction.SpecialCredit(),
-      creditChange = amount,
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = memo
+      attribution = ActionAttribution(user = None, admin = adminWho),
+      action = AccountEventAction.SpecialCredit()
     ))
   }
 
@@ -334,20 +262,12 @@ class PlanManagementCommanderImpl @Inject() (
     } else {
       throw new InvalidChange("plan_not_available")
     }
-    accountEventRepo.save(AccountEvent(
-      state = AccountEventStates.PENDING,
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = account.id.get,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
+      attribution = attribution,
       action = AccountEventAction.PlanChanged(account.planId, newPlanId),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      pending = true
     ))
   }
 
@@ -362,19 +282,11 @@ class PlanManagementCommanderImpl @Inject() (
       default = false,
       stripeToken = stripeToken
     ))
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = accountId,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get)
     ))
   }
 
@@ -390,19 +302,11 @@ class PlanManagementCommanderImpl @Inject() (
       }
       paymentMethodRepo.save(newDefault.copy(default = true))
     }
-    accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
+    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = accountId,
-      billingRelated = false,
-      whoDunnit = attribution.user,
-      whoDunnitExtra = JsNull,
-      kifiAdminInvolved = attribution.admin,
-      action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get),
-      creditChange = DollarAmount(0),
-      paymentMethod = None,
-      paymentCharge = None,
-      memo = None
+      attribution = attribution,
+      action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get)
     ))
   }
 

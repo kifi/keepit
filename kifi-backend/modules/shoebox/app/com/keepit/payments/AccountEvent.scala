@@ -210,6 +210,24 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
       extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo))
   }
+
+  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, pending: Boolean = false) = {
+    AccountEvent(
+      state = if (pending) AccountEventStates.PENDING else AccountEventStates.ACTIVE,
+      eventGroup = EventGroup(),
+      eventTime = eventTime,
+      accountId = accountId,
+      billingRelated = false,
+      whoDunnit = attribution.user,
+      whoDunnitExtra = JsNull,
+      kifiAdminInvolved = attribution.admin,
+      action = action,
+      creditChange = DollarAmount(0),
+      paymentMethod = None,
+      paymentCharge = None,
+      memo = None
+    )
+  }
 }
 
 object AccountEventStates extends States[AccountEvent] {
