@@ -22,7 +22,7 @@ trait KeepToLibraryCommander {
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
-  def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary
+  // TODO(ryan): make this private and expose a public method `syncLibrary(lib): Future[Unit]`
   def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
 
@@ -36,7 +36,7 @@ class KeepToLibraryCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
-  override def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary = {
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStates = Set.empty) match {
       case Some(existingKtl) if existingKtl.isActive => existingKtl
       case existingKtlOpt =>
@@ -53,7 +53,7 @@ class KeepToLibraryCommanderImpl @Inject() (
     }
   }
 
-  override def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit] = {
+  def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit] = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId) match {
       case None => Failure(KeepToLibraryFail.NOT_IN_LIBRARY)
       case Some(activeKtl) =>
@@ -61,33 +61,35 @@ class KeepToLibraryCommanderImpl @Inject() (
         Success(())
     }
   }
-  override def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
+  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
     ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
   }
 
-  override def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
+  def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId).isDefined
   }
-  override def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep] = {
+  def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep] = {
     val keepsByIds = keepRepo.getByIds(ktls.map(_.keepId).toSet)
     ktls.map(ktl => keepsByIds(ktl.keepId))
   }
 
-  override def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
+  def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.save(ktl.withAddedBy(newOwnerId))
   }
 
-  override def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
+  def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl => syncWithKeep(ktl, keep) }
   }
-  override def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
+  private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
     val obstacleKtl = ktlRepo.getPrimaryByUriAndLibrary(keep.uriId, ktl.libraryId)
     if (obstacleKtl.exists(_.id.get != ktl.id.get) && keep.isPrimary) {
       log.error(s"[KTL-ERROR] About to sync $ktl with $keep, but ${obstacleKtl.get} is in the way")
     }
     ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(keep.isPrimary))
   }
-  override def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary = {
-    ktlRepo.save(ktl.withVisibility(lib.visibility).withOrganizationId(lib.organizationId))
+  def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.libraryId == library.id.get, "library.id does not match ktl.libraryId")
+    ktlRepo.save(ktl.withVisibility(library.visibility).withOrganizationId(library.organizationId))
   }
 }
