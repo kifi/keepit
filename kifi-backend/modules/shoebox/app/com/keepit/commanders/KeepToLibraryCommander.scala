@@ -81,6 +81,9 @@ class KeepToLibraryCommanderImpl @Inject() (
   def softRequire(b: Boolean, m: String): Unit = if (!b) airbrake.notify(m)
   def changeUriIdForKeep(keep: Keep, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
     softRequire(keep.uriId == newUriId, "URI and Keep don't match.") // TODO(ryan): once you're not scared of this anymore, change it to a hard `require`
+    ktlRepo.getPrimaryByUriAndLibrary(newUriId, keep.libraryId.get).foreach { obstacleKtl =>
+      log.error(s"[KTL-ERROR] Trying to change ${keep.id.get}'s URI to $newUriId but there is already a primary URI in library: $obstacleKtl")
+    }
     ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl =>
       ktlRepo.save(ktl.withUriId(newUriId))
     }
