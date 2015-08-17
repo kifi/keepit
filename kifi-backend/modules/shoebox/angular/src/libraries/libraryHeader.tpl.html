@@ -145,7 +145,7 @@
       <button class="kf-lh-invite-banner-button kf-continue" ng-click="signupFromInvitation()" ng-if="!$root.userLoggedIn">Continue</button>
     </div>
 
-    <div class="kf-lh-follow-btn-wrap" ng-if="!isMember()">
+    <div class="kf-lh-follow-btn-wrap" ng-if="!isMember() && library.visibility !== 'secret'">
       <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn && !library.invite"></div>
       <button class="kf-lh-follow-btn" ng-click="followLibrary({via: 'followBtn'})">Follow</button>
     </div>

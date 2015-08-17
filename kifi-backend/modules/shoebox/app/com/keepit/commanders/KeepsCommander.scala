@@ -397,15 +397,12 @@ class KeepsCommanderImpl @Inject() (
     }
   }
 
-  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
+  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit session: RWSession, context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
     keeps.groupBy(_.libraryId).toList.collect {
       case (Some(libId), _) =>
-        val library = db.readWrite { implicit session =>
-          val library = libraryRepo.get(libId)
-          libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
-          library
-        }
+        val library = libraryRepo.get(libId)
+        libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
         libraryAnalytics.unkeptPages(userId, keeps, library, context)
     }
     searchClient.updateKeepIndex()
@@ -823,6 +820,7 @@ class KeepsCommanderImpl @Inject() (
     val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
     val newKeep = k.copy(
       id = None,
+      externalId = ExternalId(),
       userId = userId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,

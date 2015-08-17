@@ -91,5 +91,44 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
         }
       }
     }
+    "be able to move keeps between libraries" in {
+      "not cause db constraint violations" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val lib1 = LibraryFactory.library().withOwner(user).saved
+            val lib2 = LibraryFactory.library().withOwner(user).saved
+            val keep = KeepFactory.keep().withUser(user).withLibrary(lib1).saved
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beSome
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
+
+            for (i <- 1 to 10) {
+              // lib1 -> lib2
+              ktlCommander.removeKeepFromLibrary(keep.id.get, lib1.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib2, user.id.get)
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beNone
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beSome
+
+              // lib2 -> lib1
+              ktlCommander.removeKeepFromLibrary(keep.id.get, lib2.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib1, user.id.get)
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beSome
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
+            }
+            ktlRepo.count === 2
+
+            for (i <- 1 to 10) {
+              ktlCommander.removeKeepFromLibrary(keep.id.get, lib1.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib1, user.id.get)
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beSome
+              ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
+            }
+            ktlRepo.count === 2
+            ktlRepo.all.foreach(println)
+          }
+          1 === 1
+        }
+      }
+    }
   }
 }
