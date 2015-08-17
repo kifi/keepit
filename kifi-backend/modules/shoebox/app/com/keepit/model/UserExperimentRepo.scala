@@ -16,6 +16,7 @@ trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserEx
   def getByType(experiment: UserExperimentType)(implicit session: RSession): Seq[UserExperiment]
   def hasExperiment(userId: Id[User], experimentType: UserExperimentType)(implicit session: RSession): Boolean
   def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(UserExperimentType, Int)]
+  def ensureUserHasExperiment(userId: Id[User], experimentType: UserExperimentType)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -92,6 +93,12 @@ class UserExperimentRepoImpl @Inject() (
     query.as[(String, Int)].list.map {
       case (name, count) =>
         (UserExperimentType(name), count)
+    }
+  }
+
+  def ensureUserHasExperiment(userId: Id[User], experimentType: UserExperimentType)(implicit session: RWSession): Unit = {
+    if (!hasExperiment(userId, experimentType)) {
+      save(UserExperiment(userId = userId, experimentType = experimentType))
     }
   }
 }
