@@ -230,7 +230,7 @@ class PlanManagementCommanderImpl @Inject() (
   def grandfatherPlan(id: Id[PaidPlan]): Unit = db.readWrite { implicit session =>
     val plan = paidPlanRepo.get(id)
     if (plan.state == PaidPlanStates.ACTIVE) {
-      paidPlanRepo.save(plan.copy(state = PaidPlanStates.GRANDFATHERED))
+      paidPlanRepo.save(plan.withState(PaidPlanStates.GRANDFATHERED))
     } else {
       throw new InvalidChange("plan_not_active")
     }
@@ -240,7 +240,7 @@ class PlanManagementCommanderImpl @Inject() (
     val plan = paidPlanRepo.get(id)
     val accounts = paidAccountRepo.getActiveByPlan(id)
     if (accounts.isEmpty) {
-      paidPlanRepo.save(plan.copy(state = PaidPlanStates.INACTIVE))
+      paidPlanRepo.save(plan.withState(PaidPlanStates.INACTIVE))
     } else {
       throw new InvalidChange("plan_in_use")
     }

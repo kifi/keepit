@@ -22,6 +22,7 @@ case class PaidPlan(
 
   def withId(id: Id[PaidPlan]): PaidPlan = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
+  def withState(state: State[PaidPlan]): PaidPlan = this.copy(state = state)
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
