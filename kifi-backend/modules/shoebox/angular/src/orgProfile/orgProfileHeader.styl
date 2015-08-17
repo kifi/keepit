@@ -16,6 +16,14 @@ ophImageWidth = 200px
   margin: 0 auto
   display: flex
 
+  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
+    padding-top: 12px
+    margin-left: 20px
+    margin-right: 20px
+
+  @media (max-width: appMobileWidth)
+    flex-direction: column
+
   textarea.kf-edit-field
     background: transparent
 
@@ -24,16 +32,13 @@ ophImageWidth = 200px
       background: white
       color: textDarkGrey
 
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    padding-top: 12px
-    margin-left: 20px
-    margin-right: 20px
 
   .profile-image-widget
     width: ophImageWidth
     height: ophImageWidth
     overflow: hidden
     border-radius: 5%
+    margin: auto
 
 .kf-oph-pic-wrapper
   position: relative
@@ -59,6 +64,10 @@ ophImageWidth = 200px
   flex: 1
   margin-left: 25px
   text-align: left
+
+  @media (max-width: appMobileWidth)
+    margin-right: 25px
+    margin-top: 25px
 
   .kf-oph-input
     width: 100%
