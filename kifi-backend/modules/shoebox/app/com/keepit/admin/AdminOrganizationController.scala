@@ -337,7 +337,7 @@ class AdminOrganizationController @Inject() (
   def setHandle(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val handle = OrganizationHandle(request.body.asFormUrlEncoded.flatMap(_.get("handle").flatMap(_.headOption)).filter(_.length > 0).get)
     db.readWrite { implicit session =>
-      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle)
+      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle, overrideValidityCheck = true)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgId))
   }
