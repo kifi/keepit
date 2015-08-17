@@ -3,8 +3,9 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
+import com.keepit.notify.info.NeedsInfo.UsingAll
 import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, PickOne, GetUser }
-import com.keepit.notify.info.{ NotificationInfo, ReturnsInfoResult }
+import com.keepit.notify.info.{ NeedsInfo, NotificationInfo, ReturnsInfoResult }
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -34,20 +35,21 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 
   override def shouldGroupWith(newEvent: NewConnectionInvite, existingEvents: Set[NewConnectionInvite]): Boolean = false
 
-  override def info(events: Set[NewConnectionInvite]): ReturnsInfoResult = for {
-    event <- PickOne(events)
-    user <- GetUser(event.inviterId)
-    userImage <- GetUserImage(event.inviterId)
-  } yield NotificationInfo(
-    path = Path(user.username.value),
-    title = s"${user.firstName} ${user.lastName} wants to connect with you on Kifi",
-    body = s"Enjoy ${user.firstName}’s keeps in your search results and message ${user.firstName} directly.",
-    linkText = s"Respond to ${user.firstName}’s invitation",
-    imageUrl = userImage,
-    extraJson = Some(Json.obj(
-      "friend" -> BasicUser.fromUser(user)
-    ))
-  )
+  override val info = {
+    import NeedsInfo._
+    event[NewConnectionInvite].usingOne(evt => (user(evt.inviterId), userImage(evt.inviterId))) {
+      case result(evt, (get(user), get(userImage))) => NotificationInfo(
+        path = Path(user.username.value),
+        title = s"${user.firstName} ${user.lastName} wants to connect with you on Kifi",
+        body = s"Enjoy ${user.firstName}’s keeps in your search results and message ${user.firstName} directly.",
+        linkText = s"Respond to ${user.firstName}’s invitation",
+        imageUrl = userImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(user)
+        ))
+      )
+    }
+  }
 
 }
 
@@ -72,20 +74,21 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 
   override def shouldGroupWith(newEvent: ConnectionInviteAccepted, existingEvents: Set[ConnectionInviteAccepted]): Boolean = false
 
-  override def info(events: Set[ConnectionInviteAccepted]): ReturnsInfoResult = for {
-    event <- PickOne(events)
-    user <- GetUser(event.accepterId)
-    userImage <- GetUserImage(event.accepterId)
-  } yield NotificationInfo(
-    path = Path(user.username.value),
-    title = s"${user.firstName} ${user.lastName} accepted your invitation to connect!",
-    body = s"Now you will enjoy ${user.firstName}’s keeps in your search results and you can message ${user.firstName} directly.",
-    linkText = s"Visit ${user.firstName}’s profile",
-    imageUrl = userImage,
-    extraJson = Some(Json.obj(
-      "friend" -> BasicUser.fromUser(user)
-    ))
-  )
+  override val info = {
+    import NeedsInfo._
+    event[ConnectionInviteAccepted].usingOne(evt => (user(evt.accepterId), userImage(evt.accepterId))) {
+      case result(evt, (get(user), get(userImage))) => NotificationInfo(
+        path = Path(user.username.value),
+        title = s"${user.firstName} ${user.lastName} accepted your invitation to connect!",
+        body = s"Now you will enjoy ${user.firstName}’s keeps in your search results and message ${user.firstName} directly.",
+        linkText = s"Visit ${user.firstName}’s profile",
+        imageUrl = userImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(user)
+        ))
+      )
+    }
+  }
 
 }
 

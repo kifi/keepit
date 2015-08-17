@@ -1,6 +1,6 @@
 package com.keepit.notify.model
 
-import com.keepit.notify.info.{ Fails, ReturnsInfo, ReturnsInfoResult }
+import com.keepit.notify.info._
 import com.keepit.notify.model.event._
 import play.api.libs.json._
 
@@ -39,7 +39,7 @@ trait NotificationKind[N <: NotificationEvent] {
    */
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
 
-  def info(events: Set[N]): ReturnsInfoResult = Fails(new UnsupportedOperationException("info not available"))
+  val info: NeedsInfo.Using[N, _ <: Product, _] = ???
 
 }
 
