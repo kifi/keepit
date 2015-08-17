@@ -41,6 +41,7 @@ class OrganizationCommanderImpl @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteRepo: OrganizationInviteRepo,
+    userExperimentRepo: UserExperimentRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -215,6 +216,7 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+            userExperimentRepo.save(UserExperiment(userId = request.requesterId, experimentType = UserExperimentType.ORGANIZATION))
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
