@@ -27,7 +27,6 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
 
-  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 
   // For backwards compatibility with KeepRepo
@@ -139,9 +138,6 @@ class KeepToLibraryRepoImpl @Inject() (
     q.as[Id[Keep]].list.toSet
   }
 
-  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary = {
-    save(model.withState(KeepToLibraryStates.ACTIVE))
-  }
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
   }
