@@ -131,11 +131,11 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
 
 }
 
-case class EventGroup(id: Long) extends AnyVal
+case class EventGroup(id: String) extends AnyVal
 
 object EventGroup {
   def apply(): EventGroup = {
-    EventGroup(scala.util.Random.nextLong)
+    EventGroup(java.util.UUID.randomUUID.toString)
   }
 }
 
