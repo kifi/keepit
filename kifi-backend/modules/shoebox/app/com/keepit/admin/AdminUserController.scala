@@ -536,19 +536,6 @@ class AdminUserController @Inject() (
   def connectUsers(user1: Id[User]) = AdminUserPage { implicit request =>
     val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
     db.readWrite { implicit session =>
-      val socialUser1 = socialUserInfoRepo.getByUser(user1).find(_.networkType == SocialNetworks.FORTYTWO)
-      val socialUser2 = socialUserInfoRepo.getByUser(user2).find(_.networkType == SocialNetworks.FORTYTWO)
-      for {
-        su1 <- socialUser1
-        su2 <- socialUser2
-      } yield {
-        socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-          case Some(sc) =>
-            socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-          case None =>
-            socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-        }
-      }
       userConnectionRepo.addConnections(user1, Set(user2), requested = true)
       eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
       eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
@@ -867,35 +854,6 @@ class AdminUserController @Inject() (
         socialRes.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}" } ++
         contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }
       ).mkString("<br/>"))
-    }
-  }
-
-  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminUserPage.async { request =>
-    SafeFuture {
-      val toBeCreated = db.readWrite { implicit session =>
-        userConnectionRepo.all().collect {
-          case activeConnection if {
-            val user1State = userRepo.get(activeConnection.user1).state
-            val user2State = userRepo.get(activeConnection.user2).state
-            activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
-          } =>
-            val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
-              if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
-              Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
-            } else None
-        }.flatten
-      }
-
-      implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
-      implicit val userIdFormat = Id.format[User]
-      val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2) })
-      val title = "FortyTwo Connections to be created"
-      val msg = toBeCreated.mkString("\n")
-      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
-        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
-      Ok(json)
     }
   }
 
