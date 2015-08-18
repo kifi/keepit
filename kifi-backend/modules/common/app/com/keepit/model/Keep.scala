@@ -65,7 +65,8 @@ case class Keep(
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
-    visibility = lib.visibility
+    visibility = lib.visibility,
+    organizationId = lib.organizationId
   )
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly

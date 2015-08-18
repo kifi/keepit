@@ -773,7 +773,7 @@ class LibraryCommanderImpl @Inject() (
           if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
               implicit val session: RWSession = s
-              keepCommander.changeVisibility(k, curViz)
+              keepCommander.syncWithLibrary(k, lib)
               ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
                 ktlCommander.syncWithLibrary(_, lib)
               }

@@ -533,7 +533,42 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
       "correctly change all the denormalized library fields on keeps/ktls" in {
         withDb(modules: _*) { implicit injector =>
-          
+          val libraryCommander = inject[LibraryCommander]
+          val (user, org, lib1) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            val lib = LibraryFactory.library().withOwner(user).published().saved
+            KeepFactory.keeps(100).map(_.withLibrary(lib).withUser(user)).saved
+            (user, org, lib)
+          }
+
+          val lib2 = libraryCommander.modifyLibrary(lib1.id.get, user.id.get, LibraryModifyRequest(visibility = Some(LibraryVisibility.SECRET))).right.get
+          Thread.sleep(1000)
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib2.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib2.visibility
+              keep.organizationId === lib2.organizationId
+            }
+          }
+
+          val lib3 = libraryCommander.modifyLibrary(lib2.id.get, user.id.get, LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(org.id.get)), visibility = Some(LibraryVisibility.ORGANIZATION))).right.get
+          Thread.sleep(1000)
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib3.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib3.visibility
+              keep.organizationId === lib3.organizationId
+            }
+          }
+
+          val lib4 = libraryCommander.modifyLibrary(lib3.id.get, user.id.get, LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(user.id.get)), visibility = Some(LibraryVisibility.PUBLISHED))).right.get
+          Thread.sleep(1000)
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib4.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib4.visibility
+              keep.organizationId === lib4.organizationId
+            }
+          }
+          1 === 1
         }
       }
     }
