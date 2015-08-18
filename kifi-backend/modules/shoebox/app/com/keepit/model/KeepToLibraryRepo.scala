@@ -20,7 +20,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
-  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
 
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -109,8 +109,10 @@ class KeepToLibraryRepoImpl @Inject() (
     getByLibraryIdsHelper(libraryIds, excludeStates).list.groupBy(_.libraryId)
   }
 
-  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    val q = for ((ktl, keep) <- rows join keepRepo.rows on (_.keepId === _.id) if ktl.libraryId === libraryId && !ktl.state.inSet(excludeStates)) yield (ktl, keep)
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
+    val q = for (
+      (ktl, keep) <- rows innerJoin keepRepo.rows on (_.keepId === _.id) if ktl.libraryId === libraryId && ktl.state === KeepToLibraryStates.ACTIVE && keep.state === KeepStates.ACTIVE
+    ) yield (ktl, keep)
     val sortedKeeps = q.sortBy { case (ktl, keep) => (keep.keptAt desc, keep.id desc) }.map(_._2)
     sortedKeeps.drop(offset.value).take(limit.value).list
   }
