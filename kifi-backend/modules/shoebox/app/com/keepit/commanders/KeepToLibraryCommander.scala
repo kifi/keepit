@@ -42,6 +42,7 @@ class KeepToLibraryCommanderImpl @Inject() (
           keepId = keep.id.get,
           libraryId = library.id.get,
           addedBy = addedBy,
+          addedAt = keep.keptAt, // TODO(ryan): take this out once we're ready to have keeps in multiple libraries
           uriId = keep.uriId,
           isPrimary = keep.isPrimary,
           visibility = library.visibility,
