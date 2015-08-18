@@ -36,9 +36,11 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite]
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
 }
 
 @Singleton
@@ -401,6 +403,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
+  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getLastSentByOrgIdAndUserId(orgId, inviteeId)
+    }
+  }
+
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
     val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
@@ -459,5 +467,18 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean = {
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
+  }
+
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo] = {
+    val inviteOpt = (viewerIdOpt, authTokenOpt) match {
+      case (Some(viewerId), None) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId)
+      case (None, Some(authToken)) => getInviteByOrganizationIdAndAuthToken(orgId, authToken)
+      case (Some(viewerId), Some(authToken)) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId).orElse(getInviteByOrganizationIdAndAuthToken(orgId, authToken))
+      case _ => None
+    }
+    inviteOpt.map { invite =>
+      val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
+      OrganizationInviteInfo.fromInvite(invite, inviter)
+    }
   }
 }

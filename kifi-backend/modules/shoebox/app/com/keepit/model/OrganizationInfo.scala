@@ -5,6 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -35,26 +36,40 @@ object OrganizationInfo {
   )(unlift(OrganizationInfo.unapply))
 }
 
-case class MembershipInfo(
-  isInvited: Boolean,
+case class OrganizationMembershipInfo(
+  isInvited: Boolean, // deprecated, kill and use invite.isDefined || invite != null instead
+  invite: Option[OrganizationInviteInfo],
   permissions: Set[OrganizationPermission],
   role: Option[OrganizationRole])
-object MembershipInfo {
-  implicit val defaultWrites: Writes[MembershipInfo] = (
+object OrganizationMembershipInfo {
+  implicit val defaultWrites: Writes[OrganizationMembershipInfo] = (
     (__ \ 'isInvited).write[Boolean] and
+    (__ \ 'invite).writeNullable[OrganizationInviteInfo] and
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
     (__ \ 'role).writeNullable[OrganizationRole]
-  )(unlift(MembershipInfo.unapply))
+  )(unlift(OrganizationMembershipInfo.unapply))
+}
+
+case class OrganizationInviteInfo(
+  inviter: BasicUser,
+  lastInvited: DateTime)
+object OrganizationInviteInfo {
+  implicit val defaultWrites: Writes[OrganizationInviteInfo] = (
+    (__ \ 'inviter).write[BasicUser] and
+    (__ \ 'lastInvited).write[DateTime])(unlift(OrganizationInviteInfo.unapply))
+  def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
+    OrganizationInviteInfo(inviter, invite.updatedAt)
+  }
 }
 
 case class OrganizationView(
   organizationInfo: OrganizationInfo,
-  membershipInfo: MembershipInfo)
+  membershipInfo: OrganizationMembershipInfo)
 
 object OrganizationView {
   implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
-      "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
+      "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 }
 
