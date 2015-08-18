@@ -8,14 +8,20 @@
         <div ng-if="userData.invite">
           <div class="kf-register-header kf-register-header-centered">Join Kifi</div>
           <div>
-            <img class="kf-register-inviter-pic" ng-src="{{userData.invite.inviter|pic}}"></img>
-            <span class="kf-register-modal-invite-text"> {{userData.invite.inviter.firstName}} invited you to {{userData.invite.access === 'read_only' ? 'follow' : 'collaborate on'}} this library. </span>
+            <img class="kf-register-inviter-pic" ng-if="userData.invite && userData.intent === 'follow'" ng-src="{{userData.invite.inviter|pic}}"></img>
+            <img class="kf-register-inviter-pic" ng-if="userData.invite && userData.intent === 'joinOrg'" ng-src="{{userData.invite.inviter.pictureName}}"></img>
+            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.libAuthToken">
+              {{userData.invite.inviter.firstName}} invited you to {{userData.invite.access === 'read_only' ? 'follow' : 'collaborate on'}} this library.
+            </span>
+            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.orgAuthToken">
+              {{userData.invite.inviter.firstName}} invited you to become a member of this team.
+            </span>
           </div>
         </div>
         <div ng-if="!userData.invite">
-          <div class="kf-register-header" ng-if="userData.libraryId && !userData.toConnectWith">Join Kifi to get updates to this library</div>
+          <div class="kf-register-header" ng-if="userData.intent === 'follow' && !userData.toConnectWith">Join Kifi to get updates to this library</div>
           <div class="kf-register-header" ng-if="userData.toConnectWith">Join Kifi to connect with {{userData.toConnectWith.firstName}}</div>
-          <div class="kf-register-header" ng-if="userData.orgId && !userData.invite">Sign up for Kifi to join this organization</div>
+          <div class="kf-register-header" ng-if="userData.intent === 'joinOrg' && !userData.invite">Sign up for Kifi to join this organization</div>
         </div>
 
         <div class="register-modal-social-block">

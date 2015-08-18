@@ -2,14 +2,20 @@
   <div
     ng-if="shouldShowInviteBanner()"
     kf-generic-banner
-    text="You've been invited to join {{profile.name}}'s organization."
-    actions="bannerButtons"
+    text="You've been invited to join {{profile.name}}'s team."
+    actions="inviteBannerButtons"
   ></div>
   <div
     ng-if="notification == 'save'"
     kf-generic-banner
     text="Saved successfully"
     icon="'save'"
+  ></div>
+  <div
+    ng-if="shouldShowSignupBanner()"
+    kf-generic-banner
+    text="{{membership.invite.inviter.firstName}} {{membership.invite.inviter.lastName}} invited you to become a member of this team."
+    actions="signupBannerButtons"
   ></div>
   <div
     ng-if="notification == 'error'"
