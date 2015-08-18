@@ -144,6 +144,7 @@ case class AccountEvent(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
+    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -171,6 +172,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[AccountEvent],
+    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -189,6 +191,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       createdAt,
       updatedAt,
       state,
+      stage,
       eventGroup,
       eventTime,
       accountId,
@@ -206,14 +209,14 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
 
   def unapplyFromDbRow(e: AccountEvent) = {
     val (eventType, extras) = e.action.toDbRow
-    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventGroup, e.eventTime, e.accountId,
+    Some((e.id, e.createdAt, e.updatedAt, e.state, e.stage, e.eventGroup, e.eventTime, e.accountId,
       e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
       extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo))
   }
 
   def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, pending: Boolean = false) = {
     AccountEvent(
-      state = if (pending) AccountEventStates.PENDING else AccountEventStates.ACTIVE,
+      stage = if (pending) ProcessingStage.PENDING else ProcessingStage.COMPLETE,
       eventGroup = EventGroup(),
       eventTime = eventTime,
       accountId = accountId,
@@ -228,10 +231,16 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       memo = None
     )
   }
+
+  case class ProcessingStage(name: String)
+  object ProcessingStage {
+    val PENDING = ProcessingStage("pending")
+    val PROCESSING = ProcessingStage("processing")
+    val FAILED = ProcessingStage("failed")
+    val COMPLETE = ProcessingStage("complete")
+  }
+
 }
 
-object AccountEventStates extends States[AccountEvent] {
-  val PENDING = State[AccountEvent]("pending")
-  val PROCESSING = State[AccountEvent]("processing")
-  val FAILED = State[AccountEvent]("failed")
-}
+object AccountEventStates extends States[AccountEvent]
+

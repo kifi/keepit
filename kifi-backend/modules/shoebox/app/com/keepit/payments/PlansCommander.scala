@@ -73,7 +73,14 @@ class PlanManagementCommanderImpl @Inject() (
       }
       paidAccountRepo.getByOrgId(orgId, Set()) match {
         case Some(pa) if pa.state == PaidAccountStates.ACTIVE => throw new InvalidChange("account_exists")
-        case Some(pa) => paidAccountRepo.save(pa.copy(state = PaidAccountStates.ACTIVE, planId = planId))
+        case Some(pa) => paidAccountRepo.save(PaidAccount(
+          id = pa.id,
+          orgId = orgId,
+          planId = planId,
+          credit = DollarAmount(0),
+          userContacts = Seq.empty,
+          emailContacts = Seq.empty
+        ))
         case None => paidAccountRepo.save(PaidAccount(
           orgId = orgId,
           planId = planId,
@@ -220,7 +227,7 @@ class PlanManagementCommanderImpl @Inject() (
 
   def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan = db.readWrite { implicit session =>
     paidPlanRepo.save(PaidPlan(
-      state = if (custom) PaidPlanStates.CUSTOM else PaidPlanStates.ACTIVE,
+      kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
       billingCycle = billingCycle,
       pricePerCyclePerUser = price
@@ -230,7 +237,7 @@ class PlanManagementCommanderImpl @Inject() (
   def grandfatherPlan(id: Id[PaidPlan]): Unit = db.readWrite { implicit session =>
     val plan = paidPlanRepo.get(id)
     if (plan.state == PaidPlanStates.ACTIVE) {
-      paidPlanRepo.save(plan.withState(PaidPlanStates.GRANDFATHERED))
+      paidPlanRepo.save(plan.copy(kind = PaidPlan.Kind.GRANDFATHERED))
     } else {
       throw new InvalidChange("plan_not_active")
     }
@@ -247,8 +254,8 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan] = db.readOnlyMaster { implicit session =>
-    val states = if (grantedByAdmin.isDefined) Set(PaidPlanStates.ACTIVE, PaidPlanStates.CUSTOM) else Set(PaidPlanStates.ACTIVE)
-    paidPlanRepo.getByStates(states)
+    val kinds = if (grantedByAdmin.isDefined) Set(PaidPlan.Kind.NORMAL, PaidPlan.Kind.CUSTOM) else Set(PaidPlan.Kind.NORMAL)
+    paidPlanRepo.getByKinds(kinds)
   }
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
@@ -257,7 +264,7 @@ class PlanManagementCommanderImpl @Inject() (
       case _ => throw new InvalidChange("account_does_not_exists")
     }
     val newPlan = paidPlanRepo.get(newPlanId)
-    if (newPlan.state == PaidPlanStates.ACTIVE || (newPlan.state == PaidPlanStates.CUSTOM && attribution.admin.isDefined)) {
+    if (newPlan.state == PaidPlanStates.ACTIVE && (newPlan.kind == PaidPlan.Kind.NORMAL || (newPlan.kind == PaidPlan.Kind.CUSTOM && attribution.admin.isDefined))) {
       paidAccountRepo.save(account.copy(planId = newPlanId))
     } else {
       throw new InvalidChange("plan_not_available")

@@ -16,6 +16,7 @@ case class PaidPlan(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
+    kind: PaidPlan.Kind,
     name: Name[PaidPlan],
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount) extends ModelWithPublicId[PaidPlan] with ModelWithState[PaidPlan] {
@@ -28,9 +29,13 @@ case class PaidPlan(
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
+
+  case class Kind(name: String)
+  object Kind {
+    val NORMAL = Kind("normal")
+    val GRANDFATHERED = Kind("grandfathered")
+    val CUSTOM = Kind("custom")
+  }
 }
 
-object PaidPlanStates extends States[PaidPlan] {
-  val GRANDFATHERED = State[PaidPlan]("grandfathered")
-  val CUSTOM = State[PaidPlan]("custom")
-}
+object PaidPlanStates extends States[PaidPlan]
