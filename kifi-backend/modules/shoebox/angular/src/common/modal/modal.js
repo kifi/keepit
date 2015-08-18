@@ -43,7 +43,7 @@ angular.module('kifi')
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {
-          'width': '100%',
+          'width': attrs.kfWidth ? '100%' : null,
           'max-width': attrs.kfWidth || '400px',
           'height': attrs.kfHeight
         };
