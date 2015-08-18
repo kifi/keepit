@@ -248,13 +248,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val libraryCommander = inject[LibraryCommander]
           val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
-          add1.isRight === true
+          add1 must beRight
           add1.right.get.name === "Avengers Missions"
           val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
-          add2.isRight === true
+          add2 must beRight
           add2.right.get.name === "MURICA"
           val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
-          add3.isRight === true
+          add3 must beRight
           add3.right.get.name === "Science and Stuff"
           libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
 
@@ -276,13 +276,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           db.readWrite { implicit s =>
             libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
           }
-          libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+          libraryCommander.addLibrary(lib3Request, userIron.id.get) must beRight
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
             allLibs.length === 3
             allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-            allLibs.map(_.color.nonEmpty === true)
+            allLibs.foreach(_.color.nonEmpty === true)
           }
+          1 === 1
         }
       }
       "let an org member create a library in that org if they have permission" in {
@@ -296,7 +297,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, owner.id.get)
-          addResponse.isRight === true
+          addResponse must beRight
         }
       }
       "fail if an org member tries to create a library in their org but does not have permission" in {
@@ -315,7 +316,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, member.id.get)
-          addResponse.isLeft === true
+          addResponse must beLeft
         }
       }
       "fail if a non-member tries to add a library to an organization" in {
@@ -330,7 +331,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
           val addResponse = libraryCommander.addLibrary(addRequest, rando.id.get)
-          addResponse.isLeft === true
+          addResponse must beLeft
         }
       }
     }
@@ -351,7 +352,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           implicit val publicIdConfig = inject[PublicIdConfiguration]
           val cannotMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(org.id.get)))
-          cannotMoveOrg.isLeft === true
+          cannotMoveOrg must beLeft
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === None
           }
@@ -361,13 +362,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // move from personal space to org space
           val canMoveOrg = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(org.id.get)))
-          canMoveOrg.isRight === true
-          canMoveOrg.right.get.organizationId === org.id
+          canMoveOrg must beRight
+          canMoveOrg.right.get.modifiedLibrary.organizationId === org.id
 
           // prevent move from org to one without privs
           val attemptToStealLibrary = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
-          attemptToStealLibrary.isLeft === true
+          attemptToStealLibrary must beLeft
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === org.id
           }
@@ -378,7 +379,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val moveOrganization = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
-          moveOrganization.isRight === true
+          moveOrganization must beRight
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
           }
@@ -386,7 +387,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // try to move library back to owner out of org space.
           val moveHome = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userIron.id.get,
             LibraryModifyRequest(space = Some(userIron.id.get)))
-          moveHome.isLeft === true // only the owner can move a library out right now.
+          moveHome must beLeft // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).organizationId === starkOrg.id
           }
@@ -394,7 +395,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // owner moves the library home.
           val moveHomeSucceeds = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(space = Some(userAgent.id.get)))
-          moveHomeSucceeds.isRight === true // only the owner can move a library out right now.
+          moveHomeSucceeds must beRight // only the owner can move a library out right now.
           db.readOnlyMaster { implicit session =>
             libraryRepo.get(libShield.id.get).space === LibrarySpace.fromUserId(userAgent.id.get)
           }
@@ -408,37 +409,37 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libraryCommander = inject[LibraryCommander]
           val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
             LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER)))
-          mod1.isRight === true
-          mod1.right.get.description === Some("Samuel L. Jackson was here")
-          mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER)
+          mod1 must beRight
+          mod1.right.get.modifiedLibrary.description === Some("Samuel L. Jackson was here")
+          mod1.right.get.modifiedLibrary.whoCanInvite === Some(LibraryInvitePermissions.OWNER)
 
           val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
             LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
-          mod2.isRight === true
-          mod2.right.get.name === "MURICA #1!!!!!"
-          mod2.right.get.slug === LibrarySlug("murica_#1")
+          mod2 must beRight
+          mod2.right.get.modifiedLibrary.name === "MURICA #1!!!!!"
+          mod2.right.get.modifiedLibrary.slug === LibrarySlug("murica_#1")
 
           val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
             LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
-          mod3.isRight === true
-          mod3.right.get.visibility === LibraryVisibility.PUBLISHED
+          mod3 must beRight
+          mod3.right.get.modifiedLibrary.visibility === LibraryVisibility.PUBLISHED
 
           val mod3NoChange = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
             LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED)))
-          mod3NoChange.isRight === true
-          mod3NoChange.right.get.visibility === LibraryVisibility.PUBLISHED
+          mod3NoChange must beRight
+          mod3NoChange.right.get.modifiedLibrary.visibility === LibraryVisibility.PUBLISHED
 
           val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
             LibraryModifyRequest(name = Some("HULK SMASH")))
-          mod4.isRight === false
+          mod4 must beLeft
           val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
             LibraryModifyRequest(name = Some("")))
-          mod5.isRight === false
+          mod5 must beLeft
 
           val mod6 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
             LibraryModifyRequest(color = Some(LibraryColor.SKY_BLUE)))
-          mod6.isRight === true
-          mod6.right.get.color === Some(LibraryColor.SKY_BLUE)
+          mod6 must beRight
+          mod6.right.get.modifiedLibrary.color === Some(LibraryColor.SKY_BLUE)
 
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
@@ -473,44 +474,44 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           // Move it into starkOrg
           val response1 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
-          response1.isRight === true
+          response1 must beRight
 
           // Now the library should live in starkOrg, but there is still an alias from ironMan
           db.readOnlyMaster { implicit session =>
-            inject[LibraryRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff")) must beSome
             inject[LibraryAliasRepo].count === 1
 
             val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
-            ironManAlias.isDefined === true
+            ironManAlias must beSome
             ironManAlias.get.libraryId === ironLib.id.get
           }
 
           // Move it back into ironMan's personal space
           val response2 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(ironMan.id.get)))
-          response2.isRight === true
+          response2 must beRight
 
           // The ironMan one was reclaimed, so it should be inactive now
           db.readOnlyMaster { implicit session =>
-            inject[LibraryRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff")) must beSome
 
             val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"), excludeState = None)
-            ironManAlias.isDefined === true
+            ironManAlias must beSome
             ironManAlias.get.state === LibraryAliasStates.INACTIVE
 
             val starkOrgAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(starkOrg.id.get, LibrarySlug("herostuff"))
-            starkOrgAlias.isDefined === true
+            starkOrgAlias must beSome
             starkOrgAlias.get.libraryId === ironLib.id.get
           }
 
           // Move it into earthOrg
           val response3 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(earthOrg.id.get)))
-          response3.isRight === true
+          response3 must beRight
 
           // Two aliases now, both ironMan and starkOrg
           db.readOnlyMaster { implicit session =>
-            inject[LibraryRepo].getBySpaceAndSlug(earthOrg.id.get, LibrarySlug("herostuff")).isDefined === true
+            inject[LibraryRepo].getBySpaceAndSlug(earthOrg.id.get, LibrarySlug("herostuff")) must beSome
             inject[LibraryAliasRepo].count === 2
 
             val ironManAlias = inject[LibraryAliasRepo].getBySpaceAndSlug(ironMan.id.get, LibrarySlug("herostuff"))
@@ -529,6 +530,49 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
           response4 must beRight
+        }
+      }
+      "correctly change all the denormalized library fields on keeps/ktls" in {
+        withDb(modules: _*) { implicit injector =>
+          val libraryCommander = inject[LibraryCommander]
+          val (user, org, lib1) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            val lib = LibraryFactory.library().withOwner(user).published().saved
+            KeepFactory.keeps(100).map(_.withLibrary(lib).withUser(user)).saved
+            (user, org, lib)
+          }
+
+          val res2 = libraryCommander.modifyLibrary(lib1.id.get, user.id.get, LibraryModifyRequest(visibility = Some(LibraryVisibility.SECRET))).right.get
+          Await.result(res2.keepChanges, Duration.Inf)
+          val lib2 = res2.modifiedLibrary
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib2.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib2.visibility
+              keep.organizationId === lib2.organizationId
+            }
+          }
+
+          val res3 = libraryCommander.modifyLibrary(lib2.id.get, user.id.get, LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(org.id.get)), visibility = Some(LibraryVisibility.ORGANIZATION))).right.get
+          Await.result(res3.keepChanges, Duration.Inf)
+          val lib3 = res3.modifiedLibrary
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib3.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib3.visibility
+              keep.organizationId === lib3.organizationId
+            }
+          }
+
+          val res4 = libraryCommander.modifyLibrary(lib3.id.get, user.id.get, LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(user.id.get)), visibility = Some(LibraryVisibility.PUBLISHED))).right.get
+          Await.result(res4.keepChanges, Duration.Inf)
+          val lib4 = res4.modifiedLibrary
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib4.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib4.visibility
+              keep.organizationId === lib4.organizationId
+            }
+          }
+          1 === 1
         }
       }
     }
@@ -844,7 +888,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
-        res1.isRight === true
+        res1 must beRight
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser((userHulk))), LibraryAccess.READ_ONLY),
@@ -860,7 +904,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Tests that users can have multiple invitations multiple times
         // but if invites are sent within 5 Minutes of each other, they do not persist!
-        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")) must beRight
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted from previous call
         }
@@ -876,12 +920,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteCollab2 = Seq((Right(EmailAddress("hawkeye@shield.gov")), LibraryAccess.READ_WRITE, None))
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")) must beRight
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 5
         }
         // Test collaborator invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")) must beRight
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
         }
@@ -892,13 +936,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")) must beRight
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
 
         // Test collaborator invite to collaborate (invite does NOT persist)
-        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")) must beRight
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
@@ -983,7 +1027,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // correct authtoken (invite by email)
           val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
-          successJoin.isRight === true
+          successJoin must beRight
           val includeInviteSet = Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED, LibraryInviteStates.ACTIVE)
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
@@ -994,7 +1038,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
             libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
           }
-          libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
+          libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None) must beRight
           db.readOnlyMaster { implicit s =>
             libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
           }
@@ -1014,7 +1058,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val libraryCommander = inject[LibraryCommander]
           val response = libraryCommander.joinLibrary(member.id.get, lib.id.get)
-          response.isRight ==== true
+          response must beRight
 
           db.readOnlyMaster { implicit session =>
             inject[LibraryMembershipRepo].getWithLibraryId(lib.id.get).map(_.userId).toSet === Set(owner.id.get, member.id.get)
@@ -1034,7 +1078,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val libraryCommander = inject[LibraryCommander]
           val response = libraryCommander.joinLibrary(rando.id.get, lib.id.get)
-          response.isLeft ==== true
+          response must beLeft
 
           db.readOnlyMaster { implicit session =>
             inject[LibraryMembershipRepo].getWithLibraryId(lib.id.get).map(_.userId).toSet === Set(owner.id.get)
@@ -1053,7 +1097,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryRepo.get(libMurica.id.get).memberCount === 3
           }
 
-          libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
+          libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get) must beRight
 
           db.readOnlyMaster { implicit s =>
             libraryMembershipRepo.count === 6
@@ -1267,7 +1311,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         //copy 1 keep to libUSA - libUSA has no keeps
         val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
-        res1.isRight === true
+        res1 must beRight
         res1.right.get._1.length === 1 // all successes
         res1.right.get._2.length === 0 // all successes
         db.readOnlyMaster { implicit s =>
@@ -1285,7 +1329,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
         // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
-        res2.isRight === true
+        res2 must beRight
         res2.right.get._1.length === 1 // 1 reactivated keep
         res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
@@ -1564,25 +1608,25 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.OWNER)).isRight === false
 
         // test owner demoting access
-        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_ONLY)).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_ONLY)) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_ONLY
         }
 
         // test owner promoting access
-        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_WRITE)).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_WRITE)) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_WRITE
         }
 
         // test collaborator promoting access
-        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_WRITE)).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_WRITE)) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3).get.access === LibraryAccess.READ_WRITE
         }
 
         // test collaborator demoting access
-        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_ONLY)).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_ONLY)) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3).get.access === LibraryAccess.READ_ONLY
         }
@@ -1597,13 +1641,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // test collaborator removing access
-        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, None).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, None) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3) === None
         }
 
         // test owner removing access
-        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None) must beRight
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2) === None
         }

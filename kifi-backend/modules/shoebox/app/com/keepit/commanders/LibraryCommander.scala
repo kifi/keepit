@@ -68,7 +68,7 @@ trait LibraryCommander {
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
@@ -649,7 +649,7 @@ class LibraryCommanderImpl @Inject() (
     db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
   }
 
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse] = {
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -773,7 +773,7 @@ class LibraryCommanderImpl @Inject() (
           if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
               implicit val session: RWSession = s
-              keepCommander.changeVisibility(k, curViz)
+              keepCommander.syncWithLibrary(k, lib)
               ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
                 ktlCommander.syncWithLibrary(_, lib)
               }
@@ -790,7 +790,8 @@ class LibraryCommanderImpl @Inject() (
           }
         }.flatMap(m => m)
 
-        updateKeepVisibility(newVisibility, 0).onComplete { _ => searchClient.updateKeepIndex() }
+        val keepChanges = updateKeepVisibility(newVisibility, 0)
+        keepChanges.onComplete { _ => searchClient.updateKeepIndex() }
 
         val edits = Map(
           "title" -> (newName != targetLib.name),
@@ -802,7 +803,7 @@ class LibraryCommanderImpl @Inject() (
           "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
           "space" -> (newSpace != targetLib.space)
         )
-        (lib, edits)
+        (lib, edits, keepChanges)
       }
 
       Future {
@@ -814,7 +815,7 @@ class LibraryCommanderImpl @Inject() (
         searchClient.updateLibraryIndex()
       }
       result match {
-        case Right((lib, _)) => Right(lib)
+        case Right((lib, _, keepChanges)) => Right(LibraryModifyResponse(lib, keepChanges))
         case Left(error) => Left(error)
       }
     }

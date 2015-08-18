@@ -98,7 +98,7 @@ trait KeepsCommander {
   def numKeeps(userId: Id[User]): Int
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
-  def changeVisibility(keep: Keep, newVisibility: LibraryVisibility)(implicit session: RWSession): Keep
+  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
@@ -770,8 +770,9 @@ class KeepsCommanderImpl @Inject() (
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withNote(newNote))
   }
-  def changeVisibility(keep: Keep, newVisibility: LibraryVisibility)(implicit session: RWSession): Keep = {
-    keepRepo.save(keep.withVisibility(newVisibility))
+  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
+    require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
+    keepRepo.save(keep.withLibrary(library))
   }
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withOwner(newOwnerId))
