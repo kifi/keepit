@@ -12,7 +12,7 @@ alter table account_event
 alter table account_event
     add column processing_stage VARCHAR(20) NOT NULL;
 
-alter table paid_acount
+alter table paid_account
     add column kind VARCHAR(20) NOT NULL;
 
 

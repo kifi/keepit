@@ -2,13 +2,14 @@ package com.keepit.payments
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User, Name }
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.ExecutionContext
+import scala.util.{ Try, Success, Failure }
 
 import play.api.libs.json.JsNull
 
@@ -16,37 +17,38 @@ import com.google.inject.{ ImplementedBy, Inject }
 
 import org.joda.time.DateTime
 
-class UnauthorizedChange(msg: String) extends Exception(msg)
-class InvalidChange(msg: String) extends Exception
+abstract class PlanManagementException(msg: String) extends Exception(msg)
+class UnauthorizedChange(msg: String) extends PlanManagementException(msg)
+class InvalidChange(msg: String) extends PlanManagementException(msg)
 
 @ImplementedBy(classOf[PlanManagementCommanderImpl])
 trait PlanManagementCommander {
-  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan]): Unit
+  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], session: RWSession): Try[Unit]
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
 
-  def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
-  def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Unit
-  def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit
-  def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Unit
+  def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): AccountEvent
+  def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): AccountEvent
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress])
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): Unit
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan
-  def grandfatherPlan(id: Id[PaidPlan]): Unit
-  def deactivatePlan(id: Id[PaidPlan]): Unit
+  def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
+  def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
 
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
-  def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Unit
+  def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): Unit
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Unit
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): AccountEvent
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent]
 
   def getAccountEvents(orgId: Id[Organization], before: Option[DateTime], max: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent]
 }
@@ -65,34 +67,39 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan]): Unit = {
-    db.readWrite { implicit session =>
-      val plan = paidPlanRepo.get(planId)
-      if (plan.state != PaidPlanStates.ACTIVE) {
-        throw new InvalidChange("plan_not_active")
-      }
-      paidAccountRepo.getByOrgId(orgId, Set()) match {
-        case Some(pa) if pa.state == PaidAccountStates.ACTIVE => throw new InvalidChange("account_exists")
-        case Some(pa) => paidAccountRepo.save(PaidAccount(
-          id = pa.id,
-          orgId = orgId,
-          planId = planId,
-          credit = DollarAmount(0),
-          userContacts = Seq.empty,
-          emailContacts = Seq.empty
-        ))
-        case None => paidAccountRepo.save(PaidAccount(
-          orgId = orgId,
-          planId = planId,
-          credit = DollarAmount(0),
-          userContacts = Seq.empty,
-          emailContacts = Seq.empty
-        ))
+  //very explicitely accepts a db session to allow account creation on org creation within the same db session
+  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], session: RWSession): Try[Unit] = {
+    implicit val s = session
+    val plan = paidPlanRepo.get(planId)
+    if (plan.state != PaidPlanStates.ACTIVE) {
+      Failure(new InvalidChange("plan_not_active"))
+    } else {
+      paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
+        case Some(pa) if pa.state == PaidAccountStates.ACTIVE => Failure(new InvalidChange("account_exists"))
+        case Some(pa) =>
+          paidAccountRepo.save(PaidAccount(
+            id = pa.id,
+            orgId = orgId,
+            planId = planId,
+            credit = DollarAmount(0),
+            userContacts = Seq.empty,
+            emailContacts = Seq.empty
+          ))
+          Success(())
+        case None =>
+          paidAccountRepo.save(PaidAccount(
+            orgId = orgId,
+            planId = planId,
+            credit = DollarAmount(0),
+            userContacts = Seq.empty,
+            emailContacts = Seq.empty
+          ))
+          Success(())
       }
     }
   }
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -102,7 +109,7 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -112,7 +119,7 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -121,7 +128,7 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -130,13 +137,9 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    val updatedAccount = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => {
-        account.copy(userContacts = account.userContacts.filter(_ != userId))
-      }
-      case None => throw new InvalidChange("account_does_not_exists")
-    }
+  def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId))
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -146,13 +149,9 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    val updatedAccount = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => {
-        account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress))
-      }
-      case None => throw new InvalidChange("account_does_not_exists")
-    }
+  def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress))
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -162,13 +161,9 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    val updatedAccount = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => {
-        account.copy(userContacts = account.userContacts.filter(_ != userId) :+ userId)
-      }
-      case None => throw new InvalidChange("account_does_not_exists")
-    }
+  def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId) :+ userId)
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -178,13 +173,9 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    val updatedAccount = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => {
-        account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress) :+ emailAddress)
-      }
-      case None => throw new InvalidChange("account_does_not_exists")
-    }
+  def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress) :+ emailAddress)
     paidAccountRepo.save(updatedAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -195,19 +186,12 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress]) = db.readOnlyMaster { implicit session =>
-    paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => {
-        (account.userContacts, account.emailContacts)
-      }
-      case None => throw new Exception("account_does_not_exists")
-    }
+    val account = paidAccountRepo.getByOrgId(orgId)
+    (account.userContacts, account.emailContacts)
   }
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): Unit = db.readWrite { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => account
-      case None => throw new InvalidChange("account_does_not_exists")
-    }
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.copy(credit = account.credit + amount))
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -218,11 +202,7 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount = db.readOnlyMaster { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) => account
-      case None => throw new Exception("account_does_not_exists")
-    }
-    account.credit
+    paidAccountRepo.getByOrgId(orgId).credit
   }
 
   def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan = db.readWrite { implicit session =>
@@ -234,22 +214,22 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def grandfatherPlan(id: Id[PaidPlan]): Unit = db.readWrite { implicit session =>
+  def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan] = db.readWrite { implicit session =>
     val plan = paidPlanRepo.get(id)
-    if (plan.state == PaidPlanStates.ACTIVE) {
-      paidPlanRepo.save(plan.copy(kind = PaidPlan.Kind.GRANDFATHERED))
+    if (plan.state == PaidPlanStates.ACTIVE && plan.kind == PaidPlan.Kind.NORMAL) {
+      Success(paidPlanRepo.save(plan.copy(kind = PaidPlan.Kind.GRANDFATHERED)))
     } else {
-      throw new InvalidChange("plan_not_active")
+      Failure(new InvalidChange("plan_not_actisve"))
     }
   }
 
-  def deactivatePlan(id: Id[PaidPlan]): Unit = db.readWrite { implicit session =>
+  def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan] = db.readWrite { implicit session =>
     val plan = paidPlanRepo.get(id)
     val accounts = paidAccountRepo.getActiveByPlan(id)
     if (accounts.isEmpty) {
-      paidPlanRepo.save(plan.withState(PaidPlanStates.INACTIVE))
+      Success(paidPlanRepo.save(plan.withState(PaidPlanStates.INACTIVE)))
     } else {
-      throw new InvalidChange("plan_in_use")
+      Failure(new InvalidChange("plan_in_use"))
     }
   }
 
@@ -258,31 +238,28 @@ class PlanManagementCommanderImpl @Inject() (
     paidPlanRepo.getByKinds(kinds)
   }
 
-  def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId) match {
-      case Some(account) if account.state == PaidAccountStates.ACTIVE => account
-      case _ => throw new InvalidChange("account_does_not_exists")
-    }
+  def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = db.readWrite { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
     val newPlan = paidPlanRepo.get(newPlanId)
     if (newPlan.state == PaidPlanStates.ACTIVE && (newPlan.kind == PaidPlan.Kind.NORMAL || (newPlan.kind == PaidPlan.Kind.CUSTOM && attribution.admin.isDefined))) {
       paidAccountRepo.save(account.copy(planId = newPlanId))
+      Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+        eventTime = clock.now,
+        accountId = account.id.get,
+        attribution = attribution,
+        action = AccountEventAction.PlanChanged(account.planId, newPlanId),
+        pending = true
+      )))
     } else {
-      throw new InvalidChange("plan_not_available")
+      Failure(new InvalidChange("plan_not_available"))
     }
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
-      accountId = account.id.get,
-      attribution = attribution,
-      action = AccountEventAction.PlanChanged(account.planId, newPlanId),
-      pending = true
-    ))
   }
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod] = db.readOnlyMaster { implicit session =>
     paymentMethodRepo.getByAccountId(orgId2AccountId(orgId))
   }
 
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newPaymentMethod = paymentMethodRepo.save(PaymentMethod(
       accountId = accountId,
@@ -297,24 +274,25 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution): Unit = db.readWrite { implicit session =>
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent] = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newDefault = paymentMethodRepo.get(newDefaultId)
     val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
     if (newDefault.state != PaymentMethodStates.ACTIVE) {
-      throw new InvalidChange("payment_method_not_available")
+      Failure(new InvalidChange("payment_method_not_available"))
     } else {
       oldDefaultOpt.map { oldDefault =>
         paymentMethodRepo.save(oldDefault.copy(default = false))
       }
       paymentMethodRepo.save(newDefault.copy(default = true))
+      Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+        eventTime = clock.now,
+        accountId = accountId,
+        attribution = attribution,
+        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get)
+      )))
     }
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
-      accountId = accountId,
-      attribution = attribution,
-      action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get)
-    ))
+
   }
 
   def getAccountEvents(orgId: Id[Organization], beforeOpt: Option[DateTime], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
