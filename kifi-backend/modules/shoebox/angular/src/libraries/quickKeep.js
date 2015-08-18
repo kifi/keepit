@@ -20,8 +20,6 @@ angular.module('kifi')
           return scope.library && scope.library.membership && (scope.library.membership.access === 'owner' || scope.library.membership.access === 'read_write');
         };
 
-        scope.showQuickAdd = scope.isOwnerOrCollaborator() && scope.library.keeps.length;
-
         scope.doQuickKeep = function () {
           var url = (scope.quickKeep.url) || '';
           scope.quickKeep.quickCheck = true;
