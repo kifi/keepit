@@ -764,17 +764,18 @@ class LibraryCommanderImpl @Inject() (
         // Update visibility of keeps
         // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
         def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
-          val (keeps, curViz) = db.readOnlyMaster { implicit s =>
-            val viz = libraryRepo.get(targetLib.id.get).visibility // It may have changed, re-check
+          val (keeps, lib, curViz) = db.readOnlyMaster { implicit s =>
+            val lib = libraryRepo.get(targetLib.id.get)
+            val viz = lib.visibility // It may have changed, re-check
             val keeps = keepRepo.getByLibraryIdAndExcludingVisibility(libraryId, Some(viz), 1000)
-            (keeps, viz)
+            (keeps, lib, viz)
           }
           if (keeps.nonEmpty && curViz == changedVisibility) {
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
               implicit val session: RWSession = s
               keepCommander.changeVisibility(k, curViz)
               ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
-                ktlCommander.changeVisibility(_, curViz)
+                ktlCommander.syncWithLibrary(_, lib)
               }
             }
             if (iter < 200) { // to prevent infinite loops if there's an issue updating keeps.

@@ -30,9 +30,11 @@ case class KeepToLibrary(
   def withUpdateTime(now: DateTime): KeepToLibrary = this.copy(updatedAt = now)
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
+  def withOrganizationId(newOrgIdOpt: Option[Id[Organization]]): KeepToLibrary = this.copy(organizationId = newOrgIdOpt)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
-  def nonPrimary: KeepToLibrary = this.copy(isPrimary = false)
+  def withPrimary(isPrimary: Boolean): KeepToLibrary = this.copy(isPrimary = isPrimary)
+  def nonPrimary: KeepToLibrary = this.withPrimary(false)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE

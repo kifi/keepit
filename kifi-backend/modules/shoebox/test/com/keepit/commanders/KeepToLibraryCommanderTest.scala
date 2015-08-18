@@ -2,15 +2,21 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.integrity.{ URLMigration, URIMigrationSeqNumKey, URIMigration, UriIntegrityPlugin }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+
+import scala.util.Random
 
 class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -124,7 +130,59 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
             }
             ktlRepo.count === 2
-            ktlRepo.all.foreach(println)
+          }
+          1 === 1
+        }
+      }
+    }
+    "keep up with uri migrations" in {
+      "ensure that ktls stay in sync with their keeps" in {
+        withDb(modules: _*) { implicit injector =>
+          val uriRepo = inject[NormalizedURIRepo]
+
+          // Setup a bunch of URIs
+          val numUris = 100
+          val (user, lib, origUris, dupUris) = db.readWrite { implicit session =>
+            val urls = for (i <- 1 to numUris) yield s"http://${RandomStringUtils.randomAlphanumeric(10)}.com"
+            val uris = urls.map { url => normalizedURIInterner.internByUri(url, contentWanted = true) }
+            uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUris
+
+            val (origUris, dupUris) = Random.shuffle(uris).splitAt(numUris / 2)
+
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
+            uris.foreach { uri =>
+              KeepFactory.keep().withUser(user).withLibrary(lib).withUri(uri).saved
+            }
+            (user, lib, origUris, dupUris)
+          }
+
+          // Mark some of them as duplicate and schedule a URI migration
+          val plugin = inject[UriIntegrityPlugin]
+          plugin.onStart()
+          for ((origUri, dupUri) <- origUris zip dupUris) {
+            plugin.handleChangedUri(URIMigration(dupUri.id.get, origUri.id.get))
+          }
+          inject[ChangedURISeqAssigner].assignSequenceNumbers()
+
+          // Do the migration
+          plugin.batchURIMigration()
+
+          // Make sure the KTLs did the right thing
+          db.readOnlyMaster { implicit session =>
+            val keeps = inject[KeepRepo].all
+            keeps.count(_.isPrimary) === origUris.length
+            keeps.count(_.isActive) === origUris.length
+            keeps.count(!_.isPrimary) === dupUris.length
+            keeps.map(_.uriId).toSet === origUris.map(_.id.get).toSet
+            keeps.foreach { keep =>
+              val ktls = ktlRepo.getAllByKeepId(keep.id.get, excludeStates = Set.empty)
+              ktls.size === 1
+              ktls.head.isPrimary === keep.isPrimary
+              ktls.head.state === keep.state
+              ktls.head.uriId === keep.uriId
+              ktls.head.visibility === keep.visibility
+            }
           }
           1 === 1
         }
