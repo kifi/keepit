@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, SequenceNumber, State }
@@ -17,9 +17,10 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getCountByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
   def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
+
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
 
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -44,8 +45,11 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 @Singleton
 class KeepToLibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock)
+  val clock: Clock,
+  keepRepoProvider: Provider[KeepRepoImpl])
     extends KeepToLibraryRepo with DbRepo[KeepToLibrary] with Logging {
+
+  lazy val keepRepo = keepRepoProvider.get
 
   override def deleteCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
   override def invalidateCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
@@ -98,14 +102,19 @@ class KeepToLibraryRepoImpl @Inject() (
     // TODO(ryan): This needs to use a cache, and fall back on a single monster query, not a bunch of tiny queries
     libraryIds.map(libId => libId -> getCountByLibraryId(libId, excludeStates)).toMap
   }
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStates).sortBy(r => (r.addedAt desc, r.keepId desc)).drop(offset.value).take(limit.value).list
-  }
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
     getByLibraryIdHelper(libraryId, excludeStates).list
   }
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
     getByLibraryIdsHelper(libraryIds, excludeStates).list.groupBy(_.libraryId)
+  }
+
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
+    val q = for (
+      (ktl, keep) <- rows innerJoin keepRepo.rows on (_.keepId === _.id) if ktl.libraryId === libraryId && ktl.state === KeepToLibraryStates.ACTIVE && keep.state === KeepStates.ACTIVE
+    ) yield (ktl, keep)
+    val sortedKeeps = q.sortBy { case (ktl, keep) => (keep.keptAt desc, keep.id desc) }.map(_._2)
+    sortedKeeps.drop(offset.value).take(limit.value).list
   }
 
   private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
