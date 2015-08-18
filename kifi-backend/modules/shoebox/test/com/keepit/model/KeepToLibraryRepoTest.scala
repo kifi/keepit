@@ -85,7 +85,7 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
 
             for (lib <- libs) {
               val expected = inject[KeepRepo].getByLibrary(lib.id.get, offset = 10, limit = 20).map(_.id.get)
-              val actual = inject[KeepToLibraryRepo].getByLibraryId(lib.id.get, offset = Offset(10), limit = Limit(20)).map(_.keepId)
+              val actual = inject[KeepToLibraryRepo].getByLibraryIdSorted(lib.id.get, offset = Offset(10), limit = Limit(20)).map(_.id.get)
               actual === expected
             }
           }
