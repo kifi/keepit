@@ -31,6 +31,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
+  def getCountManualByUserInLastDays(userId: Id[User], days: Int)(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int]
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
@@ -355,9 +356,15 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[Int].first
+    rows.filter(k => k.userId === userId && k.state === KeepStates.ACTIVE).length.run
+  }
+
+  def getCountManualByUserInLastDays(userId: Id[User], days: Int)(implicit session: RSession): Int = {
+    rows.filter(k => k.userId === userId && k.state === KeepStates.ACTIVE && k.keptAt > clock.now().minusDays(days) && k.source.inSet(KeepSource.manual)).length.run
+  }
+
+  def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+    rows.filter(k => k.userId === userId && k.source.inSet(KeepSource.manual)).map(_.keptAt).max.run
   }
 
   // TODO (this hardcodes keeper and mobile sources - update to use the Set[KeepSource]
@@ -503,11 +510,6 @@ class KeepRepoImpl @Inject() (
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc, b.library_id asc limit $count""".as[(Id[Library], Int)].list
-  }
-
-  def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    val sources: Set[KeepSource] = Set(KeepSource.keeper, KeepSource.mobile, KeepSource.email, KeepSource.site)
-    rows.filter(k => k.userId === userId && k.source.inSet(sources)).map(_.keptAt).max.run
   }
 
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {

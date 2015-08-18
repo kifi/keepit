@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.common.time._
+import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
 import org.joda.time.DateTime
 
@@ -17,6 +18,8 @@ object KeepFactory {
       urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
+      title = Some(RandomStringUtils.randomAlphabetic(20)),
+      keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = userId,
       source = KeepSource.keeper,
       libraryId = None,
@@ -46,6 +49,7 @@ object KeepFactory {
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
     def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
     def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))
+    def withUri(uri: NormalizedURI) = new PartialKeep(keep.copy(uriId = uri.id.get, url = uri.url))
     def nonPrimary() = new PartialKeep(keep.copy(isPrimary = false))
     def get: Keep = keep
   }

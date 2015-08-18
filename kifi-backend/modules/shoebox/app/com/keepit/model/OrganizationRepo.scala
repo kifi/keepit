@@ -25,8 +25,7 @@ trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organiz
 class OrganizationRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    orgCache: OrganizationCache,
-    libRepo: Provider[LibraryRepoImpl]) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    orgCache: OrganizationCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -46,15 +45,14 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
-  implicit def orgId2Key(orgId: Id[Organization]): OrganizationKey = OrganizationKey(orgId)
 
   initTable()
 
   override def deleteCache(org: Organization)(implicit session: RSession) {
-    orgCache.remove(org.id.get)
+    org.id.foreach(id => orgCache.remove(OrganizationKey(id)))
   }
   override def invalidateCache(org: Organization)(implicit session: RSession) {
-    orgCache.set(org.id.get, org)
+    org.id.foreach(id => orgCache.set(OrganizationKey(id), org))
   }
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {
@@ -74,9 +72,9 @@ class OrganizationRepoImpl @Inject() (
 
   // Be aware that this will return inactive organizations, so make sure you want the orgs you ask for
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {
-    orgCache.bulkGetOrElse(orgIds map orgId2Key) { missingKeys =>
+    orgCache.bulkGetOrElse(orgIds.map(OrganizationKey(_))) { missingKeys =>
       val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }) } yield row }
-      q.list.map { x => orgId2Key(x.id.get) -> x }.toMap
+      q.list.map { x => OrganizationKey(x.id.get) -> x }.toMap
     }.map { case (key, org) => key.id -> org }
   }
 

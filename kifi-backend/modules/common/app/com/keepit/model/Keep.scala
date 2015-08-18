@@ -44,6 +44,9 @@ case class Keep(
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
+  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
@@ -62,7 +65,8 @@ case class Keep(
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
-    visibility = lib.visibility
+    visibility = lib.visibility,
+    organizationId = lib.organizationId
   )
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
@@ -255,6 +259,8 @@ object KeepSource {
   val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
 
   val discrete = Set(keeper, site, mobile, email, twitterSync)
+
+  val manual = Set(keeper, site, mobile, email)
 
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper

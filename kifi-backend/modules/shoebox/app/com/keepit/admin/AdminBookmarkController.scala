@@ -110,7 +110,7 @@ class AdminBookmarksController @Inject() (
   def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
-      keepRepo.save(keep.copy(state = KeepStates.INACTIVE))
+      keepCommander.deactivateKeep(keep)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
@@ -242,6 +242,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
+  // TODO(ryan): slap whoever named this method
   def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
     db.readWrite { implicit session =>
       keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
@@ -273,13 +274,13 @@ class AdminBookmarksController @Inject() (
       }.toMap
       log.info(s"[Admin] populating ${keepGroup.length} keeps with hashtags in note field")
       db.readWrite { implicit s =>
-        keepGroup.map { k =>
+        keepGroup.foreach { k =>
           val newNote = keepNotesMap(k.id.get)
           log.info(s"[Admin] updating note... new:_${newNote}_ vs. original:_${k.note}_ ${newNote != k.note}")
           if (newNote != k.note) {
             log.info(s"[Admin] really updating note... ${k.id.get}")
-            val updatedK = keepRepo.save(k.copy(note = newNote))
-            log.info(s"[Admin] UPDATED! ${updatedK}")
+            val updatedK = keepCommander.updateNote(k, newNote)
+            log.info(s"[Admin] UPDATED! $updatedK")
           }
         }
       }

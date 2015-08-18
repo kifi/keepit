@@ -23,6 +23,8 @@ orgStats: OrganizationStatistics
         </td></tr>
     <tr><td>Created At</td>
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Libs prv/org/pub</td>
+        <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td></tr>
     <tr><td>Handle</td>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
@@ -95,7 +97,7 @@ orgStats: OrganizationStatistics
         <th>Member Name</th>
         <th>Role</th>
         <th>Last Keep</th>
-        <th>Lib create/follow</th>
+        <th>Lib created</th>
         <th>Keeps PRV/PUB</th>
         <th>Messages all/active/started</th>
         <th>Remove</th>
@@ -159,7 +161,7 @@ orgStats: OrganizationStatistics
     <input type="Submit" value="Add">
 </form>
 
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(orgStats.orgId)" method="GET" class="form-inline refresh-reco-list">
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgStats.orgId)" method="GET" class="form-inline refresh-reco-list">
     # of Recommendations: <input type="number" name="numMemberRecos" value="30">
     <input type="Submit" value="Refresh">
 </form>
