@@ -260,17 +260,6 @@ class UserConnectionsCommander @Inject() (
           (false, "tooManySent")
         } else {
           friendRequestRepo.getBySenderAndRecipient(recipient.id.get, senderId, activeOrIgnored) map { friendReq =>
-            for {
-              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-            } yield {
-              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                case Some(sc) =>
-                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                case None =>
-                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-              }
-            }
             userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
 
             s.onTransactionSuccess {

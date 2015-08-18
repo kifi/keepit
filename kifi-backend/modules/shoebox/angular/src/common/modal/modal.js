@@ -42,17 +42,13 @@ angular.module('kifi')
         onOpen();
       }],
       link: function (scope, element, attrs) {
-        scope.dialogStyle = {};
+        scope.dialogStyle = {
+          'width': attrs.kfWidth ? '100%' : null,
+          'max-width': attrs.kfWidth || '400px',
+          'height': attrs.kfHeight
+        };
         scope.backdropStyle = {};
         scope.noUserHide = (attrs.noUserHide !== void 0) || false;
-
-        if (attrs.kfWidth) {
-          scope.dialogStyle.width = attrs.kfWidth;
-        }
-        if (attrs.kfHeight) {
-          scope.dialogStyle.height = attrs.kfHeight;
-        }
-
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 

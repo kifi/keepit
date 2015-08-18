@@ -45,6 +45,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def pageUsersWithPotentialOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
   def countLinkedInUsersWithoutOrgs()(implicit session: RSession): Int
   def pageLinkedInUsersWithoutOrgs(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def topKeepersNotInOrgs(limit: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -376,6 +377,31 @@ class UserRepoImpl @Inject() (
           select user_id from user_experiment where experiment_type = 'fake' and state = 'active' and user_id = social_user_info.user_id
         ) and (select count(bookmark.user_id) from bookmark where bookmark.user_id = social_user_info.user_id) >= 10
         limit $size offset ${size * page};
+      """.as[Id[User]].list
+
+    val userMaps = getUsers(ids)
+
+    ids.map(id => userMaps(id))
+  }
+
+  /**
+   * this ugly query has bad performance and is used only for admin.
+   * no really good place to put it in, think this is a least bad now
+   */
+  def topKeepersNotInOrgs(limit: Int)(implicit session: RSession): Seq[User] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+
+    val ids = sql"""
+      select u.id
+      from bookmark b, user u
+      where
+        b.user_id = u.id and u.state = 'active' and b.kept_at > SUBDATE(now(),interval 7 day)
+        and b.source in ('keeper', 'mobile', 'email', 'site')
+        and u.id not in (select distinct user_id from organization_membership where state = 'active')
+        and u.id not in (select distinct user_id from user_value where name="ignore_for_potential_organizations" and value = "true")
+        group by u.id
+        order by count(*) desc
+        limit $limit
       """.as[Id[User]].list
 
     val userMaps = getUsers(ids)

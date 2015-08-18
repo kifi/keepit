@@ -6,23 +6,31 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
 import com.keepit.model._
+
+import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[KeepToLibraryCommanderImpl])
 trait KeepToLibraryCommander {
-  def internKeepInLibrary(ar: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse]
-  def removeKeepFromLibrary(dr: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse]
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary
+  def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit]
+  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit
 
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
   def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep]
-  def changeVisibility(ktl: KeepToLibrary, newVisibility: LibraryVisibility)(implicit session: RWSession): KeepToLibrary
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
+
+  def syncKeep(keep: Keep)(implicit session: RWSession): Unit
+  // TODO(ryan): make this private and expose a public method `syncLibrary(lib): Future[Unit]`
+  def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
 
 @Singleton
 class KeepToLibraryCommanderImpl @Inject() (
   db: Database,
+  clock: Clock,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -30,48 +38,34 @@ class KeepToLibraryCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
-  private def getValidationError(request: KeepToLibraryRequest)(implicit session: RSession): Option[KeepToLibraryFail] = {
-    def userCanWrite = libraryMembershipRepo.getWithLibraryIdAndUserId(request.libraryId, request.requesterId).exists(_.canWrite)
-    def keepIsActive = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).exists(ktl => ktl.isActive)
-
-    request match {
-      case _: KeepToLibraryInternRequest =>
-        if (!userCanWrite) Some(KeepToLibraryFail.INSUFFICIENT_PERMISSIONS)
-        else None
-
-      case _: KeepToLibraryRemoveRequest =>
-        if (!userCanWrite) Some(KeepToLibraryFail.INSUFFICIENT_PERMISSIONS)
-        else if (!keepIsActive) Some(KeepToLibraryFail.NOT_IN_LIBRARY)
-        else None
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary = {
+    ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStates = Set.empty) match {
+      case Some(existingKtl) if existingKtl.isActive => existingKtl
+      case existingKtlOpt =>
+        val newKtlTemplate = KeepToLibrary(
+          keepId = keep.id.get,
+          libraryId = library.id.get,
+          addedBy = addedBy,
+          addedAt = clock.now,
+          uriId = keep.uriId,
+          isPrimary = keep.isPrimary,
+          visibility = library.visibility,
+          organizationId = library.organizationId
+        )
+        ktlRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
     }
   }
 
-  def internKeepInLibrary(request: KeepToLibraryInternRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryInternResponse] = {
-    getValidationError(request).map(Left(_)).getOrElse {
-      val ktl = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId, excludeStates = Set.empty) match {
-        case Some(existingKtl) if existingKtl.isActive => existingKtl
-        case existingKtlOpt =>
-          val newKtlTemplate = KeepToLibrary(
-            keepId = request.keepId,
-            libraryId = request.libraryId,
-            addedBy = request.requesterId,
-            uriId = request.keep.uriId,
-            isPrimary = request.keep.isPrimary,
-            visibility = request.library.visibility,
-            organizationId = request.library.organizationId
-          )
-          ktlRepo.save(newKtlTemplate.copy(id = existingKtlOpt.flatMap(_.id)))
-      }
-      Right(KeepToLibraryInternResponse(ktl))
+  def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit] = {
+    ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId) match {
+      case None => Failure(KeepToLibraryFail.NOT_IN_LIBRARY)
+      case Some(activeKtl) =>
+        ktlRepo.deactivate(activeKtl)
+        Success(())
     }
   }
-
-  def removeKeepFromLibrary(request: KeepToLibraryRemoveRequest)(implicit session: RWSession): Either[KeepToLibraryFail, KeepToLibraryRemoveResponse] = {
-    getValidationError(request).map(Left(_)).getOrElse {
-      val ktl = ktlRepo.getByKeepIdAndLibraryId(request.keepId, request.libraryId).get // Guaranteed to return an active link
-      ktlRepo.deactivate(ktl)
-      Right(KeepToLibraryRemoveResponse())
-    }
+  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
   }
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
@@ -82,10 +76,23 @@ class KeepToLibraryCommanderImpl @Inject() (
     ktls.map(ktl => keepsByIds(ktl.keepId))
   }
 
-  def changeVisibility(ktl: KeepToLibrary, newVisibility: LibraryVisibility)(implicit session: RWSession): KeepToLibrary = {
-    ktlRepo.save(ktl.withVisibility(newVisibility))
-  }
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.save(ktl.withAddedBy(newOwnerId))
+  }
+
+  def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl => syncWithKeep(ktl, keep) }
+  }
+  private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
+    val obstacleKtl = ktlRepo.getPrimaryByUriAndLibrary(keep.uriId, ktl.libraryId)
+    if (obstacleKtl.exists(_.id.get != ktl.id.get) && keep.isPrimary) {
+      log.error(s"[KTL-ERROR] About to sync $ktl with $keep, but ${obstacleKtl.get} is in the way")
+    }
+    ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(keep.isPrimary))
+  }
+  def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.libraryId == library.id.get, "library.id does not match ktl.libraryId")
+    ktlRepo.save(ktl.withVisibility(library.visibility).withOrganizationId(library.organizationId))
   }
 }

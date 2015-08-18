@@ -67,7 +67,7 @@
     padding: 0 35px
 
   .dialog-buttons
-    text-align: left
+    justify-content: space-between
 
 .manage-lib-followers-info
   padding: 25px 115px
@@ -90,15 +90,18 @@
   color: white
 
 .manage-lib-input-wrapper
-  margin-bottom: 15px
+  display: flex
   margin-top: 25px
 
   &.kf-color
     font-size: 0
 
+
+.manage-lib-input-area
+  flex: 1 0 0
+
 .manage-lib-heading
-  display: inline-block
-  width: 115px
+  min-width: 100px
   padding-top: 10px
   font-size: 15px
   font-weight: bold
@@ -106,10 +109,6 @@
 
   .kf-color>&
     padding-top: 8px
-
-.manage-lib-body
-  display: inline-block
-  width: calc(100% - 120px)
 
 input.manage-lib-input
 textarea.manage-lib-input
@@ -119,7 +118,7 @@ select.manage-lib-input
   border: 1px solid #c7c7c7
   border-radius: 5px
   padding: 10px 15px
-  width: 405px
+  width: 100%
   color: textBlackColor
   vertical-align: top
   placeholder secondaryTextGray
@@ -147,8 +146,7 @@ select.manage-lib-input
 
 .manage-lib-slug
   display: table
-  margin: 5px 0 0 122px
-  width: 398px
+  margin-left: 5px
 
 .manage-lib-slug-1
   display: table-cell
@@ -175,10 +173,7 @@ select.manage-lib-input
   resize: none
 
 .manage-lib-create-visibility-wrapper
-  display: inline-block
-  width: calc(100% - 115px)
-  vertical-align: top
-  padding-top: 10px
+  padding-top: 6px
 
 .manage-lib-create-visibility-input-container
   display: inline-block
@@ -196,6 +191,7 @@ select.manage-lib-input
   height: 36px
   border-radius: 5px
   margin-right: 4px
+  margin-bottom: 4px
   position: relative
   cursor: pointer
 
@@ -224,7 +220,10 @@ button.manage-lib-delete-button
   width: 152px
 
 .manage-lib-delete-button
-  margin: 0 250px 0 20px
+  margin-left: 20px
+
+.manage-lib-save-button
+  margin-right: 20px
 
 .manage-lib-error
   text-align: center
@@ -625,7 +624,6 @@ textarea.manage-lib-sub-input
 
   &:focus
     border: 1px solid blueColor
-
 
 //
 // Delete library confirm modal

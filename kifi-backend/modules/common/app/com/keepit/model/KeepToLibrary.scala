@@ -7,6 +7,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Status
 import play.api.http.Status._
 
+import scala.util.control.NoStackTrace
+
 case class KeepToLibrary(
   id: Option[Id[KeepToLibrary]] = None,
   createdAt: DateTime = currentDateTime,
@@ -28,10 +30,16 @@ case class KeepToLibrary(
   def withUpdateTime(now: DateTime): KeepToLibrary = this.copy(updatedAt = now)
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
+  def withOrganizationId(newOrgIdOpt: Option[Id[Organization]]): KeepToLibrary = this.copy(organizationId = newOrgIdOpt)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
+  def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
+  def withPrimary(isPrimary: Boolean): KeepToLibrary = this.copy(isPrimary = isPrimary)
+  def nonPrimary: KeepToLibrary = this.withPrimary(false)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
+
+  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE).nonPrimary
 }
 
 object KeepToLibrary {
@@ -60,40 +68,15 @@ object KeepToLibrary {
 
 object KeepToLibraryStates extends States[KeepToLibrary]
 
-sealed abstract class KeepToLibraryFail(val status: Int, val message: String) {
+sealed abstract class KeepToLibraryFail(val status: Int, val message: String) extends Exception(message) with NoStackTrace {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
 object KeepToLibraryFail {
-  case object INSUFFICIENT_PERMISSIONS extends KeepToLibraryFail(FORBIDDEN, "insufficient_permissions")
   case object NOT_IN_LIBRARY extends KeepToLibraryFail(BAD_REQUEST, "keep_not_in_library")
 
   def apply(str: String): KeepToLibraryFail = {
     str match {
-      case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
       case NOT_IN_LIBRARY.message => NOT_IN_LIBRARY
     }
   }
 }
-
-sealed abstract class KeepToLibraryRequest {
-  def keepId: Id[Keep]
-  def libraryId: Id[Library]
-  def requesterId: Id[User]
-}
-
-// Unfortunately we need the full models in order to fill in the appropriate
-// denormalized fields (libraryVisibility, keepOwner, etc)
-case class KeepToLibraryInternRequest(
-    keep: Keep,
-    library: Library,
-    requesterId: Id[User]) extends KeepToLibraryRequest {
-  override def keepId = keep.id.get
-  override def libraryId = library.id.get
-}
-case class KeepToLibraryInternResponse(ktl: KeepToLibrary)
-
-case class KeepToLibraryRemoveRequest(
-  keepId: Id[Keep],
-  libraryId: Id[Library],
-  requesterId: Id[User]) extends KeepToLibraryRequest
-case class KeepToLibraryRemoveResponse(dummy: Boolean = false)

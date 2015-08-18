@@ -26,6 +26,7 @@ class MobileOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
     else {
       request.body.validate[OrganizationInitialValues](OrganizationInitialValues.mobileV1) match {
@@ -36,7 +37,7 @@ class MobileOrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt)
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
               Ok(Json.toJson(organizationView))
           }
       }
@@ -44,19 +45,21 @@ class MobileOrganizationController @Inject() (
   }
 
   def modifyOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     request.body.validate[OrganizationModifications](OrganizationModifications.mobileV1) match {
       case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
       case JsSuccess(modifications, _) =>
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt)
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
   }
 
   def deleteOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     val deleteRequest = OrganizationDeleteRequest(requesterId = request.request.userId, orgId = request.orgId)
     orgCommander.deleteOrganization(deleteRequest) match {
       case Left(fail) => fail.asErrorResponse
@@ -65,7 +68,7 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt)
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
     Ok(Json.toJson(organizationView))
   }
 

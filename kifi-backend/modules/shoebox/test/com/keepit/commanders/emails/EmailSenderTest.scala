@@ -50,10 +50,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[InviteToKifiSender]
         val toAddress = EmailAddress("taco@gmail.com")
         val inviteId = ExternalId[Invitation]()
-        val (fromUser, fromEmail) = db.readWrite { implicit rw =>
-          val user = UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
-          val emailAddress = inject[UserEmailAddressCommander].intern(user.id.get, EmailAddress("billy@gmail.com")).get._1.address
-          (user, emailAddress)
+        val fromUser = db.readWrite { implicit rw =>
+          UserFactory.user().withName("Billy", "Madison").withUsername("test").saved
         }
         val email = Await.result(sender(toAddress, fromUser.id.get, inviteId), Duration(5, "seconds"))
         outbox.size === 1
@@ -62,7 +60,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.fromName === Some("Billy Madison (via Kifi)")
         email.from === SystemEmailAddress.INVITATION
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
-        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromEmail.address
+        email.extraHeaders === None
 
         val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email", "kcid=na-vf_email-kifi_invite")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
@@ -443,7 +441,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
-        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
@@ -497,7 +495,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
-        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("Hi Aaron") === true
@@ -525,7 +523,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
-        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "I want to collaborate with you on Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("Hi Aaron") === true
@@ -580,7 +578,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
-        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("check this out!") === true

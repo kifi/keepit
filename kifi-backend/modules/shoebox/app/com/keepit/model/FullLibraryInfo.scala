@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -110,6 +111,10 @@ case class LibraryModifyRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None)
+
+case class LibraryModifyResponse(
+  modifiedLibrary: Library,
+  keepChanges: Future[Unit])
 
 case class LibraryInfo(
   id: PublicId[Library],

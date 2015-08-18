@@ -49,12 +49,9 @@ trait OrganizationAccessActions {
         case Success(orgId) =>
           maybeRequest match {
             case request: UserRequest[_] if request.experiments.contains(UserExperimentType.ORGANIZATION) =>
-              val userIdOpt: Option[Id[User]] = request match {
-                case userRequest: UserRequest[A] => Some(userRequest.userId)
-                case _ => None
-              }
+              val userId = request.userId
               val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
-              val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
+              val memberPermissions = orgMembershipCommander.getPermissions(orgId, Some(userId))
               if (requiredPermissionsSet.subsetOf(memberPermissions)) {
                 block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
               } else {
@@ -68,7 +65,6 @@ trait OrganizationAccessActions {
                 Future.successful(OrganizationFail.INVALID_AUTHTOKEN.asErrorResponse)
               }
             case _ => Future.successful(NotFound) // we can remove this after we remove the OrgExperiment guard
-
           }
         case _ =>
           Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)

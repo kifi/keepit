@@ -4,23 +4,25 @@
 
 @userSetDescription = {
     @userData.userViewType match {
-        case AllUsersViewType => {Total Users}
-        case RegisteredUsersViewType => {Registered Users}
-        case FakeUsersViewType => {Fake Users}
-        case ByExperimentUsersViewType(exp) => {@exp.value}
-        case UsersPotentialOrgsViewType => {Users with Potential Organizations}
-        case LinkedInUsersWithoutOrgsViewType => {LinkedIn Users without Organizations}
+        case All => {Total Users}
+        case TopKeepersNotInOrg => {Top Orgless Keepers}
+        case Registered => {Registered Users}
+        case Fake => {Fake Users}
+        case ByExperiment(exp) => {@exp.value}
+        case UsersPotentialOrgs => {Users with Potential Organizations}
+        case LinkedInUsersWithoutOrgs => {LinkedIn Users without Organizations}
     }
 }
 
 @otherPagesRoute(page: Int) = {
     @userData.userViewType match {
-        case AllUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersView(page)}
-        case RegisteredUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.registeredUsersView(page)}
-        case FakeUsersViewType => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
-        case ByExperimentUsersViewType(exp) => {@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(page, exp.value)}
-        case UsersPotentialOrgsViewType => {@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(page)}
-        case LinkedInUsersWithoutOrgsViewType => {@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(page)}
+        case All => {@com.keepit.controllers.admin.routes.AdminUserController.usersView(page)}
+        case TopKeepersNotInOrg => {@com.keepit.controllers.admin.routes.AdminUserController.topKeepersNotInOrg()}
+        case Registered => {@com.keepit.controllers.admin.routes.AdminUserController.registeredUsersView(page)}
+        case Fake => {@com.keepit.controllers.admin.routes.AdminUserController.fakeUsersView(page)}
+        case ByExperiment(exp) => {@com.keepit.controllers.admin.routes.AdminUserController.byExperimentUsersView(page, exp.value)}
+        case UsersPotentialOrgs => {@com.keepit.controllers.admin.routes.AdminUserController.usersPotentialOrgsView(page)}
+        case LinkedInUsersWithoutOrgs => {@com.keepit.controllers.admin.routes.AdminUserController.linkedInUsersWithoutOrgsView(page)}
     }
 }
 

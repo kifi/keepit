@@ -1,6 +1,7 @@
 @(user: User,
   userThreadStats: com.keepit.eliza.model.UserThreadStats,
-  totalBookmarks: Int,
+  totalKeeps: Int,
+  manualKeepsLastWeek: Int,
   organizations: Seq[Organization],
   candidateOrganizations: Seq[Organization],
   experiments: Set[UserExperimentType],
@@ -53,7 +54,10 @@
         <th>External services</th><td><a href="https://mixpanel.com/report/311211/explore/#user?distinct_id=@{user.externalId.id}">Mixpanel Profile</a>, <a href="https://mixpanel.com/report/311211/live/#chosen_columns:!('$browser','$city',mp_country_code,distinct_id,'$referring_domain'),column_widths:!(200,100,122,84,118,141,170),query:(distinct_ids:!(),is_or_query:!f,on:'properties%5B%22userId%22%5D%20%3D%3D%201',property_selectors:!((defaults:(filter_state:(),human_readable_params:!(),query:''),distinct_id_operator:and,distinct_ids:!(),human_readable_params:!((type:property,val:userId),(type:operator,val:equals),(type:operand,val:@{user.id.get.id})),query:'properties%5B%22userId%22%5D%20%3D%3D%201',valid_segfilter:(filters:!((filter:(operand:'@{user.id.get.id}',operator:%3D%3D),property:userId,selected_property_type:number,type:number)),op:and))))">Mixpanel Live View</a>, <a href="https://www.linkedin.com/vsearch/p?orig=TRNV&keywords=@{user.firstName}+@{user.lastName}">LinkedIn Search by name</a></td>
       </tr>
       <tr>
-        <th>Total Keeps</th><td>@totalBookmarks</td>
+        <th>Total Keeps</th><td>@totalKeeps</td>
+      </tr>
+      <tr>
+        <th>Manual Keeps Last Week</th><td>@manualKeepsLastWeek</td>
       </tr>
       <tr>
         <th>Messages all/active/started</th><td>@{userThreadStats.all}/@{userThreadStats.active}/@{userThreadStats.started}</td>
@@ -90,7 +94,7 @@
                       <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="form-inline add-candidate">
                           <span style="margin : 2 px">
                               <a data-hover="tooltip" title="@org.description+"
-                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(org.id.get)">
                                   @org.name
                               </a> <a href="https://www.kifi.com/@{org.handle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-potential-candidate-input" name="user-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
                           </span>
@@ -109,7 +113,7 @@
                         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(org.id.get)" method="POST" class="add-candidate" style="display: inline">
                           <span style="margin : 2 px">
                               <a data-hover="tooltip" title="@org.description+"
-                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewById(org.id.get)">
+                                 class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(org.id.get)">
                                   @org.name : @score
                               </a> <a href="https://www.kifi.com/@{org.handle.value}"><span style="font-family : 'Segoe UI Symbol' ; color : black ; font-size : 10 px ;">♡</span></a> <input type="hidden" id="add-recommended-candidate-input" name="user-id" value="@{user.id.get.id}"> <input type="Submit" value="Add candidate">
                           </span>
