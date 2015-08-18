@@ -18,6 +18,7 @@ angular.module('kifi')
       scope.notification = null;
 
       var authToken = $location.search().authToken || '';
+      scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
@@ -90,7 +91,7 @@ angular.module('kifi')
 
       scope.shouldShowInviteBanner = function () {
         // TODO: Check if this user is a member already
-        return profileService.userLoggedIn() && scope.membership.isInvited && !scope.acknowledgedInvite;
+        return profileService.userLoggedIn() && scope.membership.invite && !scope.acknowledgedInvite;
       };
 
       scope.shouldShowSignupBanner = function () {
