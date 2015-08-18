@@ -470,12 +470,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo] = {
-    val inviteOpt = (viewerIdOpt, authTokenOpt) match {
-      case (Some(viewerId), None) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId)
-      case (None, Some(authToken)) => getInviteByOrganizationIdAndAuthToken(orgId, authToken)
-      case (Some(viewerId), Some(authToken)) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId).orElse(getInviteByOrganizationIdAndAuthToken(orgId, authToken))
-      case _ => None
-    }
+    val userInviteOpt = viewerIdOpt.flatMap(getLastSentByOrganizationIdAndInviteeId(orgId, _))
+    val authTokenInviteOpt = authTokenOpt.flatMap(getInviteByOrganizationIdAndAuthToken(orgId, _))
+    val inviteOpt = userInviteOpt.orElse(authTokenInviteOpt)
     inviteOpt.map { invite =>
       val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
       OrganizationInviteInfo.fromInvite(invite, inviter)
