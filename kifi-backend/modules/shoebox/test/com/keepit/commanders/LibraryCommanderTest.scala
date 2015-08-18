@@ -531,6 +531,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           response4 must beRight
         }
       }
+      "correctly change all the denormalized library fields on keeps/ktls" in {
+        withDb(modules: _*) { implicit injector =>
+          
+        }
+      }
     }
 
     "remove library, memberships & invites" in {
