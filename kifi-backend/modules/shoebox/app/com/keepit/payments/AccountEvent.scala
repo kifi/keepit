@@ -164,7 +164,7 @@ case class AccountEvent(
 object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
 
   protected[this] val publicIdPrefix = "ae"
-  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-57, -50, -59, -20, 87, -37, -64, 34, -84, -42, 10, 118, 40, -17, -23, -93))
 
   def applyFromDbRow(
     id: Option[Id[AccountEvent]],

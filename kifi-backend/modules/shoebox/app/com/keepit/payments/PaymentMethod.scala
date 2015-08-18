@@ -28,7 +28,7 @@ case class PaymentMethod(
 object PaymentMethod extends ModelWithPublicIdCompanion[PaymentMethod] {
 
   protected[this] val publicIdPrefix = "pm"
-  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-27, 11, 110, 93, 103, 55, -9, -3, -10, 73, -17, -49, -97, -78, 29, 78))
 
   def applyFromDbRow(id: Option[Id[PaymentMethod]], createdAt: DateTime, updatedAt: DateTime, state: State[PaymentMethod], accountId: Id[PaidAccount], default: Option[Boolean], stripeToken: StripeToken) = {
     PaymentMethod(id, createdAt, updatedAt, state, accountId, default.exists(b => b), stripeToken)

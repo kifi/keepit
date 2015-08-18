@@ -27,7 +27,7 @@ case class PaidPlan(
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
-  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
 }
 
 object PaidPlanStates extends States[PaidPlan] {
