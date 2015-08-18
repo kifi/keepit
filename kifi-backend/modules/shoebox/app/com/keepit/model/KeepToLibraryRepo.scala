@@ -1,9 +1,10 @@
 package com.keepit.model
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ Id, SequenceNumber, State }
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
@@ -45,11 +46,36 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 @Singleton
 class KeepToLibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock,
-  keepRepoProvider: Provider[KeepRepoImpl])
+  val clock: Clock)
     extends KeepToLibraryRepo with DbRepo[KeepToLibrary] with Logging {
 
-  lazy val keepRepo = keepRepoProvider.get
+  private implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
+  private implicit val getKeepResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
+    Keep._applyFromDbRow(
+      id = r.<<[Option[Id[Keep]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      externalId = r.<<[ExternalId[Keep]],
+      title = r.<<[Option[String]],
+      uriId = r.<<[Id[NormalizedURI]],
+      isPrimary = r.<<[Option[Boolean]],
+      urlId = r.<<[Id[URL]],
+      url = r.<<[String],
+      isPrivate = r.<<[Boolean],
+      userId = r.<<[Id[User]],
+      state = r.<<[State[Keep]],
+      source = r.<<[KeepSource],
+      kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
+      seq = r.<<[SequenceNumber[Keep]],
+      libraryId = r.<<[Option[Id[Library]]],
+      visibility = r.<<[LibraryVisibility],
+      keptAt = r.<<[DateTime],
+      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
+      note = r.<<[Option[String]],
+      originalKeeperId = r.<<[Option[Id[User]]],
+      organizationId = r.<<[Option[Id[Organization]]]
+    )
+  }
 
   override def deleteCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
   override def invalidateCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
@@ -110,11 +136,14 @@ class KeepToLibraryRepoImpl @Inject() (
   }
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
-    val q = for (
-      (ktl, keep) <- rows innerJoin keepRepo.rows on (_.keepId === _.id) if ktl.libraryId === libraryId && ktl.state === KeepToLibraryStates.ACTIVE && keep.state === KeepStates.ACTIVE
-    ) yield (ktl, keep)
-    val sortedKeeps = q.sortBy { case (ktl, keep) => (keep.keptAt desc, keep.id desc) }.map(_._2)
-    sortedKeeps.drop(offset.value).take(limit.value).list
+    // N.B.: Slick is NOT GOOD at joins (as of 2015-08-18). This query is hand-written for a reason.
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select k.* from
+                  keep_to_library ktl inner join bookmark k on (ktl.keep_id = k.id)
+                  where ktl.library_id = $libraryId and ktl.state = 'active' and k.state = 'active'
+                  order by k.kept_at desc, k.id desc
+                  limit ${limit.value} offset ${offset.value};"""
+    q.as[Keep].list
   }
 
   private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
