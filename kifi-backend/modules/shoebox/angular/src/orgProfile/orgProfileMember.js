@@ -20,9 +20,9 @@ angular.module('kifi')
       );
     }
 
-    function _resentInvite() {
+    function _getResentInvite() {
       var $scope = this;
-      return $scope._resentInvite;
+      return $scope.model.resentInvite;
     }
 
     function _hasAcceptedInvite() {
@@ -93,8 +93,7 @@ angular.module('kifi')
       var $scope = this;
       $scope.$emit('inviteMember', $scope.member, function (promise) {
         promise.then(function () {
-          // TODO: WHY $scope.$parent??? Is it because ng-if creates a new scope?
-          $scope.$parent._resentInvite = true;
+          $scope.model.resentInvite = true;
         });
       });
     }
@@ -147,7 +146,7 @@ angular.module('kifi')
 
     function _role() {
       var $scope = this;
-      return ($scope.hasAcceptedInvite() ? '' : 'Pending') +
+      return ($scope.hasAcceptedInvite() ? '' : 'Pending ') +
         ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
     }
 
@@ -167,7 +166,7 @@ angular.module('kifi')
           }
         });
 
-        $scope._resentInvite = false;
+        $scope.model = { resentInvite: false }; // assign primitive to reference
         $scope._controlsOpen = false;
 
         $scope.open = function() {
@@ -178,7 +177,7 @@ angular.module('kifi')
         $scope.close = function() {
           if ($scope.controlsOpen) {
             $scope.controlsOpen = false;
-            $scope.resentInvite = false;
+            $scope.model.resentInvite = false;
             $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
           }
         };
@@ -198,7 +197,7 @@ angular.module('kifi')
         $scope.isMe = _isMe;
         $scope.isMeAndOwner = _isMeAndOwner;
 
-        $scope.resentInvite = _resentInvite;
+        $scope.getResentInvite = _getResentInvite;
 
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
         $scope.shouldShowMakeOwner = _shouldShowMakeOwner;

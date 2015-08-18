@@ -19,9 +19,11 @@ trait KeepToLibraryCommander {
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
   def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep]
-  def changeVisibility(ktl: KeepToLibrary, newVisibility: LibraryVisibility)(implicit session: RWSession): KeepToLibrary
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
-  def changeUriIdForKeep(keep: Keep, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit
+
+  def syncKeep(keep: Keep)(implicit session: RWSession): Unit
+  // TODO(ryan): make this private and expose a public method `syncLibrary(lib): Future[Unit]`
+  def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
 
 @Singleton
@@ -42,6 +44,7 @@ class KeepToLibraryCommanderImpl @Inject() (
           keepId = keep.id.get,
           libraryId = library.id.get,
           addedBy = addedBy,
+          addedAt = keep.keptAt, // TODO(ryan): take this out once we're ready to have keeps in multiple libraries
           uriId = keep.uriId,
           isPrimary = keep.isPrimary,
           visibility = library.visibility,
@@ -71,21 +74,23 @@ class KeepToLibraryCommanderImpl @Inject() (
     ktls.map(ktl => keepsByIds(ktl.keepId))
   }
 
-  def changeVisibility(ktl: KeepToLibrary, newVisibility: LibraryVisibility)(implicit session: RWSession): KeepToLibrary = {
-    ktlRepo.save(ktl.withVisibility(newVisibility))
-  }
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.save(ktl.withAddedBy(newOwnerId))
   }
 
-  def softRequire(b: Boolean, m: String): Unit = if (!b) airbrake.notify(m)
-  def changeUriIdForKeep(keep: Keep, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    softRequire(keep.uriId == newUriId, "URI and Keep don't match.") // TODO(ryan): once you're not scared of this anymore, change it to a hard `require`
-    ktlRepo.getPrimaryByUriAndLibrary(newUriId, keep.libraryId.get).foreach { obstacleKtl =>
-      log.error(s"[KTL-ERROR] Trying to change ${keep.id.get}'s URI to $newUriId but there is already a primary URI in library: $obstacleKtl")
+  def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl => syncWithKeep(ktl, keep) }
+  }
+  private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
+    val obstacleKtl = ktlRepo.getPrimaryByUriAndLibrary(keep.uriId, ktl.libraryId)
+    if (obstacleKtl.exists(_.id.get != ktl.id.get) && keep.isPrimary) {
+      log.error(s"[KTL-ERROR] About to sync $ktl with $keep, but ${obstacleKtl.get} is in the way")
     }
-    ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl =>
-      ktlRepo.save(ktl.withUriId(newUriId))
-    }
+    ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(keep.isPrimary))
+  }
+  def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {
+    require(ktl.libraryId == library.id.get, "library.id does not match ktl.libraryId")
+    ktlRepo.save(ktl.withVisibility(library.visibility).withOrganizationId(library.organizationId))
   }
 }
