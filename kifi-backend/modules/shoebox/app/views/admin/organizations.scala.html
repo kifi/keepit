@@ -18,7 +18,9 @@
    <ul>
        <li>Members: @orgs.map(_.members).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
        <li>Candidates: @orgs.map(_.candidates).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
-       <li>Libraries: @orgs.map(_.numLibraries).sum</li>
+       <li>Private Libraries: @orgs.map(_.libStats.privateLibCount).sum</li>
+       <li>Org Libraries: @orgs.map(_.libStats.protectedLibCount).sum</li>
+       <li>Public Libraries: @orgs.map(_.libStats.publicLibCount).sum</li>
        <li>Keeps: @orgs.map(_.numKeeps).sum</li>
        <li>Internal Chats: @orgs.map(_.internalMemberChatStats).sum</li>
        <li>All Chats: @orgs.map(_.allMemberChatStats).sum</li>
@@ -33,7 +35,7 @@
                 <th>Name</th>
                 <th>Members</th>
                 <th>Membership candidates</th>
-                <th>Org libraries</th>
+                <th>Libs prv/org/pub</th>
                 <th>Org keeps</th>
                 <th>Chats between members</th>
                 <th>All member chats</th>
@@ -45,7 +47,7 @@
                     <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
                     <td>@orgStats.members.filterNot(_.id == fakeOwnerId).size</td>
                     <td>@orgStats.candidates.filterNot(_.id == fakeOwnerId).size</td>
-                    <td>@orgStats.numLibraries</td>
+                    <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td>
                     <td>@orgStats.numKeeps</td>
                     <td>@orgStats.internalMemberChatStats</td>
                     <td>@orgStats.allMemberChatStats</td>
