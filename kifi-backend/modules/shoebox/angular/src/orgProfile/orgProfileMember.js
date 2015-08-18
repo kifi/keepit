@@ -116,6 +116,7 @@ angular.module('kifi')
         member: $scope.member,
         returnAction: function () {
           $scope.$emit('resetAndFetch');
+          $scope.organization.ownerId = $scope.member.id
         }
       };
       for (var i=0, len=$scope.members.length; i < len; i++) {
@@ -124,6 +125,7 @@ angular.module('kifi')
         }
       }
       modalService.open({
+        // TODO: Template name needs to be longer
         template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
         modalData: opts
       });
