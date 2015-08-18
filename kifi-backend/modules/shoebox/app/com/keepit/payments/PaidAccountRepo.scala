@@ -12,6 +12,8 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
+  def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount]
+  def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
 }
 
 @Singleton
@@ -43,6 +45,14 @@ class PaidAccountRepoImpl @Inject() (
 
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount] = {
     (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).firstOption
+  }
+
+  def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount] = {
+    (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row.id).first
+  }
+
+  def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if row.planId === planId && row.state === PaidAccountStates.ACTIVE) yield row).list
   }
 
 }

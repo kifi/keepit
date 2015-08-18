@@ -20,6 +20,10 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
 
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+
 }
 
 @Singleton
@@ -31,7 +35,7 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, Long](_.id, EventGroup(_))
+  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
 
   type RepoImpl = AccountEventTable
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "paid_plan") {
@@ -68,6 +72,22 @@ class AccountEventRepoImpl @Inject() (
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent] = {
     (for (row <- rows if row.accountId === accountId && row.state === state) yield row).list
+  }
+
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
+      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(_.eventTime desc).take(limit).list
+    } getOrElse {
+      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(_.eventTime desc).take(limit).list
+    }
+  }
+
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
+      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(_.eventTime desc).take(limit).list
+    } getOrElse {
+      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(_.eventTime desc).take(limit).list
+    }
   }
 
 }
