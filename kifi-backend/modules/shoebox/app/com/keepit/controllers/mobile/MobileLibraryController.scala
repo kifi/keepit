@@ -97,7 +97,7 @@ class MobileLibraryController @Inject() (
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
-      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
+      case Right(response) => Ok(Json.toJson(constructLibraryInfo(response.modifiedLibrary)))
     }
   }
 
