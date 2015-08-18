@@ -19,7 +19,6 @@ trait KeepToLibraryCommander {
 
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
-  def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep]
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
@@ -70,10 +69,6 @@ class KeepToLibraryCommanderImpl @Inject() (
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId).isDefined
-  }
-  def getKeeps(ktls: Seq[KeepToLibrary])(implicit session: RSession): Seq[Keep] = {
-    val keepsByIds = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-    ktls.map(ktl => keepsByIds(ktl.keepId))
   }
 
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
