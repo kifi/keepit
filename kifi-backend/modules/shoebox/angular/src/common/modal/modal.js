@@ -44,7 +44,7 @@ angular.module('kifi')
       link: function (scope, element, attrs) {
         scope.dialogStyle = {
           'width': '100%',
-          'max-width': attrs.kfWidth || '550px',
+          'max-width': attrs.kfWidth || '400px',
           'height': attrs.kfHeight
         };
         scope.backdropStyle = {};
