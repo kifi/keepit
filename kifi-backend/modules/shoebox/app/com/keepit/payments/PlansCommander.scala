@@ -34,14 +34,14 @@ trait PlanManagementCommander {
   def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Unit
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress])
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, adminWho: Option[Id[User]], memo: Option[String]): Unit
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): Unit
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan
   def grandfatherPlan(id: Id[PaidPlan]): Unit
   def deactivatePlan(id: Id[PaidPlan]): Unit
 
-  def getAvailablePlans(adminWho: Option[Id[User]] = None): Seq[PaidPlan]
+  def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Unit
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
@@ -196,7 +196,7 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, adminWho: Option[Id[User]], memo: Option[String]): Unit = db.readWrite { implicit session =>
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): Unit = db.readWrite { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId) match {
       case Some(account) => account
       case None => throw new InvalidChange("account_does_not_exists")
@@ -205,7 +205,7 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = account.id.get,
-      attribution = ActionAttribution(user = None, admin = adminWho),
+      attribution = ActionAttribution(user = None, admin = grantedByAdmin),
       action = AccountEventAction.SpecialCredit()
     ))
   }
@@ -246,8 +246,8 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  def getAvailablePlans(adminWho: Option[Id[User]] = None): Seq[PaidPlan] = db.readOnlyMaster { implicit session =>
-    val states = if (adminWho.isDefined) Set(PaidPlanStates.ACTIVE, PaidPlanStates.CUSTOM) else Set(PaidPlanStates.ACTIVE)
+  def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan] = db.readOnlyMaster { implicit session =>
+    val states = if (grantedByAdmin.isDefined) Set(PaidPlanStates.ACTIVE, PaidPlanStates.CUSTOM) else Set(PaidPlanStates.ACTIVE)
     paidPlanRepo.getByStates(states)
   }
 
