@@ -6,7 +6,6 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.model._
 
 import scala.util.{ Success, Failure, Try }
@@ -30,7 +29,6 @@ trait KeepToLibraryCommander {
 @Singleton
 class KeepToLibraryCommanderImpl @Inject() (
   db: Database,
-  clock: Clock,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -46,7 +44,7 @@ class KeepToLibraryCommanderImpl @Inject() (
           keepId = keep.id.get,
           libraryId = library.id.get,
           addedBy = addedBy,
-          addedAt = clock.now,
+          addedAt = keep.keptAt, // TODO(ryan): take this out once we're ready to have keeps in multiple libraries
           uriId = keep.uriId,
           isPrimary = keep.isPrimary,
           visibility = library.visibility,
