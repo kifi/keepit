@@ -37,7 +37,7 @@ class MobileOrganizationController @Inject() (
             case Left(failure) =>
               failure.asErrorResponse
             case Right(response) =>
-              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt.map(Left(_)))
+              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
               Ok(Json.toJson(organizationView))
           }
       }
@@ -52,7 +52,7 @@ class MobileOrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt.map(Left(_)))
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -68,7 +68,7 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt.map(Left(_)))
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
     Ok(Json.toJson(organizationView))
   }
 

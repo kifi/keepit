@@ -136,7 +136,8 @@ class LibraryController @Inject() (
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
-      case Right(lib) =>
+      case Right(response) =>
+        val lib = response.modifiedLibrary
         val (owner, membership, org) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
