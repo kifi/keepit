@@ -51,7 +51,7 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
     friend <- GetUser(event.friendId, "friend")
     image <- GetUserImage(event.friendId, "friendImage")
   } yield NotificationInfo(
-    path = Path(friend.username.value),
+    url = Path(friend.username.value).encode.absolute,
     imageUrl = image,
     title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
     body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",

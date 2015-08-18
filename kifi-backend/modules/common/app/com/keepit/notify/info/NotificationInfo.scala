@@ -6,7 +6,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class NotificationInfo(
-  path: Path,
+  url: String,
   imageUrl: String,
   title: String,
   body: String,
@@ -16,7 +16,7 @@ case class NotificationInfo(
 object NotificationInfo {
 
   implicit val format = (
-    (__ \ "path").format[Path] and
+    (__ \ "url").format[String] and
     (__ \ "imageUrl").format[String] and
     (__ \ "title").format[String] and
     (__ \ "body").format[String] and

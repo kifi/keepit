@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.eliza.commanders.NotificationDeliveryCommander
 import com.keepit.eliza.model.NotificationItem
 import com.keepit.model.NotificationCategory
-import com.keepit.notify.info.{ NotificationInfo, NotificationInfoGenerator }
+import com.keepit.notify.info.{ NotificationInfo }
 import com.keepit.notify.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 

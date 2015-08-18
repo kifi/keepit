@@ -3,14 +3,16 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
-import com.keepit.notify.info.NeedsInfo.UsingAll
+import com.keepit.notify.info.NeedsInfo.Using
 import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, PickOne, GetUser }
-import com.keepit.notify.info.{ NeedsInfo, NotificationInfo, ReturnsInfoResult }
+import com.keepit.notify.info._
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.Future
 
 trait ConnectionEvent extends NotificationEvent
 
@@ -37,17 +39,18 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 
   override val info = {
     import NeedsInfo._
-    event[NewConnectionInvite].usingOne(evt => (user(evt.inviterId), userImage(evt.inviterId))) {
-      case result(evt, (get(user), get(userImage))) => NotificationInfo(
-        path = Path(user.username.value),
-        title = s"${user.firstName} ${user.lastName} wants to connect with you on Kifi",
-        body = s"Enjoy ${user.firstName}’s keeps in your search results and message ${user.firstName} directly.",
-        linkText = s"Respond to ${user.firstName}’s invitation",
-        imageUrl = userImage,
-        extraJson = Some(Json.obj(
-          "friend" -> BasicUser.fromUser(user)
-        ))
-      )
+    from[NewConnectionInvite].usingOne(evt => user(evt.inviterId, "inviter") :: userImage(evt.inviterId, "inviterImage") :: NINil) {
+      case Results(inviter :: inviterImage :: ResultNil) =>
+        NotificationInfo(
+          url = Path(inviter.username.value).encode.absolute,
+          title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
+          body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
+          linkText = s"Respond to ${inviter.firstName}’s invitation",
+          imageUrl = inviterImage,
+          extraJson = Some(Json.obj(
+            "friend" -> BasicUser.fromUser(inviter)
+          ))
+        )
     }
   }
 
@@ -76,19 +79,19 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 
   override val info = {
     import NeedsInfo._
-    event[ConnectionInviteAccepted].usingOne(evt => (user(evt.accepterId), userImage(evt.accepterId))) {
-      case result(evt, (get(user), get(userImage))) => NotificationInfo(
-        path = Path(user.username.value),
-        title = s"${user.firstName} ${user.lastName} accepted your invitation to connect!",
-        body = s"Now you will enjoy ${user.firstName}’s keeps in your search results and message ${user.firstName} directly.",
-        linkText = s"Visit ${user.firstName}’s profile",
-        imageUrl = userImage,
-        extraJson = Some(Json.obj(
-          "friend" -> BasicUser.fromUser(user)
-        ))
-      )
+    from[ConnectionInviteAccepted].usingOne(evt => user(evt.accepterId, "accepter") :: userImage(evt.accepterId, "accepterImage") :: NINil) {
+      case Results(accepter :: accepterImage :: ResultNil) =>
+        NotificationInfo(
+          url = Path(accepter.username.value).encode.absolute,
+          title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
+          body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
+          linkText = s"Visit ${accepter.firstName}’s profile",
+          imageUrl = accepterImage,
+          extraJson = Some(Json.obj(
+            "friend" -> BasicUser.fromUser(accepter)
+          ))
+        )
     }
   }
 
 }
-

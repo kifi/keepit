@@ -4,8 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, Keep, Library, User }
 import com.keepit.common.time._
-import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, GetUser, PickOne }
-import com.keepit.notify.info.{ Args, NotificationInfo, ReturnsInfo, ReturnsInfoResult }
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._

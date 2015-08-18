@@ -39,7 +39,7 @@ trait NotificationKind[N <: NotificationEvent] {
    */
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
 
-  val info: NeedsInfo.Using[N, _ <: Product, _] = ???
+  val info: NeedsInfo.Using[N, _, _]
 
 }
 
