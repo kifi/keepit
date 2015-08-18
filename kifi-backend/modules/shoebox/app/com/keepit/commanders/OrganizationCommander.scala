@@ -20,7 +20,7 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
-  def getOrganizationView(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]]): OrganizationView
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
@@ -55,10 +55,10 @@ class OrganizationCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
-  def getOrganizationView(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]]): OrganizationView = {
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
-      val organizationInfo = getOrganizationInfoHelper(orgId, viewerInfoOpt.flatMap(_.left.toOption))
-      val membershipInfo = getMembershipInfoHelper(orgId, viewerInfoOpt)
+      val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
     }
   }
@@ -106,12 +106,12 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numLibraries)
   }
 
-  private def getMembershipInfoHelper(orgId: Id[Organization], viewerInfoOpt: Option[Either[Id[User], String]])(implicit session: RSession): OrganizationMembershipInfo = {
-    viewerInfoOpt.map { userIdOrAuthToken =>
-      val membershipOpt = userIdOrAuthToken.left.toOption.flatMap(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId))
-      val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, userIdOrAuthToken)
-      OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
-    }.getOrElse(OrganizationMembershipInfo(isInvited = false, invite = None, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationMembershipInfo = {
+    val membershipOpt = viewerIdOpt.flatMap { viewerId =>
+      orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
+    }
+    val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
+    OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {

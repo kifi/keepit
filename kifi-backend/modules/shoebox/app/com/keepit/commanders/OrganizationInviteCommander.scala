@@ -40,7 +40,7 @@ trait OrganizationInviteCommander {
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
-  def getViewerInviteInfo(orgId: Id[Organization], userIdOrAuth: Either[Id[User], String]): Option[OrganizationInviteInfo]
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
 }
 
 @Singleton
@@ -469,14 +469,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
   }
 
-  def getViewerInviteInfo(orgId: Id[Organization], userIdOrAuth: Either[Id[User], String]): Option[OrganizationInviteInfo] = {
-    userIdOrAuth.fold(
-      { userId => getLastSentByOrganizationIdAndInviteeId(orgId, userId) },
-      { authToken => getInviteByOrganizationIdAndAuthToken(orgId, authToken) }
-    ).map {
-        invite: OrganizationInvite =>
-          val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
-          OrganizationInviteInfo.fromInvite(invite, inviter)
-      }
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo] = {
+    val inviteOpt = (viewerIdOpt, authTokenOpt) match {
+      case (Some(viewerId), None) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId)
+      case (None, Some(authToken)) => getInviteByOrganizationIdAndAuthToken(orgId, authToken)
+      case (Some(viewerId), Some(authToken)) => getLastSentByOrganizationIdAndInviteeId(orgId, viewerId).orElse(getInviteByOrganizationIdAndAuthToken(orgId, authToken))
+      case _ => None
+    }
+    inviteOpt.map { invite =>
+      val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
+      OrganizationInviteInfo.fromInvite(invite, inviter)
+    }
   }
 }
