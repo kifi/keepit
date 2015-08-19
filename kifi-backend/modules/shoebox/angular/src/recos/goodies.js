@@ -16,8 +16,6 @@ angular.module('kifi')
           return installService.installState;
         };
 
-        scope.canRunOnboarding = installService.isValidChrome;
-
         scope.triggerInstall = function () {
           installService.triggerInstall(function () {
             modalService.open({
