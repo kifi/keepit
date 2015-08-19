@@ -18,13 +18,14 @@ angular.module('kifi')
       scope.notification = null;
 
       var authToken = $location.search().authToken || '';
+      scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
 
       if (!profileService.userLoggedIn() && scope.profile && authToken) {
-        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken});
+        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
       }
 
       scope.undo = function () {
@@ -89,11 +90,14 @@ angular.module('kifi')
       };
 
       scope.shouldShowInviteBanner = function () {
-        // TODO: Check if this user is a member already
-        return scope.membership.isInvited && !scope.acknowledgedInvite;
+        return profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !scope.acknowledgedInvite;
       };
 
-      scope.bannerButtons = [
+      scope.shouldShowSignupBanner = function () {
+        return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
+      };
+
+      scope.inviteBannerButtons = [
         {
           label: 'Decline',
           className: 'kf-decline',
@@ -113,6 +117,16 @@ angular.module('kifi')
                 orgProfileService.invalidateOrgProfileCache();
                 $state.reload();
               });
+          }
+        }
+      ];
+
+      scope.signupBannerButtons = [
+        {
+          label: 'Accept',
+          className: 'kf-accept',
+          click: function () {
+            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite });
           }
         }
       ];

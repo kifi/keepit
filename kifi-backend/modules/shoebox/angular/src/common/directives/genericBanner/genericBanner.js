@@ -10,7 +10,8 @@ angular.module('kifi')
         text: '@',
         actions: '=',
         icon: '=',
-        variation: '='
+        variation: '=',
+        thumb: '@'
       },
       replace: true,
       link: function () {

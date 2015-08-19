@@ -120,6 +120,10 @@ angular.module('kifi')
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
 
+      var libAuthTokenQueryString = params.libAuthToken ? 'authToken='+params.libAuthToken : '';
+      var orgAuthTokenQueryString = params.orgAuthToken ? 'authToken='+params.orgAuthToken : '';
+      $scope.authTokenQueryParam = params.intent === 'follow' ? libAuthTokenQueryString : orgAuthTokenQueryString;
+
       $scope.emailSubmitted = false;
 
       setModalScope(modalService.open({
