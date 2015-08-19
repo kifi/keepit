@@ -68,7 +68,7 @@ angular.module('kifi')
           libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedShareTwitter'});
           event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
             original_referer: scope.library.absUrl,
-            text: 'Discover this amazing @Kifi library about ' + scope.library.name + '!',
+            text: 'Check out this @Kifi library about ' + scope.library.name + '!',
             tw_p: 'tweetbutton',
             url: scope.library.absUrl +
               '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
