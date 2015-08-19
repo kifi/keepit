@@ -1,26 +1,25 @@
 package com.keepit.integrity
 
-import com.keepit.commanders.{ KeepToLibraryCommander, KeepsCommander }
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.model._
+import akka.pattern.{ ask, pipe }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.time._
+import com.keepit.commanders.{ KeepToUserCommander, KeepToLibraryCommander }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
-import com.keepit.common.actor.ActorInstance
-import com.keepit.rover.fetcher.HttpRedirect
-import scala.concurrent.duration._
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.time._
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
-import akka.pattern.{ ask, pipe }
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.common.core._
+import com.keepit.rover.fetcher.HttpRedirect
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 trait UriChangeMessage
 
@@ -38,6 +37,7 @@ class UriIntegrityActor @Inject() (
     urlRepo: URLRepo,
     val keepRepo: KeepRepo,
     ktlCommander: KeepToLibraryCommander,
+    ktuCommander: KeepToUserCommander,
     changedUriRepo: ChangedURIRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
@@ -78,6 +78,7 @@ class UriIntegrityActor @Inject() (
             keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
             val newKeep = keepRepo.save(helpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
             ktlCommander.syncKeep(newKeep)
+            ktuCommander.syncKeep(newKeep)
             (Some(keep), None)
           case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
@@ -88,9 +89,12 @@ class UriIntegrityActor @Inject() (
               val deadKeep = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
               ktlCommander.syncKeep(deadKeep)
               ktlCommander.removeKeepFromAllLibraries(deadKeep)
+              ktuCommander.syncKeep(deadKeep)
+              ktuCommander.removeKeepFromAllUsers(deadKeep)
+              keepUriUserCache.remove(KeepUriUserKey(deadKeep.uriId, deadKeep.userId))
               val liveKeep = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
               ktlCommander.syncKeep(liveKeep)
-              keepUriUserCache.remove(KeepUriUserKey(deadKeep.uriId, deadKeep.userId))
+              ktuCommander.syncKeep(liveKeep)
               (Some(deadKeep), Some(liveKeep))
             }
 

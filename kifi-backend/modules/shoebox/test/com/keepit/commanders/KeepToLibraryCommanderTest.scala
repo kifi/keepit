@@ -2,19 +2,16 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.db.SequenceNumber
-import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.integrity.{ URLMigration, URIMigrationSeqNumKey, URIMigration, UriIntegrityPlugin }
+import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
-
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.OrganizationFactoryHelper._
 
 import scala.util.Random
 
@@ -176,7 +173,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             keeps.count(!_.isPrimary) === dupUris.length
             keeps.map(_.uriId).toSet === origUris.map(_.id.get).toSet
             keeps.foreach { keep =>
-              val ktls = ktlRepo.getAllByKeepId(keep.id.get, excludeStates = Set.empty)
+              val ktls = ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None)
               ktls.size === 1
               ktls.head.isPrimary === keep.isPrimary
               ktls.head.state === keep.state
