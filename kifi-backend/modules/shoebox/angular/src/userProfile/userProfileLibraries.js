@@ -47,6 +47,7 @@ angular.module('kifi')
         return userProfileActionService
           .getLibraries(handle, filter, pageNumber, pageSize)
           .then(function (data) {
+            $scope.loaded = true;
             return data[filter];
           });
       }

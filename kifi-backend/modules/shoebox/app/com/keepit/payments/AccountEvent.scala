@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
@@ -10,6 +11,10 @@ import com.kifi.macros.json
 import play.api.libs.json.{ JsValue, JsNull, Json }
 
 import org.joda.time.DateTime
+
+import javax.crypto.spec.IvParameterSpec
+
+case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
 trait AccountEventAction {
   def eventType: String
@@ -92,7 +97,7 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
   }
 
   @json
-  case class DefaultPaymentMethodChanged(from: Id[PaymentMethod], to: Id[PaymentMethod]) extends AccountEventAction {
+  case class DefaultPaymentMethodChanged(from: Option[Id[PaymentMethod]], to: Id[PaymentMethod]) extends AccountEventAction {
     def eventType: String = "default_payment_method_changed"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }
@@ -126,13 +131,20 @@ object AccountEventAction { //There is probably a deeper type hirachy that can b
 
 }
 
-case class EventGroup(id: Long) extends AnyVal
+case class EventGroup(id: String) extends AnyVal
+
+object EventGroup {
+  def apply(): EventGroup = {
+    EventGroup(java.util.UUID.randomUUID.toString)
+  }
+}
 
 case class AccountEvent(
     id: Option[Id[AccountEvent]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
+    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -141,22 +153,26 @@ case class AccountEvent(
     whoDunnitExtra: JsValue,
     kifiAdminInvolved: Option[Id[User]],
     action: AccountEventAction,
-    creditChange: DollarAmount, //in cents
+    creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
-    paymentCharge: Option[DollarAmount], //in cents
-    memo: Option[String]) extends ModelWithState[AccountEvent] {
+    paymentCharge: Option[DollarAmount],
+    memo: Option[String]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
 }
 
-object AccountEvent {
+object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
+
+  protected[this] val publicIdPrefix = "ae"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-57, -50, -59, -20, 87, -37, -64, 34, -84, -42, 10, 118, 40, -17, -23, -93))
 
   def applyFromDbRow(
     id: Option[Id[AccountEvent]],
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[AccountEvent],
+    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -175,6 +191,7 @@ object AccountEvent {
       createdAt,
       updatedAt,
       state,
+      stage,
       eventGroup,
       eventTime,
       accountId,
@@ -192,14 +209,38 @@ object AccountEvent {
 
   def unapplyFromDbRow(e: AccountEvent) = {
     val (eventType, extras) = e.action.toDbRow
-    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventGroup, e.eventTime, e.accountId,
+    Some((e.id, e.createdAt, e.updatedAt, e.state, e.stage, e.eventGroup, e.eventTime, e.accountId,
       e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
       extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo))
   }
+
+  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, pending: Boolean = false) = {
+    AccountEvent(
+      stage = if (pending) ProcessingStage.PENDING else ProcessingStage.COMPLETE,
+      eventGroup = EventGroup(),
+      eventTime = eventTime,
+      accountId = accountId,
+      billingRelated = false,
+      whoDunnit = attribution.user,
+      whoDunnitExtra = JsNull,
+      kifiAdminInvolved = attribution.admin,
+      action = action,
+      creditChange = DollarAmount(0),
+      paymentMethod = None,
+      paymentCharge = None,
+      memo = None
+    )
+  }
+
+  case class ProcessingStage(name: String)
+  object ProcessingStage {
+    val PENDING = ProcessingStage("pending")
+    val PROCESSING = ProcessingStage("processing")
+    val FAILED = ProcessingStage("failed")
+    val COMPLETE = ProcessingStage("complete")
+  }
+
 }
 
-object AccountEventStates extends States[AccountEvent] {
-  val PENDING = State[AccountEvent]("pending")
-  val PROCESSING = State[AccountEvent]("processing")
-  val FAILED = State[AccountEvent]("failed")
-}
+object AccountEventStates extends States[AccountEvent]
+

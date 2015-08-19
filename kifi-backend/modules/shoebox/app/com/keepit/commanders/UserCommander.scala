@@ -435,7 +435,7 @@ class UserCommander @Inject() (
         userCredRepo.save(userCred.withCredentials(pwdInfo.password))
       }
     }
-    log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
+    log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId}")}")
     savedIdentity
   }
 

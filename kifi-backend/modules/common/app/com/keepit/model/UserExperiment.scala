@@ -73,7 +73,6 @@ object UserExperimentType {
   val RECO_FASTLANE = UserExperimentType("reco_fastlane")
   val RECO_SUBSAMPLE = UserExperimentType("reco_subsample")
   val APPLY_RECO_FEEDBACK = UserExperimentType("apply_reco_feedback")
-  val ORGANIZATION = UserExperimentType("organization")
   val SEARCH_LAB = UserExperimentType("search_lab")
   val READ_IT_LATER = UserExperimentType("read_id_later")
   val NEW_NOTIFS_SYSTEM = UserExperimentType("new_notifs_system")
@@ -87,7 +86,7 @@ object UserExperimentType {
     NEW_NOTIFS_SYSTEM :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
-  val _TRACK_FOR_ANALYTICS = Set(ORGANIZATION, EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)
+  val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)
 
   private val _ALL_MAP: Map[String, UserExperimentType] = _ALL.map(e => e.value -> e).toMap
 

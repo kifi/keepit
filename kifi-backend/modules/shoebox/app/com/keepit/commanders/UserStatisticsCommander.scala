@@ -44,7 +44,7 @@ case class OrganizationStatisticsOverview(
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
-  numLibraries: Int,
+  libStats: LibCountStatistics,
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
@@ -62,6 +62,17 @@ case class MemberStatistics(
 
   dateLastManualKeep: Option[DateTime])
 
+case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
+
+object LibCountStatistics {
+  def apply(libs: Iterable[Library]): LibCountStatistics = {
+    LibCountStatistics(
+      libs.count(_.isSecret),
+      libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
+      libs.count(_.isPublished))
+  }
+}
+
 case class OrganizationStatistics(
   org: Organization,
   orgId: Id[Organization],
@@ -70,7 +81,7 @@ case class OrganizationStatistics(
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
-  numLibraries: Int,
+  libStats: LibCountStatistics,
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
@@ -176,23 +187,27 @@ class UserStatisticsCommander @Inject() (
   }
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int): Future[OrganizationStatistics] = {
-    val (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
-      val org = orgRepo.get(orgId)
-      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-      val numKeeps = libraries.map(_.keepCount).sum
+    val (members, candidates) = db.readOnlyMaster { implicit session =>
       val members = orgMembershipRepo.getAllByOrgId(orgId)
       val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-      val userIds = members.map(_.userId) ++ candidates.map(_.userId)
-      val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
-      val membersStatsFut = membersStatistics(userIds)
-      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-      (org, libraries, numKeeps, members, candidates, experiments, membersStatsFut, domains)
+      (members, candidates)
     }
 
     val fMemberRecommendations = try {
       abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
     } catch {
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
+    }
+
+    val (org, libraries, numKeeps, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
+      val org = orgRepo.get(orgId)
+      val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+      val numKeeps = libraries.map(_.keepCount).sum
+      val userIds = members.map(_.userId) ++ candidates.map(_.userId)
+      val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
+      val membersStatsFut = membersStatistics(userIds)
+      val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
+      (org, libraries, numKeeps, experiments, membersStatsFut, domains)
     }
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
@@ -251,7 +266,7 @@ class UserStatisticsCommander @Inject() (
       handle = org.handle,
       name = org.name,
       description = org.description,
-      numLibraries = libraries.size,
+      libStats = LibCountStatistics(libraries),
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,
@@ -289,7 +304,7 @@ class UserStatisticsCommander @Inject() (
       handle = org.handle,
       name = org.name,
       description = org.description,
-      numLibraries = libraries.size,
+      libStats = LibCountStatistics(libraries),
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,

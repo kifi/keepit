@@ -58,25 +58,28 @@
 //==========================
 
 .library-visibility-radio-label
+  display: block
   box-sizing: border-box
-  display: inline-block
-  width: 33%
-  padding: 5px 10px
-  border: 1px solid whitesmoke
+  padding: 5px 0
   vertical-align: top
-  text-align: center
-  cursor: pointer
 
-  &:first-child
-    border-top-left-radius: 8px
-    border-bottom-left-radius: 8px
+  @media (min-width: appMobileWidth)
+    display: inline-block
+    padding: 5px 10px
+    border: 1px solid whitesmoke
+    text-align: center
+    cursor: pointer
 
-  &:last-child
-    border-top-right-radius: 8px
-    border-bottom-right-radius: 8px
+    &:first-child
+      border-top-left-radius: 8px
+      border-bottom-left-radius: 8px
 
-  & + &
-    margin-left: -1px
+    &:last-child
+      border-top-right-radius: 8px
+      border-bottom-right-radius: 8px
+
+    & + &
+      margin-left: -1px
 
 .library-visibility-radio-input
   margin-right: 5px

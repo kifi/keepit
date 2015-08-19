@@ -5,7 +5,7 @@ import java.util.concurrent.{ Callable, TimeUnit }
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 
 import com.google.common.cache.{ CacheBuilder, Cache }
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -31,7 +31,7 @@ import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import scala.util.{ Success, Failure }
+import scala.util.{ Try, Success, Failure }
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.common.performance._
 import com.keepit.common.domain.DomainToNameMapper
@@ -69,8 +69,45 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply _, unlift(BulkKeepSelection.unapply))
 }
 
+@ImplementedBy(classOf[KeepsCommanderImpl])
+trait KeepsCommander {
+  def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
+  def getKeepsCountFuture(): Future[Int]
+  def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
+  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
+  def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep]
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]])
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])]
+  def updateKeepInLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext)
+  def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int
+  def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection]
+  def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection]
+  def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext): Unit
+  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep])
+  def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection
+  def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit
+  def clearTags(url: String, userId: Id[User]): Unit
+  def tagsByUrl(url: String, userId: Id[User]): Seq[Collection]
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String], socialShare: SocialShare)(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])]
+  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext)
+  def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
+  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
+  def assembleKeepExport(keepExports: Seq[KeepExport]): String
+  def numKeeps(userId: Id[User]): Int
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep
+  def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
+  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
+  def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
+  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
+  def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
+  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
+}
+
 @Singleton
-class KeepsCommander @Inject() (
+class KeepsCommanderImpl @Inject() (
     db: Database,
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
@@ -98,8 +135,12 @@ class KeepsCommander @Inject() (
     facebookPublishingCommander: FacebookPublishingCommander,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
     implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends KeepsCommander with Logging {
 
+  def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep] = {
+    val idToKeepMap = keepRepo.getByIds(ids.toSet)
+    ids.map(idToKeepMap)
+  }
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchClient.indexInfoList()).map { results =>
@@ -336,8 +377,8 @@ class KeepsCommander @Inject() (
 
           // Save keeps as INACTIVE
           val inactivatedKeeps = keeps.map { k =>
-            ktlCommander.removeKeepFromLibrary(KeepToLibraryRemoveRequest(k.id.get, libId, userId))
-            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None))
+            ktlCommander.removeKeepFromLibrary(k.id.get, libId)
+            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None)) // TODO(ryan): remove this, don't kill keeps when you detach them
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -361,15 +402,12 @@ class KeepsCommander @Inject() (
     }
   }
 
-  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
+  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit session: RWSession, context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
     keeps.groupBy(_.libraryId).toList.collect {
       case (Some(libId), _) =>
-        val library = db.readWrite { implicit session =>
-          val library = libraryRepo.get(libId)
-          libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
-          library
-        }
+        val library = libraryRepo.get(libId)
+        libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
         libraryAnalytics.unkeptPages(userId, keeps, library, context)
     }
     searchClient.updateKeepIndex()
@@ -436,7 +474,7 @@ class KeepsCommander @Inject() (
             keepToCollectionRepo.insertAll(newK2C.toSeq)
           }
           val activated = existing collect {
-            case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
+            case ktc if ktc.isInactive && keepsById.contains(ktc.keepId) =>
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
           }
 
@@ -450,7 +488,7 @@ class KeepsCommander @Inject() (
             val noteStr = targetKeep.note.getOrElse("")
             val persistedNote = Some(Hashtags.addNewHashtagsToString(noteStr, Seq(collection.name))).filter(_.nonEmpty)
             if (persistedNote != targetKeep.note) {
-              val updatedKeep = keepRepo.save(targetKeep.copy(note = persistedNote)) // notify keep index
+              val updatedKeep = updateNote(targetKeep, persistedNote) // notify keep index
               libraryAnalytics.taggedPage(updatedCollection, updatedKeep, context, taggingAt)
             }
           }
@@ -483,7 +521,7 @@ class KeepsCommander @Inject() (
         val editedNote = targetKeep.note.map { noteStr =>
           Hashtags.removeHashtagsFromString(noteStr, Set(collection.name))
         }.filterNot(_.isEmpty)
-        val updatedKeep = keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
+        val updatedKeep = updateNote(targetKeep, editedNote) // notify keep index
         libraryAnalytics.untaggedPage(collection, updatedKeep, context, removedAt)
       }
       removed.toSet
@@ -626,7 +664,7 @@ class KeepsCommander @Inject() (
     val noteWithHashtagsAppended = Hashtags.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    val updatedKeep = keepRepo.save(keep.copy(note = finalNote))
+    val updatedKeep = updateNote(keep, finalNote)
     libraryAnalytics.updatedKeep(keep, updatedKeep, context)
   }
 
@@ -728,6 +766,105 @@ class KeepsCommander @Inject() (
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
+    val keep = keepRepo.save(k)
+    // TODO(ryan): drop this once keeps don't need to exist in libraries
+    ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
+    keep
+  }
+  def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
+    keepRepo.save(keep.withNote(newNote))
+  }
+  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
+    require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
+    keepRepo.save(keep.withLibrary(library))
+  }
+  def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
+    keepRepo.save(keep.withOwner(newOwnerId))
+  }
+  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlCommander.removeKeepFromAllLibraries(keep)
+    keepRepo.deactivate(keep)
+  }
+
+  // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep
+  def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep] = {
+    val oldWay = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
+    val newWay = ktlRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
+    if (newWay.map(_.keepId) != oldWay.map(_.id.get)) log.info(s"[KTL-MATCH] moveKeep(uri = ${k.uriId}, toLib = ${toLibrary.id.get}): existingKeepOpt ${newWay.map(_.keepId)} != ${oldWay.map(_.id.get)}")
+
+    val existingKeepOpt = oldWay
+
+    existingKeepOpt match {
+      case None =>
+        val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
+        ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
+        ktlCommander.internKeepInLibrary(k, toLibrary, userId)
+        Right(movedKeep)
+      case Some(existingKeep) if existingKeep.isInactive =>
+        combineTags(k.id.get, existingKeep.id.get)
+
+        keepRepo.deactivate(k) // TODO(ryan): don't deactivate keeps here
+        ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
+
+        val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
+        ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
+
+        Right(movedKeep)
+      case Some(existingKeep) =>
+        if (toLibrary.id.get == k.libraryId.get) {
+          Left(LibraryError.AlreadyExistsInDest)
+        } else {
+          keepRepo.deactivate(k)
+          ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
+          combineTags(k.id.get, existingKeep.id.get)
+          Left(LibraryError.AlreadyExistsInDest)
+        }
+    }
+  }
+  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
+    val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
+    val newKeep = k.copy(
+      id = None,
+      externalId = ExternalId(),
+      userId = userId,
+      libraryId = Some(toLibrary.id.get),
+      visibility = toLibrary.visibility,
+      source = withSource.getOrElse(k.source),
+      originalKeeperId = k.originalKeeperId.orElse(Some(userId))
+    )
+
+    currentKeepOpt match {
+      case None =>
+        val persistedKeep = persistKeep(newKeep)
+        combineTags(k.id.get, persistedKeep.id.get)
+        Right(persistedKeep)
+
+      case Some(existingKeep) if existingKeep.isInactive =>
+        val persistedKeep = persistKeep(newKeep.withId(existingKeep.id.get))
+        combineTags(k.id.get, persistedKeep.id.get)
+        Right(persistedKeep)
+
+      case Some(existingKeep) =>
+        combineTags(k.id.get, existingKeep.id.get)
+        Left(LibraryError.AlreadyExistsInDest)
+    }
+  }
+
+  // combine tag info on both keeps & saves difference on the new Keep
+  private def combineTags(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
+    val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
+    val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
+    val tagsToAdd = oldSet.diff(existingSet)
+    tagsToAdd.foreach { tagId =>
+      val newKtc = KeepToCollection(keepId = newKeepId, collectionId = tagId)
+      val ktcOpt = keepToCollectionRepo.getOpt(newKeepId, tagId)
+      if (!ktcOpt.exists(_.isActive)) {
+        // either overwrite (if the dead one exists) or create a new one
+        keepToCollectionRepo.save(newKtc.copy(id = ktcOpt.map(_.id.get)))
+      }
+    }
+  }
 }
 
 sealed trait HelpRankSelector { val name: String }

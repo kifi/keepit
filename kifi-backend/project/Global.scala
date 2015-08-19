@@ -29,7 +29,7 @@ object Global {
   )
 
   val macroParadiseSettings = Seq(
-    scalaVersion := "2.11.6",
+    scalaVersion := "2.11.7",
     scalacOptions ++= _scalacOptions,
     resolvers += Resolver.sonatypeRepo("releases"),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
@@ -71,9 +71,9 @@ object Global {
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
     "com.kifi" %% "franz" % "0.3.8",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
-    "com.google.inject" % "guice" % "4.0-beta5",
-    "com.google.inject.extensions" % "guice-multibindings" % "4.0-beta5",
-    "net.codingwell" %% "scala-guice" % "4.0.0-beta5",
+    "com.google.inject" % "guice" % "4.0",
+    "com.google.inject.extensions" % "guice-multibindings" % "4.0",
+    "net.codingwell" %% "scala-guice" % "4.0.0",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.8.1",
@@ -93,7 +93,7 @@ object Global {
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     offline := false, // set to true to do work offline
-    scalaVersion := "2.11.6",
+    scalaVersion := "2.11.7",
     version := Version.appVersion,
     libraryDependencies ++= commonDependencies,
     scalacOptions ++= _scalacOptions,

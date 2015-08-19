@@ -699,7 +699,8 @@ POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.A
 POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
 
 
-GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewById(id: Id[Organization], numMemberRecos: Int ?= 60)
+GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
+GET     /admin/organization/id/:id                           @com.keepit.controllers.admin.AdminOrganizationController.organizationViewBy(id: Id[Organization], numMemberRecos: Int ?= 60)
 POST    /admin/organization/:id/setName                      @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
 POST    /admin/organization/:id/setHandle                    @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
 POST    /admin/organization/:id/setDescription               @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
@@ -728,7 +729,8 @@ POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.control
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 
 
-GET     /admin/usersPotentialOrgs   @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
+GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
+GET     /admin/usersPotentialOrgs       @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
 GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
 GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
@@ -736,7 +738,6 @@ GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin
 # TEMPORARY ROUTE - remove when activity email is live
 POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
 
-GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
 POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)

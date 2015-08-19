@@ -1940,9 +1940,7 @@ function kifify(tab) {
     if (!tab.nUri) {
       stashTabByNormUri(tab, uri);
     }
-    if (!tab.engaged) {
-      kififyWithPageData(tab, d);
-    }
+    kififyWithPageData(tab, d);
   } else {
     ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {

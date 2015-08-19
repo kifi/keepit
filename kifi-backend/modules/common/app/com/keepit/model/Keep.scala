@@ -44,6 +44,9 @@ case class Keep(
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
+  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
@@ -62,7 +65,8 @@ case class Keep(
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
-    visibility = lib.visibility
+    visibility = lib.visibility,
+    organizationId = lib.organizationId
   )
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
@@ -221,6 +225,14 @@ case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
 class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
+  override val version = 1
+  val namespace = "keep_by_id"
+  def toKey(): String = id.id.toString
+}
+class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KeepIdKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 object KeepStates extends States[Keep]
 
 case class KeepSource(value: String) {
@@ -255,6 +267,8 @@ object KeepSource {
   val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
 
   val discrete = Set(keeper, site, mobile, email, twitterSync)
+
+  val manual = Set(keeper, site, mobile, email)
 
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper

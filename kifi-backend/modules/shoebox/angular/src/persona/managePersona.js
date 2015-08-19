@@ -65,7 +65,7 @@ angular.module('kifi')
         };
 
         scope.close = function() {
-          if (scope.selectedPersonaIds.length > 0) {
+          if (scope.selectedPersonaIds.length > 0 || scope.allPersonas.length === 0) {
             if (_.isFunction(scope.closeAction)) {
               scope.loading = true;
               userPersonaActionService.selectPersonas(scope.selectedPersonaIds).then(function() {

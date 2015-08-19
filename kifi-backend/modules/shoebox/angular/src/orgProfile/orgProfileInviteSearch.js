@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteSearch', [
-  'profileService', 'orgProfileService', 'socialService', '$timeout', 'util', 'KEY',
-  function (profileService, orgProfileService, socialService, $timeout, util, KEY) {
+  'profileService', 'orgProfileService', 'socialService', 'modalService', '$timeout', 'util', 'KEY',
+  function (profileService, orgProfileService, socialService, modalService, $timeout, util, KEY) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -245,7 +245,7 @@ angular.module('kifi')
             }]
           }).then(function () {
             result.sent = true;
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.inviteExistingEmail = function (result) {
@@ -259,7 +259,7 @@ angular.module('kifi')
             }]
           }).then(function () {
             result.sent = true;
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.inviteNewEmail = function (result) {
@@ -277,7 +277,7 @@ angular.module('kifi')
             }]
           }).then(function () {
             result.sent = true;
-          });
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.importGmail = function () {

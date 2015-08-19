@@ -11,6 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -19,15 +20,14 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
-  def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse]
-  def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse]
-  def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse]
-  def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse]
-
+  def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
+  def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
+  def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
+  def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
   def hasFakeExperiment(org: Id[Organization]): Boolean
 }
@@ -38,8 +38,10 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteRepo: OrganizationInviteRepo,
+    userExperimentRepo: UserExperimentRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -49,13 +51,14 @@ class OrganizationCommanderImpl @Inject() (
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
+    organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander) extends OrganizationCommander with Logging {
 
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): OrganizationView = {
+  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
       val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
-      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt)
+      val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
     }
   }
@@ -103,12 +106,12 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numLibraries)
   }
 
-  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MembershipInfo = {
-    viewerIdOpt.map { userId =>
-      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
-      MembershipInfo(isInvited = invites.nonEmpty, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
-    }.getOrElse(MembershipInfo(isInvited = false, role = None, permissions = orgRepo.get(orgId).basePermissions.forNonmember))
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationMembershipInfo = {
+    val membershipOpt = viewerIdOpt.flatMap { viewerId =>
+      orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
+    }
+    val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
+    OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
   }
 
   def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
@@ -201,7 +204,7 @@ class OrganizationCommanderImpl @Inject() (
       .withSite(modifications.site.orElse(org.site))
   }
 
-  def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
+  def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
     Try {
       db.readWrite { implicit session =>
         getValidationError(request) match {
@@ -213,17 +216,18 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+            organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
       }
     } match {
       case Success(Left(fail)) => Left(fail)
       case Success(Right(response)) => Right(response)
-      case Failure(ex) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Failure(ex) => log.error(ex.getMessage); Left(OrganizationFail.HANDLE_UNAVAILABLE)
     }
   }
 
-  def modifyOrganization(request: OrganizationModifyRequest): Either[OrganizationFail, OrganizationModifyResponse] = {
+  def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse] = {
     db.readWrite { implicit session =>
       getValidationError(request) match {
         case None =>
@@ -234,7 +238,7 @@ class OrganizationCommanderImpl @Inject() (
             val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
             applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
           }
-
+          organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)
       }
@@ -256,7 +260,7 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
-  def deleteOrganization(request: OrganizationDeleteRequest): Either[OrganizationFail, OrganizationDeleteResponse] = {
+  def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse] = {
     db.readWrite { implicit session =>
       getValidationError(request) match {
         case None =>
@@ -273,13 +277,14 @@ class OrganizationCommanderImpl @Inject() (
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
+          organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationDeleteResponse(request))
         case Some(orgFail) => Left(orgFail)
       }
     }
   }
 
-  def transferOrganization(request: OrganizationTransferRequest): Either[OrganizationFail, OrganizationTransferResponse] = {
+  def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse] = {
     db.readWrite { implicit session =>
       getValidationError(request) match {
         case Some(orgFail) => Left(orgFail)
@@ -290,6 +295,7 @@ class OrganizationCommanderImpl @Inject() (
             case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
+          organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
           Right(OrganizationTransferResponse(request, modifiedOrg))
       }
     }

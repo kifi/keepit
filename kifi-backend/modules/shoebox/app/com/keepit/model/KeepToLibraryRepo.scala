@@ -3,7 +3,8 @@ package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ Id, SequenceNumber, State }
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
@@ -17,9 +18,10 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getCountByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
   def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
+
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
 
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -27,7 +29,6 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
 
-  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 
   // For backwards compatibility with KeepRepo
@@ -99,14 +100,22 @@ class KeepToLibraryRepoImpl @Inject() (
     // TODO(ryan): This needs to use a cache, and fall back on a single monster query, not a bunch of tiny queries
     libraryIds.map(libId => libId -> getCountByLibraryId(libId, excludeStates)).toMap
   }
-  def getByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit, excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStates).sortBy(r => (r.addedAt desc, r.keepId desc)).drop(offset.value).take(limit.value).list
-  }
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
     getByLibraryIdHelper(libraryId, excludeStates).list
   }
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
     getByLibraryIdsHelper(libraryIds, excludeStates).list.groupBy(_.libraryId)
+  }
+
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]] = {
+    // N.B.: Slick is NOT GOOD at joins (as of 2015-08-18). This query is hand-written for a reason.
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select k.id from
+                  keep_to_library ktl inner join bookmark k on (ktl.keep_id = k.id)
+                  where ktl.library_id = $libraryId and ktl.state = 'active' and k.state = 'active'
+                  order by k.kept_at desc, k.id desc
+                  limit ${limit.value} offset ${offset.value};"""
+    q.as[Id[Keep]].list
   }
 
   private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {
@@ -139,11 +148,8 @@ class KeepToLibraryRepoImpl @Inject() (
     q.as[Id[Keep]].list.toSet
   }
 
-  def activate(model: KeepToLibrary)(implicit session: RWSession): KeepToLibrary = {
-    save(model.withState(KeepToLibraryStates.ACTIVE))
-  }
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {
-    save(model.withState(KeepToLibraryStates.INACTIVE))
+    save(model.sanitizeForDelete)
   }
 
   /**

@@ -7,19 +7,13 @@ const tabs = require('sdk/tabs');
 const {getTabId} = require('sdk/tabs/utils');
 const {windows} = require('sdk/window/utils');
 const browserNs = require('sdk/core/namespace').ns();
+const {viewFor} = require("sdk/view/core");
+
 
 function getTabIdForBrowser(gBrowser, browser) {
   for (let tab of gBrowser.tabs) {
     if (tab.linkedBrowser === browser) {
       return getTabId(tab);
-    }
-  }
-}
-
-function getXpcomWindow(win) {
-  for (let w of windows('navigator:browser')) {
-    if (BrowserWindow({window: w}) === win) {
-      return w;
     }
   }
 }
@@ -60,12 +54,12 @@ exports.onChange = function (callback) {
     onChange(win.gBrowser, callback);
   }
   browserWindows.on('open', function(win) {
-    onChange(getXpcomWindow(win).gBrowser, callback);
+    onChange(viewFor(win).gBrowser, callback);
   });
   browserWindows.on('close', function(win) {
-    var xpcomWin = getXpcomWindow(win);
-    if (xpcomWin) {
-      offChange(xpcomWin.gBrowser);
+    var domWin = viewFor(win);
+    if (domWin) {
+      offChange(domWin.gBrowser);
     }
   });
 };
@@ -79,12 +73,12 @@ exports.onFocus = function (callback) {
     onFocus(win, callbacks);
   }
   browserWindows.on('open', function (win) {
-    onFocus(getXpcomWindow(win), callbacks);
+    onFocus(viewFor(win), callbacks);
   });
   browserWindows.on('close', function (win) {
-    var xpcomWin = getXpcomWindow(win);
-    if (xpcomWin) {
-      offFocus(xpcomWin, callbacks);
+    var domWin = viewFor(win);
+    if (domWin) {
+      offFocus(domWin, callbacks);
     }
   });
 };
