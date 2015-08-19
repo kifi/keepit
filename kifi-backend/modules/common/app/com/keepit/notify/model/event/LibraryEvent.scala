@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ NotificationInfo, NeedInfo$ }
+import com.keepit.notify.info.{ NotificationInfo, NeedInfo }
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
