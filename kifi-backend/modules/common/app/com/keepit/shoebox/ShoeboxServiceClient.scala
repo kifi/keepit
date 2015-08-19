@@ -803,8 +803,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = {
-    redundantDBConnectionCheck(userIds)
-    val query = userIds.mkString(",")
-    call(Shoebox.internal.getOrganizationsForUsers(query)).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
+    val payload = Json.toJson(userIds)
+    call(Shoebox.internal.getOrganizationsForUsers(), payload).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
   }
 }
