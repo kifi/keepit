@@ -8,12 +8,11 @@
         <div ng-if="userData.invite">
           <div class="kf-register-header kf-register-header-centered">Join Kifi</div>
           <div>
-            <img class="kf-register-inviter-pic" ng-if="userData.invite && userData.intent === 'follow'" ng-src="{{userData.invite.inviter|pic}}"></img>
-            <img class="kf-register-inviter-pic" ng-if="userData.invite && userData.intent === 'joinOrg'" ng-src="{{userData.invite.inviter.pictureName}}"></img>
-            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.libAuthToken">
+            <img class="kf-register-inviter-pic" ng-if="userData.invite" ng-src="{{userData.invite.inviter|pic}}"></img>
+            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.intent === 'follow'">
               {{userData.invite.inviter.firstName}} invited you to {{userData.invite.access === 'read_only' ? 'follow' : 'collaborate on'}} this library.
             </span>
-            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.orgAuthToken">
+            <span class="kf-register-modal-invite-text" ng-if="userData.invite && userData.intent === 'joinOrg'">
               {{userData.invite.inviter.firstName}} invited you to become a member of this team.
             </span>
           </div>
