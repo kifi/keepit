@@ -11,9 +11,6 @@ case class UserCred(id: Option[Id[UserCred]] = None,
     updatedAt: DateTime = currentDateTime,
     state: State[UserCred] = UserCredStates.ACTIVE,
     userId: Id[User],
-    loginName: String,
-    provider: String,
-    salt: String, // TODO: char[]
     credentials: String // TODO: char[]
     ) extends ModelWithState[UserCred] {
   def withId(id: Id[UserCred]) = this.copy(id = Some(id))
