@@ -14,7 +14,8 @@
   <div
     ng-if="shouldShowSignupBanner()"
     kf-generic-banner
-    text="{{membership.invite.inviter.firstName}} {{membership.invite.inviter.lastName}} invited you to become a member of this team."
+    thumb="{{membership.invite.inviter|pic}}"
+    text="{{membership.invite.inviter|name}} invited you to become a member of this team."
     actions="signupBannerButtons"
   ></div>
   <div
