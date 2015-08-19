@@ -39,7 +39,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           }
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.getOrganization(publicId)
           val response = controller.getOrganization(publicId)(request)
           response === OrganizationFail.INVALID_PUBLIC_ID
@@ -62,17 +62,17 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val ownerRequest = route.getOrganization(publicId)
           val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
           status(ownerResponse) === OK
 
-          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(member)
           val memberRequest = route.getOrganization(publicId)
           val memberResponse = controller.getOrganization(publicId)(memberRequest)
           status(memberResponse) === OK
 
-          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(rando)
           val randoRequest = route.getOrganization(publicId)
           val randoResponse = controller.getOrganization(publicId)(randoRequest)
           status(randoResponse) === OK
@@ -96,19 +96,19 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         }
         val publicId = Organization.publicId(org.id.get)
 
-        inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+        inject[FakeUserActionsHelper].setUser(owner)
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
         (Json.parse(contentAsString(ownerResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
 
-        inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+        inject[FakeUserActionsHelper].setUser(member)
         val memberRequest = route.getOrganization(publicId)
         val memberResponse = controller.getOrganization(publicId)(memberRequest)
         status(memberResponse) === OK
         (Json.parse(contentAsString(memberResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
 
-        inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+        inject[FakeUserActionsHelper].setUser(rando)
         val randoRequest = route.getOrganization(publicId)
         val randoResponse = controller.getOrganization(publicId)(randoRequest)
         status(randoResponse) === OK
@@ -129,13 +129,14 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           }
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val ownerRequest = route.getOrganization(publicId)
           val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
           status(ownerResponse) === OK
           (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "numLibraries").as[Int] === 10 + 15
 
-          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(rando)
+          inject[FakeUserActionsHelper].setUser(rando)
           val randoRequest = route.getOrganization(publicId)
           val randoResponse = controller.getOrganization(publicId)(randoRequest)
           status(randoResponse) === OK
@@ -156,7 +157,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             user
           }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.getOrganizationsForUser(user.externalId)
           val response = controller.getOrganizationsForUser(user.externalId)(request)
           status(response) === OK
@@ -183,7 +184,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             (user, rando)
           }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val userRequest = route.getOrganizationsForUser(user.externalId)
           val userResponse = controller.getOrganizationsForUser(user.externalId)(userRequest)
           status(userResponse) === OK
@@ -192,7 +193,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           (userJsonResponse \ "organizations") must haveClass[JsArray]
           (userJsonResponse \ "organizations").as[Seq[JsValue]].length === 10
 
-          inject[FakeUserActionsHelper].setUser(rando, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(rando)
           val randoRequest = route.getOrganizationsForUser(user.externalId)
           val randoResponse = controller.getOrganizationsForUser(user.externalId)(randoRequest)
           status(randoResponse) === OK
@@ -228,7 +229,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
 
           val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
           val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
           status(response) === OK
@@ -244,7 +245,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
 
           val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(nonmember, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(nonmember)
           val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
           val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
           status(response) === OK
@@ -260,7 +261,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, nonmember, publicLibs, orgLibs, privateLibs) = setupLibraries(numPublicLibs, numOrgLibs, numPrivateLibs)
 
           val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(member)
           val request = route.getOrganizationLibraries(publicId, offset = 0, limit = 100)
           val response = controller.getOrganizationLibraries(publicId, offset = 0, limit = 100)(request)
           status(response) === OK
@@ -276,7 +277,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(Json.parse("""{"asdf": "qwer"}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -286,7 +287,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(Json.parse("""{"name": ""}"""))
           val result = controller.createOrganization(request)
           status(result) === BAD_REQUEST
@@ -300,7 +301,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val orgDescription = "Fun for the whole family"
           val createRequestJson = Json.parse(s"""{"name": "$orgName", "description": "$orgDescription"}""")
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(createRequestJson)
           val result = controller.createOrganization(request)
           status(result) === OK
@@ -322,7 +323,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       "succeed for valid name" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "name": "bob" }"""
@@ -335,7 +336,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       "succeed for valid modifications" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
           val json = """ {"none":["view_organization"],"admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
@@ -348,7 +349,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       "fail on invalid modifications" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "basePermissions": {"member":[]} }""" // all members must at least be able to view the organization
@@ -361,7 +362,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
       "fail for missing role in basePermissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
           val json = """{ "basePermissions": {"admin": [], "none": []} }"""
@@ -382,7 +383,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           }
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.deleteOrganization(publicId)
           val result = controller.deleteOrganization(publicId)(request)
           status(result) === NO_CONTENT
@@ -400,7 +401,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           }
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(member)
           val request = route.deleteOrganization(publicId)
           val result = controller.deleteOrganization(publicId)(request)
 
@@ -416,7 +417,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           }
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.deleteOrganization(publicId)
           val result = controller.deleteOrganization(publicId)(request)
           status(result) === NO_CONTENT
@@ -441,7 +442,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, rando) = setupTransfer
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val body = Json.obj("newOwner" -> member.externalId)
           val request = route.transferOrganization(publicId).withBody(body)
           val result = controller.transferOrganization(publicId)(request)
@@ -458,7 +459,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, rando) = setupTransfer
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val body = Json.obj("newOwner" -> rando.externalId)
           val request = route.transferOrganization(publicId).withBody(body)
           val result = controller.transferOrganization(publicId)(request)
@@ -475,7 +476,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val (org, owner, member, rando) = setupTransfer
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(member, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(member)
           val body1 = Json.obj("newOwner" -> member.externalId)
           val request1 = route.transferOrganization(publicId).withBody(body1)
           val result1 = controller.transferOrganization(publicId)(request1)
