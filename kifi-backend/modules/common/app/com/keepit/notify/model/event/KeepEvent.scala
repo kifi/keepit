@@ -42,27 +42,27 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
       "newKeep".arg(_.keepId, keep), "keeper".arg(_.keeperId, user), "keeperImage".arg(_.keeperId, userImage),
       "libraryKept".arg(_.libraryId, library)
     ) {
-      case Fetched(args) =>
-        val newKeep = args.get[Keep]("newKeep")
-        val keeper = args.get[User]("keeper")
-        val keeperImage = args.get[String]("keeperImage")
-        val libraryKept = args.get[Library]("libraryKept")
-        NotificationInfo(
-          url = newKeep.url,
-          imageUrl = keeperImage,
-          title = s"New Keep in ${libraryKept.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to Page",
-          extraJson = Some(Json.obj(
-            "keeper" -> BasicUser.fromUser(keeper),
-            "library" -> Json.toJson(Json.obj()), // TODO fill in with library info
-            "keep" -> Json.obj(
-              "id" -> newKeep.externalId,
-              "url" -> newKeep.url
-            )
-          ))
-        )
-    }
+        case Fetched(args, _) =>
+          val newKeep = args.get[Keep]("newKeep")
+          val keeper = args.get[User]("keeper")
+          val keeperImage = args.get[String]("keeperImage")
+          val libraryKept = args.get[Library]("libraryKept")
+          NotificationInfo(
+            url = newKeep.url,
+            imageUrl = keeperImage,
+            title = s"New Keep in ${libraryKept.name}",
+            body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
+            linkText = "Go to Page",
+            extraJson = Some(Json.obj(
+              "keeper" -> BasicUser.fromUser(keeper),
+              "library" -> Json.toJson(Json.obj()), // TODO fill in with library info
+              "keep" -> Json.obj(
+                "id" -> newKeep.externalId,
+                "url" -> newKeep.url
+              )
+            ))
+          )
+      }
   }
 }
 
@@ -98,29 +98,29 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
       "libraryKept".arg(_.libraryId, library), "keeper".arg(_.keeperId, user), "newKeep".arg(_.keepId, keep),
       "libraryKeptUrl".arg(_.libraryId, libraryUrl), "keeperImage".arg(_.keeperId, userImage)
     ) {
-      case Fetched(args) =>
-        val libraryKept = args.get[Library]("libraryKept")
-        val keeper = args.get[User]("keeper")
-        val keeperBasic = BasicUser.fromUser(keeper)
-        val newKeep = args.get[Keep]("newKeep")
-        val libraryKeptUrl = args.get[String]("libraryKeptUrl")
-        val keeperImage = args.get[String]("keeperImage")
-        NotificationInfo(
-          url = libraryKeptUrl,
-          imageUrl = keeperImage,
-          title = s"New Keep in ${libraryKept.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to library",
-          extraJson = Some(Json.obj(
-            "keeper" -> keeperBasic,
-            "library" -> Json.toJson(Json.obj()) , //todo fix
-            "keep" -> Json.obj(
-              "id" -> newKeep.externalId,
-              "url" -> newKeep.url
-            )
-          ))
-        )
-    }
+        case Fetched(args, _) =>
+          val libraryKept = args.get[Library]("libraryKept")
+          val keeper = args.get[User]("keeper")
+          val keeperBasic = BasicUser.fromUser(keeper)
+          val newKeep = args.get[Keep]("newKeep")
+          val libraryKeptUrl = args.get[String]("libraryKeptUrl")
+          val keeperImage = args.get[String]("keeperImage")
+          NotificationInfo(
+            url = libraryKeptUrl,
+            imageUrl = keeperImage,
+            title = s"New Keep in ${libraryKept.name}",
+            body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
+            linkText = "Go to library",
+            extraJson = Some(Json.obj(
+              "keeper" -> keeperBasic,
+              "library" -> Json.toJson(Json.obj()), //todo fix
+              "keep" -> Json.obj(
+                "id" -> newKeep.externalId,
+                "url" -> newKeep.url
+              )
+            ))
+          )
+      }
   }
 
 }

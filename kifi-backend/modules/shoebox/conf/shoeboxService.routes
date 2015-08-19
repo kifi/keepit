@@ -1004,8 +1004,6 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
-POST    /internal/shoebox/database/generateNotificationInfos            @com.keepit.controllers.internal.ShoeboxController.generateNotificationInfos
-
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
