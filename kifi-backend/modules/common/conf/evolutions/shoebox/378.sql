@@ -2,15 +2,12 @@
 
 # --- !Ups
 
-alter table notification add COLUMN group_identifier VARCHAR(256);
+alter table notification add COLUMN group_identifier VARCHAR(191);
 
 alter table notification add CONSTRAINT notification_group_identifier unique index(group_identifier);
 
-alter table notification add COLUMN recipient VARCHAR(256) not null DEFAULT('');
+alter table notification add COLUMN recipient VARCHAR(191) not null;
 
-update notification set recipient = 'user:' + user_id;
-
-alter table notification modify COLUMN recipient VARCHAR(256) not null;
 alter table notification drop column user_id;
 
 -- # Replaces the JSON, really ugly but it works. Commented out because this happens manually after the evolution
