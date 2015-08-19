@@ -93,6 +93,4 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       heimdal.trackEvent(UserEvent(requester.id.get, builder.build, UserEventTypes.CREATED_ORGANIZATION))
     }
   }
-    }
-  }
 }
