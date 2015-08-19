@@ -868,7 +868,7 @@ class KeepsCommanderImpl @Inject() (
   }
 
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
-    val keeps: Seq[Keep] = db.readWrite { implicit session =>
+    val keeps: Seq[Keep] = db.readOnlyMaster { implicit session =>
       keepRepo.getRecentKeepsFromFollowedLibraries(userId, limit, beforeExtId, afterExtId)
     }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
       case (keep, (acc, seenUriIds)) =>

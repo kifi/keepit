@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ KeepsCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -19,6 +19,7 @@ import scala.concurrent.Future
 class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
+    keepsCommander: KeepsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     val db: Database,
     val userRepo: UserRepo,
@@ -119,6 +120,15 @@ class MobileRecommendationsController @Inject() (
       val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
 
       Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
+    }
+  }
+
+  def keepUpdates(limit: Int, beforeId: Option[String], afterId: Option[String]) = UserAction.async { request =>
+    val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
+    val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
+
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { updatedKeeps =>
+      Ok(Json.obj("updatedKeeps" -> updatedKeeps))
     }
   }
 

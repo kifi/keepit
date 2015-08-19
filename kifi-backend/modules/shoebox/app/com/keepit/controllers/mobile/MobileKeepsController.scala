@@ -269,8 +269,8 @@ class MobileKeepsController @Inject() (
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
 
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { updatedKeeps =>
-      Ok(Json.obj("updatedKeeps" -> updatedKeeps))
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { keeps =>
+      Ok(Json.obj("keeps" -> keeps))
     }
   }
 
