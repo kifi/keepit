@@ -38,6 +38,9 @@ angular.module('kifi')
       }),
       $rootScope.$on('libraryKeepCountChanged', function (event, libraryId, keepCount) {
         (_.find($scope.libraries, {id: libraryId}) || {}).keepCount = keepCount;
+      }),
+      $rootScope.$on('loaded', function() {
+        $scope.loaded = true;
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);

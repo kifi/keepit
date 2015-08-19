@@ -43,6 +43,7 @@ angular.module('kifi')
           offset: page,
           limit: size
         }).then(function (response) {
+          $rootScope.$emit("loaded");
           return response.data;
         });
       },
