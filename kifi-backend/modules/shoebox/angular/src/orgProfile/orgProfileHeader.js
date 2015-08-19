@@ -90,12 +90,11 @@ angular.module('kifi')
       };
 
       scope.shouldShowInviteBanner = function () {
-        // TODO: Check if this user is a member already
-        return profileService.userLoggedIn() && scope.membership.invite && !scope.acknowledgedInvite;
+        return profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !scope.acknowledgedInvite;
       };
 
       scope.shouldShowSignupBanner = function () {
-        return !profileService.userLoggedIn() && !!scope.membership.invite;
+        return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
       };
 
       scope.inviteBannerButtons = [

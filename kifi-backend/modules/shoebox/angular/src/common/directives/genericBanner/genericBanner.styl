@@ -10,9 +10,19 @@
   color: white
   padding-left: 15px
   padding-right: 15px
+  vertical-align: middle
+  margin-top: 5px
+  position: relative
 
   &.kf-generic-banner-error
     background-color: errorRed
+
+  &.ng-enter
+    transition: margin-top .2s, opacity .2s
+
+  &.ng-enter-active
+    margin-top: 10px
+    opacity: 100
 
   &.ng-leave
     transition: margin-top .2s, opacity .2s
