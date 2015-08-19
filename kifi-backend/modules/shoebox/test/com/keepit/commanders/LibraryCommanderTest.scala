@@ -335,6 +335,21 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
       }
     }
+    "when getFullLibraryInfo(s) is called" in {
+      "serve up a full library info" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, lib) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
+            KeepFactory.keeps(100).map(_.withUser(user).withLibrary(lib)).saved
+            (user, lib)
+          }
+          val fullInfoFut = inject[LibraryCommander].createFullLibraryInfo(Some(user.id.get), true, lib, ProcessedImageSize.XLarge.idealSize, true)
+          val fullInfo = Await.result(fullInfoFut, Duration.Inf)
+          fullInfo.keeps.nonEmpty === true
+        }
+      }
+    }
     "when modify library is called:" in {
       "allow changing organizationId of library" in {
         withDb(modules: _*) { implicit injector =>

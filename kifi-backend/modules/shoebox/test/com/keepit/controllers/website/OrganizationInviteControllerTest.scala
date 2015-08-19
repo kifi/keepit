@@ -44,8 +44,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
             (invitee, invite)
           }
-
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
 
@@ -68,7 +67,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           status(result) must equalTo(NO_CONTENT)
@@ -90,7 +89,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (invitee, invite)
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
@@ -103,7 +102,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             UserFactory.user().withName("New", "Guy").saved
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(PublicId[Organization]("12345"), "authToken")
           val result = controller.acceptInvitation(PublicId[Organization]("12345"), "authToken")(request)
 
@@ -129,7 +128,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val orgId = org.id.get
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.declineInvitation(publicOrgId)
           val result = controller.declineInvitation(publicOrgId)(request)
           status(result) must equalTo(NO_CONTENT)
@@ -148,7 +147,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             UserFactory.user().withName("New", "Guy").saved
           }
 
-          inject[FakeUserActionsHelper].setUser(invitee, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.declineInvitation(PublicId[Organization]("12345"))
           val result = controller.declineInvitation(PublicId[Organization]("12345"))(request)
 
@@ -169,7 +168,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(JsString(""))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -200,7 +199,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.ADMIN))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -219,7 +218,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (inviter, org)
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
@@ -238,7 +237,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             inviter
           }
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val request = route.createAnonymousInviteToOrganization(PublicId[Organization]("12345")).withBody(Json.obj("role" -> OrganizationRole.MEMBER))
           val result = controller.createAnonymousInviteToOrganization(PublicId[Organization]("12345"))(request)
 
@@ -270,7 +269,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}"}
@@ -290,7 +289,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
 
           val badInputs = Seq(
             Json.parse(s"""{ "invites": [{ "id":  "${nonMember.externalId.id}", "email": "ryan@kifi.com"}]}"""), // Both email and id
@@ -312,7 +311,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(cannot_invite, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(cannot_invite)
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}"}
@@ -331,7 +330,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           // guaranteed to be random, because it was generated with a random number generator.
           val publicId = PublicId[Organization]("2267")
 
-          inject[FakeUserActionsHelper].setUser(inviter, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(inviter)
           val jsonInput = Json.parse(
             s"""{ "invites": [
                |{ "id":  "${not_a_member.externalId.id}"}
@@ -356,7 +355,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
           val body = Json.obj("cancel" -> Json.arr(Json.obj("email" -> email)))
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.cancelInvites(publicOrgId).withBody(body)
           val result = controller.cancelInvites(publicOrgId)(request)
 
@@ -375,7 +374,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
           val body = Json.obj("cancel" -> Json.arr(Json.obj("id" -> rando.externalId)))
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.cancelInvites(publicOrgId).withBody(body)
           val result = controller.cancelInvites(publicOrgId)(request)
 
@@ -395,7 +394,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
 
           val email = EmailAddress("ryan@kifi.com") // no invite for this email
           val body = Json.obj("cancel" -> Json.arr(Json.obj("email" -> email)))
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(owner)
           val request = route.cancelInvites(publicOrgId).withBody(body)
           val result = controller.cancelInvites(publicOrgId)(request)
 

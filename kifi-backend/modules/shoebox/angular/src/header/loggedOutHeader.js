@@ -62,6 +62,8 @@ angular.module('kifi')
     // to the search parameters on the search controller via $stateParams.
     // See: http://stackoverflow.com/questions/23081397/ui-router-stateparams-vs-state-params
     $scope.search.text = $state.params.q || '';
+    var authToken = $state.params.authToken;
+    $scope.authTokenParam = authToken ? 'authToken='+authToken : '';
     $scope.onQueryChange = util.$debounce($scope, reactToQueryChange, 250);
 
     $scope.$on('$destroy', $rootScope.$on('newQueryFromLocation', function (e, query) {

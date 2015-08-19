@@ -93,7 +93,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(modules: _*) { implicit injector =>
           val (user, _) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.getByHandle(user.username)
           val response = controller.getByHandle(user.username, authToken = None)(request)
 
@@ -105,7 +105,7 @@ class UserOrOrganizationControllerTest extends Specification with ShoeboxTestInj
         withDb(modules: _*) { implicit injector =>
           val (user, org) = testSetup
 
-          inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ORGANIZATION))
+          inject[FakeUserActionsHelper].setUser(user)
           val request = route.getByHandle(org.handle)
           val response = controller.getByHandle(org.handle, authToken = None)(request)
 

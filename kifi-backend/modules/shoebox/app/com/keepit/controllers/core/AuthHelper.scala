@@ -317,7 +317,7 @@ class AuthHelper @Inject() (
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        val existing = userCredRepo.findByEmailOpt(email.address.trim)
+        val existing = emailAddressRepo.getByAddress(email) // todo(Léo / Andrew): only enforce this for verified emails?
         if (existing.nonEmpty) {
           log.warn("[social-finalize] Can't finalize because email is known: " + existing)
         }
@@ -482,7 +482,7 @@ class AuthHelper @Inject() (
               val updated = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
                 userCredRepo.save(userCred.withCredentials(pwdInfo.password))
               }
-              log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
+              log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId}")}")
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>

@@ -10,9 +10,19 @@
   color: white
   padding-left: 15px
   padding-right: 15px
+  vertical-align: middle
+  margin-top: 5px
+  position: relative
 
   &.kf-generic-banner-error
     background-color: errorRed
+
+  &.ng-enter
+    transition: margin-top .2s, opacity .2s
+
+  &.ng-enter-active
+    margin-top: 10px
+    opacity: 100
 
   &.ng-leave
     transition: margin-top .2s, opacity .2s
@@ -22,6 +32,7 @@
     opacity: 0
 
 .kf-generic-banner-text,
+.kf-generic-banner-thumb,
 .kf-generic-banner-icon.symbol-sprite,
 .kf-generic-banner-btns
   margin: 6px 0
@@ -30,6 +41,10 @@
 
   + *
     margin-left: 10px
+
+.kf-generic-banner-thumb
+  width: 35px
+  border-radius: 20px
 
 .kf-generic-banner-icon.symbol-sprite
   fill: white

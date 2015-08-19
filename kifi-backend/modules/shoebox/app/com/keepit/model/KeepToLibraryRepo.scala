@@ -21,7 +21,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByLibraryId(libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
-  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
 
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]] = Set(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -48,34 +48,6 @@ class KeepToLibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock)
     extends KeepToLibraryRepo with DbRepo[KeepToLibrary] with Logging {
-
-  private implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
-  private implicit val getKeepResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep._applyFromDbRow(
-      id = r.<<[Option[Id[Keep]]],
-      createdAt = r.<<[DateTime],
-      updatedAt = r.<<[DateTime],
-      externalId = r.<<[ExternalId[Keep]],
-      title = r.<<[Option[String]],
-      uriId = r.<<[Id[NormalizedURI]],
-      isPrimary = r.<<[Option[Boolean]],
-      urlId = r.<<[Id[URL]],
-      url = r.<<[String],
-      isPrivate = r.<<[Boolean],
-      userId = r.<<[Id[User]],
-      state = r.<<[State[Keep]],
-      source = r.<<[KeepSource],
-      kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
-      seq = r.<<[SequenceNumber[Keep]],
-      libraryId = r.<<[Option[Id[Library]]],
-      visibility = r.<<[LibraryVisibility],
-      keptAt = r.<<[DateTime],
-      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
-      note = r.<<[Option[String]],
-      originalKeeperId = r.<<[Option[Id[User]]],
-      organizationId = r.<<[Option[Id[Organization]]]
-    )
-  }
 
   override def deleteCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
   override def invalidateCache(orgMember: KeepToLibrary)(implicit session: RSession) {}
@@ -135,15 +107,15 @@ class KeepToLibraryRepoImpl @Inject() (
     getByLibraryIdsHelper(libraryIds, excludeStates).list.groupBy(_.libraryId)
   }
 
-  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
+  def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]] = {
     // N.B.: Slick is NOT GOOD at joins (as of 2015-08-18). This query is hand-written for a reason.
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select k.* from
+    val q = sql"""select k.id from
                   keep_to_library ktl inner join bookmark k on (ktl.keep_id = k.id)
                   where ktl.library_id = $libraryId and ktl.state = 'active' and k.state = 'active'
                   order by k.kept_at desc, k.id desc
                   limit ${limit.value} offset ${offset.value};"""
-    q.as[Keep].list
+    q.as[Id[Keep]].list
   }
 
   private def getByKeepIdAndLibraryIdHelper(keepId: Id[Keep], libraryId: Id[Library], excludeStates: Set[State[KeepToLibrary]])(implicit session: RSession) = {

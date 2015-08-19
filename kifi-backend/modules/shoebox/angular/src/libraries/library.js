@@ -190,7 +190,7 @@ angular.module('kifi')
       var absUrl = env.origin + (library.path || library.url);
       event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
         original_referer: absUrl,
-        text: 'Discover this amazing @Kifi library about ' + library.name + '!',
+        text: 'Check out this @Kifi library about ' + library.name + '!',
         tw_p: 'tweetbutton',
         url: absUrl +
           '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +

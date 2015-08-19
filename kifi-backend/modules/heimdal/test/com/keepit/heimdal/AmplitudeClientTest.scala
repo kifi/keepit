@@ -30,7 +30,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
     val builder = new HeimdalContextBuilder
     builder += ("fooBarBaz", "yay")
     builder += ("agentVersion", "1.2.3")
-    builder.addExperiments(Set(UserExperimentType.ORGANIZATION, UserExperimentType.ADMIN))
+    builder.addExperiments(Set(UserExperimentType.ADMIN))
     builder ++= data.toMap
     builder.build
   }
