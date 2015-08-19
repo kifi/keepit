@@ -270,7 +270,8 @@ angular.module('kifi')
           owner: api.isMyLibrary(library),
           privacySetting: privacySetting,
           hasCoverImage: !!library.image,
-          source: 'site'
+          source: 'site',
+          orgId: library.org ? library.org.id : ''
         };
 
         if (library.visibility === 'published') {
