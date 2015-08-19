@@ -8,9 +8,7 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'common/directives/loadingSpinner/loadingSpinner.tpl.html',
       scope: { hide: '=' },
-      replace: true,
-      link: function ($scope) {
-      }
+      replace: true
     };
   }
 ]);
