@@ -17,7 +17,6 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.FullLibUpdatesRecoInfo
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -876,9 +875,7 @@ class KeepsCommanderImpl @Inject() (
         if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
     }._1
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
-      FullLibUpdatesRecoInfo(itemInfo = keepInfos).itemInfo
-    }
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true)
   }
 }
 
