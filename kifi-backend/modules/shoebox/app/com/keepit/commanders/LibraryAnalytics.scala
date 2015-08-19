@@ -143,7 +143,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("editColor", edits.get("color").getOrElse(false))
       contextBuilder += ("editMadePrivate", edits.get("madePrivate").getOrElse(false))
       contextBuilder += ("editListed", edits.get("listed").getOrElse(false))
-
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
@@ -291,7 +291,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
-
+        contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (!KeepSource.imports.contains(bookmark.source)) {
