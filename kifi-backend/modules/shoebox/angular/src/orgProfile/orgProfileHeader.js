@@ -24,7 +24,7 @@ angular.module('kifi')
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
 
-      if (!profileService.userLoggedIn() && scope.profile && authToken) {
+      if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
         signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
       }
 
