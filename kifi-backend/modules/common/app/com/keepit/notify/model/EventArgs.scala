@@ -1,6 +1,6 @@
 package com.keepit.notify.model
 
-import com.keepit.notify.info.{NeedsInfo, Args}
+import com.keepit.notify.info.{NeedInfo$, Args}
 
 case class EventArgs[E <: NotificationEvent](event: NotificationEvent, argsMap: Args = Map()) {
 
@@ -10,7 +10,7 @@ case class EventArgs[E <: NotificationEvent](event: NotificationEvent, argsMap: 
 
 }
 
-case class GenEventArgs[E <: NotificationEvent](names: Seq[String], fn: E => Seq[NeedsInfo[Any]])
+case class GenEventArgs[E <: NotificationEvent](names: Seq[String], fn: E => Seq[NeedInfo[Any]])
 
 object GenEventArgs {
 

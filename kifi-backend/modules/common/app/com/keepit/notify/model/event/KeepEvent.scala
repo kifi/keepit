@@ -2,7 +2,7 @@ package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, Keep, User }
-import com.keepit.notify.info.{ NotificationInfo, NeedsInfo }
+import com.keepit.notify.info.{ NotificationInfo, NeedInfo$ }
 import com.keepit.notify.model.{ NotificationEvent, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -37,7 +37,7 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = false
 
   override val info = {
-    import NeedsInfo._
+    import NeedInfo._
     usingOne[LibraryNewKeep](
       "newKeep".arg(_.keepId, keep), "keeper".arg(_.keeperId, user), "keeperImage".arg(_.keeperId, userImage),
       "libraryKept".arg(_.libraryId, library)
@@ -93,7 +93,7 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
   override def shouldGroupWith(newEvent: NewKeepActivity, existingEvents: Set[NewKeepActivity]): Boolean = false
 
   override val info = {
-    import NeedsInfo._
+    import NeedInfo._
     usingOne[NewKeepActivity](
       "libraryKept".arg(_.libraryId, library), "keeper".arg(_.keeperId, user), "newKeep".arg(_.keepId, keep),
       "libraryKeptUrl".arg(_.libraryId, libraryUrl), "keeperImage".arg(_.keeperId, userImage)
