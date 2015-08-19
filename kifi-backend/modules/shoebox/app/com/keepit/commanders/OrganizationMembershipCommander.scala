@@ -42,6 +42,7 @@ trait OrganizationMembershipCommander {
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
@@ -147,6 +148,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
       organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+    }
+  }
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getAllByUserIds(userIds)
     }
   }
 

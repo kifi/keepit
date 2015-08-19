@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.model.{ Organization, NotificationCategory, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -194,6 +194,7 @@ class MessagingAnalytics @Inject() (
           val uriId = thread.uriId.get
           shoebox.getBasicKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
+            thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
             val context = contextBuilder.build
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
@@ -240,4 +241,12 @@ class MessagingAnalytics @Inject() (
 
   private def anonymise(contextBuilder: HeimdalContextBuilder): Unit =
     contextBuilder.anonymise("userParticipants", "newParticipants", "otherParticipants", "threadId", "messageId", "uriId")
+
+  private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
+    val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
+    orgIdsByUserIdFut.foreach { orgIdsByUserId =>
+      val commonOrgs = orgIdsByUserId.values.reduce[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
+      contextBuilder += ("organizationId", commonOrgs.map(_.toString).toSeq)
+    }
+  }
 }

@@ -21,6 +21,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getSortedMembershipsByOrgId(orgId: Id[Organization], offset: Offset, limit: Limit, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getAllByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationMembership]
   def getAllByIds(membershipIds: Set[Id[OrganizationMembership]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[OrganizationMembership], OrganizationMembership]
+  def getAllByUserIds(userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], Set[OrganizationMembership]]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -114,6 +115,10 @@ class OrganizationMembershipRepoImpl @Inject() (
 
   def getAllByIds(membershipIds: Set[Id[OrganizationMembership]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[OrganizationMembership], OrganizationMembership] = {
     (for (row <- rows if row.id.inSet(membershipIds) && row.state =!= excludeState.orNull) yield (row.id, row)).list.toMap
+  }
+
+  def getAllByUserIds(userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], Set[OrganizationMembership]] = {
+    rows.filter(row => row.userId.inSet(userIds) && row.state =!= excludeState.orNull).list.groupBy(_.userId).mapValues(_.toSet)
   }
 
   override def getSortedMembershipsByOrgId(orgId: Id[Organization], offset: Offset, limit: Limit, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {

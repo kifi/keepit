@@ -50,6 +50,9 @@ object UserEventTypes {
   val MODIFIED_LIBRARY = EventType("modified_library")
   val FOLLOWED_LIBRARY = EventType("followed_library")
   val VIEWED_LIBRARY = EventType("viewed_library")
+
+  // Organizations
+  val CREATED_ORGANIZATION = EventType("created_organization")
 }
 
 object SystemEventTypes {
