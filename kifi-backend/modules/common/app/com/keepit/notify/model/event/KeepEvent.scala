@@ -39,7 +39,7 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
   override val info = {
     import NeedInfo._
     usingOne[LibraryNewKeep](
-      "newKeep".arg(_.keepId, keep), "keeper".arg(_.keeperId, user), "keeperImage".arg(_.keeperId, userImage),
+      "newKeep".arg(_.keepId, keep), "keeper".arg(_.keeperId, user), "keeperImage".arg(_.keeperId, userImageUrl),
       "libraryKept".arg(_.libraryId, library)
     ) {
         case Fetched(args, _) =>
@@ -96,7 +96,7 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
     import NeedInfo._
     usingOne[NewKeepActivity](
       "libraryKept".arg(_.libraryId, library), "keeper".arg(_.keeperId, user), "newKeep".arg(_.keepId, keep),
-      "libraryKeptUrl".arg(_.libraryId, libraryUrl), "keeperImage".arg(_.keeperId, userImage)
+      "libraryKeptUrl".arg(_.libraryId, libraryUrl), "keeperImage".arg(_.keeperId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val libraryKept = args.get[Library]("libraryKept")

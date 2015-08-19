@@ -39,7 +39,7 @@ object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteA
     import NeedInfo._
     usingOne[LibraryCollabInviteAccepted](
       "accepter".arg(_.accepterId, user), "libraryIn".arg(_.libraryId, library),
-      "accepterImage".arg(_.accepterId, userImage)
+      "accepterImage".arg(_.accepterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val accepter = args.get[User]("accepter")

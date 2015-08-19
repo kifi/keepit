@@ -39,7 +39,7 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
   override val info = {
     import NeedInfo._
     usingOne[NewConnectionInvite](
-      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImage)
+      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val inviter = args.get[User]("inviter")
@@ -83,7 +83,7 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
   override val info = {
     import NeedInfo._
     usingOne[ConnectionInviteAccepted](
-      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImage)
+      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val accepter = args.get[User]("accepter")
