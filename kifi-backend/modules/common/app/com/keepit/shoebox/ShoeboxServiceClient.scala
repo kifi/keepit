@@ -130,6 +130,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
+  def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -799,5 +800,11 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
+  }
+
+  def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = {
+    redundantDBConnectionCheck(userIds)
+    val query = userIds.mkString(",")
+    call(Shoebox.internal.getOrganizationsForUsers(query)).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
   }
 }

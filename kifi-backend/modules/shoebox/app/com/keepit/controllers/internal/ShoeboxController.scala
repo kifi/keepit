@@ -514,4 +514,10 @@ class ShoeboxController @Inject() (
     val inviteViews: Set[OrganizationInviteView] = organizationInviteCommander.getInvitesByOrganizationId(orgId).map(OrganizationInvite.toOrganizationInviteView)
     Ok(Json.toJson(inviteViews))
   }
+
+  def getOrganizationsForUsers(ids: String) = Action { request =>
+    val userIds = ids.split(',').map(id => Id[User](id.toLong)).toSet
+    val orgIdsByUserId = organizationMembershipCommander.getAllForUsers(userIds).mapValues(_.map(_.organizationId))
+    Ok(Json.toJson(orgIdsByUserId))
+  }
 }
