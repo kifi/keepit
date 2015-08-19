@@ -143,10 +143,6 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           invite.userId === Some(invitedUserId)
         }
         invites.length === 20
-
-        db.readOnlyMaster { implicit session =>
-          userExperimentRepo.hasExperiment(invitedUserId, UserExperimentType.ORGANIZATION) should beTrue
-        }
       }
     }
 

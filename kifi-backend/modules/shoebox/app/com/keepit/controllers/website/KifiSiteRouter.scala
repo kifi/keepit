@@ -170,57 +170,22 @@ class KifiSiteRouter @Inject() (
   }
 
   private def lookupUser(handle: Handle) = {
-    // TODO(ryan)[ORG-EXPERIMENT]: when orgs are live, kill the below code and use this commented code
-    /*
     lookupByHandle(handle) flatMap {
       case (Left(org), _) => None
       case (Right(user), redirectStatusOpt) => Some((user, redirectStatusOpt))
     }
-    */
-    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
-    handleOwnerOpt.flatMap {
-      case (Left(org), _) => None
-      case (Right(user), isPrimary) =>
-        val foundHandle = Handle.fromUsername(user.username)
-        if (foundHandle != handle) {
-          // owner moved or handle normalization
-          Some((user, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER)))
-        } else {
-          Some((user, None))
-        }
-    }
   }
 
-  // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
-  private def lookupOrganization(handle: Handle)(implicit request: MaybeUserRequest[_]) = {
+  private def lookupOrganization(handle: Handle) = {
     lookupByHandle(handle) flatMap {
       case (Right(user), _) => None
       case (Left(org), redirectStatusOpt) => Some((org, redirectStatusOpt))
     }
   }
 
-  // TODO(ryan)[ORG-EXPERIMENT]: drop this implicit request when orgs go live
-  private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true)(implicit request: MaybeUserRequest[_]): Option[(Either[Organization, User], Option[Int])] = {
-    implicit val heimdalContext = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    def userCanSeeOrg(org: Organization) = {
-      val authTokenOpt = request.getQueryString("authToken")
-      val inviteOpt = authTokenOpt.flatMap { authToken =>
-        db.readOnlyMaster { implicit session => orgInviteCommander.getInviteByOrganizationIdAndAuthToken(org.id.get, authToken) }
-      }
-      if (inviteOpt.isDefined) organizationAnalytics.trackInvitationClicked(org, inviteOpt.get)
-
-      request match {
-        case userReq: UserRequest[_] => !mustBeInExperiment || userReq.experiments.contains(UserExperimentType.ORGANIZATION)
-        case nonuserReq: NonUserRequest[_] => !mustBeInExperiment || inviteOpt.isDefined
-      }
-    }
+  private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true): Option[(Either[Organization, User], Option[Int])] = {
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
-    handleOwnerOpt.flatMap {
-      // TODO(ryan): when orgs go live, drop this flatmap
-      // This flatmap serves to hide orgs from everyone except users WITH the org experiment
-      case (Left(org), redirectStatusOpt) if !userCanSeeOrg(org) => None
-      case other => Some(other)
-    } map {
+    handleOwnerOpt.map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {
           case Left(org) => Handle.fromOrganizationHandle(org.handle)

@@ -301,9 +301,6 @@ class AdminOrganizationController @Inject() (
             case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
             case None => //whatever
           }
-          if (!userExperimentRepo.hasExperiment(newOwnerId, UserExperimentType.ORGANIZATION)) {
-            userExperimentRepo.save(UserExperiment(userId = newOwnerId, experimentType = UserExperimentType.ORGANIZATION))
-          }
         }
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
     }

@@ -29,20 +29,17 @@ class OrganizationController @Inject() (
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
-    else {
-      request.body.validate[OrganizationInitialValues](OrganizationInitialValues.website) match {
-        case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
-        case JsSuccess(initialValues, _) =>
-          val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
-          orgCommander.createOrganization(createRequest) match {
-            case Left(failure) =>
-              failure.asErrorResponse
-            case Right(response) =>
-              val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
-              Ok(Json.toJson(organizationView))
-          }
-      }
+    request.body.validate[OrganizationInitialValues](OrganizationInitialValues.website) match {
+      case _: JsError => OrganizationFail.BAD_PARAMETERS.asErrorResponse
+      case JsSuccess(initialValues, _) =>
+        val createRequest = OrganizationCreateRequest(requesterId = request.userId, initialValues)
+        orgCommander.createOrganization(createRequest) match {
+          case Left(failure) =>
+            failure.asErrorResponse
+          case Right(response) =>
+            val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
+            Ok(Json.toJson(organizationView))
+        }
     }
   }
 
@@ -96,15 +93,11 @@ class OrganizationController @Inject() (
     Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 
-  // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
-  def getOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
-    if (!request.experiments.contains(UserExperimentType.ORGANIZATION)) BadRequest(Json.obj("error" -> "insufficient_permissions"))
-    else {
-      val user = userCommander.getByExternalIds(Seq(extId)).values.head
-      val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-      val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
+  def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
+    val user = userCommander.getByExternalIds(Seq(extId)).values.head
+    val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
+    val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-      Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
-    }
+    Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
   }
 }
