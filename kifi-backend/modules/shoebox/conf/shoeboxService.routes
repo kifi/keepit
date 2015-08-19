@@ -249,7 +249,7 @@ POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.M
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 #DEPRECATED: use instead /m/1/keeps/stream
-GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String])
+GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(limit: Int, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
 
