@@ -132,7 +132,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean]
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
-  def generateNotificationInfos(notifs: Map[NotificationId, Set[NotificationEvent]]): Future[Map[NotificationId, NotificationInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -802,10 +801,5 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
-  }
-
-  def generateNotificationInfos(notifs: Map[NotificationId, Set[NotificationEvent]]): Future[Map[NotificationId, NotificationInfo]] = {
-    val payload = Json.toJson(notifs)
-    call(Shoebox.internal.generateNotificationInfos(), payload).map(_.json.as[Map[NotificationId, NotificationInfo]])
   }
 }

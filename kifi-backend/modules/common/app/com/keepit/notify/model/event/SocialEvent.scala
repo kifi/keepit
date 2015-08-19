@@ -35,30 +35,30 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
 
   override def shouldGroupWith(newEvent: NewSocialConnection, existingEvents: Set[NewSocialConnection]): Boolean = false
 
-  def build(
-    recipient: Recipient,
-    time: DateTime,
-    friend: User,
-    friendImage: String,
-    networkType: Option[SocialNetworkType]): EventArgs =
-    EventArgs(
-      NewSocialConnection(recipient, time, friend.id.get, networkType)
-    ).args("friend" -> friend, "friendImage" -> friendImage)
+  //  def build(
+  //    recipient: Recipient,
+  //    time: DateTime,
+  //    friend: User,
+  //    friendImage: String,
+  //    networkType: Option[SocialNetworkType]): EventArgs =
+  //    EventArgs(
+  //      NewSocialConnection(recipient, time, friend.id.get, networkType)
+  //    ).args("friend" -> friend, "friendImage" -> friendImage)
 
-  override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
-    event <- PickOne(events)
-    friend <- GetUser(event.friendId, "friend")
-    image <- GetUserImage(event.friendId, "friendImage")
-  } yield NotificationInfo(
-    url = Path(friend.username.value).encode.absolute,
-    imageUrl = image,
-    title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
-    body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
-    linkText = "Invite more friends to kifi",
-    extraJson = Some(Json.obj(
-      "friend" -> BasicUser.fromUser(friend)
-    ))
-  )
+  //  override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
+  //    event <- PickOne(events)
+  //    friend <- GetUser(event.friendId, "friend")
+  //    image <- GetUserImage(event.friendId, "friendImage")
+  //  } yield NotificationInfo(
+  //    url = Path(friend.username.value).encode.absolute,
+  //    imageUrl = image,
+  //    title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
+  //    body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
+  //    linkText = "Invite more friends to kifi",
+  //    extraJson = Some(Json.obj(
+  //      "friend" -> BasicUser.fromUser(friend)
+  //    ))
+  //  )
 
 }
 

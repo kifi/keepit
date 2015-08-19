@@ -21,7 +21,7 @@ trait PossibleNeeds {
   def library(id: Id[Library]): NeedsInfo[Library] = NeedLibrary(id)
   def userImage(id: Id[User]): NeedsInfo[String] = NeedUserImage(id)
   def keep(id: Id[Keep]): NeedsInfo[Keep] = NeedKeep(id)
-  def libraryUrl(id: Id[Library]): NeedsInfo[String]
+  def libraryUrl(id: Id[Library]): NeedsInfo[String] = NeedLibraryUrl(id)
 
 }
 
@@ -58,13 +58,13 @@ trait UsingDsl {
   def usingOne[E <: NotificationEvent](getInfo: GenEventArgs[E]*)(fn: Fetched[E] => NotificationInfo) =
     UsingOne[E](GenEventArgs.sequence(getInfo), fn)
 
-  case class Fetched[+E <: NotificationEvent](results: EventArgs[E], originalEvents: Seq[E])
+  case class Fetched[E <: NotificationEvent](results: EventArgs[E], originalEvents: Seq[E])
 
   object Results {
     def unapply[E <: NotificationEvent](that: Fetched[E]): Option[EventArgs[E]] = Some(that.results)
   }
 
-  case class Filled[A](elem) extends NeedsInfo[A]
+  case class Filled[A](elem: A) extends NeedsInfo[A]
 
 }
 

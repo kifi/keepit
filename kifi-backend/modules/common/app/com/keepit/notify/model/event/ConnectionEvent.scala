@@ -41,20 +41,20 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
     usingOne[NewConnectionInvite](
       "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImage)
     ) {
-      case Fetched(args, _) =>
-        val inviter = args.get[User]("inviter")
-        val inviterImage = args.get[String]("inviterImage")
-        NotificationInfo(
-          url = Path(inviter.username.value).encode.absolute,
-          title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
-          body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
-          linkText = s"Respond to ${inviter.firstName}’s invitation",
-          imageUrl = inviterImage,
-          extraJson = Some(Json.obj(
-            "friend" -> BasicUser.fromUser(inviter)
-          ))
-        )
-    }
+        case Fetched(args, _) =>
+          val inviter = args.get[User]("inviter")
+          val inviterImage = args.get[String]("inviterImage")
+          NotificationInfo(
+            url = Path(inviter.username.value).encode.absolute,
+            title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
+            body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
+            linkText = s"Respond to ${inviter.firstName}’s invitation",
+            imageUrl = inviterImage,
+            extraJson = Some(Json.obj(
+              "friend" -> BasicUser.fromUser(inviter)
+            ))
+          )
+      }
   }
 
 }
@@ -85,20 +85,20 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
     usingOne[ConnectionInviteAccepted](
       "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImage)
     ) {
-      case Fetched(args, _) =>
-        val accepter = args.get[User]("accepter")
-        val accepterImage = args.get[String]("accepterImage")
-        NotificationInfo(
-          url = Path(accepter.username.value).encode.absolute,
-          title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
-          body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
-          linkText = s"Visit ${accepter.firstName}’s profile",
-          imageUrl = accepterImage,
-          extraJson = Some(Json.obj(
-            "friend" -> BasicUser.fromUser(accepter)
-          ))
-        )
-    }
+        case Fetched(args, _) =>
+          val accepter = args.get[User]("accepter")
+          val accepterImage = args.get[String]("accepterImage")
+          NotificationInfo(
+            url = Path(accepter.username.value).encode.absolute,
+            title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
+            body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
+            linkText = s"Visit ${accepter.firstName}’s profile",
+            imageUrl = accepterImage,
+            extraJson = Some(Json.obj(
+              "friend" -> BasicUser.fromUser(accepter)
+            ))
+          )
+      }
   }
 
 }

@@ -17,7 +17,6 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model.{ NotificationId, NotificationKind, NotificationEvent }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
@@ -75,8 +74,7 @@ class ShoeboxController @Inject() (
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
   userPersonaRepo: UserPersonaRepo,
-  rover: RoverServiceClient,
-  notificationInfoGenerator: NotificationInfoGenerator)(implicit private val clock: Clock,
+  rover: RoverServiceClient)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
@@ -516,12 +514,5 @@ class ShoeboxController @Inject() (
   def getOrganizationInviteViews(orgId: Id[Organization]) = Action { request =>
     val inviteViews: Set[OrganizationInviteView] = organizationInviteCommander.getInvitesByOrganizationId(orgId).map(OrganizationInvite.toOrganizationInviteView)
     Ok(Json.toJson(inviteViews))
-  }
-
-  def generateNotificationInfos = Action.async(parse.tolerantJson) { request =>
-    val events = request.body.as[Map[NotificationId, Set[NotificationEvent]]]
-    notificationInfoGenerator.runIdMap(events).map { result =>
-      Ok(Json.toJson(result))
-    }
   }
 }
