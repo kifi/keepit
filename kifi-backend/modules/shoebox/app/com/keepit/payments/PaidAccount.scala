@@ -7,7 +7,9 @@ import com.keepit.common.mail.EmailAddress
 
 import org.joda.time.DateTime
 
-case class DollarAmount(cents: Int) extends AnyVal
+case class DollarAmount(cents: Int) extends AnyVal {
+  def +(other: DollarAmount) = DollarAmount(cents + other.cents)
+}
 
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,

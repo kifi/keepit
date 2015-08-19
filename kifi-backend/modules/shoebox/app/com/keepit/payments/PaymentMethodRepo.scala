@@ -10,6 +10,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 @ImplementedBy(classOf[PaymentMethodRepoImpl])
 trait PaymentMethodRepo extends Repo[PaymentMethod] {
   def getByAccountId(accountId: Id[PaidAccount], excludeStates: Set[State[PaymentMethod]] = Set(PaymentMethodStates.INACTIVE))(implicit session: RSession): Seq[PaymentMethod]
+  def getDefault(accountId: Id[PaidAccount])(implicit session: RSession): Option[PaymentMethod]
 }
 
 @Singleton
@@ -25,9 +26,9 @@ class PaymentMethodRepoImpl @Inject() (
   type RepoImpl = PaymentMethodTable
   class PaymentMethodTable(tag: Tag) extends RepoTable[PaymentMethod](db, tag, "paid_plan") {
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
-    def default = column[Boolean]("default_method", O.Nullable)
+    def default = column[Option[Boolean]]("default_method", O.Nullable)
     def stripeToken = column[StripeToken]("stripe_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, accountId, default.?, stripeToken) <> ((PaymentMethod.applyFromDbRow _).tupled, PaymentMethod.unapplyFromDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, accountId, default, stripeToken) <> ((PaymentMethod.applyFromDbRow _).tupled, PaymentMethod.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new PaymentMethodTable(tag)
@@ -39,6 +40,10 @@ class PaymentMethodRepoImpl @Inject() (
 
   def getByAccountId(accountId: Id[PaidAccount], excludeStates: Set[State[PaymentMethod]] = Set(PaymentMethodStates.INACTIVE))(implicit session: RSession): Seq[PaymentMethod] = {
     (for (row <- rows if row.accountId === accountId && !row.state.inSet(excludeStates)) yield row).list
+  }
+
+  def getDefault(accountId: Id[PaidAccount])(implicit session: RSession): Option[PaymentMethod] = {
+    (for (row <- rows if row.accountId === accountId && row.default === true) yield row).firstOption
   }
 
 }

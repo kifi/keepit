@@ -11,7 +11,11 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
-  def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
+  //every org should have a PaidAccount, created during org creation. Every time this method gets called that better exist.
+  def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount
+  def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
+  def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount]
+  def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
 }
 
 @Singleton
@@ -41,8 +45,20 @@ class PaidAccountRepoImpl @Inject() (
 
   override def invalidateCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
 
-  def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount] = {
+  def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount = {
+    (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).first
+  }
+
+  def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount] = {
     (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).firstOption
+  }
+
+  def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount] = {
+    (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row.id).first
+  }
+
+  def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if row.planId === planId && row.state === PaidAccountStates.ACTIVE) yield row).list
   }
 
 }

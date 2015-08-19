@@ -20,6 +20,10 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
 
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+
 }
 
 @Singleton
@@ -31,10 +35,12 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, Long](_.id, EventGroup(_))
+  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
+  implicit val processingStageColumnType = MappedColumnType.base[AccountEvent.ProcessingStage, String](_.name, AccountEvent.ProcessingStage(_))
 
   type RepoImpl = AccountEventTable
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "paid_plan") {
+    def stage = column[AccountEvent.ProcessingStage]("processing_stage", O.NotNull)
     def eventGroup = column[EventGroup]("event_group", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
@@ -48,7 +54,7 @@ class AccountEventRepoImpl @Inject() (
     def paymentMethod = column[Id[PaymentMethod]]("payment_method", O.Nullable)
     def paymentCharge = column[DollarAmount]("payment_charge", O.Nullable)
     def memo = column[String]("memo", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, eventGroup, eventTime, accountId, billingRelated, whoDunnit.?, whoDunnitExtra, kifiAdminInvolved.?, eventType, eventTypeExtras, creditChange, paymentMethod.?, paymentCharge.?, memo.?) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, stage, eventGroup, eventTime, accountId, billingRelated, whoDunnit.?, whoDunnitExtra, kifiAdminInvolved.?, eventType, eventTypeExtras, creditChange, paymentMethod.?, paymentCharge.?, memo.?) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new AccountEventTable(tag)
@@ -68,6 +74,24 @@ class AccountEventRepoImpl @Inject() (
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent] = {
     (for (row <- rows if row.accountId === accountId && row.state === state) yield row).list
+  }
+
+  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    val accountEvents = rows.filter(row => row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE)
+    val relevantEvents = onlyRelatedToBillingOpt match {
+      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
+      case None => accountEvents
+    }
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+  }
+
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    val accountEvents = rows.filter(row => row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE)
+    val relevantEvents = onlyRelatedToBillingOpt match {
+      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
+      case None => accountEvents
+    }
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
   }
 
 }
