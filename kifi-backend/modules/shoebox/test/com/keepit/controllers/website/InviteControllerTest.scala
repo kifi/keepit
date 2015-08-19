@@ -58,7 +58,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
       val user1 = UserFactory.user().withName("Foo", "Foo").withUsername("test").saved
       val email1 = userEmailAddressCommander.intern(userId = user1.id.get, address = senderEmail).get._1
       val pwdInfo = PasswordInfo("bcrypt", BCrypt.hashpw("random_pwd", BCrypt.gensalt()))
-      val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
+      val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, credentials = pwdInfo.password))
       val socialUserInfoRepo = inject[SocialUserInfoRepo]
       val socialUser = SocialUser(
         identityId = IdentityId(email1.address.address, "userpass"),
