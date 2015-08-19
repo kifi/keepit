@@ -163,20 +163,6 @@ class RecommendationsCommander @Inject() (
     }.getOrElse(Future.successful(None))
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
-
-    val keeps: Seq[Keep] = db.readWrite { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, limit, beforeExtId, afterExtId)
-    }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
-      case (keep, (acc, seenUriIds)) =>
-        if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
-    }._1
-
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
-      FullLibUpdatesRecoInfo(itemInfo = keepInfos).itemInfo
-    }
-  }
-
   private def decorateUriRecos(userId: Id[User], recos: Seq[RecoInfo], explain: Boolean): Future[Seq[FullUriRecoInfo]] = {
     val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
       recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }

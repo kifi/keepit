@@ -17,6 +17,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
+import com.keepit.curator.model.FullLibUpdatesRecoInfo
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -104,6 +105,7 @@ trait KeepsCommander {
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]]
 }
 
 @Singleton
@@ -863,6 +865,19 @@ class KeepsCommanderImpl @Inject() (
         // either overwrite (if the dead one exists) or create a new one
         keepToCollectionRepo.save(newKtc.copy(id = ktcOpt.map(_.id.get)))
       }
+    }
+  }
+
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
+    val keeps: Seq[Keep] = db.readWrite { implicit session =>
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, limit, beforeExtId, afterExtId)
+    }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
+      case (keep, (acc, seenUriIds)) =>
+        if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
+    }._1
+
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+      FullLibUpdatesRecoInfo(itemInfo = keepInfos).itemInfo
     }
   }
 }
