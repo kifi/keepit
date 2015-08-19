@@ -192,7 +192,7 @@ class ActivityPusher @Inject() (
     }
     res map { deviceCount =>
       log.info(s"push successful to $deviceCount devices")
-      if (deviceCount <= 0) {=
+      if (deviceCount <= 0) {
         db.readWrite { implicit s =>
           //there may be some race conditions with the four lines ahead, we can live with that.
           log.info(s"disable activity push task $activity until user register with at least one device")
