@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('extensionLiaison', [
-  '$window', '$rootScope', 'installService',
-  function ($window, $rootScope, installService) {
+  '$window', '$rootScope',
+  function ($window, $rootScope) {
 
     $window.addEventListener('message', function (event) {
       $rootScope.$apply(function () {
@@ -27,20 +27,18 @@ angular.module('kifi')
     });
 
     function triggerGuide() {
-      if (installService.isValidChrome) {
-        $window.postMessage({
-          type: 'start_guide',
-          pages: [{  // TODO: remove pages once extension 3.3.41 is out of use
-            url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
-            image: ['/img/guide/ted_jobs.jpg', 480, 425],
-            noun: 'video',
-            query: 'steve+jobs',
-            title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
-            matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
-            track: 'steveJobsSpeech'
-          }]
-        }, '*');
-      }
+      $window.postMessage({
+        type: 'start_guide',
+        pages: [{  // TODO: remove pages once extension 3.3.41 is out of use
+          url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
+          image: ['/img/guide/ted_jobs.jpg', 480, 425],
+          noun: 'video',
+          query: 'steve+jobs',
+          title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
+          matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
+          track: 'steveJobsSpeech'
+        }]
+      }, '*');
     }
 
     function postReply(message, event) {
