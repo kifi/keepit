@@ -3,7 +3,6 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
-import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, GetUser, PickOne }
 import com.keepit.notify.info._
 import com.keepit.notify.model._
 import com.keepit.social.{ BasicUser, SocialNetworkType }

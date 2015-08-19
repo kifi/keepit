@@ -1,8 +1,11 @@
 package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, User }
+import com.keepit.common.path.Path
+import com.keepit.model.{LibraryNotificationInfo, Library, User}
+import com.keepit.notify.info.{NotificationInfo, NeedsInfo}
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -31,6 +34,30 @@ object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteA
   )(LibraryCollabInviteAccepted.apply, unlift(LibraryCollabInviteAccepted.unapply))
 
   override def shouldGroupWith(newEvent: LibraryCollabInviteAccepted, existingEvents: Set[LibraryCollabInviteAccepted]): Boolean = false
+
+  override val info = {
+    import NeedsInfo._
+    usingOne[LibraryCollabInviteAccepted](
+      "accepter".arg(_.accepterId, user), "libraryIn".arg(_.libraryId, library),
+      "accepterImage".arg(_.accepterId, userImage)
+    ) {
+      case Fetched(args) =>
+        val accepter = args.get[User]("accepter")
+        val libraryIn = args.get[Library]("libraryIn")
+        val accepterImage = args.get[String]("accepterImage")
+        NotificationInfo(
+          url = Path(accepter.username.value).encode.absolute,
+          imageUrl = accepterImage,
+          title = s"${accepter.firstName} is now collaborating on ${libraryIn.name}",
+          body = s"You invited ${accepter.firstName} to join ${libraryIn.name}",
+          linkText = s"See ${accepter.firstName}’s profile",
+          extraJson = Some(Json.obj(
+            "follower" -> BasicUser.fromUser(accepter),
+            "library" -> Json.toJson(Json.obj()) //todo outfit with library info
+          ))
+        )
+    }
+  }
 
 }
 

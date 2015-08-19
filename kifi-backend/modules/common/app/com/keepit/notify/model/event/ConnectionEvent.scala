@@ -4,7 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
 import com.keepit.notify.info.NeedsInfo.Using
-import com.keepit.notify.info.ReturnsInfo.{ GetUserImage, PickOne, GetUser }
 import com.keepit.notify.info._
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
@@ -39,8 +38,12 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 
   override val info = {
     import NeedsInfo._
-    from[NewConnectionInvite].usingOne(evt => user(evt.inviterId, "inviter") :: userImage(evt.inviterId, "inviterImage") :: NINil) {
-      case Results(inviter :: inviterImage :: ResultNil) =>
+    usingOne[NewConnectionInvite](
+      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImage)
+    ) {
+      case Fetched(args, _) =>
+        val inviter = args.get[User]("inviter")
+        val inviterImage = args.get[String]("inviterImage")
         NotificationInfo(
           url = Path(inviter.username.value).encode.absolute,
           title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
@@ -79,8 +82,12 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 
   override val info = {
     import NeedsInfo._
-    from[ConnectionInviteAccepted].usingOne(evt => user(evt.accepterId, "accepter") :: userImage(evt.accepterId, "accepterImage") :: NINil) {
-      case Results(accepter :: accepterImage :: ResultNil) =>
+    usingOne[ConnectionInviteAccepted](
+      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImage)
+    ) {
+      case Fetched(args, _) =>
+        val accepter = args.get[User]("accepter")
+        val accepterImage = args.get[String]("accepterImage")
         NotificationInfo(
           url = Path(accepter.username.value).encode.absolute,
           title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
