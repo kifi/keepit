@@ -118,7 +118,7 @@ class OrganizationMembershipRepoImpl @Inject() (
   }
 
   def getAllByUserIds(userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], Set[OrganizationMembership]] = {
-    (for (row <- rows if row.userId.inSet(userIds) && row.state =!= excludeState.orNull) yield (row.userId, row)).list.groupBy(_._1).mapValues(userIdAndRow => userIdAndRow.map(_._2).toSet)
+    rows.filter(row => row.userId.inSet(userIds) && row.state =!= excludeState.orNull).list.groupBy(_.userId).mapValues(_.toSet)
   }
 
   override def getSortedMembershipsByOrgId(orgId: Id[Organization], offset: Offset, limit: Limit, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
