@@ -225,6 +225,14 @@ case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
 class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
+  override val version = 1
+  val namespace = "keep_by_id"
+  def toKey(): String = id.id.toString
+}
+class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KeepIdKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 object KeepStates extends States[Keep]
 
 case class KeepSource(value: String) {

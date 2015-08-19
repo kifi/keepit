@@ -76,6 +76,7 @@ class KeepRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     val countCache: KeepCountCache,
+    keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
@@ -166,6 +167,7 @@ class KeepRepoImpl @Inject() (
       countByLibraryCache.remove(CountByLibraryKey(id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
     }
+    keepByIdCache.remove(KeepIdKey(keep.id.get))
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
   }
@@ -178,14 +180,23 @@ class KeepRepoImpl @Inject() (
     if (keep.state == KeepStates.INACTIVE) {
       deleteCache(keep)
     } else {
+      keepByIdCache.set(KeepIdKey(keep.id.get), keep)
       keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
       countCache.remove(KeepCountKey(keep.userId))
     }
   }
 
+  override def get(id: Id[Keep])(implicit session: RSession): Keep = {
+    keepByIdCache.getOrElse(KeepIdKey(id)) {
+      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    }
+  }
+
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
-    val q = for (b <- rows if b.id.inSet(ids)) yield b
-    q.list.map { keep => (keep.id.get, keep) }.toMap
+    keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
+      val q = { for { row <- rows if row.id.inSet(missingKeys.map(_.id)) } yield row }
+      q.list.map { x => KeepIdKey(x.id.get) -> x }.toMap
+    }.map { case (key, org) => key.id -> org }
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
