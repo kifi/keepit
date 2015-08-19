@@ -77,19 +77,21 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
-      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(r => (r.eventTime desc, r.id)).take(limit).list
-    } getOrElse {
-      (for (row <- rows if row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+    val accountEvents = rows.filter(row => row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE)
+    val relevantEvents = onlyRelatedToBillingOpt match {
+      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
+      case None => accountEvents
     }
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
   }
 
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    onlyRelatedToBillingOpt.map { onlyRelatedToBilling =>
-      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE && row.billingRelated === onlyRelatedToBilling) yield row).sortBy(r => (r.eventTime desc, r.id)).take(limit).list
-    } getOrElse {
-      (for (row <- rows if row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE) yield row).sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+    val accountEvents = rows.filter(row => row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE)
+    val relevantEvents = onlyRelatedToBillingOpt match {
+      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
+      case None => accountEvents
     }
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
   }
 
 }

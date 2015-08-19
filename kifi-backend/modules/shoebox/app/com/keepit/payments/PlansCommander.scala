@@ -219,7 +219,7 @@ class PlanManagementCommanderImpl @Inject() (
     if (plan.state == PaidPlanStates.ACTIVE && plan.kind == PaidPlan.Kind.NORMAL) {
       Success(paidPlanRepo.save(plan.copy(kind = PaidPlan.Kind.GRANDFATHERED)))
     } else {
-      Failure(new InvalidChange("plan_not_actisve"))
+      Failure(new InvalidChange("plan_not_active"))
     }
   }
 
@@ -241,7 +241,8 @@ class PlanManagementCommanderImpl @Inject() (
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = db.readWrite { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
     val newPlan = paidPlanRepo.get(newPlanId)
-    if (newPlan.state == PaidPlanStates.ACTIVE && (newPlan.kind == PaidPlan.Kind.NORMAL || (newPlan.kind == PaidPlan.Kind.CUSTOM && attribution.admin.isDefined))) {
+    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
+    if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
       paidAccountRepo.save(account.copy(planId = newPlanId))
       Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
