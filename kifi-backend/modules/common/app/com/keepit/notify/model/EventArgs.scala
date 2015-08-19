@@ -1,10 +1,10 @@
 package com.keepit.notify.model
 
-import com.keepit.notify.info.{NeedInfo$, Args}
+import com.keepit.notify.info.{NeedInfo, Args}
 
 case class EventArgs[E <: NotificationEvent](event: NotificationEvent, argsMap: Args = Map()) {
 
-  def args(args: (String, Any)*) = copy(argsMap = this.argsMap ++ args)
+  def args(givenArgs: (String, Any)*) = copy(argsMap = this.argsMap ++ givenArgs)
 
   def get[A](arg: String) = argsMap.get(arg).get.asInstanceOf[A]
 
