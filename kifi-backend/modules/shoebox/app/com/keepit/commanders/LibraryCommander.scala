@@ -23,7 +23,8 @@ import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationC
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
-import com.keepit.notify.model.{ LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator, LibraryNewKeep }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.keepit.common.concurrent.FutureHelpers
@@ -1084,14 +1085,14 @@ class LibraryCommanderImpl @Inject() (
       }
     if (access == LibraryAccess.READ_WRITE) {
       elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
-        lib.ownerId,
+        Recipient(lib.ownerId),
         currentDateTime,
         newFollowerId,
         lib.id.get
       ))
     } else {
       elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
-        lib.ownerId,
+        Recipient(lib.ownerId),
         currentDateTime,
         newFollowerId,
         lib.id.get
@@ -1157,7 +1158,7 @@ class LibraryCommanderImpl @Inject() (
           }
         toBeNotified foreach { userId =>
           elizaClient.sendNotificationEvent(LibraryNewKeep(
-            userId,
+            Recipient(userId),
             currentDateTime,
             newKeep.userId,
             newKeep.id.get,
