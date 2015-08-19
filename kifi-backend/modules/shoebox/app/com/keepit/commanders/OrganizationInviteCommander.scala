@@ -102,9 +102,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
       invitation.state
     } contains OrganizationInviteStates.ACTIVE
-    if (hasOrgInvite && !userExperimentRepo.hasExperiment(userId, UserExperimentType.ORGANIZATION)) {
-      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.ORGANIZATION))
-    }
   }
 
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
@@ -149,15 +146,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val owner = basicUserRepo.load(org.ownerId)
             val inviter = userRepo.get(inviterId)
             (org, owner, inviter)
-          }
-          db.readWrite { implicit session =>
-            invites.foreach { invite =>
-              invite.userId.foreach { id =>
-                if (!userExperimentRepo.hasExperiment(id, UserExperimentType.ORGANIZATION)) {
-                  userExperimentRepo.save(UserExperiment(userId = id, experimentType = UserExperimentType.ORGANIZATION))
-                }
-              }
-            }
           }
           val persistedInvites = invites.flatMap(persistInvitation)
 

@@ -155,7 +155,7 @@ class LibraryCommanderImpl @Inject() (
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
     if (limit > 0) db.readOnlyReplicaAsync { implicit s =>
       val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
-      val newWay = ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit))
+      val newWay = ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit)) |> keepCommander.idsToKeeps
       if (newWay != oldWay) {
         log.info(s"[KTL-MATCH] getKeeps($libraryId, $offset, $limit): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
       }
@@ -287,7 +287,7 @@ class LibraryCommanderImpl @Inject() (
                 } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case _ =>
                 val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
-                val newWay = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown))
+                val newWay = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
                 if (newWay != oldWay) log.info(s"[KTL-MATCH] createFullLibraryInfos(${library.id.get}): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
                 oldWay
             }

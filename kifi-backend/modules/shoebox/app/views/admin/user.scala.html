@@ -1,6 +1,7 @@
 @(user: User,
   userThreadStats: com.keepit.eliza.model.UserThreadStats,
   totalKeeps: Int,
+  libs: com.keepit.commanders.LibCountStatistics,
   manualKeepsLastWeek: Int,
   organizations: Seq[Organization],
   candidateOrganizations: Seq[Organization],
@@ -55,6 +56,9 @@
       </tr>
       <tr>
         <th>Total Keeps</th><td>@totalKeeps</td>
+      </tr>
+      <tr><td>Libs prv/org/pub</td>
+        <td>@libs.privateLibCount / @libs.protectedLibCount / @libs.publicLibCount</td>
       </tr>
       <tr>
         <th>Manual Keeps Last Week</th><td>@manualKeepsLastWeek</td>

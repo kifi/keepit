@@ -44,7 +44,7 @@ case class OrganizationStatisticsOverview(
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
-  libStats: OrganizationLibStatistics,
+  libStats: LibCountStatistics,
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
@@ -62,11 +62,11 @@ case class MemberStatistics(
 
   dateLastManualKeep: Option[DateTime])
 
-case class OrganizationLibStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
+case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
 
-object OrganizationLibStatistics {
-  def apply(libs: Set[Library]): OrganizationLibStatistics = {
-    OrganizationLibStatistics(
+object LibCountStatistics {
+  def apply(libs: Iterable[Library]): LibCountStatistics = {
+    LibCountStatistics(
       libs.count(_.isSecret),
       libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
       libs.count(_.isPublished))
@@ -81,7 +81,7 @@ case class OrganizationStatistics(
   handle: OrganizationHandle,
   name: String,
   description: Option[String],
-  libStats: OrganizationLibStatistics,
+  libStats: LibCountStatistics,
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
@@ -266,7 +266,7 @@ class UserStatisticsCommander @Inject() (
       handle = org.handle,
       name = org.name,
       description = org.description,
-      libStats = OrganizationLibStatistics(libraries),
+      libStats = LibCountStatistics(libraries),
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,
@@ -304,7 +304,7 @@ class UserStatisticsCommander @Inject() (
       handle = org.handle,
       name = org.name,
       description = org.description,
-      libStats = OrganizationLibStatistics(libraries),
+      libStats = LibCountStatistics(libraries),
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,

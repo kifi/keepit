@@ -27,9 +27,11 @@ trait OrganizationAccessActions {
       Organization.decodePublicId(pubId) match {
         case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
         case Success(orgId) =>
-          if (doesUserHaveRequiredPermissions(orgId, Some(request.userId), requiredPermissions.toSet)) {
+          val memberPermissions = orgMembershipCommander.getPermissions(orgId, request.userIdOpt)
+          val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
+          if (requiredPermissionsSet.subsetOf(memberPermissions)) {
             val authTokenOpt = request.getQueryString("authToken")
-            block(OrganizationUserRequest(request, orgId, authTokenOpt, requiredPermissions.toSet))
+            block(OrganizationUserRequest(request, orgId, authTokenOpt, memberPermissions))
           } else {
             Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
           }
@@ -37,37 +39,18 @@ trait OrganizationAccessActions {
     }
   }
 
-  private def doesUserHaveRequiredPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]], explicitlyRequiredPermissions: Set[OrganizationPermission]): Boolean = {
-    val requiredPermissions = explicitlyRequiredPermissions + OrganizationPermission.VIEW_ORGANIZATION
-    val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
-    requiredPermissions.subsetOf(memberPermissions)
-  }
-
   def OrganizationAction(id: PublicId[Organization], authTokenOpt: Option[String], requiredPermissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
     override def invokeBlock[A](maybeRequest: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
       Organization.decodePublicId(id) match {
+        case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
         case Success(orgId) =>
-          maybeRequest match {
-            case request: UserRequest[_] if request.experiments.contains(UserExperimentType.ORGANIZATION) =>
-              val userId = request.userId
-              val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
-              val memberPermissions = orgMembershipCommander.getPermissions(orgId, Some(userId))
-              if (requiredPermissionsSet.subsetOf(memberPermissions)) {
-                block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
-              } else {
-                Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
-              }
-            case request: NonUserRequest[_] if authTokenOpt.isDefined =>
-              if (authTokenOpt.exists(authToken => orgInviteCommander.isAuthValid(orgId, authToken))) {
-                val memberPermissions = orgMembershipCommander.getPermissions(orgId, None)
-                block(OrganizationRequest(request, orgId, authTokenOpt, memberPermissions))
-              } else {
-                Future.successful(OrganizationFail.INVALID_AUTHTOKEN.asErrorResponse)
-              }
-            case _ => Future.successful(NotFound) // we can remove this after we remove the OrgExperiment guard
+          val memberPermissions = orgMembershipCommander.getPermissions(orgId, maybeRequest.userIdOpt)
+          val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
+          if (requiredPermissionsSet.subsetOf(memberPermissions)) {
+            block(OrganizationRequest(maybeRequest, orgId, authTokenOpt, memberPermissions))
+          } else {
+            Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
           }
-        case _ =>
-          Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
       }
     }
   }
