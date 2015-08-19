@@ -138,7 +138,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfLibraryFound(handle: Handle, slug: String) = WebAppPage { implicit request =>
-    lookupByHandle(handle, mustBeInExperiment = false) flatMap {
+    lookupByHandle(handle) flatMap {
       case (handleOwner, spaceRedirectStatusOpt) =>
         val handleSpace: LibrarySpace = handleOwner match {
           case Left(org) => org.id.get
@@ -183,7 +183,7 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  private def lookupByHandle(handle: Handle, mustBeInExperiment: Boolean = true): Option[(Either[Organization, User], Option[Int])] = {
+  private def lookupByHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
     handleOwnerOpt.map {
       case (handleOwner, isPrimary) =>
