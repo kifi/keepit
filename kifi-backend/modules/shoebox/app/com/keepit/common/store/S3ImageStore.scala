@@ -177,7 +177,7 @@ class S3ImageStoreImpl @Inject() (
       future onComplete {
         case Success(a) =>
           val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
-          updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
+          updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType), setDefault, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
             exception = e,
@@ -277,7 +277,7 @@ class S3ImageStoreImpl @Inject() (
       case Success(res) =>
         val resizedImageResults = cropResizeAndUpload(userExtId, newFilename, bufferedImage, cropAttributes)
         resizedImageResults.find(_.isDefined).map { hadASuccess =>
-          updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true, cropAttributes)
+          updateUserPictureRecord(userId, newFilename, UserPictureSource.USER_UPLOAD, true, cropAttributes)
           hadASuccess
         }.flatten.map { success =>
           avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
