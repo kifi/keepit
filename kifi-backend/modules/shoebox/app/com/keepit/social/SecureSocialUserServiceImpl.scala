@@ -301,43 +301,11 @@ class SecureSocialUserPluginImpl @Inject() (
     sui
   }
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
-    db.readOnlyMaster { implicit s =>
-      providerId match {
-        case UsernamePasswordProvider.UsernamePassword =>
-          val cred = userCredRepo.findByEmailOpt(email)
-          log.info(s"[findByEmail] $email provider=$providerId cred=$cred")
-          cred match {
-            case Some(c: UserCred) => {
-              val user = userRepo.get(c.userId)
-              val res = Some(SocialUser(IdentityId(email, providerId), user.firstName, user.lastName, user.firstName + " " + user.lastName, Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(PasswordInfo(c.provider, c.credentials, Some(c.salt)))))
-              log.info(s"[findByEmail] user=$user socialUser=$res")
-              res
-            }
-            case None => {
-              log.info(s"[findByEmail] email=$email not found")
-              None
-            }
-          }
-        case _ => None
-      }
-    }
-  }
-
-  val tokenMap = collection.mutable.Map.empty[String, Token] // REMOVEME
-
-  def save(token: Token) {
-    log.info(s"[save] token=(${token.email}, ${token.uuid}, ${token.isSignUp}, ${token.isExpired}")
-    tokenMap += (token.uuid -> token)
-  }
-
-  def findToken(token: String): Option[Token] = {
-    val res = tokenMap.get(token)
-    log.info(s"[findToken] token=$token res=$res")
-    res
-  }
-  def deleteToken(uuid: String) {}
-  def deleteExpiredTokens() {}
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = None
+  def save(token: Token): Unit = {}
+  def findToken(token: String): Option[Token] = None
+  def deleteToken(uuid: String): Unit = {}
+  def deleteExpiredTokens(): Unit = {}
 }
 
 @AppScoped

@@ -11,7 +11,6 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[UserCredRepoImpl])
 trait UserCredRepo extends Repo[UserCred] with RepoWithDelete[UserCred] {
   def findByUserIdOpt(id: Id[User])(implicit session: RSession): Option[UserCred]
-  def findByEmailOpt(email: String)(implicit session: RSession): Option[UserCred]
 }
 
 @Singleton
@@ -39,10 +38,4 @@ class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     val q = for { c <- rows if c.userId === id && c.state === UserCredStates.ACTIVE } yield c
     q.firstOption
   }
-
-  def findByEmailOpt(email: String)(implicit session: RSession): Option[UserCred] = {
-    val q = for { c <- rows if c.loginName === email && c.state === UserCredStates.ACTIVE } yield c
-    q.firstOption
-  }
-
 }
