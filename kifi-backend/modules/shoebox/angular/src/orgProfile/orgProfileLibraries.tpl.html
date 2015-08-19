@@ -18,7 +18,7 @@
     <div class="kf-opl-empty" ng-if="libraries.length === 0">
       {{ profile | name }} doesn't have any libraries you have access to.
     </div>
-    <div class="kf-opl-nonmember" ng-if="!membership.role">
+    <div class="kf-opl-nonmember" ng-if="!membership.role && !membership.invite">
       If you are a member of this team, please contact the team's administrator and request an invitation.
     </div>
   </div>
