@@ -392,8 +392,11 @@ angular.module('kifi')
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
+            // Focus without scrolling
+            var x = $window.scrollX, y = $window.scrollY;
             newLibraryNameInput.focus();
-          }, 100); // HACK: race condition scrolls the page before the box is positioned correctly
+            $window.scrollTo(x, y);
+          }, 0);
         };
 
         scope.hideCreatePanel = function () {
