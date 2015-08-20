@@ -1,25 +1,20 @@
 package com.keepit.notify.info
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Keep, Library, User }
+import com.keepit.model._
 
-sealed trait NeedInfo[+A]
+sealed case class NeedInfo[M](kind: String)(id: Id[M])
 
-trait PossibleNeeds {
+object NeedInfo {
 
-  case class NeedUser(id: Id[User]) extends NeedInfo[User]
-  case class NeedLibrary(id: Id[Library]) extends NeedInfo[Library]
-  case class NeedUserImageUrl(id: Id[User]) extends NeedInfo[String]
-  case class NeedKeep(id: Id[Keep]) extends NeedInfo[Keep]
-  case class NeedLibraryUrl(id: Id[Library]) extends NeedInfo[String]
-
-  def user(id: Id[User]): NeedInfo[User] = NeedUser(id)
-  def library(id: Id[Library]): NeedInfo[Library] = NeedLibrary(id)
-  def userImageUrl(id: Id[User]): NeedInfo[String] = NeedUserImageUrl(id)
-  def keep(id: Id[Keep]): NeedInfo[Keep] = NeedKeep(id)
-  def libraryUrl(id: Id[Library]): NeedInfo[String] = NeedLibraryUrl(id)
+  val user = NeedInfo[User]("user")
+  val library = NeedInfo[Library]("library")
+  val userImageUrl = NeedInfo[User]("userImageUrl")
+  val keep = NeedInfo[Keep]("keep")
+  val libraryUrl = NeedInfo[Library]("libraryUrl")
+  val libraryInfo = NeedInfo[Library]("libraryInfo")
+  val libraryOwner = NeedInfo[Library]("libraryOwner")
+  val organization = NeedInfo[Organization]("organization")
 
 }
-
-object NeedInfo extends PossibleNeeds
 

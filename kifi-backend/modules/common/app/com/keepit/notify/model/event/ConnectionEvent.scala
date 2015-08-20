@@ -3,9 +3,8 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
-import com.keepit.notify.info.NeedInfo.Using
 import com.keepit.notify.info._
-import com.keepit.notify.model.{NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent}
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -33,7 +32,6 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
     (__ \ "time").format[DateTime] and
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
-
 
   override def info(event: NewConnectionInvite): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
@@ -77,18 +75,18 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
   override def info(event: ConnectionInviteAccepted): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
     UsingDbSubset(user(event.accepterId), userImageUrl(event.accepterId)) { subset =>
-        val accepter = subset.user(event.accepterId)
-        val accepterImage = subset.userImageUrl(event.accepterId)
-        NotificationInfo(
-          url = Path(accepter.username.value).encode.absolute,
-          title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
-          body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
-          linkText = s"Visit ${accepter.firstName}’s profile",
-          imageUrl = accepterImage,
-          extraJson = Some(Json.obj(
-            "friend" -> BasicUser.fromUser(accepter)
-          ))
-        )
+      val accepter = subset.user(event.accepterId)
+      val accepterImage = subset.userImageUrl(event.accepterId)
+      NotificationInfo(
+        url = Path(accepter.username.value).encode.absolute,
+        title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
+        body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
+        linkText = s"Visit ${accepter.firstName}’s profile",
+        imageUrl = accepterImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(accepter)
+        ))
+      )
     }
   }
 

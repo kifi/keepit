@@ -2,7 +2,7 @@ package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -81,7 +81,7 @@ case class OwnedLibraryNewFollower(
 
 }
 
-object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower] {
+object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryNewFollower] {
 
   override val name: String = "owned_library_new_follower"
 
@@ -91,8 +91,6 @@ object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower]
     (__ \ "followerId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
-
-  override def shouldGroupWith(newEvent: OwnedLibraryNewFollower, existingEvents: Set[OwnedLibraryNewFollower]): Boolean = false
 
 }
 
@@ -106,7 +104,7 @@ case class OwnedLibraryNewCollaborator(
 
 }
 
-object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewCollaborator] {
+object OwnedLibraryNewCollaborator extends NonGroupingNotificationKind[OwnedLibraryNewCollaborator] {
 
   override val name: String = "owned_library_new_collaborator"
 
@@ -116,7 +114,5 @@ object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewColla
     (__ \ "collaboratorId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
-
-  override def shouldGroupWith(newEvent: OwnedLibraryNewCollaborator, existingEvents: Set[OwnedLibraryNewCollaborator]): Boolean = false
 
 }

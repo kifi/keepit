@@ -22,7 +22,7 @@ case class NewSocialConnection(
 
 }
 
-object NewSocialConnection extends NotificationKind[NewSocialConnection] {
+object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnection] {
 
   override val name: String = "new_social_connection"
 
@@ -34,31 +34,6 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
   override def shouldGroupWith(newEvent: NewSocialConnection, existingEvents: Set[NewSocialConnection]): Boolean = false
-
-  //  def build(
-  //    recipient: Recipient,
-  //    time: DateTime,
-  //    friend: User,
-  //    friendImage: String,
-  //    networkType: Option[SocialNetworkType]): EventArgs =
-  //    EventArgs(
-  //      NewSocialConnection(recipient, time, friend.id.get, networkType)
-  //    ).args("friend" -> friend, "friendImage" -> friendImage)
-
-  //  override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
-  //    event <- PickOne(events)
-  //    friend <- GetUser(event.friendId, "friend")
-  //    image <- GetUserImage(event.friendId, "friendImage")
-  //  } yield NotificationInfo(
-  //    url = Path(friend.username.value).encode.absolute,
-  //    imageUrl = image,
-  //    title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
-  //    body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
-  //    linkText = "Invite more friends to kifi",
-  //    extraJson = Some(Json.obj(
-  //      "friend" -> BasicUser.fromUser(friend)
-  //    ))
-  //  )
 
 }
 
@@ -74,7 +49,7 @@ case class SocialContactJoined(
 
 }
 
-object SocialContactJoined extends NotificationKind[SocialContactJoined] {
+object SocialContactJoined extends NonGroupingNotificationKind[SocialContactJoined] {
 
   override val name: String = "social_contact_joined"
 

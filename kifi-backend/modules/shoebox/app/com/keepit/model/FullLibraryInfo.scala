@@ -227,15 +227,6 @@ object LibraryCardInfo {
   }
 }
 
-@json
-case class LibraryNotificationInfo(
-  id: PublicId[Library],
-  name: String,
-  slug: LibrarySlug,
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  owner: BasicUser)
-
 object LibraryNotificationInfo {
   def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
     LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfo.createInfo(_)), owner)
