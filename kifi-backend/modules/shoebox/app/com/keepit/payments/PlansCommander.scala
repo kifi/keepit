@@ -118,7 +118,7 @@ class PlanManagementCommanderImpl @Inject() (
     Try {
       paidAccountRepo.maybeGetByOrgId(orgId).foreach { account =>
         paidAccountRepo.save(account.withState(PaidAccountStates.INACTIVE))
-        accountEventRepo.inactivateAll(account.id.get)
+        accountEventRepo.deactivateAll(account.id.get)
         paymentMethodRepo.getByAccountId(account.id.get).foreach { paymentMethod =>
           paymentMethodRepo.save(paymentMethod.copy(
             state = PaymentMethodStates.INACTIVE,

@@ -3,7 +3,7 @@ package com.keepit.payments
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model.User
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -24,7 +24,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
 
-  def inactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 
 }
 
@@ -96,8 +96,8 @@ class AccountEventRepoImpl @Inject() (
     relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
   }
 
-  def inactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
-    (for (row <- rows if row.accountId === accountId) yield row.state).update(AccountEventStates.INACTIVE)
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
+    (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
   }
 
 }
