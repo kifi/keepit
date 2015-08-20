@@ -24,7 +24,7 @@ class PaymentMethodRepoImpl @Inject() (
   implicit val stripeTokenColumnType = MappedColumnType.base[StripeToken, String](_.token, StripeToken(_))
 
   type RepoImpl = PaymentMethodTable
-  class PaymentMethodTable(tag: Tag) extends RepoTable[PaymentMethod](db, tag, "paid_plan") {
+  class PaymentMethodTable(tag: Tag) extends RepoTable[PaymentMethod](db, tag, "payment_method") {
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
     def default = column[Option[Boolean]]("default_method", O.Nullable)
     def stripeToken = column[StripeToken]("stripe_token", O.NotNull)

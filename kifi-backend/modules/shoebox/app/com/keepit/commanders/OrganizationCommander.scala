@@ -15,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import com.keepit.payments.{ PlanManagementCommander, PaidPlan }
 
 import scala.util.{ Failure, Success, Try }
 
@@ -53,7 +54,8 @@ class OrganizationCommanderImpl @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration,
-    handleCommander: HandleCommander) extends OrganizationCommander with Logging {
+    handleCommander: HandleCommander,
+    planManagementCommander: PlanManagementCommander) extends OrganizationCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
@@ -216,6 +218,7 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session).get
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
@@ -277,6 +280,7 @@ class OrganizationCommanderImpl @Inject() (
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
+          planManagementCommander.deactivatePaidAccountForOrganziation(org.id.get, session)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationDeleteResponse(request))
         case Some(orgFail) => Left(orgFail)

@@ -23,7 +23,8 @@ class InvalidChange(msg: String) extends PlanManagementException(msg)
 
 @ImplementedBy(classOf[PlanManagementCommanderImpl])
 trait PlanManagementCommander {
-  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], session: RWSession): Try[Unit]
+  def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent]
+  def deactivatePaidAccountForOrganziation(orgId: Id[Organization], session: RWSession): Try[Unit]
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
   def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
@@ -68,35 +69,66 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   //very explicitely accepts a db session to allow account creation on org creation within the same db session
-  def createPaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], session: RWSession): Try[Unit] = {
+  def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
     val plan = paidPlanRepo.get(planId)
     if (plan.state != PaidPlanStates.ACTIVE) {
       Failure(new InvalidChange("plan_not_active"))
     } else {
-      paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
+      val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
         case Some(pa) if pa.state == PaidAccountStates.ACTIVE => Failure(new InvalidChange("account_exists"))
         case Some(pa) =>
-          paidAccountRepo.save(PaidAccount(
+          Success(paidAccountRepo.save(PaidAccount(
             id = pa.id,
             orgId = orgId,
             planId = planId,
             credit = DollarAmount(0),
             userContacts = Seq.empty,
             emailContacts = Seq.empty
-          ))
-          Success(())
+          )))
         case None =>
-          paidAccountRepo.save(PaidAccount(
+          Success(paidAccountRepo.save(PaidAccount(
             orgId = orgId,
             planId = planId,
             credit = DollarAmount(0),
             userContacts = Seq.empty,
             emailContacts = Seq.empty
-          ))
-          Success(())
+          )))
+      }
+      maybeAccount.map { account =>
+        accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = account.id.get,
+          attribution = ActionAttribution(user = Some(creator), admin = None),
+          action = AccountEventAction.UserAdded(creator),
+          pending = true
+        ))
+        accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = account.id.get,
+          attribution = ActionAttribution(user = Some(creator), admin = None),
+          action = AccountEventAction.AdminAdded(creator)
+        ))
       }
     }
+  }
+
+  def deactivatePaidAccountForOrganziation(orgId: Id[Organization], session: RWSession): Try[Unit] = {
+    implicit val s = session
+    Try {
+      paidAccountRepo.maybeGetByOrgId(orgId).foreach { account =>
+        paidAccountRepo.save(account.withState(PaidAccountStates.INACTIVE))
+        accountEventRepo.inactivateAll(account.id.get)
+        paymentMethodRepo.getByAccountId(account.id.get).foreach { paymentMethod =>
+          paymentMethodRepo.save(paymentMethod.copy(
+            state = PaymentMethodStates.INACTIVE,
+            default = false,
+            stripeToken = StripeToken.DELETED
+          ))
+        }
+      }
+    }
+
   }
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>

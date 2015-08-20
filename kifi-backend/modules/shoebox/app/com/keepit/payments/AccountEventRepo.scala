@@ -24,6 +24,8 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
 
+  def inactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
+
 }
 
 @Singleton
@@ -39,22 +41,22 @@ class AccountEventRepoImpl @Inject() (
   implicit val processingStageColumnType = MappedColumnType.base[AccountEvent.ProcessingStage, String](_.name, AccountEvent.ProcessingStage(_))
 
   type RepoImpl = AccountEventTable
-  class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "paid_plan") {
+  class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "account_event") {
     def stage = column[AccountEvent.ProcessingStage]("processing_stage", O.NotNull)
     def eventGroup = column[EventGroup]("event_group", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
     def billingRelated = column[Boolean]("billing_related", O.NotNull)
-    def whoDunnit = column[Id[User]]("whodunnit", O.Nullable)
+    def whoDunnit = column[Option[Id[User]]]("whodunnit", O.Nullable)
     def whoDunnitExtra = column[JsValue]("whodunnit_extra", O.NotNull)
-    def kifiAdminInvolved = column[Id[User]]("kifi_admin_involved", O.Nullable)
+    def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
     def eventType = column[String]("event_type", O.NotNull)
     def eventTypeExtras = column[JsValue]("event_type_extras", O.NotNull)
     def creditChange = column[DollarAmount]("credit_change", O.NotNull)
-    def paymentMethod = column[Id[PaymentMethod]]("payment_method", O.Nullable)
-    def paymentCharge = column[DollarAmount]("payment_charge", O.Nullable)
-    def memo = column[String]("memo", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, stage, eventGroup, eventTime, accountId, billingRelated, whoDunnit.?, whoDunnitExtra, kifiAdminInvolved.?, eventType, eventTypeExtras, creditChange, paymentMethod.?, paymentCharge.?, memo.?) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
+    def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
+    def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
+    def memo = column[Option[String]]("memo", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, stage, eventGroup, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new AccountEventTable(tag)
@@ -92,6 +94,10 @@ class AccountEventRepoImpl @Inject() (
       case None => accountEvents
     }
     relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+  }
+
+  def inactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
+    (for (row <- rows if row.accountId === accountId) yield row.state).update(AccountEventStates.INACTIVE)
   }
 
 }
