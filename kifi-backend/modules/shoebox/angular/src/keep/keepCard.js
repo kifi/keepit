@@ -87,6 +87,11 @@ angular.module('kifi')
       templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope) {
 
+        if (typeof scope.galleryView === 'undefined') {
+          // Default to true when the caller doesn't specify
+          scope.galleryView = true;
+        }
+
         //
         // Scope data.
         //
@@ -103,10 +108,7 @@ angular.module('kifi')
             scope.defaultDescLines = galleryView ? 4 : 2;
           };
           setImage(scope.galleryView);
-          scope.$watch(
-            function() { return scope.galleryView; },
-            function(galleryView) { setImage(galleryView); }
-          );
+          scope.$watch('galleryView', setImage);
 
           if (keep.user) {
             // don't repeat the user at the top of the keep card in the keeper list

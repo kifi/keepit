@@ -91,7 +91,7 @@ class ABookImporter @Inject() (
             batchNum += 1
             val basicContacts = readBasicContacts(userId, origin, batch)
             processed += batch.length
-            abookEntry = db.readWrite(attempts = 2) { implicit s =>
+            abookEntry = {
               try {
                 contactInterner.internContacts(userId, abookInfo.id.get, basicContacts)
               } catch {
@@ -110,7 +110,9 @@ class ABookImporter @Inject() (
                   throw t // this will fail
                 }
               }
-              abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
+              db.readWrite(attempts = 2) { implicit s =>
+                abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
+              }
             }
           }
           abookEntry = db.readWrite(attempts = 2) { implicit s =>
