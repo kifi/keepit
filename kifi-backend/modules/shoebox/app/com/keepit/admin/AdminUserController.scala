@@ -357,7 +357,7 @@ class AdminUserController @Inject() (
           case All => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
           case TopKeepersNotInOrg =>
-            val users = userRepo.topKeepersNotInOrgs(50)
+            val users = userRepo.topKeepersNotInOrgs(20)
             (users, users.size)
           case Registered => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
             userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
