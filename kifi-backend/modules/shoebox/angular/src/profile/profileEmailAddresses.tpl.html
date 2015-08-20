@@ -29,7 +29,7 @@
     </ul>
     <a class="profile-email-address-add" href="javascript:" ng-click="enableAddEmail()" ng-show="!(state.editing || state.invalid)">+ add a new email address</a>
     <div class="profile-email-address-add-box" ng-show="state.editing || state.invalid">
-      <div kf-profile-input input-state="state" input-validate-action="validateEmail(value)" input-save-action="addEmail(value)" action-label="Add">
+      <div kf-profile-input input-state="state" input-validate-action="validateEmail(value)" clear-on-close="true" input-save-action="addEmail(value)" action-label="Add">
         <input class="profile-email-address-add-input"
                kf-focus-if focus-cond="state.editing"
                ng-model="state.value"

@@ -42,17 +42,19 @@ angular.module('kifi')
     };
 
     $scope.saveEmail = function (email) {
-      return getEmailInfo(email).then(function (result) {
+      return getEmailInfo(email)
+      .then(function (result) {
         return checkCandidateEmailSuccess(email, result.data);
-      }, function (result) {
+      })['catch'](function (result) {
         return profileService.getEmailValidationError(result.status);
       });
     };
 
     $scope.addEmail = function (email) {
-      return getEmailInfo(email).then(function (result) {
+      return getEmailInfo(email)
+      .then(function (result) {
         return checkCandidateAddEmailSuccess(email, result.data);
-      }, function (result) {
+      })['catch'](function (result) {
         return profileService.getEmailValidationError(result.status);
       });
     };
@@ -136,10 +138,9 @@ angular.module('kifi')
 
     function checkCandidateAddEmailSuccess(email, emailInfo) {
       if (emailInfo.status === 'available') {
+        showVerificationAlert(email);
         profileService.addEmailAccount(email);
-        showVerificationAlert(email); // todo: is the verification triggered automatically?
-      }
-      else {
+      } else {
         return profileService.failureInputActionResult(
           'This email address is already added',
           'Please use another email address.'
