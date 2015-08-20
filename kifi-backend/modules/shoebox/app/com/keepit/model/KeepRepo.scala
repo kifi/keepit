@@ -1,15 +1,15 @@
 package com.keepit.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
-import com.keepit.common.logging.Logging
-import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
-import com.keepit.common.core._
+
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
@@ -20,6 +20,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
 
+  def getByUriAndEntitiesHash(uriId: Id[NormalizedURI], entitiesHash: EntitiesHash)(implicit session: RSession): Set[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -101,10 +102,11 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
+    def entitiesHash = column[Option[EntitiesHash]]("entities_hash", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
+        note, originalKeeperId, organizationId, entitiesHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -112,6 +114,8 @@ class KeepRepoImpl @Inject() (
 
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
+
+  implicit val getEntitiesHashResult = getResultOptionFromMapper[EntitiesHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -135,7 +139,8 @@ class KeepRepoImpl @Inject() (
       sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
-      organizationId = r.<<[Option[Id[Organization]]]
+      organizationId = r.<<[Option[Id[Organization]]],
+      entitiesHash = r.<<[Option[EntitiesHash]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -217,6 +222,10 @@ class KeepRepoImpl @Inject() (
     }
   }
 
+  def getByUriAndEntitiesHash(uriId: Id[NormalizedURI], entitiesHash: EntitiesHash)(implicit session: RSession): Set[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.entitiesHash === entitiesHash && b.state === KeepStates.ACTIVE) yield b).list.toSet
+  }
+
   // preserved for backward compatibility
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
@@ -261,7 +270,6 @@ class KeepRepoImpl @Inject() (
 
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
   }
 
@@ -270,21 +278,18 @@ class KeepRepoImpl @Inject() (
 
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility != '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility = '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
 
     // Performance sensitive call.
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries instead of raw strings.
@@ -543,7 +548,6 @@ class KeepRepoImpl @Inject() (
 
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
 
     (beforeIdOpt.flatMap(getOpt), afterIdOpt.flatMap(getOpt)) match {
       case (Some(before), _) =>

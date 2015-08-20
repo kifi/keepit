@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import java.util.concurrent.TimeoutException
 
-import com.keepit.commanders.{ TweetImportCommander, KeepsCommander, KeepInterner }
+import com.keepit.commanders.{ TweetImportCommander, KeepCommander, KeepInterner }
 import com.keepit.common.akka.{ TimeoutFuture, SafeFuture }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -35,7 +35,7 @@ class BookmarkImporter @Inject() (
     urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
-    keepsCommander: KeepsCommander,
+    keepsCommander: KeepCommander,
     tweetCommander: TweetImportCommander,
     clock: Clock,
     implicit val executionContext: ExecutionContext,
