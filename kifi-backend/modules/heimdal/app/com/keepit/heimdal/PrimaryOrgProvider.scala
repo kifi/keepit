@@ -35,11 +35,9 @@ class PrimaryOrgProviderImpl @Inject() (
 
   def getPrimaryOrgValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
     primaryOrgValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
-      val shoeboxValuesFut = shoebox.getOrgTrackingValues(orgId)
-      val orgMembersFut = shoebox.getOrganizationMembers(orgId)
       for {
-        shoeboxValues <- shoeboxValuesFut
-        members <- orgMembersFut
+        shoeboxValues <- shoebox.getOrgTrackingValues(orgId)
+        members <- shoebox.getOrganizationMembers(orgId)
         messageCount <- eliza.getTotalMessageCountForGroup(members)
       } yield {
         val popularKeeper = helprankCommander.getPopularKeeper(members)
