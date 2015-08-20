@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
-import com.keepit.notify.info.NeedsInfo.Using
+import com.keepit.notify.info.NeedInfo.Using
 import com.keepit.notify.info._
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
@@ -37,9 +37,9 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
   override def shouldGroupWith(newEvent: NewConnectionInvite, existingEvents: Set[NewConnectionInvite]): Boolean = false
 
   override val info = {
-    import NeedsInfo._
+    import NeedInfo._
     usingOne[NewConnectionInvite](
-      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImage)
+      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val inviter = args.get[User]("inviter")
@@ -81,9 +81,9 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
   override def shouldGroupWith(newEvent: ConnectionInviteAccepted, existingEvents: Set[ConnectionInviteAccepted]): Boolean = false
 
   override val info = {
-    import NeedsInfo._
+    import NeedInfo._
     usingOne[ConnectionInviteAccepted](
-      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImage)
+      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val accepter = args.get[User]("accepter")

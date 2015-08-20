@@ -7,29 +7,29 @@ import play.api.libs.functional.{ ~, FunctionalCanBuild }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-sealed trait NeedsInfo[+A]
+sealed trait NeedInfo[+A]
 
 trait PossibleNeeds {
 
-  case class NeedUser(id: Id[User]) extends NeedsInfo[User]
-  case class NeedLibrary(id: Id[Library]) extends NeedsInfo[Library]
-  case class NeedUserImage(id: Id[User]) extends NeedsInfo[String]
-  case class NeedKeep(id: Id[Keep]) extends NeedsInfo[Keep]
-  case class NeedLibraryUrl(id: Id[Library]) extends NeedsInfo[String]
+  case class NeedUser(id: Id[User]) extends NeedInfo[User]
+  case class NeedLibrary(id: Id[Library]) extends NeedInfo[Library]
+  case class NeedUserImageUrl(id: Id[User]) extends NeedInfo[String]
+  case class NeedKeep(id: Id[Keep]) extends NeedInfo[Keep]
+  case class NeedLibraryUrl(id: Id[Library]) extends NeedInfo[String]
 
-  def user(id: Id[User]): NeedsInfo[User] = NeedUser(id)
-  def library(id: Id[Library]): NeedsInfo[Library] = NeedLibrary(id)
-  def userImage(id: Id[User]): NeedsInfo[String] = NeedUserImage(id)
-  def keep(id: Id[Keep]): NeedsInfo[Keep] = NeedKeep(id)
-  def libraryUrl(id: Id[Library]): NeedsInfo[String] = NeedLibraryUrl(id)
+  def user(id: Id[User]): NeedInfo[User] = NeedUser(id)
+  def library(id: Id[Library]): NeedInfo[Library] = NeedLibrary(id)
+  def userImageUrl(id: Id[User]): NeedInfo[String] = NeedUserImageUrl(id)
+  def keep(id: Id[Keep]): NeedInfo[Keep] = NeedKeep(id)
+  def libraryUrl(id: Id[Library]): NeedInfo[String] = NeedLibraryUrl(id)
 
 }
 
 trait ArgsDsl {
 
   implicit class StringGenArgs(str: String) {
-    def arg[A, E <: NotificationEvent](f: E => A, need: A => NeedsInfo[Any]): GenEventArgs[E] = arg(f andThen need)
-    def arg[E <: NotificationEvent](f: E => NeedsInfo[Any]): GenEventArgs[E] = GenEventArgs(Seq(str), e => Seq(f(e)))
+    def arg[A, E <: NotificationEvent](f: E => A, need: A => NeedInfo[Any]): GenEventArgs[E] = arg(f andThen need)
+    def arg[E <: NotificationEvent](f: E => NeedInfo[Any]): GenEventArgs[E] = GenEventArgs(Seq(str), e => Seq(f(e)))
   }
 
 }
@@ -37,7 +37,7 @@ trait ArgsDsl {
 trait UsingDsl {
 
   /**
-   * Represents something that produces a series of [[NeedsInfo]] requests from an event [[E]], then consumes
+   * Represents something that produces a series of [[NeedInfo]] requests from an event [[E]], then consumes
    * them with a function that takes a result.
    */
   trait Using[E <: NotificationEvent, R] {
@@ -64,9 +64,9 @@ trait UsingDsl {
     def unapply[E <: NotificationEvent](that: Fetched[E]): Option[EventArgs[E]] = Some(that.results)
   }
 
-  case class Filled[A](elem: A) extends NeedsInfo[A]
+  case class Filled[A](elem: A) extends NeedInfo[A]
 
 }
 
-object NeedsInfo extends PossibleNeeds with UsingDsl with ArgsDsl
+object NeedInfo extends PossibleNeeds with UsingDsl with ArgsDsl
 

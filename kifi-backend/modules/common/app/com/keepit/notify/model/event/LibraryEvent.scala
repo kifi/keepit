@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ NotificationInfo, NeedsInfo }
+import com.keepit.notify.info.{ NotificationInfo, NeedInfo }
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -36,10 +36,10 @@ object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteA
   override def shouldGroupWith(newEvent: LibraryCollabInviteAccepted, existingEvents: Set[LibraryCollabInviteAccepted]): Boolean = false
 
   override val info = {
-    import NeedsInfo._
+    import NeedInfo._
     usingOne[LibraryCollabInviteAccepted](
       "accepter".arg(_.accepterId, user), "libraryIn".arg(_.libraryId, library),
-      "accepterImage".arg(_.accepterId, userImage)
+      "accepterImage".arg(_.accepterId, userImageUrl)
     ) {
         case Fetched(args, _) =>
           val accepter = args.get[User]("accepter")
