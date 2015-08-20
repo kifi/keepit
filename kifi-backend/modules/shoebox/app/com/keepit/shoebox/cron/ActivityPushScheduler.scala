@@ -170,7 +170,7 @@ class ActivityPusher @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> libMessage.owner,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(libMessage.lib, libMessage.libImageOpt, libMessage.owner)),
+            "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(libMessage.lib, libMessage.libImageOpt, libMessage.owner)),
             "keep" -> Json.obj(
               "id" -> libMessage.newKeep.externalId,
               "url" -> libMessage.newKeep.url

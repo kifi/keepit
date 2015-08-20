@@ -388,7 +388,7 @@ class LibraryCommanderImpl @Inject() (
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
-          image = libImageOpt.map(LibraryImageInfo.createInfo),
+          image = libImageOpt.map(LibraryImageInfoBuilder.createInfo),
           followers = followers,
           collaborators = collaborators,
           keeps = keepInfos,
@@ -1064,7 +1064,7 @@ class LibraryCommanderImpl @Inject() (
       unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     ) map { _ =>
         if (!lotsOfFollowers) {
@@ -1127,7 +1127,7 @@ class LibraryCommanderImpl @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
+            "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
             "keep" -> Json.obj(
               "id" -> newKeep.externalId,
               "url" -> newKeep.url
@@ -1651,7 +1651,7 @@ class LibraryCommanderImpl @Inject() (
       name = lib.name,
       description = lib.description,
       color = lib.color,
-      image = image.map(LibraryImageInfo.createInfo),
+      image = image.map(LibraryImageInfoBuilder.createInfo),
       slug = lib.slug,
       visibility = lib.visibility,
       owner = owner,

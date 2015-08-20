@@ -53,7 +53,7 @@ object LibraryImage {
   )(LibraryImage.apply, unlift(LibraryImage.unapply))
 }
 
-object LibraryImageInfo {
+object LibraryImageInfoBuilder {
   def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))
 }
 

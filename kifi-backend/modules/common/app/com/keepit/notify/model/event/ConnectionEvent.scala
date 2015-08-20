@@ -35,7 +35,9 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
 
   override def info(event: NewConnectionInvite): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    UsingDbSubset(user(event.inviterId), userImageUrl(event.inviterId)) { subset =>
+    UsingDbSubset(Seq(
+      user(event.inviterId), userImageUrl(event.inviterId)
+    )) { subset =>
       val inviter = subset.user(event.inviterId)
       val inviterImage = subset.userImageUrl(event.inviterId)
       NotificationInfo(
@@ -74,7 +76,9 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
 
   override def info(event: ConnectionInviteAccepted): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    UsingDbSubset(user(event.accepterId), userImageUrl(event.accepterId)) { subset =>
+    UsingDbSubset(Seq(
+      user(event.accepterId), userImageUrl(event.accepterId)
+    )) { subset =>
       val accepter = subset.user(event.accepterId)
       val accepterImage = subset.userImageUrl(event.accepterId)
       NotificationInfo(

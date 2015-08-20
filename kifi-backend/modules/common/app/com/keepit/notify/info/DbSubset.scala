@@ -15,6 +15,7 @@ trait DbSubset {
   def libraryInfo(id: Id[Library]): LibraryNotificationInfo
   def libraryOwner(id: Id[Library]): User
   def organization(id: Id[Organization]): Organization
+  def organizationInfo(id: Id[Organization]): OrganizationNotificationInfo
 
 }
 
@@ -26,7 +27,8 @@ class MapDbSubset(
     val libraryUrlMap: Map[Id[Library], String] = Map(),
     val libraryInfoMap: Map[Id[Library], LibraryNotificationInfo] = Map(),
     val libraryOwnerMap: Map[Id[Library], User] = Map(),
-    val organizationMap: Map[Id[Organization], Organization] = Map()) extends DbSubset {
+    val organizationMap: Map[Id[Organization], Organization] = Map(),
+    val organizationInfoMap: Map[Id[Organization], OrganizationNotificationInfo] = Map()) extends DbSubset {
 
   def user(id: Id[User]): User = userMap(id)
   def library(id: Id[Library]): Library = libraryMap(id)
@@ -36,6 +38,7 @@ class MapDbSubset(
   def libraryInfo(id: Id[Library]): LibraryNotificationInfo = libraryInfoMap(id)
   def libraryOwner(id: Id[Library]): User = libraryOwnerMap(id)
   def organization(id: Id[Organization]): Organization = organizationMap(id)
+  def organizationInfo(id: Id[Organization]): OrganizationNotificationInfo = organizationInfoMap(id)
 
 }
 
@@ -44,7 +47,3 @@ trait DbSubsetProvider[F[_]] {
 }
 
 case class UsingDbSubset[A](needs: Seq[NeedInfo[_]])(fn: DbSubset => A)
-
-object UsingDbSubset {
-  def apply[A](needs: NeedInfo[_]*)(fn: DbSubset => A): UsingDbSubset[A] = UsingDbSubset(needs)(fn)
-}

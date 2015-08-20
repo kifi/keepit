@@ -254,7 +254,7 @@ class TwitterSocialGraphImpl @Inject() (
       category = NotificationCategory.User.LIBRARY_FOLLOWING,
       extra = Some(Json.obj(
         "inviter" -> libOwner,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, libOwner))
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, libImageOpt, libOwner))
       ))
     ) map { _ =>
         if (user.createdAt > clock.now.minusMinutes(30)) {
@@ -288,7 +288,7 @@ class TwitterSocialGraphImpl @Inject() (
       unread = false,
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     ) map { _ =>
         val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))

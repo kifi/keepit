@@ -35,20 +35,20 @@ object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
 
   override def info(event: OrgNewInvite): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    UsingDbSubset(
+    UsingDbSubset(Seq(
       user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
-    ) { subset =>
-        val inviter = subset.user(event.inviterId)
-        val invitedOrg = subset.organization(event.orgId)
-        val inviterImage = subset.userImageUrl(event.inviterId)
-        NotificationInfo(
-          url = Path(invitedOrg.handle.value).encode.absolute,
-          imageUrl = inviterImage,
-          title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.name}!",
-          body = s"Help ${invitedOrg.name} by sharing your knowledge with them.",
-          linkText = "Visit organization"
-        )
-      }
+    )) { subset =>
+      val inviter = subset.user(event.inviterId)
+      val invitedOrg = subset.organization(event.orgId)
+      val inviterImage = subset.userImageUrl(event.inviterId)
+      NotificationInfo(
+        url = Path(invitedOrg.handle.value).encode.absolute,
+        imageUrl = inviterImage,
+        title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.name}!",
+        body = s"Help ${invitedOrg.name} by sharing your knowledge with them.",
+        linkText = "Visit organization"
+      )
+    }
   }
 
 }
@@ -76,24 +76,25 @@ object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] 
 
   override def info(event: OrgInviteAccepted): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    UsingDbSubset(
-      user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId)
-    ) { subset =>
-        val accepter = subset.user(event.accepterId)
-        val acceptedOrg = subset.organization(event.orgId)
-        val accepterId = subset.userImageUrl(event.accepterId)
-        NotificationInfo(
-          url = Path(acceptedOrg.handle.value).encode.absolute,
-          imageUrl = accepterId,
-          title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.name}!",
-          body = s"You invited ${accepter.firstName} to join ${acceptedOrg.name}",
-          linkText = "Visit organization",
-          extraJson = Some(Json.obj(
-            "member" -> BasicUser.fromUser(accepter),
-            "organization" -> Json.toJson(Json.obj()) // todo write
-          ))
-        )
-      }
+    UsingDbSubset(Seq(
+      user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
+    )) { subset =>
+      val accepter = subset.user(event.accepterId)
+      val acceptedOrg = subset.organization(event.orgId)
+      val accepterId = subset.userImageUrl(event.accepterId)
+      val acceptedOrgInfo = subset.organizationInfo(event.orgId)
+      NotificationInfo(
+        url = Path(acceptedOrg.handle.value).encode.absolute,
+        imageUrl = accepterId,
+        title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.name}!",
+        body = s"You invited ${accepter.firstName} to join ${acceptedOrg.name}",
+        linkText = "Visit organization",
+        extraJson = Some(Json.obj(
+          "member" -> BasicUser.fromUser(accepter),
+          "organization" -> Json.toJson(acceptedOrgInfo)
+        ))
+      )
+    }
   }
 
 }

@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, Keep, Library, User }
 import com.keepit.common.time._
-import com.keepit.notify.info.{NotificationInfo, UsingDbSubset}
+import com.keepit.notify.info.{ NotificationInfo, UsingDbSubset }
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -80,7 +80,7 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
   override def info(events: Set[DepressedRobotGrumble]): UsingDbSubset[NotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
 
-    UsingDbSubset() { subset =>
+    UsingDbSubset(Seq()) { subset =>
       NotificationInfo(
         url = "http://goo.gl/PqN7Cs",
         imageUrl = "http://i.imgur.com/qs8QofA.png",
