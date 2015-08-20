@@ -12,7 +12,8 @@ angular.module('kifi')
         validateAction: '&inputValidateAction',
         saveAction: '&inputSaveAction',
         explicitEnabling: '=',
-        actionLabel: '@'
+        actionLabel: '@',
+        clearOnClose: '='
       },
       transclude: true,
       templateUrl: 'profile/profileInput.tpl.html',
@@ -40,6 +41,10 @@ angular.module('kifi')
         function cancel() {
           scope.state.value = scope.state.currentValue;
           scope.state.editing = false;
+
+          if (scope.clearOnClose) {
+            scope.state.currentValue = scope.state.prevValue = null;
+          }
         }
 
         function onClickOutsideInput(event) {
@@ -100,12 +105,14 @@ angular.module('kifi')
           }
 
           // Save input.
-          $q.when(scope.saveAction({value: value})).then(function (result) {
-            if (result && !result.isSuccess) {
-              if (result.error) {
-                setInvalid(result.error);
-              }
+          scope.saveAction({value: value})
+          .then(function (result) {
+            if (result && result.error) {
+              setInvalid(result && result.error);
               updateValue(scope.state.prevValue);
+            } else if (scope.clearOnClose) {
+              scope.state.prevValue = null;
+              updateValue('');
             }
           });
         };
