@@ -1,5 +1,6 @@
 package com.keepit.notify.model
 
+import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.notify.info._
 import com.keepit.notify.model.event._
 import play.api.libs.json._
@@ -45,26 +46,7 @@ trait NotificationKind[N <: NotificationEvent] {
 
 object NotificationKind {
 
-  private val kinds: List[NKind] = List[NKind](
-    NewKeepActivity,
-    NewSocialConnection,
-    OwnedLibraryNewFollower,
-    OwnedLibraryNewCollaborator,
-    LibraryNewKeep,
-    LibraryCollabInviteAccepted,
-    LibraryFollowInviteAccepted,
-    LibraryNewCollabInvite,
-    LibraryNewFollowInvite,
-    OwnedLibraryNewCollabInvite,
-    OwnedLibraryNewFollowInvite,
-    OrgNewInvite,
-    OrgInviteAccepted,
-    SocialContactJoined,
-    NewConnectionInvite,
-    ConnectionInviteAccepted,
-    NewMessage,
-    DepressedRobotGrumble
-  )
+  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NKind]("N")
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
 
