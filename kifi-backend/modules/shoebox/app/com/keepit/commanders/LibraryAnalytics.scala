@@ -420,6 +420,7 @@ class LibraryAnalytics @Inject() (
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
     val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
+
   }
 
   def untaggedPage(tag: Collection, keep: Keep, context: HeimdalContext, untaggedAt: DateTime = currentDateTime): Unit =
@@ -433,6 +434,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     contextBuilder += ("tagId", tag.id.get.toString)
+    if (action == "taggedPage") contextBuilder == ("organizationId", keep.organizationId.map(_.toString).getOrElse(""))
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
 
     // Anonymized event with tag information
