@@ -23,6 +23,7 @@ angular.module('kifi')
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
+      scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
       if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
         signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
