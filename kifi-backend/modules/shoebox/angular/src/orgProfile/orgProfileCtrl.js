@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileCtrl', [
-  '$window', '$rootScope', '$scope', '$analytics', '$location', 'profile',
-  'orgProfileService', 'originTrackingService', 'profileService',
-  function ($window, $rootScope, $scope, $analytics, $location, profile,
-  orgProfileService, originTrackingService, profileService) {
+  '$window', '$rootScope', '$scope', '$analytics', '$state', '$location', '$log', 'profile',
+  'orgProfileService', 'originTrackingService',
+  function ($window, $rootScope, $scope, $analytics, $state, $location, $log, profile,
+  orgProfileService, originTrackingService) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.profile = _.cloneDeep(profile.organization);
     $scope.membership = _.cloneDeep(profile.membership);
@@ -16,9 +16,7 @@ angular.module('kifi')
 
     attributes = _.extend(orgProfileService.getCommonTrackingAttributes($scope.profile), attributes);
     attributes = originTrackingService.applyAndClear(attributes);
-    if ($rootScope.userLoggedIn) {
-      attributes.owner = $scope.profile.owner.id === profileService.me.id;
-    }
+    attributes.orgMemberStatus = $scope.membership.role || ($scope.membership.invite ? 'pendingMember' : null);
     $analytics.pageTrack(url, attributes);
   }
 
