@@ -4,7 +4,7 @@
   <a class="profile-nw nw-email import-gmail" href="javascript:" ng-click="importGmailContacts()" ng-bind="addressBookImportText"></a>
   <div ng-if="addressBooks">
     <div class="profile-email-accounts-wrapper">
-      <div class="profile-email-accounts-overview">
+      <div class="profile-email-accounts-overview" ng-if="addressBooks.length">
         <span>Your imported accounts: </span>
         <table class="profile-email-accounts">
           <tbody>
