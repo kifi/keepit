@@ -133,6 +133,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -158,7 +159,8 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
   keepImagesCache: KeepImagesCache,
-  primaryOrgForUserCache: PrimaryOrgForUserCache)
+  primaryOrgForUserCache: PrimaryOrgForUserCache,
+  orgTrackingValuesCache: OrgTrackingValuesCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -807,5 +809,13 @@ class ShoeboxServiceClientImpl @Inject() (
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = {
     val payload = Json.toJson(userIds)
     call(Shoebox.internal.getOrganizationsForUsers(), payload).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
+    cacheProvider.orgTrackingValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
+      call(Shoebox.internal.getOrgTrackingValues(orgId)).map {
+        _.json.as[OrgTrackingValues]
+      }
+    }
   }
 }

@@ -30,6 +30,7 @@ trait OrganizationCommander {
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
   def hasFakeExperiment(org: Id[Organization]): Boolean
+  def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
 }
 
 @Singleton
@@ -313,6 +314,17 @@ class OrganizationCommanderImpl @Inject() (
         val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
         applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
       }
+    }
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues = {
+    db.readOnlyReplica { implicit session =>
+      val libraries = libraryRepo.getOrganizationLibraries(orgId)
+      val libraryCount = libraries.length
+      val keepCount = keepRepo.getByLibraryIds(libraries.map(_.id.get).toSet).count(keep => !KeepSource.imports.contains(keep.source))
+      val inviteCount = orgInviteRepo.getCountByOrganization(orgId, decisions = Set(InvitationDecision.PENDING))
+      val collabLibCount = libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_WRITE).count { case (_, memberCount) => memberCount > 0 }
+      OrgTrackingValues(libraryCount, keepCount, inviteCount, collabLibCount)
     }
   }
 }
