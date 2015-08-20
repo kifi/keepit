@@ -2,27 +2,27 @@ package com.keepit.commanders
 
 import java.util.UUID
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
+import com.keepit.heimdal.{HeimdalContext, HeimdalServiceClient}
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
-import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
+import com.keepit.normalizer.{NormalizationCandidate, NormalizedURIInterner}
 import com.keepit.rover.RoverServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
-import scala.util.{ Failure, Random, Success, Try }
-import com.keepit.common.akka.SafeFuture
+import scala.util.{Failure, Success, Try}
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -42,7 +42,7 @@ class KeepInternerImpl @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
-  keepToLibraryCommander: KeepToLibraryCommander,
+  keepCommander: KeepsCommander,
   countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -247,7 +247,7 @@ class KeepInternerImpl @Inject() (
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
-            keepRepo.save(keep)
+            keepCommander.persistKeep(keep)
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
@@ -267,7 +267,7 @@ class KeepInternerImpl @Inject() (
           note = note,
           originalKeeperId = Some(userId)
         )
-        val improvedKeep = keepRepo.save(integrityHelpers.improveKeepSafely(uri, keep))
+        val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep))
         (true, false, improvedKeep)
     }
     if (wasInactiveKeep) {
@@ -275,7 +275,6 @@ class KeepInternerImpl @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    keepToLibraryCommander.internKeepInLibrary(internedKeep, library, internedKeep.userId)
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
