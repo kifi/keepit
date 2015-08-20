@@ -2,47 +2,33 @@ package com.keepit.commanders
 
 import java.util.concurrent.{ Callable, TimeUnit }
 
-import com.keepit.common.cache.TransactionalCaching.Implicits._
-
-import com.google.common.cache.{ CacheBuilder, Cache }
-import com.google.inject.{ ImplementedBy, Singleton, Inject }
-
-import com.keepit.common.core._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.net._
-import com.keepit.common.time._
+import com.google.common.cache.{ Cache, CacheBuilder }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.cache.TransactionalCaching.Implicits._
+import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.performance._
+import com.keepit.common.time._
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
+import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, BasicUser }
-
+import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
+import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.BodyParsers.parse
 
-import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
-import akka.actor.Scheduler
-import com.keepit.eliza.ElizaServiceClient
-import scala.util.{ Try, Success, Failure }
-import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import com.keepit.common.performance._
-import com.keepit.common.domain.DomainToNameMapper
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import org.joda.time.DateTime
-import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, RestrictedKeepInfo, ItemAugmentationRequest, AugmentableItem }
-import com.keepit.common.json.TupleFormat
-import com.keepit.common.store.ImageSize
-import com.keepit.common.CollectionHelpers
+import scala.util.{ Failure, Success }
 
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
@@ -117,6 +103,8 @@ class KeepsCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,
+    ktuRepo: KeepToUserRepo,
+    ktuCommander: KeepToUserCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
@@ -376,10 +364,12 @@ class KeepsCommanderImpl @Inject() (
           val keeps = keepsE.map(_.left.get)
           val invalidKeepIds = invalidKeepIdsE.map(_.right.get)
 
-          // Save keeps as INACTIVE
           val inactivatedKeeps = keeps.map { k =>
-            ktlCommander.removeKeepFromLibrary(k.id.get, libId)
-            keepRepo.save(k.copy(state = KeepStates.INACTIVE, note = None)) // TODO(ryan): remove this, don't kill keeps when you detach them
+            // TODO(ryan): stop deactivating keeps and instead just detach them from libraries
+            // just uncomment the line below this and rework some of this
+            // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
+            deactivateKeep(k)
+            k.withState(KeepStates.INACTIVE).withNote(None)
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -769,6 +759,7 @@ class KeepsCommanderImpl @Inject() (
 
   def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
     val keep = keepRepo.save(k)
+    ktuCommander.internKeepInUser(keep, keep.userId, keep.userId)
     // TODO(ryan): drop this once keeps don't need to exist in libraries
     ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
     keep
@@ -785,6 +776,7 @@ class KeepsCommanderImpl @Inject() (
   }
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)
+    ktuCommander.removeKeepFromAllUsers(keep)
     keepRepo.deactivate(keep)
   }
 

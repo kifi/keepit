@@ -3,11 +3,6 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import play.api.libs.json.Json
-import play.api.mvc.Results.Status
-import play.api.http.Status._
-
-import scala.util.control.NoStackTrace
 
 case class KeepToLibrary(
   id: Option[Id[KeepToLibrary]] = None,
@@ -67,16 +62,3 @@ object KeepToLibrary {
 }
 
 object KeepToLibraryStates extends States[KeepToLibrary]
-
-sealed abstract class KeepToLibraryFail(val status: Int, val message: String) extends Exception(message) with NoStackTrace {
-  def asErrorResponse = Status(status)(Json.obj("error" -> message))
-}
-object KeepToLibraryFail {
-  case object NOT_IN_LIBRARY extends KeepToLibraryFail(BAD_REQUEST, "keep_not_in_library")
-
-  def apply(str: String): KeepToLibraryFail = {
-    str match {
-      case NOT_IN_LIBRARY.message => NOT_IN_LIBRARY
-    }
-  }
-}
