@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import com.google.inject.{ ImplementedBy, Inject }
+import com.keepit.commander.HelpRankCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
@@ -24,7 +25,7 @@ class PrimaryOrgProviderImpl @Inject() (
     primaryOrgValuesCache: OrgTrackingValuesCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
-    keepDiscoveriesRepo: KeepDiscoveryRepo,
+    helprankCommander: HelpRankCommander,
     db: Database) extends PrimaryOrgProvider {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = {
     primaryOrgForUserCache.getOrElseFutureOpt(PrimaryOrgForUserKey(userId)) {
@@ -34,15 +35,15 @@ class PrimaryOrgProviderImpl @Inject() (
 
   def getPrimaryOrgValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
     primaryOrgValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
-      shoebox.getOrgTrackingValues(orgId).flatMap { shoeboxValues =>
-        shoebox.getOrganizationMembers(orgId).flatMap { members =>
-          eliza.getTotalMessageCountForGroup(members).map { messageCount =>
-            db.readOnlyMaster { implicit session =>
-              val popularKeeper = keepDiscoveriesRepo.getDiscoveryCountsByKeeper(members).maxBy(_._2)._1
-              shoeboxValues.copy(messageCount = Some(messageCount), popularKeeper = Some(popularKeeper))
-            }
-          }
-        }
+      val shoeboxValuesFut = shoebox.getOrgTrackingValues(orgId)
+      val orgMembersFut = shoebox.getOrganizationMembers(orgId)
+      for {
+        shoeboxValues <- shoeboxValuesFut
+        members <- orgMembersFut
+        messageCount <- eliza.getTotalMessageCountForGroup(members)
+        popularKeeper = helprankCommander.getPopularKeeper(members)
+      } yield {
+        shoeboxValues.copy(messageCount = Some(messageCount), popularKeeper = Some(popularKeeper))
       }
     }
   }
