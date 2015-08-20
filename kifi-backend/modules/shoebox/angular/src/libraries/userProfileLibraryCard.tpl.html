@@ -32,6 +32,16 @@
           ng-if="lib.kind !== 'system_main' && lib.visibility === 'published'"
         ></svg>
       </div>
+      <div data-kf-tooltip="This library is viewable only to members of your organization">
+        <svg
+          class="kf-upl-card-org-private"
+          kf-symbol-sprite
+          icon="org"
+          ng-class="{'kf-collab': lib.numCollaborators }"
+          title="An org private library"
+          ng-if="lib.visibility === 'organization'"
+        ></svg>
+      </div>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
     <div class="kf-upl-card-foot" ng-switch="footerKind" ng-if="footerKind !== 'followers'">
