@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
-  function($scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
+  '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
+  function($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
     function memberPageAnalytics(args) {
       orgProfileService.trackEvent('user_clicked_page', organization, args);
     }
@@ -257,7 +257,7 @@ angular.module('kifi')
         }
       });
     };
-
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgMembers' });
     resetAndFetch();
   }
 ]);

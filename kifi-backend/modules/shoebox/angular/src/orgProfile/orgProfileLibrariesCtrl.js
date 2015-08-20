@@ -96,7 +96,7 @@ angular.module('kifi')
         }
       });
     };
-
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgLibraries'});
     resetAndFetchLibraries();
   }
 ]);
