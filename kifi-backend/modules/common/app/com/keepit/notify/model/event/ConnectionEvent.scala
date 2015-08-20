@@ -36,25 +36,23 @@ object NewConnectionInvite extends NotificationKind[NewConnectionInvite] {
 
   override def shouldGroupWith(newEvent: NewConnectionInvite, existingEvents: Set[NewConnectionInvite]): Boolean = false
 
-  override val info = {
+  override def info(events: Set[NewConnectionInvite]): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    usingOne[NewConnectionInvite](
-      "inviter".arg(_.inviterId, user), "inviterImage".arg(_.inviterId, userImageUrl)
-    ) {
-        case Fetched(args, _) =>
-          val inviter = args.get[User]("inviter")
-          val inviterImage = args.get[String]("inviterImage")
-          NotificationInfo(
-            url = Path(inviter.username.value).encode.absolute,
-            title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
-            body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
-            linkText = s"Respond to ${inviter.firstName}’s invitation",
-            imageUrl = inviterImage,
-            extraJson = Some(Json.obj(
-              "friend" -> BasicUser.fromUser(inviter)
-            ))
-          )
-      }
+    val oneEvent = events.head
+    UsingDbSubset(user(oneEvent.inviterId), userImageUrl(oneEvent.inviterId)) { subset =>
+      val inviter = subset.user(oneEvent.inviterId)
+      val inviterImage = subset.userImageUrl(oneEvent.inviterId)
+      NotificationInfo(
+        url = Path(inviter.username.value).encode.absolute,
+        title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
+        body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
+        linkText = s"Respond to ${inviter.firstName}’s invitation",
+        imageUrl = inviterImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(inviter)
+        ))
+      )
+    }
   }
 
 }
@@ -80,25 +78,23 @@ object ConnectionInviteAccepted extends NotificationKind[ConnectionInviteAccepte
 
   override def shouldGroupWith(newEvent: ConnectionInviteAccepted, existingEvents: Set[ConnectionInviteAccepted]): Boolean = false
 
-  override val info = {
+  override def info(events: Set[ConnectionInviteAccepted]): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    usingOne[ConnectionInviteAccepted](
-      "accepter".arg(_.accepterId, user), "accepterImage".arg(_.accepterId, userImageUrl)
-    ) {
-        case Fetched(args, _) =>
-          val accepter = args.get[User]("accepter")
-          val accepterImage = args.get[String]("accepterImage")
-          NotificationInfo(
-            url = Path(accepter.username.value).encode.absolute,
-            title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
-            body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
-            linkText = s"Visit ${accepter.firstName}’s profile",
-            imageUrl = accepterImage,
-            extraJson = Some(Json.obj(
-              "friend" -> BasicUser.fromUser(accepter)
-            ))
-          )
-      }
+    val oneEvent = events.head
+    UsingDbSubset(user(oneEvent.accepterId), userImageUrl(oneEvent.accepterId)) { subset =>
+        val accepter = subset.user(oneEvent.accepterId)
+        val accepterImage = subset.userImageUrl(oneEvent.accepterId)
+        NotificationInfo(
+          url = Path(accepter.username.value).encode.absolute,
+          title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
+          body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
+          linkText = s"Visit ${accepter.firstName}’s profile",
+          imageUrl = accepterImage,
+          extraJson = Some(Json.obj(
+            "friend" -> BasicUser.fromUser(accepter)
+          ))
+        )
+    }
   }
 
 }
