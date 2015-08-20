@@ -46,6 +46,36 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "getCountByLibrariesSince" in {
+      withDb() { implicit injector =>
+        val date = inject[FakeClock].now
+        val (lib1, lib2, lib3, lib4, lib5, lib6) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+
+          val lib1 = LibraryFactory.library().withOwner(user1).discoverable().saved
+          val lib2 = LibraryFactory.library().withOwner(user1).secret().saved
+          val lib3 = LibraryFactory.library().withOwner(user1).published().saved
+
+          val lib4 = LibraryFactory.library().withOwner(user2).discoverable().saved
+          val lib5 = LibraryFactory.library().withOwner(user2).secret().saved
+          val lib6 = LibraryFactory.library().withOwner(user2).published().saved
+
+          keep().withUser(user1).withKeptAt(date.plusDays(7)).withLibrary(lib1).saved
+          keep().withUser(user1).withKeptAt(date).withLibrary(lib2).saved
+          keep().withUser(user1).withKeptAt(date.minusDays(7)).withLibrary(lib3).saved
+          keeps(20).map(_.withUser(user2).withLibrary(lib6).withKeptAt(date)).saved
+          keeps(20).map(_.withUser(user2).withLibrary(lib5).withKeptAt(date)).saved
+          (lib1.id.get, lib2.id.get, lib3.id.get, lib4.id.get, lib5.id.get, lib6.id.get)
+        }
+        db.readOnlyMaster { implicit s =>
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusMinutes(1)) === 1
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusMinutes(1)) === 2
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusYears(1)) === 0
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusYears(1)) === 3
+        }
+      }
+    }
     "last active keep time" in {
       withDb() { implicit injector =>
         val (user1, user2, user3) = db.readWrite { implicit s =>

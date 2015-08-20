@@ -25,6 +25,8 @@ orgStats: OrganizationStatistics
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
     <tr><td>Libs prv/org/pub</td>
         <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td></tr>
+    <tr><td>Num Keeps ever/last week</td>
+        <td>@orgStats.numKeeps / @orgStats.numKeepsLastWeek</td></tr>
     <tr><td>Handle</td>
         <td>
             <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setHandle(orgStats.orgId)" method="POST" class="form-inline set-handle">
@@ -111,7 +113,7 @@ orgStats: OrganizationStatistics
             <td>@membership.role</td>
             <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
             <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(membership.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
@@ -142,7 +144,7 @@ orgStats: OrganizationStatistics
             <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
             <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
             <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+            <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
             <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
             <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                 <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
