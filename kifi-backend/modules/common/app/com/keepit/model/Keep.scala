@@ -25,7 +25,6 @@ case class Keep(
     userId: Id[User],
     state: State[Keep] = KeepStates.ACTIVE,
     source: KeepSource,
-    kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]],
     keptAt: DateTime = currentDateTime,
@@ -34,7 +33,7 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -93,10 +92,10 @@ object Keep {
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
     case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
-      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
+      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
         uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, urlId = urlId, url = url,
-        userId = userId, state = state, source = source, kifiInstallation = kifiInstallation,
+        userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
         organizationId = organizationId)
@@ -106,25 +105,25 @@ object Keep {
   def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
     urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
-    state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
+    state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]]): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url,
-      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId)
+      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId)
   }
 
   def unapplyToDbRow(k: Keep) = {
     Some(
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
         k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url),
-      (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation,
+      (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
         k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Id[URL], String)
-  private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, Option[ExternalId[KifiInstallation]], SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
+  private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -141,7 +140,6 @@ object Keep {
       (__ \ 'userId).read(Id.format[User]) and
       (__ \ 'state).read(State.format[Keep]) and
       (__ \ 'source).read[String].map(KeepSource(_)) and
-      (__ \ 'kifiInstallation).readNullable(ExternalId.format[KifiInstallation]) and
       (__ \ 'seq).read(SequenceNumber.format[Keep]) and
       (__ \ 'libraryId).readNullable(Id.format[Library]) and
       (__ \ 'visibility).read[LibraryVisibility] and
@@ -176,7 +174,6 @@ object Keep {
         "userId" -> k.userId,
         "state" -> k.state,
         "source" -> k.source.value,
-        "kifiInstallation" -> k.kifiInstallation,
         "seq" -> k.seq,
         "libraryId" -> k.libraryId,
         "keptAt" -> k.keptAt,

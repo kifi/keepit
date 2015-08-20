@@ -94,7 +94,6 @@ class KeepRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
     def source = column[KeepSource]("source", O.NotNull)
-    def kifiInstallation = column[Option[ExternalId[KifiInstallation]]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
@@ -104,7 +103,7 @@ class KeepRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
-      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
+      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
 
@@ -129,7 +128,6 @@ class KeepRepoImpl @Inject() (
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],
-      kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
