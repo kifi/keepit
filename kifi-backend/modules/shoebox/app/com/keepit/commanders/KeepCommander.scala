@@ -18,6 +18,7 @@ import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
+import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
@@ -55,8 +56,8 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply _, unlift(BulkKeepSelection.unapply))
 }
 
-@ImplementedBy(classOf[KeepsCommanderImpl])
-trait KeepsCommander {
+@ImplementedBy(classOf[KeepCommanderImpl])
+trait KeepCommander {
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
@@ -87,6 +88,7 @@ trait KeepsCommander {
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Keep
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
@@ -94,7 +96,7 @@ trait KeepsCommander {
 }
 
 @Singleton
-class KeepsCommanderImpl @Inject() (
+class KeepCommanderImpl @Inject() (
     db: Database,
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
@@ -123,8 +125,9 @@ class KeepsCommanderImpl @Inject() (
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
+    uriHelpers: UriIntegrityHelpers,
     implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends KeepsCommander with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep] = {
     val idToKeepMap = keepRepo.getByIds(ids.toSet)
@@ -773,6 +776,12 @@ class KeepsCommanderImpl @Inject() (
   }
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withOwner(newOwnerId))
+  }
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Keep = {
+    val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
+    ktlCommander.syncKeep(newKeep)
+    ktuCommander.syncKeep(newKeep)
+    newKeep
   }
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)

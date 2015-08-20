@@ -2,7 +2,7 @@ package com.keepit.integrity
 
 import akka.pattern.{ ask, pipe }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepToUserCommander, KeepToLibraryCommander }
+import com.keepit.commanders.{KeepCommander, KeepToUserCommander, KeepToLibraryCommander}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db._
@@ -36,6 +36,7 @@ class UriIntegrityActor @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     urlRepo: URLRepo,
     val keepRepo: KeepRepo,
+    keepCommander: KeepCommander,
     ktlCommander: KeepToLibraryCommander,
     ktuCommander: KeepToUserCommander,
     changedUriRepo: ChangedURIRepo,
@@ -49,11 +50,9 @@ class UriIntegrityActor @Inject() (
 
   /** tricky point: make sure (library, uri) pair is unique.  */
   private def handleBookmarks(oldKeeps: Seq[Keep])(implicit session: RWSession): Unit = {
-
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
     val deactivatedKeeps = oldKeeps.map { keep =>
-
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val newUri = urlToUriMap.getOrElse(keep.url, {
         val newUri = normalizedURIInterner.internByUri(keep.url, contentWanted = true)
@@ -70,16 +69,14 @@ class UriIntegrityActor @Inject() (
         val libId = keep.libraryId.get // fail if there's no library
         val userId = keep.userId
         val newUriId = newUri.id.get
-        val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
+        val mergeCandidates = keepRepo.getMergeableCandidates(keep, newUriId)
 
         currentBookmarkOpt match {
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
-            val newKeep = keepRepo.save(helpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
-            ktlCommander.syncKeep(newKeep)
-            ktuCommander.syncKeep(newKeep)
-            (Some(keep), None)
+            val newKeep = keepCommander.changeUri(keep, newUri)
+            (Some(newKeep), None)
           case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
               // TODO(ryan): This is just killing the old keep. We ought to check if the Keep metadata can be merged
