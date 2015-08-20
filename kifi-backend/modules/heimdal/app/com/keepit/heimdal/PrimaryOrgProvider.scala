@@ -41,8 +41,8 @@ class PrimaryOrgProviderImpl @Inject() (
         shoeboxValues <- shoeboxValuesFut
         members <- orgMembersFut
         messageCount <- eliza.getTotalMessageCountForGroup(members)
-        popularKeeper = helprankCommander.getPopularKeeper(members)
       } yield {
+        val popularKeeper = helprankCommander.getPopularKeeper(members)
         shoeboxValues.copy(messageCount = Some(messageCount), popularKeeper = Some(popularKeeper))
       }
     }
