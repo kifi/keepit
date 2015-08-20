@@ -105,7 +105,7 @@ angular.module('kifi')
           }
 
           // Save input.
-          scope.saveAction({value: value})
+          $q.when(scope.saveAction({value: value}))
           .then(function (result) {
             if (result && result.error) {
               setInvalid(result && result.error);
