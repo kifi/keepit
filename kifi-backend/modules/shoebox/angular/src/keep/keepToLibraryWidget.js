@@ -389,12 +389,11 @@ angular.module('kifi')
             scope.newLibrary.name = scope.search.name;
           }
 
-
           // Wait for the creation panel to be shown, and then focus on the
           // input.
           $timeout(function () {
             newLibraryNameInput.focus();
-          }, 0);
+          }, 100); // HACK: race condition scrolls the page before the box is positioned correctly
         };
 
         scope.hideCreatePanel = function () {
