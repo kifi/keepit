@@ -67,7 +67,8 @@ case class MemberStatistics(
 case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
 
 object LibCountStatistics {
-  def apply(libs: Iterable[Library]): LibCountStatistics = {
+  def apply(allLibs: Iterable[Library]): LibCountStatistics = {
+    val libs = allLibs.filter(_.kind == LibraryKind.USER_CREATED)
     LibCountStatistics(
       libs.count(_.isSecret),
       libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
