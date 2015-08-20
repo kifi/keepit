@@ -1,15 +1,15 @@
 package com.keepit.model
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.keepit.commanders.{LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
-import scala.slick.jdbc.{GetResult, PositionedResult, StaticQuery}
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
@@ -19,8 +19,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
-
-  def getMergeCandidates(keepId: Id[Keep], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Keep]
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
@@ -513,10 +511,6 @@ class KeepRepoImpl @Inject() (
         Some(keep)
       }
     }
-  }
-
-  def getMergeCandidates(keepId: Id[Keep], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Keep] = {
-
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {

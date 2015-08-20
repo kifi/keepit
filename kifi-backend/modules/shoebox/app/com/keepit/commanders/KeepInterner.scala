@@ -42,7 +42,7 @@ class KeepInternerImpl @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
-  keepCommander: KeepsCommander,
+  keepCommander: KeepCommander,
   countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,

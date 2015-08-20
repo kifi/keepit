@@ -88,7 +88,7 @@ trait KeepCommander {
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Keep
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep]
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
@@ -777,12 +777,37 @@ class KeepCommanderImpl @Inject() (
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withOwner(newOwnerId))
   }
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Keep = {
-    val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUriId)))
+
+  private def getKeepsByLibrariesAndUsers(libIds: Set[Id[Library]], userIds: Set[Id[User]], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {
+    val seedCandidates = if (libIds.nonEmpty) {
+      ktlRepo.getAllByLibraryAndUri(libIds.head, uriId).map(_.keepId)
+    } else if (userIds.nonEmpty) {
+      ktuRepo.getAllByUserAndUri(userIds.head, uriId).map(_.keepId)
+    } else {
+      throw new Exception("keep is not connected to any users or in any libraries")
+    }
+
+    val libCandidates = libIds.foldLeft(seedCandidates) { case (cands, libId) => cands intersect ktlRepo.getAllByLibraryAndUri(libId, uriId).map(_.keepId) }
+    val userAndLibCandidates = userIds.foldLeft(libCandidates) { case (cands, userId) => cands intersect ktuRepo.getAllByUserAndUri(userId, uriId).map(_.keepId) }
+    userAndLibCandidates
+  }
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep] = {
+    val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
+    val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
+    val mergeCandidates = (getKeepsByLibrariesAndUsers(libIds, userIds, newUri.id.get) |> keepRepo.getByIds).values
+
+    val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get)))
     ktlCommander.syncKeep(newKeep)
     ktuCommander.syncKeep(newKeep)
-    newKeep
+
+    if (mergeCandidates.exists(keep.canBeMergedInto)) {
+      deactivateKeep(keep)
+      None
+    } else {
+      Some(keep)
+    }
   }
+
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)
     ktuCommander.removeKeepFromAllUsers(keep)

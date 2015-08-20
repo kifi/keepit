@@ -70,6 +70,8 @@ case class Keep(
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
+
+  def canBeMergedInto(other: Keep): Boolean = true
 }
 
 object Keep {
