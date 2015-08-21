@@ -14,6 +14,27 @@ import org.specs2.mutable._
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
   "KeepRepo" should {
+    "save and load a keep" in {
+      skipped("TODO(ryan): Figure out how to make repo.save return the actual model that is saved")
+      withDb() { implicit injector =>
+        db.readWrite { implicit session =>
+          val savedKeep = keepRepo.save(Keep(
+            uriId = Id[NormalizedURI](1),
+            isPrimary = true,
+            urlId = Id[URL](2),
+            url = "http://www.kifi.com",
+            visibility = LibraryVisibility.ORGANIZATION,
+            userId = Id[User](3),
+            source = KeepSource.keeper,
+            libraryId = Some(Id[Library](4)),
+            entitiesHash = Some(EntitiesHash(5))
+          ))
+          keepRepo.get(savedKeep.id.get) === savedKeep
+          keepRepo.getNoCache(savedKeep.id.get) === savedKeep
+        }
+        1 === 1
+      }
+    }
     "getPrivate" in {
       withDb() { implicit injector =>
         val (user1, user2, keep1, keep2, keep3) = db.readWrite { implicit s =>

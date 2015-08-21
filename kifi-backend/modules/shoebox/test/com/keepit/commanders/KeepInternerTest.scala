@@ -45,7 +45,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "url" -> "http://42go.com",
           "isPrivate" -> true
         )), user.id.get, secret, KeepSource.email)
+        println("[RPB] bookmarks = " + bookmarks)
         db.readWrite { implicit session =>
+          println("[RPB] from the repo = " + keepRepo.get(bookmarks.head.id.get))
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
           keepRepo.get(bookmarks.head.id.get).copy(updatedAt = bookmarks.head.updatedAt) === bookmarks.head

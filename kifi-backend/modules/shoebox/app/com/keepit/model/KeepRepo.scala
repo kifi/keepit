@@ -106,7 +106,7 @@ class KeepRepoImpl @Inject() (
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId, entitiesHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
+        note, originalKeeperId, organizationId, entitiesHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -114,8 +114,8 @@ class KeepRepoImpl @Inject() (
 
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
+
   implicit val getEntitiesHashResult = getResultOptionFromMapper[EntitiesHash]
-  implicit val setEntitiesHashParameter = setOptionParameterFromMapper[EntitiesHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(

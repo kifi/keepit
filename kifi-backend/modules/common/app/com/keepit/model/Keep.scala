@@ -34,7 +34,7 @@ case class Keep(
     note: Option[String] = None,
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
-    entitiesHash: Option[EntitiesHash]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    entitiesHash: Option[EntitiesHash] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, entitiesHash = Some(KeepConnectionEntities.empty.hash)) // good idea?
 
@@ -77,7 +77,7 @@ case class Keep(
   def isInactive: Boolean = state == KeepStates.INACTIVE
 
   def canBeMergedInto(other: Keep): Boolean = {
-    entitiesHash == other.entitiesHash && keptAt >= other.keptAt
+    entitiesHash == other.entitiesHash && keptAt > other.keptAt
   }
 }
 
@@ -191,23 +191,23 @@ object Keep {
         "sourceAttributionId" -> k.sourceAttributionId,
         "note" -> k.note,
         "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
-        "organizationId" -> k.organizationId
+        "organizationId" -> k.organizationId,
+        "entitiesHash" -> k.entitiesHash
       )
     }
   }
 }
 
+// I want this to be a Long, but MurmurHash3 gives Ints. Any good Scala hashing libraries that do 64-bit hashes?
 case class EntitiesHash(value: Int) extends AnyVal
 object EntitiesHash {
   implicit val format: Format[EntitiesHash] =
     Format(__.read[Int].map(EntitiesHash(_)), new Writes[EntitiesHash] {
-      def writes(eh: EntitiesHash) = JsNumber(eh.value)
+      def writes(hash: EntitiesHash) = JsNumber(hash.value)
     })
 }
-case class KeepConnectionEntities(
-    libraries: Set[Id[Library]],
-    users: Set[Id[User]]) {
-  def hash: EntitiesHash = { // I REALLY want this to be a Long, but MurmurHash3 gives Ints. Any good Scala hash libraries that do 64-bit hashes?
+case class KeepConnectionEntities(libraries: Set[Id[Library]], users: Set[Id[User]]) {
+  def hash: EntitiesHash = {
     EntitiesHash(MurmurHash3.orderedHash(Seq(
       MurmurHash3.setHash(libraries),
       MurmurHash3.setHash(users)
