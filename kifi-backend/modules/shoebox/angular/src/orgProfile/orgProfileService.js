@@ -84,7 +84,6 @@ angular.module('kifi')
 
       getCommonTrackingAttributes: function (organization) {
         var defaultAttributes = {
-          type: 'orgMembers',
           orgName: organization.name,
           orgId: organization.id
         };

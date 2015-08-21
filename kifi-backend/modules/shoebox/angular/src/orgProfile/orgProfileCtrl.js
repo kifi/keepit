@@ -16,7 +16,11 @@ angular.module('kifi')
 
     attributes = _.extend(orgProfileService.getCommonTrackingAttributes($scope.profile), attributes);
     attributes = originTrackingService.applyAndClear(attributes);
-    attributes.orgMemberStatus = $scope.membership.role || ($scope.membership.invite ? 'pendingMember' : null);
+    if ($scope.membership.role) {
+      attributes.orgMemberStatus = $scope.membership.role;
+    } else if ($scope.membership.invite) {
+      attributes.orgMemberStatus = 'pendingMember';
+    }
     $analytics.pageTrack(url, attributes);
   }
 
