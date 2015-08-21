@@ -86,7 +86,7 @@ var libCssFiles = [
   'managed-lib/pace/pace.css'
 ];
 var libJsFiles = [
-  ['lib/lodash/dist/lodash.js', 'lib/lodash/dist/lodash.min.js'],
+  ['lib/lodash/lodash.js', 'lib/lodash/lodash.min.js'],
   ['lib/underscore.string/lib/underscore.string.js', 'lib/underscore.string/dist/underscore.string.min.js'],
   ['lib/jquery/dist/jquery.js', 'lib/jquery/dist/jquery.min.js'],
   ['lib/angular/angular.js', 'lib/angular/angular.min.js'],

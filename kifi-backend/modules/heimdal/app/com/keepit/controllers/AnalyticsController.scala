@@ -23,10 +23,12 @@ class AnalyticsController @Inject() (mixpanelClient: MixpanelClient, amplitudeCl
   def deleteUser(userId: Id[User]) = Action.async { request =>
     SafeFuture {
       mixpanelClient.delete(userId)
+      // TODO amplitude?
       Ok
     }
   }
 
+  // an amplitude equivalent of this doesn't, exist; use setUserProperties instead
   def incrementUserProperties(userId: Id[User]) = Action.async { request =>
     val increments = request.body.asJson.get.as[JsObject].value.mapValues(_.as[Double]).toMap
     SafeFuture {
