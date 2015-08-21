@@ -26,7 +26,7 @@ angular.module('kifi')
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
-        templateUrl: 'recos/recosView.tpl.html'
+        templateUrl: 'feed/feed.tpl.html'
       })
       .state('invite', {
         url: '/invite',
