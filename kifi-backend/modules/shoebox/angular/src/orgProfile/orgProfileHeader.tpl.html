@@ -36,11 +36,11 @@
         </p>
       </div>
       <nav class="kf-oph-stats">
-        <a class="kf-oph-stats-a" ui-sref="orgProfile.libraries" ng-click="onLibrariesClick($event, 'clickedProfileLibraries')">
+        <a class="kf-oph-stats-a" ui-sref="orgProfile.libraries" ng-click="onClickTrack($event, 'clickedProfileLibraries')">
           <div class="kf-oph-stats-name">Libraries</div>
           <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
         </a>
-        <a class="kf-oph-stats-a" ui-sref="orgProfile.members" ng-click="onMembersClick($event, 'clickedProfileMembers')">
+        <a class="kf-oph-stats-a" ui-sref="orgProfile.members" ng-click="onClickTrack($event, 'clickedProfileMembers')">
           <div class="kf-oph-stats-name">Members</div>
           <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
         </a>

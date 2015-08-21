@@ -40,7 +40,7 @@ angular.module('kifi')
         }
 
         function trackInviteEvent(eventName, attr) {
-          var type = 'organization_members';
+          var type = 'orgMembers';
           var attributes = _.extend({ type: type }, attr || {});
           orgProfileService.trackEvent(eventName, scope.organization, attributes);
         }
