@@ -4,25 +4,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ LibraryAccess, Library, User }
 import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait LibraryEvent extends NotificationEvent
-
-case class LibraryCollabInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryCollabInviteAccepted
-
-}
-
-object LibraryCollabInviteAccepted extends NonGroupingNotificationKind[LibraryCollabInviteAccepted] {
+trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[LibraryCollabInviteAccepted] {
 
   override val name: String = "library_collab_invite_accepted"
 
@@ -38,10 +26,10 @@ object LibraryCollabInviteAccepted extends NonGroupingNotificationKind[LibraryCo
     UsingDbSubset(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val invitedLib = subset.library(event.libraryId)
-      val accepterImage = subset.userImageUrl(event.accepterId)
-      val invitedLibInfo = subset.libraryInfo(event.libraryId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(accepter.username.value).encode.absolute,
         imageUrl = accepterImage,
@@ -58,17 +46,7 @@ object LibraryCollabInviteAccepted extends NonGroupingNotificationKind[LibraryCo
 
 }
 
-case class LibraryFollowInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryFollowInviteAccepted
-
-}
-
-object LibraryFollowInviteAccepted extends NonGroupingNotificationKind[LibraryFollowInviteAccepted] {
+trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[LibraryFollowInviteAccepted] {
 
   override val name: String = "library_follow_invite_accepted"
 
@@ -84,10 +62,10 @@ object LibraryFollowInviteAccepted extends NonGroupingNotificationKind[LibraryFo
     UsingDbSubset(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val acceptedLib = subset.library(event.libraryId)
-      val accepterImage = subset.userImageUrl(event.accepterId)
-      val acceptedLibInfo = subset.libraryInfo(event.libraryId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val acceptedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val acceptedLibInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(accepter.username.value).encode.absolute,
         imageUrl = accepterImage,
@@ -104,17 +82,7 @@ object LibraryFollowInviteAccepted extends NonGroupingNotificationKind[LibraryFo
 
 }
 
-case class LibraryNewCollabInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryNewCollabInvite
-
-}
-
-object LibraryNewCollabInvite extends NonGroupingNotificationKind[LibraryNewCollabInvite] {
+trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewCollabInvite] {
 
   override val name: String = "library_new_collab_invite"
 
@@ -131,12 +99,12 @@ object LibraryNewCollabInvite extends NonGroupingNotificationKind[LibraryNewColl
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
-      val invitedLib = subset.library(event.libraryId)
-      val invitedLibInfo = subset.libraryInfo(event.libraryId)
-      val invitedLibUrl = subset.libraryUrl(event.libraryId)
-      val invitedLibOwner = subset.libraryOwner(event.libraryId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
+      val invitedLibUrl = libraryUrl(event.libraryId).lookup(subset)
+      val invitedLibOwner = libraryOwner(event.libraryId).lookup(subset)
       NotificationInfo(
         url = invitedLibUrl,
         imageUrl = inviterImage,
@@ -154,17 +122,7 @@ object LibraryNewCollabInvite extends NonGroupingNotificationKind[LibraryNewColl
 
 }
 
-case class LibraryNewFollowInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryNewFollowInvite
-
-}
-
-object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFollowInvite] {
+trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewFollowInvite] {
 
   override val name: String = "library_new_follow_invite"
 
@@ -181,12 +139,12 @@ object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFoll
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
-      val libraryIn = subset.library(event.libraryId)
-      val libraryInInfo = subset.libraryInfo(event.libraryId)
-      val libraryInUrl = subset.libraryUrl(event.libraryId)
-      val libraryInOwner = subset.libraryOwner(event.libraryId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val libraryIn = library(event.libraryId).lookup(subset)
+      val libraryInInfo = libraryInfo(event.libraryId).lookup(subset)
+      val libraryInUrl = libraryUrl(event.libraryId).lookup(subset)
+      val libraryInOwner = libraryOwner(event.libraryId).lookup(subset)
       NotificationInfo(
         url = libraryInUrl,
         imageUrl = inviterImage,

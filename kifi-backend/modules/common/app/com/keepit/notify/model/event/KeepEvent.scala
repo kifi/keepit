@@ -3,26 +3,13 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, Keep, User }
 import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationEvent, NotificationKind, Recipient }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait KeepEvent extends NotificationEvent
-
-case class LibraryNewKeep(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = LibraryNewKeep
-
-}
-
-object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
+trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
 
   override val name: String = "library_new_keep"
 
@@ -40,11 +27,11 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
       user(event.keeperId), userImageUrl(event.keeperId), library(event.libraryId), keep(event.keepId),
       libraryInfo(event.libraryId)
     )) { subset =>
-      val newKeep = subset.keep(event.keepId)
-      val keeper = subset.user(event.keeperId)
-      val keeperImage = subset.userImageUrl(event.keeperId)
-      val libraryKept = subset.library(event.libraryId)
-      val libraryKeptInfo = subset.libraryInfo(event.libraryId)
+      val newKeep = keep(event.keepId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = newKeep.url,
         imageUrl = keeperImage,
@@ -64,19 +51,7 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
   }
 }
 
-// todo is this ever really used/called?
-case class NewKeepActivity(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = NewKeepActivity
-
-}
-
-object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
+trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
 
   override val name: String = "new_keep_activity"
 
@@ -94,13 +69,13 @@ object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
       library(event.libraryId), user(event.keeperId), keep(event.keepId), libraryUrl(event.libraryId),
       userImageUrl(event.keeperId), libraryInfo(event.libraryId)
     )) { subset =>
-      val libraryKept = subset.library(event.libraryId)
-      val keeper = subset.user(event.keeperId)
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
       val keeperBasic = BasicUser.fromUser(keeper)
-      val newKeep = subset.keep(event.keepId)
-      val libraryKeptUrl = subset.libraryUrl(event.libraryId)
-      val keeperImage = subset.userImageUrl(event.keeperId)
-      val libraryKeptInfo = subset.libraryInfo(event.libraryId)
+      val newKeep = keep(event.keepId).lookup(subset)
+      val libraryKeptUrl = libraryUrl(event.libraryId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = libraryKeptUrl,
         imageUrl = keeperImage,

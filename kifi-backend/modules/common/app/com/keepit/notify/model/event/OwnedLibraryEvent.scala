@@ -4,26 +4,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
 import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait OwnedLibraryEvent extends NotificationEvent
-
-case class OwnedLibraryNewCollabInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    inviteeId: Id[User],
-    libraryId: Id[Library]) extends NotificationEvent {
-
-  val kind = OwnedLibraryNewCollabInvite
-
-}
-
-object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite] {
+trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCollabInvite] {
 
   override val name: String = "owned_library_new_collab_invite"
 
@@ -54,10 +41,10 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
     UsingDbSubset(Seq(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
     )) { subset =>
-      val inviter = subset.user(oneEvent.inviterId)
-      val libraryInvited = subset.library(oneEvent.libraryId)
-      val libraryInvitedInfo = subset.libraryInfo(oneEvent.libraryId)
-      val inviterImageUrl = subset.userImageUrl(oneEvent.inviterId)
+      val inviter = user(oneEvent.inviterId).lookup(subset)
+      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+      val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
+      val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
       NotificationInfo(
         url = Path(inviter.username.value).encode.absolute,
         imageUrl = inviterImageUrl,
@@ -74,18 +61,7 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
 
 }
 
-case class OwnedLibraryNewFollowInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    inviteeId: Id[User],
-    libraryId: Id[Library]) extends NotificationEvent {
-
-  val kind = OwnedLibraryNewFollowInvite
-
-}
-
-object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
+trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFollowInvite] {
 
   override val name: String = "owned_library_new_follow_invite"
 
@@ -116,10 +92,10 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
     UsingDbSubset(Seq(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
     )) { subset =>
-      val inviter = subset.user(oneEvent.inviterId)
-      val libraryInvited = subset.library(oneEvent.libraryId)
-      val libraryInvitedInfo = subset.libraryInfo(oneEvent.libraryId)
-      val inviterImageUrl = subset.userImageUrl(oneEvent.inviterId)
+      val inviter = user(oneEvent.inviterId).lookup(subset)
+      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+      val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
+      val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
       NotificationInfo(
         url = Path(inviter.username.value).encode.absolute,
         imageUrl = inviterImageUrl,
@@ -136,17 +112,7 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
 
 }
 
-case class OwnedLibraryNewFollower(
-    recipient: Recipient,
-    time: DateTime,
-    followerId: Id[User],
-    libraryId: Id[Library]) extends NotificationEvent {
-
-  val kind = OwnedLibraryNewFollower
-
-}
-
-object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryNewFollower] {
+trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibraryNewFollower] {
 
   override val name: String = "owned_library_new_follower"
 
@@ -162,10 +128,10 @@ object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryN
     UsingDbSubset(Seq(
       user(event.followerId), userImageUrl(event.followerId), library(event.libraryId), libraryInfo(event.libraryId)
     )) { subset =>
-      val follower = subset.user(event.followerId)
-      val followerImage = subset.userImageUrl(event.followerId)
-      val libraryFollowed = subset.library(event.libraryId)
-      val libraryFollowedInfo = subset.libraryInfo(event.libraryId)
+      val follower = user(event.followerId).lookup(subset)
+      val followerImage = userImageUrl(event.followerId).lookup(subset)
+      val libraryFollowed = library(event.libraryId).lookup(subset)
+      val libraryFollowedInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(follower.username.value).encode.absolute,
         imageUrl = followerImage,
@@ -182,17 +148,7 @@ object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryN
 
 }
 
-case class OwnedLibraryNewCollaborator(
-    recipient: Recipient,
-    time: DateTime,
-    collaboratorId: Id[User],
-    libraryId: Id[Library]) extends NotificationEvent {
-
-  val kind = OwnedLibraryNewCollaborator
-
-}
-
-object OwnedLibraryNewCollaborator extends NonGroupingNotificationKind[OwnedLibraryNewCollaborator] {
+trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedLibraryNewCollaborator] {
 
   override val name: String = "owned_library_new_collaborator"
 
@@ -208,10 +164,10 @@ object OwnedLibraryNewCollaborator extends NonGroupingNotificationKind[OwnedLibr
     UsingDbSubset(Seq(
       user(event.collaboratorId), userImageUrl(event.collaboratorId), library(event.libraryId), libraryInfo(event.libraryId)
     )) { subset =>
-      val collaborator = subset.user(event.collaboratorId)
-      val collaboratorImage = subset.userImageUrl(event.collaboratorId)
-      val libraryCollaborating = subset.library(event.libraryId)
-      val libraryCollaboratingInfo = subset.libraryInfo(event.libraryId)
+      val collaborator = user(event.collaboratorId).lookup(subset)
+      val collaboratorImage = userImageUrl(event.collaboratorId).lookup(subset)
+      val libraryCollaborating = library(event.libraryId).lookup(subset)
+      val libraryCollaboratingInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(collaborator.username.value).encode.absolute,
         imageUrl = collaboratorImage,

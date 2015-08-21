@@ -2,6 +2,7 @@ package com.keepit.notify
 
 import com.keepit.common.db.ExternalId
 import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.model.event.NotificationEvent
 import play.api.libs.json.{ OFormat, Format }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

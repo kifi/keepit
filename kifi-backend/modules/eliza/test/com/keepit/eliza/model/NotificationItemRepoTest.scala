@@ -2,7 +2,7 @@ package com.keepit.eliza.model
 
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.db.Id
-import com.keepit.notify.model.DepressedRobotGrumble
+import com.keepit.notify.model.event.DepressedRobotGrumble
 import com.keepit.test.ElizaTestInjector
 import org.specs2.mutable.Specification
 

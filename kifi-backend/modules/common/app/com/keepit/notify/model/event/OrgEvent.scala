@@ -4,25 +4,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, User }
 import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait OrgEvent extends NotificationEvent
-
-case class OrgNewInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    orgId: Id[Organization]) extends OrgEvent {
-
-  val kind = OrgNewInvite
-
-}
-
-object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
+trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
 
   override val name: String = "org_new_invite"
 
@@ -38,9 +26,9 @@ object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
     UsingDbSubset(Seq(
       user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val invitedOrg = subset.organization(event.orgId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val invitedOrg = organization(event.orgId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
       NotificationInfo(
         url = Path(invitedOrg.handle.value).encode.absolute,
         imageUrl = inviterImage,
@@ -53,17 +41,7 @@ object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
 
 }
 
-case class OrgInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    orgId: Id[Organization]) extends OrgEvent {
-
-  val kind = OrgInviteAccepted
-
-}
-
-object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] {
+trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepted] {
 
   override val name: String = "org_invite_accepted"
 
@@ -79,10 +57,10 @@ object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] 
     UsingDbSubset(Seq(
       user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val acceptedOrg = subset.organization(event.orgId)
-      val accepterId = subset.userImageUrl(event.accepterId)
-      val acceptedOrgInfo = subset.organizationInfo(event.orgId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val acceptedOrg = organization(event.orgId).lookup(subset)
+      val accepterId = userImageUrl(event.accepterId).lookup(subset)
+      val acceptedOrgInfo = organizationInfo(event.orgId).lookup(subset)
       NotificationInfo(
         url = Path(acceptedOrg.handle.value).encode.absolute,
         imageUrl = accepterId,

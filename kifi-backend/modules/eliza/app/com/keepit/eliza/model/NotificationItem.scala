@@ -7,7 +7,8 @@ import akka.util.ByteStringBuilder
 import com.keepit.common.db.{ ExternalId, Model, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.{ NotificationId, NKind, NotificationKind, NotificationEvent }
+import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.model.{ NotificationId, NKind, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
