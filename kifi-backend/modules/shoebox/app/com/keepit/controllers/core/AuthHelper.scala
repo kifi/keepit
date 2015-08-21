@@ -7,6 +7,7 @@ import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.service.IpAddress
 import play.api.Mode
 import play.api.Mode._
 import play.api.mvc._
@@ -469,7 +470,7 @@ class AuthHelper @Inject() (
     } yield {
       db.readWrite { implicit s =>
         passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)) =>
+          case Some(pr) if passwordResetRepo.useResetToken(code, IpAddress(request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))) =>
             emailAddressRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
               val pwdInfo = current.plugin[PasswordHasher].get.hash(password)

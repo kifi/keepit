@@ -32,7 +32,6 @@ class UserIpAddressRepoImpl @Inject() (
     extends DbRepo[UserIpAddress] with UserIpAddressRepo with SeqNumberDbFunction[UserIpAddress] with Logging {
 
   import db.Driver.simple._
-  implicit val IpAddressTypeMapper = MappedColumnType.base[IpAddress, String](_.toString, IpAddress(_))
 
   type RepoImpl = UserIpAddressTable
   class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_addresses") with SeqNumberColumn[UserIpAddress] {

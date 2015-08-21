@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.service.IpAddress
 import org.joda.time.{ Period, DateTime }
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -13,7 +14,7 @@ import com.keepit.common.mail.EmailAddress
 @ImplementedBy(classOf[PasswordResetRepoImpl])
 trait PasswordResetRepo extends Repo[PasswordReset] {
   def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset]
-  def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean
+  def useResetToken(token: String, ip: IpAddress)(implicit session: RWSession): Boolean
   def getByToken(passwordResetToken: String)(implicit session: RSession): Option[PasswordReset]
   def tokenIsNotExpired(passwordReset: PasswordReset): Boolean
   def createNewResetToken(userId: Id[User], sentTo: EmailAddress)(implicit session: RWSession): PasswordReset
@@ -31,7 +32,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     def userId = column[Id[User]]("user_id", O.NotNull)
     def token = column[String]("token", O.NotNull)
     def usedAt = column[DateTime]("used_at", O.Nullable)
-    def usedByIP = column[String]("used_by_ip", O.Nullable)
+    def usedByIP = column[IpAddress]("used_by_ip", O.Nullable)
     def sentTo = column[EmailAddress]("sent_to", O.NotNull)
     def * = (id.?, createdAt, updatedAt, userId, state, token, usedAt.?, usedByIP.?, sentTo) <> ((PasswordReset.apply _).tupled, PasswordReset.unapply _)
   }
@@ -49,11 +50,11 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
       (for (f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
     }
 
-  def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean = {
+  def useResetToken(token: String, ip: IpAddress)(implicit session: RWSession): Boolean = {
     val tokenCannotBeOlderThan = clock.now().minus(EXPIRATION_TIME)
     val resetResult = rows.filter(pr => pr.token === token.toLowerCase && pr.state === PasswordResetStates.ACTIVE && pr.createdAt > tokenCannotBeOlderThan)
       .map(e => (e.usedAt, e.updatedAt, e.usedByIP, e.state))
-      .update((clock.now(), clock.now(), ip.take(16), PasswordResetStates.USED)) > 0
+      .update((clock.now(), clock.now(), ip, PasswordResetStates.USED)) > 0
     if (resetResult) {
       rows.filter(pr => pr.state === PasswordResetStates.ACTIVE).map(e => (e.updatedAt, e.state)).update((clock.now(), PasswordResetStates.INACTIVE))
     }

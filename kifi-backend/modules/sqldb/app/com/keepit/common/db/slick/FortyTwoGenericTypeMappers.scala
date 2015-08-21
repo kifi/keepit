@@ -1,6 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db._
+import com.keepit.common.service.IpAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
@@ -65,6 +66,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val emailAddressHashMapper = MappedColumnType.base[EmailAddressHash, String](_.hash, EmailAddressHash.apply)
   implicit val normalizedHostnameMapper = MappedColumnType.base[NormalizedHostname, String](_.value, NormalizedHostname.apply)
+  implicit val ipAddressTypeMapper = MappedColumnType.base[IpAddress, String](_.toString, IpAddress(_))
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[KeepSource, String](_.value, KeepSource.apply)
