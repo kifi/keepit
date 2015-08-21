@@ -11,6 +11,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.crypto.PublicId
 
+import scala.util.hashing.MurmurHash3
+
 case class Keep(
     id: Option[Id[Keep]] = None,
     createdAt: DateTime = currentDateTime,
@@ -31,9 +33,10 @@ case class Keep(
     sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
     note: Option[String] = None,
     originalKeeperId: Option[Id[User]] = None,
-    organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    organizationId: Option[Id[Organization]] = None,
+    entitiesHash: Option[EntitiesHash]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE)
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, entitiesHash = Some(KeepConnectionEntities.empty.hash)) // good idea?
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -68,10 +71,14 @@ case class Keep(
     organizationId = lib.organizationId
   )
 
+  def withEntities(libraries: Set[Id[Library]], users: Set[Id[User]]): Keep = this.copy(entitiesHash = Some(KeepConnectionEntities(libraries, users).hash))
+
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
 
-  def canBeMergedInto(other: Keep): Boolean = true
+  def canBeMergedInto(other: Keep): Boolean = {
+    entitiesHash == other.entitiesHash && keptAt >= other.keptAt
+  }
 }
 
 object Keep {
@@ -94,13 +101,13 @@ object Keep {
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
     case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
-      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
+      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId, entitiesHash)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
         uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, urlId = urlId, url = url,
         userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
-        organizationId = organizationId)
+        organizationId = organizationId, entitiesHash = entitiesHash)
   }
 
   // is_primary: trueOrNull in db
@@ -109,9 +116,9 @@ object Keep {
     urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]]): Keep = {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], entitiesHash: Option[EntitiesHash]): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url,
-      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId)
+      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId, entitiesHash)
   }
 
   def unapplyToDbRow(k: Keep) = {
@@ -120,12 +127,12 @@ object Keep {
         k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url),
       (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
-        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId)
+        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.entitiesHash)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Id[URL], String)
-  private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
+  private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], Option[EntitiesHash])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -149,7 +156,9 @@ object Keep {
       (__ \ 'sourceAttributionId).readNullable(Id.format[KeepSourceAttribution]) and
       (__ \ 'note).readNullable[String] and
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
-      (__ \ 'organizationId).readNullable[Id[Organization]]).tupled
+      (__ \ 'organizationId).readNullable[Id[Organization]] and
+      (__ \ 'entitiesHash).readNullable[EntitiesHash]
+    ).tupled
 
     (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)
   }
@@ -186,6 +195,27 @@ object Keep {
       )
     }
   }
+}
+
+case class EntitiesHash(value: Int) extends AnyVal
+object EntitiesHash {
+  implicit val format: Format[EntitiesHash] =
+    Format(__.read[Int].map(EntitiesHash(_)), new Writes[EntitiesHash] {
+      def writes(eh: EntitiesHash) = JsNumber(eh.value)
+    })
+}
+case class KeepConnectionEntities(
+    libraries: Set[Id[Library]],
+    users: Set[Id[User]]) {
+  def hash: EntitiesHash = { // I REALLY want this to be a Long, but MurmurHash3 gives Ints. Any good Scala hash libraries that do 64-bit hashes?
+    EntitiesHash(MurmurHash3.orderedHash(Seq(
+      MurmurHash3.setHash(libraries),
+      MurmurHash3.setHash(users)
+    )))
+  }
+}
+object KeepConnectionEntities {
+  val empty = KeepConnectionEntities(Set.empty, Set.empty)
 }
 
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {

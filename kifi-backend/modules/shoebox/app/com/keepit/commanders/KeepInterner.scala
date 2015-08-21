@@ -247,7 +247,7 @@ class KeepInternerImpl @Inject() (
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
-            keepCommander.persistKeep(keep)
+            keepCommander.persistKeep(keep, Set(userId), Set(library.id.get))
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
@@ -265,9 +265,10 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
-          originalKeeperId = Some(userId)
+          originalKeeperId = Some(userId),
+          entitiesHash = Some(KeepConnectionEntities(Set(library.id.get), Set(userId)).hash)
         )
-        val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep))
+        val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
         (true, false, improvedKeep)
     }
     if (wasInactiveKeep) {
