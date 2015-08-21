@@ -27,11 +27,11 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     ExistingDbView(
       Seq(user.existing(accepter), library.existing(invitedLib))
     )(LibraryCollabInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get,
-      libraryId = invitedLib.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        accepterId = accepter.id.get,
+        libraryId = invitedLib.id.get
+      ))
   }
 
   override def info(event: LibraryCollabInviteAccepted): UsingDbView[NotificationInfo] = {
@@ -75,11 +75,11 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     ExistingDbView(
       Seq(user.existing(accepter), library.existing(acceptedLib))
     )(LibraryFollowInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get,
-      libraryId = acceptedLib.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        accepterId = accepter.id.get,
+        libraryId = acceptedLib.id.get
+      ))
   }
 
   override def info(event: LibraryFollowInviteAccepted): UsingDbView[NotificationInfo] = {
@@ -123,11 +123,11 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
     ExistingDbView(
       Seq(user.existing(inviter), library.existing(invitedLib), user.existing(invitedLibOwner))
     )(LibraryNewCollabInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      libraryId = invitedLib.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get,
+        libraryId = invitedLib.id.get
+      ))
   }
 
   override def info(event: LibraryNewCollabInvite): UsingDbView[NotificationInfo] = {
@@ -175,11 +175,11 @@ trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewF
     ExistingDbView(
       Seq(user.existing(inviter), library.existing(invitedLib), user.existing(invitedLibOwner))
     )(LibraryNewFollowInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      libraryId = invitedLib.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get,
+        libraryId = invitedLib.id.get
+      ))
   }
 
   override def info(event: LibraryNewFollowInvite): UsingDbView[NotificationInfo] = {

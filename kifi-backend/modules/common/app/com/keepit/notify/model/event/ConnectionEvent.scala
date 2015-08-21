@@ -26,11 +26,11 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     import DbViewKey._
     ExistingDbView(
       Seq(user.existing(inviter))
-    )( NewConnectionInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get
-    ))
+    )(NewConnectionInvite(
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get
+      ))
   }
 
   override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
@@ -70,10 +70,10 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     ExistingDbView(
       Seq(user.existing(accepter))
     )(ConnectionInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        accepterId = accepter.id.get
+      ))
   }
 
   override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {

@@ -26,12 +26,12 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     ExistingDbView(
       Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
     )(LibraryNewKeep(
-      recipient = recipient,
-      time = time,
-      keeperId = keeper.id.get,
-      keepId = newKeep.id.get,
-      libraryId = libraryKept.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        keeperId = keeper.id.get,
+        keepId = newKeep.id.get,
+        libraryId = libraryKept.id.get
+      ))
   }
 
   override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
@@ -81,12 +81,12 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     ExistingDbView(
       Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
     )(NewKeepActivity(
-      recipient = recipient,
-      time = time,
-      keeperId = keeper.id.get,
-      keepId = ewKeep.id.get,
-      libraryId = libraryKept.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        keeperId = keeper.id.get,
+        keepId = newKeep.id.get,
+        libraryId = libraryKept.id.get
+      ))
   }
 
   override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {

@@ -6,53 +6,47 @@ import com.keepit.model._
 
 /**
  * Represents a view, or subset, of the shoebox database, mostly from the perspective of Eliza.
+ *
+ * The implementation uses a map from keys to maps from ids to results. While the underlying maps are
+ * untyped, types are enforced through the public facing methods [[add]] and [[lookup]].
  */
-trait DbView {
+class DbView(private val keyMap: Map[DbViewKey[_, _], Map[Id[_], Any]]) {
 
-  def lookup(kind: String, id: Id[_]): Any
+  def add[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M], result: R): DbView = {
+    val objMap = keyMap.getOrElse(key, Map.empty)
+    val assocObjMap = objMap + (id -> result)
+    new DbView(keyMap + (key -> assocObjMap))
+  }
+
+ def lookup[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): R = keyMap(key)(id).asInstanceOf[R]
 
 }
 
-/**
- * Represents a request for a certain model in a db view.
- *
- * @param kind The kind of the request
- * @param id The id of the model to lookup
- * @tparam M The type of model to lookup
- * @tparam R The type of result of the request
- */
-case class DbViewRequest[M <: HasId[M], R](kind: String, id: Id[M]) {
+object DbView {
 
   /**
-   * Actually look up the request in a db view. Because the db view  is untyped,
-   * a final cast is done.
+   * Constructs an empty MapDbView.
    *
-   * @param subset The subset to look up in
-   * @return The looked up result
+   * This is the only way to construct a DbView from the outside.
    */
-  def lookup(subset: DbView): R = subset.lookup(kind, id).asInstanceOf[R]
+  def apply() = new DbView(Map.empty)
 
 }
-
-/**
- * Represents that a certain model already exists and can be used for DB view requests.
- */
-case class ExistingDbViewModel[M <: HasId[M]](kind: String, model: M)
 
 /**
  * Represents a key which generates DB view requests.
  */
-case class DbViewKey[M <: HasId[M], R](kind: String) {
+class DbViewKey[M <: HasId[M], R] {
 
   /**
    * Indicates that the given model already has already been fetched in a potential DB view.
    */
-  def existing(model: M): ExistingDbViewModel[M] = ExistingDbViewModel(kind, model)
+  def existing(model: M): ExistingDbViewModel[M] = ExistingDbViewModel(this, model)
 
   /**
    * Builds a request using the given model.
    */
-  def apply(id: Id[M]): DbViewRequest[M, R] = DbViewRequest(kind, id)
+  def apply(id: Id[M]): DbViewRequest[M, R] = DbViewRequest(this, id)
 
 }
 
@@ -61,25 +55,38 @@ case class DbViewKey[M <: HasId[M], R](kind: String) {
  */
 object DbViewKey {
 
-  val user = DbViewKey[User, User]("user")
-  val library = DbViewKey[Library, Library]("library")
-  val userImageUrl = DbViewKey[User, String]("userImageUrl")
-  val keep = DbViewKey[Keep, Keep]("keep")
-  val libraryUrl = DbViewKey[Library, String]("libraryUrl")
-  val libraryInfo = DbViewKey[Library, LibraryNotificationInfo]("libraryInfo")
-  val libraryOwner = DbViewKey[Library, User]("libraryOwner")
-  val organization = DbViewKey[Organization, Organization]("organization")
-  val organizationInfo = DbViewKey[Organization, OrganizationNotificationInfo]("organizationInfo")
+  def apply[M <: HasId[M], R] = new DbViewKey[M, R]
+
+  val user = DbViewKey[User, User]
+  val library = DbViewKey[Library, Library]
+  val userImageUrl = DbViewKey[User, String]
+  val keep = DbViewKey[Keep, Keep]
+  val libraryUrl = DbViewKey[Library, String]
+  val libraryInfo = DbViewKey[Library, LibraryNotificationInfo]
+  val libraryOwner = DbViewKey[Library, User]
+  val organization = DbViewKey[Organization, Organization]
+  val organizationInfo = DbViewKey[Organization, OrganizationNotificationInfo]
 
 }
 
 /**
- * An implementation of a db view using a simple object/kind map.
+ * Represents a request for a certain model in a db view.
+ *
+ * @param key The key of the request
+ * @param id The id of the model to lookup
+ * @tparam M The type of model to lookup
+ * @tparam R The type of result of the request
  */
-class MapDbView(
-    val objMap: Map[String, Map[Id[_], Any]]) extends DbView {
+case class DbViewRequest[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]) {
 
-  override def lookup(kind: String, id: Id[_]): Any = objMap(kind)(id)
+  /**
+   * Actually look up the request in a db view. Because the db view  is untyped,
+   * a final cast is done.
+   *
+   * @param view The subset to look up in
+   * @return The looked up result
+   */
+  def lookup(view: DbView): R = view.lookup(key, id)
 
 }
 
@@ -88,6 +95,11 @@ class MapDbView(
  * constructs a value.
  */
 case class UsingDbView[A](requests: Seq[DbViewRequest[_, _]])(fn: DbView => A)
+
+/**
+ * Represents that a certain model already exists and can be used for DB view requests.
+ */
+case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, _], model: M)
 
 /**
  * Represents a whole bunch of items that have already been fetched and exist in a DB view, along with a value that

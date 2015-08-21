@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ExistingDbView, DbViewKey, NotificationInfo, UsingDbView}
+import com.keepit.notify.info.{ ExistingDbView, DbViewKey, NotificationInfo, UsingDbView }
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -27,12 +27,12 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     ExistingDbView(
       Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
     )(OwnedLibraryNewCollabInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      inviteeId = invitee.id.get,
-      libraryId = libraryInvited.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get,
+        inviteeId = invitee.id.get,
+        libraryId = libraryInvited.id.get
+      ))
   }
 
   override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = {
@@ -91,12 +91,12 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     ExistingDbView(
       Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
     )(OwnedLibraryNewFollowInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      inviteeId = invitee.id.get,
-      libraryId = libraryInvited.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get,
+        inviteeId = invitee.id.get,
+        libraryId = libraryInvited.id.get
+      ))
   }
 
   override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = {
@@ -154,11 +154,11 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     ExistingDbView(
       Seq(user.existing(follower), library.existing(libraryFollowed))
     )(OwnedLibraryNewFollower(
-      recipient = recipient,
-      time = time,
-      followerId = follower.id.get,
-      libraryId = libraryFollowed.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        followerId = follower.id.get,
+        libraryId = libraryFollowed.id.get
+      ))
   }
 
   override def info(event: OwnedLibraryNewFollower): UsingDbView[NotificationInfo] = {
@@ -202,11 +202,11 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     ExistingDbView(
       Seq(user.existing(collaborator), library.existing(libraryCollaborating))
     )(OwnedLibraryNewCollaborator(
-      recipient = recipient,
-      time = time,
-      collaboratorId = collaborator.id.get,
-      libraryId = libraryCollaborating.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        collaboratorId = collaborator.id.get,
+        libraryId = libraryCollaborating.id.get
+      ))
   }
 
   override def info(event: OwnedLibraryNewCollaborator): UsingDbView[NotificationInfo] = {

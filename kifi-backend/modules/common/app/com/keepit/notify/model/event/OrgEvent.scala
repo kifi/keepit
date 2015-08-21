@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, User }
-import com.keepit.notify.info.{ExistingDbView, DbViewKey, NotificationInfo, UsingDbView}
+import com.keepit.notify.info.{ ExistingDbView, DbViewKey, NotificationInfo, UsingDbView }
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -26,11 +26,11 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     ExistingDbView(
       Seq(user.existing(inviter), organization.existing(org))
     )(OrgNewInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      orgId = org.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        inviterId = inviter.id.get,
+        orgId = org.id.get
+      ))
   }
 
   override def info(event: OrgNewInvite): UsingDbView[NotificationInfo] = {
@@ -69,11 +69,11 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     ExistingDbView(
       Seq(user.existing(accepter), organization.existing(org))
     )(OrgInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get,
-      orgId = org.id.get
-    ))
+        recipient = recipient,
+        time = time,
+        accepterId = accepter.id.get,
+        orgId = org.id.get
+      ))
   }
 
   override def info(event: OrgInviteAccepted): UsingDbView[NotificationInfo] = {
