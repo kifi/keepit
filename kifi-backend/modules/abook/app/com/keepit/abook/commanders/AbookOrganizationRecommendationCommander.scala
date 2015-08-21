@@ -48,22 +48,17 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  def getRecommendations(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
-    val start = clock.now()
-    val fRecommendations = generateFutureRecommendations(orgId, viewerId, disclosePrivateEmails).map {
+  def getRecommendations(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Int, limit: Int): Future[Seq[OrganizationInviteRecommendation]] = {
+    val fRecommendations = generateFutureRecommendations(orgId, viewerIdOpt).map {
       recoStream => recoStream.slice(offset, offset + limit).toSeq
-    }
-    fRecommendations.onSuccess {
-      case recommendations if recommendations.nonEmpty => log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for org $orgId with viewer $viewerId in ${clock.now().getMillis - start.getMillis}ms.")
-      case _ => log.info(s"Org recommendations are not available. Returning in ${clock.now().getMillis - start.getMillis}ms.")
     }
     fRecommendations
   }
 
-  private def generateFutureRecommendations(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean = false): Future[Stream[OrganizationInviteRecommendation]] = {
+  private def generateFutureRecommendations(orgId: Id[Organization], viewerIdOpt: Option[Id[User]]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fExistingInvites = shoebox.getOrganizationInviteViews(orgId)
     val fRelatedEntities = getSociallyRelatedEntities(orgId)
-    val fEmailInviteRecommendations = generateFutureEmailRecommendations(orgId, viewerId, disclosePrivateEmails, fRelatedEntities, fExistingInvites)
+    val fEmailInviteRecommendations = generateFutureEmailRecommendations(orgId, viewerIdOpt, fRelatedEntities, fExistingInvites)
     val fUserInviteRecommendations = generateFutureUserRecommendations(orgId, fRelatedEntities, fExistingInvites).map(_.getOrElse(Stream.empty))
     for {
       emailRecommendations <- fEmailInviteRecommendations
@@ -118,7 +113,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureEmailRecommendations(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, fRelatedEntities: Future[Option[SociallyRelatedEntitiesForOrg]], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Stream[OrganizationInviteRecommendation]] = {
+  private def generateFutureEmailRecommendations(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], fRelatedEntities: Future[Option[SociallyRelatedEntitiesForOrg]], fExistingInvites: Future[Set[OrganizationInviteView]]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fNormalizedUsernames = abookRecommendationHelper.getNormalizedUsernames(Right(orgId))
     fRelatedEntities.flatMap { relatedEntities =>
       val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
@@ -128,11 +123,11 @@ class AbookOrganizationRecommendationCommander @Inject() (
           case Right(emailAccountId) => emailAccountId
         }
         val allContacts = db.readOnlyMaster { implicit session =>
-          if (!disclosePrivateEmails) {
-            contactRepo.getByUserId(viewerId)
-          } else {
-            val relevantEmailAccountIds = relatedEmailAccounts.map { case (id, score) => EmailAccount.fromEmailAccountInfoId(id) }.toSet
-            contactRepo.getByEmailAccountIds(relevantEmailAccountIds)
+          viewerIdOpt match {
+            case Some(viewerId) => contactRepo.getByUserId(viewerId)
+            case None =>
+              val relevantEmailAccountIds = relatedEmailAccounts.map { case (id, score) => EmailAccount.fromEmailAccountInfoId(id) }.toSet
+              contactRepo.getByEmailAccountIds(relevantEmailAccountIds)
           }
         }
         for {
@@ -171,14 +166,14 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
     @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = {
       relevantEmailAccounts.contains(emailAccountId) &&
-        !rejectedRecommendations.contains(emailAccountId)
+        !rejectedRecommendations.contains(emailAccountId) &&
+        !relevantEmailInvites.contains(emailAccountId)
     }
 
     @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
 
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
-        //val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
         val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
           emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
         }
