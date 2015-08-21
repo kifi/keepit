@@ -38,8 +38,8 @@ object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnecti
     UsingDbSubset(Seq(
       user(event.friendId), userImageUrl(event.friendId)
     )) { subset =>
-      val friend = subset.user(event.friendId)
-      val friendImage = subset.userImageUrl(event.friendId)
+      val friend = user(event.friendId).lookup(subset)
+      val friendImage = userImageUrl(event.friendId).lookup(subset)
       NotificationInfo(
         url = Path(friend.username.value).encode.absolute,
         title = s"You’re connected with ${friend.fullName} on Kifi!",
@@ -82,8 +82,8 @@ object SocialContactJoined extends NonGroupingNotificationKind[SocialContactJoin
     UsingDbSubset(Seq(
       user(event.joinerId), userImageUrl(event.joinerId)
     )) { subset =>
-      val joiner = subset.user(event.joinerId)
-      val joinerImage = subset.userImageUrl(event.joinerId)
+      val joiner = user(event.joinerId).lookup(subset)
+      val joinerImage = userImageUrl(event.joinerId).lookup(subset)
       NotificationInfo(
         url = Path(joiner.username.value + "?intent=connect").encode.absolute,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",

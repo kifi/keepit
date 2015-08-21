@@ -38,10 +38,10 @@ object LibraryCollabInviteAccepted extends NonGroupingNotificationKind[LibraryCo
     UsingDbSubset(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val invitedLib = subset.library(event.libraryId)
-      val accepterImage = subset.userImageUrl(event.accepterId)
-      val invitedLibInfo = subset.libraryInfo(event.libraryId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(accepter.username.value).encode.absolute,
         imageUrl = accepterImage,
@@ -84,10 +84,10 @@ object LibraryFollowInviteAccepted extends NonGroupingNotificationKind[LibraryFo
     UsingDbSubset(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val acceptedLib = subset.library(event.libraryId)
-      val accepterImage = subset.userImageUrl(event.accepterId)
-      val acceptedLibInfo = subset.libraryInfo(event.libraryId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val acceptedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val acceptedLibInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = Path(accepter.username.value).encode.absolute,
         imageUrl = accepterImage,
@@ -131,12 +131,12 @@ object LibraryNewCollabInvite extends NonGroupingNotificationKind[LibraryNewColl
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
-      val invitedLib = subset.library(event.libraryId)
-      val invitedLibInfo = subset.libraryInfo(event.libraryId)
-      val invitedLibUrl = subset.libraryUrl(event.libraryId)
-      val invitedLibOwner = subset.libraryOwner(event.libraryId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
+      val invitedLibUrl = libraryUrl(event.libraryId).lookup(subset)
+      val invitedLibOwner = libraryOwner(event.libraryId).lookup(subset)
       NotificationInfo(
         url = invitedLibUrl,
         imageUrl = inviterImage,
@@ -181,12 +181,12 @@ object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFoll
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
-      val libraryIn = subset.library(event.libraryId)
-      val libraryInInfo = subset.libraryInfo(event.libraryId)
-      val libraryInUrl = subset.libraryUrl(event.libraryId)
-      val libraryInOwner = subset.libraryOwner(event.libraryId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val libraryIn = library(event.libraryId).lookup(subset)
+      val libraryInInfo = libraryInfo(event.libraryId).lookup(subset)
+      val libraryInUrl = libraryUrl(event.libraryId).lookup(subset)
+      val libraryInOwner = libraryOwner(event.libraryId).lookup(subset)
       NotificationInfo(
         url = libraryInUrl,
         imageUrl = inviterImage,

@@ -38,8 +38,8 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
     UsingDbSubset(Seq(
       user(event.inviterId), userImageUrl(event.inviterId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
       NotificationInfo(
         url = Path(inviter.username.value).encode.absolute,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
@@ -79,8 +79,8 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
     UsingDbSubset(Seq(
       user(event.accepterId), userImageUrl(event.accepterId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val accepterImage = subset.userImageUrl(event.accepterId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
       NotificationInfo(
         url = Path(accepter.username.value).encode.absolute,
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",

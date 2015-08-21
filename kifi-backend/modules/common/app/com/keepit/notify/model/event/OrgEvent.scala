@@ -38,9 +38,9 @@ object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
     UsingDbSubset(Seq(
       user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
     )) { subset =>
-      val inviter = subset.user(event.inviterId)
-      val invitedOrg = subset.organization(event.orgId)
-      val inviterImage = subset.userImageUrl(event.inviterId)
+      val inviter = user(event.inviterId).lookup(subset)
+      val invitedOrg = organization(event.orgId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
       NotificationInfo(
         url = Path(invitedOrg.handle.value).encode.absolute,
         imageUrl = inviterImage,
@@ -79,10 +79,10 @@ object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] 
     UsingDbSubset(Seq(
       user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
     )) { subset =>
-      val accepter = subset.user(event.accepterId)
-      val acceptedOrg = subset.organization(event.orgId)
-      val accepterId = subset.userImageUrl(event.accepterId)
-      val acceptedOrgInfo = subset.organizationInfo(event.orgId)
+      val accepter = user(event.accepterId).lookup(subset)
+      val acceptedOrg = organization(event.orgId).lookup(subset)
+      val accepterId = userImageUrl(event.accepterId).lookup(subset)
+      val acceptedOrgInfo = organizationInfo(event.orgId).lookup(subset)
       NotificationInfo(
         url = Path(acceptedOrg.handle.value).encode.absolute,
         imageUrl = accepterId,

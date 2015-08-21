@@ -40,11 +40,11 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
       user(event.keeperId), userImageUrl(event.keeperId), library(event.libraryId), keep(event.keepId),
       libraryInfo(event.libraryId)
     )) { subset =>
-      val newKeep = subset.keep(event.keepId)
-      val keeper = subset.user(event.keeperId)
-      val keeperImage = subset.userImageUrl(event.keeperId)
-      val libraryKept = subset.library(event.libraryId)
-      val libraryKeptInfo = subset.libraryInfo(event.libraryId)
+      val newKeep = keep(event.keepId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = newKeep.url,
         imageUrl = keeperImage,
@@ -94,13 +94,13 @@ object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
       library(event.libraryId), user(event.keeperId), keep(event.keepId), libraryUrl(event.libraryId),
       userImageUrl(event.keeperId), libraryInfo(event.libraryId)
     )) { subset =>
-      val libraryKept = subset.library(event.libraryId)
-      val keeper = subset.user(event.keeperId)
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
       val keeperBasic = BasicUser.fromUser(keeper)
-      val newKeep = subset.keep(event.keepId)
-      val libraryKeptUrl = subset.libraryUrl(event.libraryId)
-      val keeperImage = subset.userImageUrl(event.keeperId)
-      val libraryKeptInfo = subset.libraryInfo(event.libraryId)
+      val newKeep = keep(event.keepId).lookup(subset)
+      val libraryKeptUrl = libraryUrl(event.libraryId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
         url = libraryKeptUrl,
         imageUrl = keeperImage,
