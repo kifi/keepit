@@ -6,14 +6,14 @@ import com.keepit.model._
 
 trait DbSubset {
 
-  def lookup[M](kind: String, id: Id[M]): Any
+  def lookup(kind: String, id: Id[_]): Any
 
 }
 
 class MapDbSubset(
     val objMap: Map[String, Map[Id[_], Any]]) extends DbSubset {
 
-  def lookup[M](kind: String, id: Id[M]): Any = objMap(kind)(id)
+  def lookup(kind: String, id: Id[_]): Any = objMap(kind)(id)
 
 }
 
