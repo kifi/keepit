@@ -76,8 +76,14 @@ case class Keep(
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
 
-  def canBeMergedInto(other: Keep): Boolean = {
-    entitiesHash == other.entitiesHash && keptAt > other.keptAt
+  def isOlderThan(other: Keep): Boolean = keptAt > other.keptAt || (keptAt == other.keptAt && id.get.id > other.id.get.id)
+
+  def hasStrictlyLessValuableMetadataThan(other: Keep): Boolean = {
+    this.isOlderThan(other) && (true || // TODO(ryan): remove this "(true ||" once we no longer want to mindlessly murder keeps
+      Seq(
+        title.isEmpty || title == other.title,
+        note.isEmpty || note == other.note
+      ).forall(b => b))
   }
 }
 
