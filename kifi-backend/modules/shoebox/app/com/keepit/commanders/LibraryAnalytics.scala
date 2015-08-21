@@ -304,12 +304,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder.addUrlInfo(bookmark.url)
         heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
     }
-    val kept = keeps.length
-    val keptPrivate = keeps.count(_.isPrivate)
-    val keptPublic = kept - keptPrivate
-    heimdal.incrementUserProperties(userId, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
     userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
-
     heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
   }
 
