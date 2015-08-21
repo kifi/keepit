@@ -18,8 +18,6 @@ trait KeepToUserRepo extends Repo[KeepToUser] {
   def getAllByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
   def getAllByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Seq[KeepToUser]]
 
-  def getAllByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser]
-
   def getByKeepIdAndUserId(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Option[KeepToUser]
 
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit
@@ -78,10 +76,6 @@ class KeepToUserRepoImpl @Inject() (
   }
   def getAllByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Seq[KeepToUser]] = {
     getByUserIdsHelper(userIds, excludeStateOpt).list.groupBy(_.userId)
-  }
-
-  def getAllByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser] = {
-    (for (row <- rows if row.userId === userId && row.uriId === uriId && row.state =!= excludeStateOpt.orNull) yield row).list.toSet
   }
 
   private def getByKeepIdAndUserIdHelper(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {

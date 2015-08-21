@@ -22,7 +22,6 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
-  def getAllByLibraryAndUri(libraryId: Id[Library], uriId: Id[NormalizedURI], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
 
@@ -114,10 +113,6 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary] = {
     getByKeepIdAndLibraryIdHelper(keepId, libraryId, excludeStateOpt).firstOption
-  }
-
-  def getAllByLibraryAndUri(libraryId: Id[Library], uriId: Id[NormalizedURI], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Set[KeepToLibrary] = {
-    (for (row <- rows if row.libraryId === libraryId && row.uriId === uriId && row.state =!= excludeStateOpt.orNull) yield row).list.toSet
   }
 
   private def getByUserIdAndLibraryIdHelper(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
