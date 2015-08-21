@@ -7,6 +7,8 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.model.User
+import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.core._
@@ -154,3 +156,7 @@ object TypeaheadHit {
 
 case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
 
+@json
+case class UserPrefixSearchRequest(userId: Id[User], query: String, maxHits: Int)
+@json
+case class UserSearchHit(userId: Id[User], score: Float)
