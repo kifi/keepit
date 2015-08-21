@@ -6,6 +6,7 @@ import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
 import play.api.libs.json._
+import com.keepit.common.time._
 
 sealed trait NotificationEvent { self =>
 

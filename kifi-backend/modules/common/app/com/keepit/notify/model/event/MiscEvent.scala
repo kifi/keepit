@@ -5,6 +5,7 @@ import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.time._
 
 trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] {
 
