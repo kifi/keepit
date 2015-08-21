@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ ElizaServiceController, ServiceController 
 import com.keepit.common.service.ServiceType
 import com.keepit.eliza.commanders.NotificationCommander
 import com.keepit.notify.NotificationProcessing
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 import play.api.libs.json.Json
 import play.api.mvc.{ Action, Controller }
 

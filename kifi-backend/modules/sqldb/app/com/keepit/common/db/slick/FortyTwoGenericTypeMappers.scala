@@ -7,7 +7,8 @@ import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Timestamp }
-import com.keepit.notify.model.{ Recipient, NKind, NotificationEvent, NotificationKind }
+import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.model.{ Recipient, NKind, NotificationKind }
 import org.joda.time.{ LocalTime, DateTime }
 import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ GetResult, SetParameter }

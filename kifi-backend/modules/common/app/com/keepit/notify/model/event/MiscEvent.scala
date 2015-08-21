@@ -1,57 +1,12 @@
-package com.keepit.notify.model
+package com.keepit.notify.model.event
 
-import com.keepit.common.db.Id
-import com.keepit.common.path.Path
-import com.keepit.model.{ Organization, Keep, Library, User }
-import com.keepit.common.time._
 import com.keepit.notify.info.{ NotificationInfo, UsingDbSubset }
-import com.keepit.social.{ BasicUser, SocialNetworkType }
+import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait NotificationEvent {
-
-  val recipient: Recipient
-  val time: DateTime
-  val kind: NKind
-
-}
-
-object NotificationEvent {
-
-  implicit val format = new OFormat[NotificationEvent] {
-
-    override def reads(json: JsValue): JsResult[NotificationEvent] = {
-      val kind = (json \ "kind").as[NKind]
-      JsSuccess(json.as[NotificationEvent](kind.format.asInstanceOf[Reads[NotificationEvent]]))
-    }
-
-    override def writes(o: NotificationEvent): JsObject = {
-      Json.obj(
-        "kind" -> Json.toJson(o.kind)
-      ) ++ o.kind.format.asInstanceOf[Writes[NotificationEvent]].writes(o).as[JsObject]
-    }
-
-  }
-
-}
-
-// todo missing, system-global notification
-// todo missing, system notification
-
-case class DepressedRobotGrumble(
-    recipient: Recipient,
-    time: DateTime,
-    robotName: String,
-    grumblingAbout: String,
-    shouldGroup: Option[Boolean] = None) extends NotificationEvent {
-
-  val kind = DepressedRobotGrumble
-
-}
-
-object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
+trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] {
 
   override val name: String = "depressed_robot_grumble"
 

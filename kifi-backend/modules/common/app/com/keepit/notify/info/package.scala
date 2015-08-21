@@ -1,6 +1,6 @@
 package com.keepit.notify
 
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 
 package object info {
 

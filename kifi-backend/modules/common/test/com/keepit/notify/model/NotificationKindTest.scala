@@ -3,7 +3,7 @@ package com.keepit.notify.model
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.event.NewSocialConnection
+import com.keepit.notify.model.event.{DepressedRobotGrumble, NewSocialConnection}
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 

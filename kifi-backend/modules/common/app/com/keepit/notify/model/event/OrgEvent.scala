@@ -4,25 +4,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, User }
 import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait OrgEvent extends NotificationEvent
-
-case class OrgNewInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    orgId: Id[Organization]) extends OrgEvent {
-
-  val kind = OrgNewInvite
-
-}
-
-object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
+trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
 
   override val name: String = "org_new_invite"
 
@@ -53,17 +41,7 @@ object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
 
 }
 
-case class OrgInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    orgId: Id[Organization]) extends OrgEvent {
-
-  val kind = OrgInviteAccepted
-
-}
-
-object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] {
+trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepted] {
 
   override val name: String = "org_invite_accepted"
 

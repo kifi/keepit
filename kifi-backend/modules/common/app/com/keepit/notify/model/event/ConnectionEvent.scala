@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.User
 import com.keepit.notify.info._
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -12,18 +12,7 @@ import play.api.libs.json._
 
 import scala.concurrent.Future
 
-trait ConnectionEvent extends NotificationEvent
-
-case class NewConnectionInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User]) extends ConnectionEvent {
-
-  val kind = NewConnectionInvite
-
-}
-
-object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvite] {
+trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionInvite] {
 
   override val name: String = "new_connection_invite"
 
@@ -55,16 +44,7 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
 
 }
 
-case class ConnectionInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User]) extends ConnectionEvent {
-
-  val kind = ConnectionInviteAccepted
-
-}
-
-object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionInviteAccepted] {
+trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[ConnectionInviteAccepted] {
 
   override val name: String = "connection_invite_accepted"
 

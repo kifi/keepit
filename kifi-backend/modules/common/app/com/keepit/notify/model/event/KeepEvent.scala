@@ -3,26 +3,13 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, Keep, User }
 import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
-import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationEvent, NotificationKind, Recipient }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait KeepEvent extends NotificationEvent
-
-case class LibraryNewKeep(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = LibraryNewKeep
-
-}
-
-object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
+trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
 
   override val name: String = "library_new_keep"
 
@@ -64,19 +51,7 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
   }
 }
 
-// todo is this ever really used/called?
-case class NewKeepActivity(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = NewKeepActivity
-
-}
-
-object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
+trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
 
   override val name: String = "new_keep_activity"
 

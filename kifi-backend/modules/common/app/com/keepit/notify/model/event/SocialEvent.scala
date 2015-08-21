@@ -10,19 +10,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait SocialEvent extends NotificationEvent
-
-case class NewSocialConnection(
-    recipient: Recipient,
-    time: DateTime,
-    friendId: Id[User],
-    networkType: Option[SocialNetworkType]) extends SocialEvent {
-
-  val kind = NewSocialConnection
-
-}
-
-object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnection] {
+trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConnection] {
 
   override val name: String = "new_social_connection"
 
@@ -55,19 +43,7 @@ object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnecti
 
 }
 
-// todo missing, social new library through twitter (unused?)
-// todo missing, social new follower through twitter (unused?)
-
-case class SocialContactJoined(
-    recipient: Recipient,
-    time: DateTime,
-    joinerId: Id[User]) extends SocialEvent {
-
-  val kind = SocialContactJoined
-
-}
-
-object SocialContactJoined extends NonGroupingNotificationKind[SocialContactJoined] {
+trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJoined] {
 
   override val name: String = "social_contact_joined"
 

@@ -71,7 +71,7 @@ trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKi
 
 object NotificationKind {
 
-  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NKind]("N")
+  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NotificationKind[_ <: NotificationEvent]]("N")
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
 
