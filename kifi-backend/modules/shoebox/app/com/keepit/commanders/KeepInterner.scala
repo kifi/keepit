@@ -123,14 +123,11 @@ class KeepInternerImpl @Inject() (
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
-    println("[RPB] newKeeps = " + newKeeps)
-    println("[RPB] existingKeeps = " + existingKeeps)
     (newKeeps ++ existingKeeps, failures)
   }
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source)
-    println("[RPB] persistedBookmarksWithUris = " + persistedBookmarksWithUris)
     if (persistedBookmarksWithUris.nonEmpty) {
       db.readWrite { implicit s =>
         libraryRepo.updateLastKept(library.id.get)
@@ -140,7 +137,6 @@ class KeepInternerImpl @Inject() (
     val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
-    println("[RPB] createdKeeps = " + createdKeeps)
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
     }
@@ -279,7 +275,6 @@ class KeepInternerImpl @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    println("[RPB] internedKeep = " + internedKeep)
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
