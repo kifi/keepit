@@ -17,7 +17,7 @@ angular.module('kifi')
 
         var className = svgElement.getAttribute('class') || '';
         svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
-        svgElement.setAttribute('viewBox', '0 0 512 512')
+        svgElement.setAttribute('viewBox', '0 0 512 512');
       };
     }
   };
