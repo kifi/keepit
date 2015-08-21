@@ -139,7 +139,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int] = {
-    rows.filter(row => row.thread.inSet(threadIds)).list.groupBy(_.thread).mapValues(_.length)
+    rows.filter(row => row.thread.inSet(threadIds)).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
   }
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Message = {
