@@ -36,7 +36,7 @@ case class Keep(
     organizationId: Option[Id[Organization]] = None,
     entitiesHash: Option[EntitiesHash] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, entitiesHash = Some(KeepConnectionEntities.empty.hash)) // good idea?
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, entitiesHash = Some(KeepConnectionEntities.empty.hash)) // good idea?
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 

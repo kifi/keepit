@@ -800,16 +800,17 @@ class KeepCommanderImpl @Inject() (
     val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
     val mergeCandidates = getKeepsByUriAndEntities(newUri.id.get, KeepConnectionEntities(libIds, userIds))
 
+    val oldUriId = keep.uriId
     val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get)))
     ktlCommander.syncKeep(newKeep)
     ktuCommander.syncKeep(newKeep)
 
-    if (mergeCandidates.exists(keep.canBeMergedInto)) {
-      deactivateKeep(keep)
+    if (mergeCandidates.exists(newKeep.canBeMergedInto)) {
+      deactivateKeep(newKeep)
       None
     } else {
-      mergeCandidates.filter(_.canBeMergedInto(keep)).foreach(deactivateKeep)
-      Some(keep)
+      mergeCandidates.filter(_.canBeMergedInto(newKeep)).foreach(deactivateKeep)
+      Some(newKeep)
     }
   }
 
