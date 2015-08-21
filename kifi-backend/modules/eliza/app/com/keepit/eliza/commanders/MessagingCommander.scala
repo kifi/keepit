@@ -629,9 +629,9 @@ class MessagingCommander @Inject() (
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
       val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
 
-      val threadInfoOpt = url.map { url =>
+      val threadInfoOpt = url.flatMap { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
-      }.flatten
+      }
 
       messageThreadFut.map {
         case (_, messages) =>

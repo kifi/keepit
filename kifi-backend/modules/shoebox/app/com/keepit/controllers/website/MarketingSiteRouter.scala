@@ -75,10 +75,10 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       val pickOpt = Try(request.getQueryString("v").map(_.toInt)).toOption.flatten
 
       pickOpt.flatMap(v => versions.find(_.version == v)).getOrElse {
-        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-        val hash = Math.abs(ip.hashCode) % 100
-        (if (hash < 50) Version9 else Version7) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
-        //        Version7
+//        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+//        val hash = Math.abs(ip.hashCode) % 100
+//        (if (hash < 50) Version9 else Version7) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
+        Version9
       }
     }
     s"index.${version.version}"
