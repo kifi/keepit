@@ -769,6 +769,11 @@ class KeepCommanderImpl @Inject() (
     ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
     keep
   }
+  private def refreshEntitiesHash(keep: Keep)(implicit session: RWSession): Keep = {
+    val libraries = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
+    val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
+    keepRepo.save(keep.withEntities(libraries, users))
+  }
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withNote(newNote))
   }
@@ -827,7 +832,7 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
         ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
         ktlCommander.internKeepInLibrary(k, toLibrary, userId)
-        Right(movedKeep)
+        Right(refreshEntitiesHash(movedKeep))
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
 
@@ -837,13 +842,14 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
         ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
 
-        Right(movedKeep)
+        Right(refreshEntitiesHash(movedKeep))
       case Some(existingKeep) =>
         if (toLibrary.id.get == k.libraryId.get) {
           Left(LibraryError.AlreadyExistsInDest)
         } else {
-          keepRepo.deactivate(k)
           ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
+          refreshEntitiesHash(k)
+          keepRepo.deactivate(k)
           combineTags(k.id.get, existingKeep.id.get)
           Left(LibraryError.AlreadyExistsInDest)
         }
