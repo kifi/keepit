@@ -2,27 +2,27 @@ package com.keepit.commanders
 
 import java.util.UUID
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{HeimdalContext, HeimdalServiceClient}
+import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
-import com.keepit.normalizer.{NormalizationCandidate, NormalizedURIInterner}
+import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
