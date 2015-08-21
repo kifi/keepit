@@ -46,7 +46,7 @@ class LibraryController @Inject() (
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
   libPathCommander: PathCommander,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,

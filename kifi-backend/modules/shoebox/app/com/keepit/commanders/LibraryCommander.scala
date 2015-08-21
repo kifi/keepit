@@ -2,45 +2,39 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Provider }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.{ EmailOptOutCommander, LibraryInviteEmailSender }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache._
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
-import com.keepit.common.util.Paginator
-import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
-import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator, LibraryNewKeep }
+import com.keepit.notify.model.event.{ LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
-import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.typeahead.KifiUserTypeahead
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import views.html.admin.{ libraries, library }
-import com.keepit.common.core._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
 
 @json case class MarketingSuggestedLibrarySystemValue(
   id: Id[Library],
@@ -123,7 +117,7 @@ class LibraryCommanderImpl @Inject() (
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
-    keepCommander: KeepsCommander,
+    keepCommander: KeepCommander,
     keepToCollectionRepo: KeepToCollectionRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,

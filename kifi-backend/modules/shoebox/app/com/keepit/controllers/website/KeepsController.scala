@@ -33,7 +33,7 @@ class KeepsController @Inject() (
   collectionRepo: CollectionRepo,
   uriRepo: NormalizedURIRepo,
   collectionCommander: CollectionCommander,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   userValueRepo: UserValueRepo,
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,

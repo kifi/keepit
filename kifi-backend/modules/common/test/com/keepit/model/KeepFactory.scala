@@ -2,7 +2,7 @@ package com.keepit.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{ ExternalId, Id, State }
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -24,7 +24,8 @@ object KeepFactory {
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
-      originalKeeperId = Some(userId)
+      originalKeeperId = Some(userId),
+      entitiesHash = None
     ))
   }
 
