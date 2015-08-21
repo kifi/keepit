@@ -216,10 +216,7 @@ case class OrgTrackingValues(
   libraryCount: Int,
   keepCount: Int,
   inviteCount: Int,
-  collabLibCount: Int,
-  messageCount: Option[Int] = None, // needs to be fetched from eliza, unset
-  popularKeeper: Option[Id[User]] = None // needs to be fetched from heimdal, unset
-  )
+  collabLibCount: Int)
 
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
   override val version = 4

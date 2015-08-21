@@ -158,7 +158,7 @@ class HelpRankCommander @Inject() (
     }
   }
 
-  def getPopularKeeper(userIds: Set[Id[User]]): Id[User] = {
+  def getKeeperWithMostKeepClicks(userIds: Set[Id[User]]): Id[User] = {
     db.readOnlyReplica { implicit session =>
       keepDiscoveryRepo.getDiscoveryCountsByKeeper(userIds).maxBy(_._2)._1
     }

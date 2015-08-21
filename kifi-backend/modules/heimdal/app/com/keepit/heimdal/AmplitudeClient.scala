@@ -128,17 +128,7 @@ trait AmplitudeRequestBuilder {
     userIdOpt.map { userId =>
       primaryOrgProvider.getPrimaryOrg(userId).flatMap {
         case Some(orgId) =>
-          val orgValuesFut = primaryOrgProvider.getPrimaryOrgValues(orgId)
-          orgValuesFut.map { values =>
-            val orgProps = Map(
-              "orgId" -> ContextStringData(orgId.toString),
-              "libraryCount" -> ContextDoubleData(values.libraryCount.toDouble),
-              "keepCount" -> ContextDoubleData(values.keepCount.toDouble),
-              "inviteCount" -> ContextDoubleData(values.inviteCount.toDouble),
-              "collabLibCount" -> ContextDoubleData(values.collabLibCount.toDouble),
-              "messageCount" -> ContextDoubleData(values.messageCount.map(_.toDouble).getOrElse(-1)),
-              "popularKeeper" -> ContextStringData(values.popularKeeper.map(_.toString).getOrElse(""))
-              )
+          primaryOrgProvider.getOrgContextData(orgId).map { orgProps =>
             (xformToSnakeCase(userProps ++ orgProps), xformToSnakeCase(eventProps ++ orgProps))
           }
         case None =>

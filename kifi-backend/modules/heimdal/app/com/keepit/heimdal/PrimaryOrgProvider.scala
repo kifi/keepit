@@ -17,12 +17,13 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[PrimaryOrgProviderImpl])
 trait PrimaryOrgProvider {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
-  def getPrimaryOrgValues(orgId: Id[Organization]): Future[OrgTrackingValues]
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
+  def getOrgContextData(orgId: Id[Organization]): Future[Map[String, ContextData]]
 }
 
 class PrimaryOrgProviderImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
-    primaryOrgValuesCache: OrgTrackingValuesCache,
+    orgTrackingValuesCache: OrgTrackingValuesCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
@@ -33,16 +34,28 @@ class PrimaryOrgProviderImpl @Inject() (
     }
   }
 
-  def getPrimaryOrgValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
-    primaryOrgValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
-      for {
-        shoeboxValues <- shoebox.getOrgTrackingValues(orgId)
-        members <- shoebox.getOrganizationMembers(orgId)
-        messageCount <- eliza.getTotalMessageCountForGroup(members)
-      } yield {
-        val popularKeeper = helprankCommander.getPopularKeeper(members)
-        shoeboxValues.copy(messageCount = Some(messageCount), popularKeeper = Some(popularKeeper))
-      }
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
+    orgTrackingValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
+      shoebox.getOrgTrackingValues(orgId)
+    }
+  }
+
+  def getOrgContextData(orgId: Id[Organization]): Future[Map[String, ContextData]] = {
+    for {
+      shoeboxValues <- getOrgTrackingValues(orgId)
+      members <- shoebox.getOrganizationMembers(orgId)
+      messageCount <- eliza.getTotalMessageCountForGroup(members)
+    } yield {
+      val keeperWithMostClicks = helprankCommander.getKeeperWithMostKeepClicks(members)
+      Map(
+        "orgId" -> ContextStringData(orgId.toString),
+        "libraryCount" -> ContextDoubleData(shoeboxValues.libraryCount),
+        "keepCount" -> ContextDoubleData(shoeboxValues.keepCount),
+        "inviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
+        "collabLibCount" -> ContextDoubleData(shoeboxValues.collabLibCount),
+        "messageCount" -> ContextDoubleData(messageCount),
+        "keeperWithMostClicks" -> ContextStringData(keeperWithMostClicks.toString)
+      )
     }
   }
 }
