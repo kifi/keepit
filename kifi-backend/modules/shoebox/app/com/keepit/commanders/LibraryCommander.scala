@@ -94,6 +94,8 @@ trait LibraryCommander {
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
   def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership]
+
+  def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User]): Library
 }
 
 class LibraryCommanderImpl @Inject() (
@@ -854,6 +856,23 @@ class LibraryCommanderImpl @Inject() (
       }
       searchClient.updateLibraryIndex()
       None
+    }
+  }
+
+  def unsafeTransferLibrary(libId: Id[Library], newOwner: Id[User]): Library = {
+    db.readWrite { implicit s =>
+      val owner = userRepo.get(newOwner)
+      assert(owner.state == UserStates.ACTIVE)
+
+      val lib = libraryRepo.getNoCache(libId)
+
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).foreach { oldOwnerMembership =>
+        libraryMembershipRepo.save(oldOwnerMembership.withState(LibraryMembershipStates.INACTIVE))
+      }
+      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, newOwner)
+      val newMembershipTemplate = LibraryMembership(libraryId = libId, userId = newOwner, access = LibraryAccess.OWNER)
+      libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.map(_.id.get)))
+      libraryRepo.save(lib.withOwner(newOwner))
     }
   }
 
