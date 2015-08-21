@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, User }
-import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
+import com.keepit.notify.info.{ DbViewKey$, NotificationInfo, UsingDbView }
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -21,9 +21,9 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     (__ \ "orgId").format[Id[Organization]]
   )(OrgNewInvite.apply, unlift(OrgNewInvite.unapply))
 
-  override def info(event: OrgNewInvite): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: OrgNewInvite): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
     )) { subset =>
       val inviter = user(event.inviterId).lookup(subset)
@@ -52,9 +52,9 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     (__ \ "orgId").format[Id[Organization]]
   )(OrgInviteAccepted.apply, unlift(OrgInviteAccepted.unapply))
 
-  override def info(event: OrgInviteAccepted): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: OrgInviteAccepted): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
     )) { subset =>
       val accepter = user(event.accepterId).lookup(subset)

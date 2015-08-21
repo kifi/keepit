@@ -42,9 +42,9 @@ trait NotificationKind[N <: NotificationEvent] {
 
   /**
    * Generates notification info for a set of events. This essentially returns a function wrapped in
-   * [[UsingDbSubset]] in order to batch potential calls from Eliza to shoebox.
+   * [[UsingDbView]] in order to batch potential calls from Eliza to shoebox.
    */
-  def info(events: Set[N]): UsingDbSubset[NotificationInfo]
+  def info(events: Set[N]): UsingDbView[NotificationInfo]
 }
 
 /**
@@ -56,7 +56,7 @@ trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKi
 
   override final def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean = false
 
-  override final def info(events: Set[N]): UsingDbSubset[NotificationInfo] = {
+  override final def info(events: Set[N]): UsingDbView[NotificationInfo] = {
     require(events.size == 1,
       "Subtypes of NonGroupingNotificationKind are supposed to guarantee that no events ever group, yet a group of events was received.")
     info(events.head)
@@ -65,7 +65,7 @@ trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKi
   /**
    * Because it is guaranteed that notifications aren't ever grouped, info can be written taking only one event.
    */
-  def info(event: N): UsingDbSubset[NotificationInfo]
+  def info(event: N): UsingDbView[NotificationInfo]
 
 }
 

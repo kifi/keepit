@@ -21,9 +21,9 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     (__ \ "networkType").formatNullable[SocialNetworkType]
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
-  override def info(event: NewSocialConnection): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: NewSocialConnection): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.friendId), userImageUrl(event.friendId)
     )) { subset =>
       val friend = user(event.friendId).lookup(subset)
@@ -53,9 +53,9 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
 
-  override def info(event: SocialContactJoined): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: SocialContactJoined): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.joinerId), userImageUrl(event.joinerId)
     )) { subset =>
       val joiner = user(event.joinerId).lookup(subset)

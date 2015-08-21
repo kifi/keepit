@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
+import com.keepit.notify.info.{ DbViewKey$, NotificationInfo, UsingDbView }
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -33,12 +33,12 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     "some friends" -> "a friend"
   )
 
-  override def info(events: Set[OwnedLibraryNewCollabInvite]): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
+  override def info(events: Set[OwnedLibraryNewCollabInvite]): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbSubset(Seq(
+    UsingDbView(Seq(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
     )) { subset =>
       val inviter = user(oneEvent.inviterId).lookup(subset)
@@ -84,12 +84,12 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     "some friends" -> "a friend"
   )
 
-  override def info(events: Set[OwnedLibraryNewFollowInvite]): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
+  override def info(events: Set[OwnedLibraryNewFollowInvite]): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbSubset(Seq(
+    UsingDbView(Seq(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
     )) { subset =>
       val inviter = user(oneEvent.inviterId).lookup(subset)
@@ -123,9 +123,9 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
 
-  override def info(event: OwnedLibraryNewFollower): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: OwnedLibraryNewFollower): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.followerId), userImageUrl(event.followerId), library(event.libraryId), libraryInfo(event.libraryId)
     )) { subset =>
       val follower = user(event.followerId).lookup(subset)
@@ -159,9 +159,9 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
 
-  override def info(event: OwnedLibraryNewCollaborator): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: OwnedLibraryNewCollaborator): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.collaboratorId), userImageUrl(event.collaboratorId), library(event.libraryId), libraryInfo(event.libraryId)
     )) { subset =>
       val collaborator = user(event.collaboratorId).lookup(subset)

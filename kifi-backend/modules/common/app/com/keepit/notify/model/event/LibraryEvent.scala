@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ LibraryAccess, Library, User }
-import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
+import com.keepit.notify.info.{ UsingDbView, NotificationInfo, DbViewKey$ }
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -21,9 +21,9 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryCollabInviteAccepted.apply, unlift(LibraryCollabInviteAccepted.unapply))
 
-  override def info(event: LibraryCollabInviteAccepted): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: LibraryCollabInviteAccepted): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
       val accepter = user(event.accepterId).lookup(subset)
@@ -57,9 +57,9 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryFollowInviteAccepted.apply, unlift(LibraryFollowInviteAccepted.unapply))
 
-  override def info(event: LibraryFollowInviteAccepted): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: LibraryFollowInviteAccepted): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
     )) { subset =>
       val accepter = user(event.accepterId).lookup(subset)
@@ -93,9 +93,9 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewCollabInvite.apply, unlift(LibraryNewCollabInvite.unapply))
 
-  override def info(event: LibraryNewCollabInvite): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: LibraryNewCollabInvite): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>
@@ -133,9 +133,9 @@ trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewF
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewFollowInvite.apply, unlift(LibraryNewFollowInvite.unapply))
 
-  override def info(event: LibraryNewFollowInvite): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  override def info(event: LibraryNewFollowInvite): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
       libraryUrl(event.libraryId), libraryOwner(event.libraryId)
     )) { subset =>

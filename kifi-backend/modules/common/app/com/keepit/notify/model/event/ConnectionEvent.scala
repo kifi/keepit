@@ -22,9 +22,16 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
 
-  override def info(event: NewConnectionInvite): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  def build(recipient: Recipient, time: DateTime, inviter: User) = {
+    import DbViewKey._
+    ExistingDbView(Seq(user.existing(inviter)))(
+      NewConnectionInvite(recipient = recipient, time = time, inviterId = inviter.id.get)
+    )
+  }
+
+  override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.inviterId), userImageUrl(event.inviterId)
     )) { subset =>
       val inviter = user(event.inviterId).lookup(subset)
@@ -54,9 +61,16 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     (__ \ "accepterId").format[Id[User]]
   )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
 
-  override def info(event: ConnectionInviteAccepted): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  def build(recipient: Recipient, time: DateTime, accepter: User) = {
+    import DbViewKey._
+    ExistingDbView(Seq(user.existing(accepter)))(
+      ConnectionInviteAccepted(recipient = recipient, time = time, accepterId = accepter.id.get)
+    )
+  }
+
+  override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.accepterId), userImageUrl(event.accepterId)
     )) { subset =>
       val accepter = user(event.accepterId).lookup(subset)

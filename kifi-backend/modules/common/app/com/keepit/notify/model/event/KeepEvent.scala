@@ -2,7 +2,7 @@ package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, Keep, User }
-import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
+import com.keepit.notify.info._
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -21,9 +21,16 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
-  override def info(event: LibraryNewKeep): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library) = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
+    )(LibraryNewKeep(recipient, time, keeper.id.get, newKeep.id.get, libraryKept.id.get))
+  }
+
+  override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       user(event.keeperId), userImageUrl(event.keeperId), library(event.libraryId), keep(event.keepId),
       libraryInfo(event.libraryId)
     )) { subset =>
@@ -63,9 +70,16 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     (__ \ "libraryId").format[Id[Library]]
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
-  override def info(event: NewKeepActivity): UsingDbSubset[NotificationInfo] = {
-    import NeedInfo._
-    UsingDbSubset(Seq(
+  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library) = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
+    )(NewKeepActivity(recipient, time, keeper.id.get, newKeep.id.get, libraryKept.id.get))
+  }
+
+  override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {
+    import DbViewKey._
+    UsingDbView(Seq(
       library(event.libraryId), user(event.keeperId), keep(event.keepId), libraryUrl(event.libraryId),
       userImageUrl(event.keeperId), libraryInfo(event.libraryId)
     )) { subset =>
