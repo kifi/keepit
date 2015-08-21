@@ -22,11 +22,15 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
 
-  def build(recipient: Recipient, time: DateTime, inviter: User) = {
+  def build(recipient: Recipient, time: DateTime, inviter: User): ExistingDbView[NewConnectionInvite] = {
     import DbViewKey._
-    ExistingDbView(Seq(user.existing(inviter)))(
-      NewConnectionInvite(recipient = recipient, time = time, inviterId = inviter.id.get)
-    )
+    ExistingDbView(
+      Seq(user.existing(inviter))
+    )( NewConnectionInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get
+    ))
   }
 
   override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
@@ -61,11 +65,15 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     (__ \ "accepterId").format[Id[User]]
   )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
 
-  def build(recipient: Recipient, time: DateTime, accepter: User) = {
+  def build(recipient: Recipient, time: DateTime, accepter: User): ExistingDbView[ConnectionInviteAccepted] = {
     import DbViewKey._
-    ExistingDbView(Seq(user.existing(accepter)))(
-      ConnectionInviteAccepted(recipient = recipient, time = time, accepterId = accepter.id.get)
-    )
+    ExistingDbView(
+      Seq(user.existing(accepter))
+    )(ConnectionInviteAccepted(
+      recipient = recipient,
+      time = time,
+      accepterId = accepter.id.get
+    ))
   }
 
   override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {

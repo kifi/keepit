@@ -24,7 +24,7 @@ trait DbView {
 case class DbViewRequest[M <: HasId[M], R](kind: String, id: Id[M]) {
 
   /**
-   * Actually look up the request in a db subset. Because the db subset is untyped,
+   * Actually look up the request in a db view. Because the db view  is untyped,
    * a final cast is done.
    *
    * @param subset The subset to look up in
@@ -91,11 +91,11 @@ case class UsingDbView[A](requests: Seq[DbViewRequest[_, _]])(fn: DbView => A)
 
 /**
  * Represents a whole bunch of items that have already been fetched and exist in a DB view, along with a value that
- * is constructed. The value can be used on its own, or additional properties may be derived from the value with the
- * help of a Db view.
+ * is constructed in the context of that view. The value can be used on its own, or additional properties may be derived
+ * from the value with thehelp of a Db view.
  *
- * The prime example is a [[com.keepit.notify.model.event.NotificationEvent]], where constructing  one gives most of the
+ * The prime example is a [[com.keepit.notify.model.event.NotificationEvent]], where constructing one gives most of the
  * information needed to generate its resulting display information, [[NotificationInfo]]. By wrapping the parameters to
- * the event in this class,
+ * the event in this class, all the potential additional request for information can be reduced.
  */
 case class ExistingDbView[A](existing: Seq[ExistingDbViewModel[_]])(value: A)

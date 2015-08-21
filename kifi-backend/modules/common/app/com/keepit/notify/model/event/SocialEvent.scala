@@ -21,6 +21,18 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     (__ \ "networkType").formatNullable[SocialNetworkType]
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
+  def build(recipient: Recipient, time: DateTime, friend: User, networkType: Option[SocialNetworkType]: ExistingDbView[NewSocialConnection] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(friend))
+    )(NewSocialConnection(
+      recipient = recipient,
+      time = time,
+      friendId = friend.id.get,
+      networkType = networkType
+    ))
+  }
+
   override def info(event: NewSocialConnection): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Seq(
@@ -52,6 +64,17 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     (__ \ "time").format[DateTime] and
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
+
+  def build(recipient: Recipient, time: DateTime, joiner: User): ExistingDbView[SocialContactJoined] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(joiner))
+    )(SocialContactJoined(
+      recipient = recipient,
+      time = time,
+      joinerId = joiner.id.get
+    ))
+  }
 
   override def info(event: SocialContactJoined): UsingDbView[NotificationInfo] = {
     import DbViewKey._

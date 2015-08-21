@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ DbViewKey$, NotificationInfo, UsingDbView }
+import com.keepit.notify.info.{ExistingDbView, DbViewKey, NotificationInfo, UsingDbView}
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -21,6 +21,19 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     (__ \ "inviteeId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollabInvite.apply, unlift(OwnedLibraryNewCollabInvite.unapply))
+
+  def build(recipient: Recipient, time: DateTime, inviter: User, invitee: User, libraryInvited: Library): ExistingDbView[OwnedLibraryNewCollabInvite] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
+    )(OwnedLibraryNewCollabInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get,
+      inviteeId = invitee.id.get,
+      libraryId = libraryInvited.id.get
+    ))
+  }
 
   override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = {
     // only check a random event, they should all have the same inviter and library
@@ -73,6 +86,19 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollowInvite.apply, unlift(OwnedLibraryNewFollowInvite.unapply))
 
+  def build(recipient: Recipient, time: DateTime, inviter: User, invitee: User, libraryInvited: Library): ExistingDbView[OwnedLibraryNewFollowInvite] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
+    )(OwnedLibraryNewFollowInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get,
+      inviteeId = invitee.id.get,
+      libraryId = libraryInvited.id.get
+    ))
+  }
+
   override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = {
     // only check a random event, they should all have the same inviter and library
     val existing = existingEvents.head
@@ -123,6 +149,18 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
 
+  def build(recipient: Recipient, time: DateTime, follower: User, libraryFollowed: Library): ExistingDbView[OwnedLibraryNewFollower] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(follower), library.existing(libraryFollowed))
+    )(OwnedLibraryNewFollower(
+      recipient = recipient,
+      time = time,
+      followerId = follower.id.get,
+      libraryId = libraryFollowed.id.get
+    ))
+  }
+
   override def info(event: OwnedLibraryNewFollower): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Seq(
@@ -158,6 +196,18 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     (__ \ "collaboratorId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
+
+  def build(recipient: Recipient, time: DateTime, collaborator: User, libraryCollaborating: Library): ExistingDbView[OwnedLibraryNewCollaborator] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(collaborator), library.existing(libraryCollaborating))
+    )(OwnedLibraryNewCollaborator(
+      recipient = recipient,
+      time = time,
+      collaboratorId = collaborator.id.get,
+      libraryId = libraryCollaborating.id.get
+    ))
+  }
 
   override def info(event: OwnedLibraryNewCollaborator): UsingDbView[NotificationInfo] = {
     import DbViewKey._

@@ -21,11 +21,17 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
-  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library) = {
+  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library): ExistingDbView[LibraryNewKeep] = {
     import DbViewKey._
     ExistingDbView(
       Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
-    )(LibraryNewKeep(recipient, time, keeper.id.get, newKeep.id.get, libraryKept.id.get))
+    )(LibraryNewKeep(
+      recipient = recipient,
+      time = time,
+      keeperId = keeper.id.get,
+      keepId = newKeep.id.get,
+      libraryId = libraryKept.id.get
+    ))
   }
 
   override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
@@ -70,11 +76,17 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     (__ \ "libraryId").format[Id[Library]]
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
-  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library) = {
+  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library): ExistingDbView[NewKeepActivity] = {
     import DbViewKey._
     ExistingDbView(
       Seq(user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept))
-    )(NewKeepActivity(recipient, time, keeper.id.get, newKeep.id.get, libraryKept.id.get))
+    )(NewKeepActivity(
+      recipient = recipient,
+      time = time,
+      keeperId = keeper.id.get,
+      keepId = ewKeep.id.get,
+      libraryId = libraryKept.id.get
+    ))
   }
 
   override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {

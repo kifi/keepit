@@ -3,7 +3,8 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ LibraryAccess, Library, User }
-import com.keepit.notify.info.{ UsingDbView, NotificationInfo, DbViewKey$ }
+import com.keepit.notify.info.DbViewKey._
+import com.keepit.notify.info._
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -20,6 +21,18 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     (__ \ "accepterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryCollabInviteAccepted.apply, unlift(LibraryCollabInviteAccepted.unapply))
+
+  def build(recipient: Recipient, time: DateTime, accepter: User, invitedLib: Library): ExistingDbView[LibraryCollabInviteAccepted] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(accepter), library.existing(invitedLib))
+    )(LibraryCollabInviteAccepted(
+      recipient = recipient,
+      time = time,
+      accepterId = accepter.id.get,
+      libraryId = invitedLib.id.get
+    ))
+  }
 
   override def info(event: LibraryCollabInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
@@ -57,6 +70,18 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryFollowInviteAccepted.apply, unlift(LibraryFollowInviteAccepted.unapply))
 
+  def build(recipient: Recipient, time: DateTime, accepter: User, acceptedLib: Library): ExistingDbView[LibraryFollowInviteAccepted] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(accepter), library.existing(acceptedLib))
+    )(LibraryFollowInviteAccepted(
+      recipient = recipient,
+      time = time,
+      accepterId = accepter.id.get,
+      libraryId = acceptedLib.id.get
+    ))
+  }
+
   override def info(event: LibraryFollowInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Seq(
@@ -92,6 +117,18 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewCollabInvite.apply, unlift(LibraryNewCollabInvite.unapply))
+
+  def build(recipient: Recipient, time: DateTime, inviter: User, invitedLib: Library, invitedLibOwner: User): ExistingDbView[LibraryNewCollabInvite] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(inviter), library.existing(invitedLib), user.existing(invitedLibOwner))
+    )(LibraryNewCollabInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get,
+      libraryId = invitedLib.id.get
+    ))
+  }
 
   override def info(event: LibraryNewCollabInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
@@ -132,6 +169,18 @@ trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewF
     (__ \ "inviterId").format[Id[User]] and
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewFollowInvite.apply, unlift(LibraryNewFollowInvite.unapply))
+
+  def build(recipient: Recipient, time: DateTime, inviter: User, invitedLib: Library, invitedLibOwner: User): ExistingDbView[LibraryNewFollowInvite] = {
+    import DbViewKey._
+    ExistingDbView(
+      Seq(user.existing(inviter), library.existing(invitedLib), user.existing(invitedLibOwner))
+    )(LibraryNewFollowInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get,
+      libraryId = invitedLib.id.get
+    ))
+  }
 
   override def info(event: LibraryNewFollowInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
