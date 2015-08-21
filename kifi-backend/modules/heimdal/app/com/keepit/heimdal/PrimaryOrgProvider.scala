@@ -54,7 +54,7 @@ class PrimaryOrgProviderImpl @Inject() (
         "inviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
         "collabLibCount" -> ContextDoubleData(shoeboxValues.collabLibCount),
         "messageCount" -> ContextDoubleData(messageCount),
-        "keeperWithMostClicks" -> ContextStringData(keeperWithMostClicks.toString)
+        "overallKeepViews" -> ContextStringData(keeperWithMostClicks.toString)
       )
     }
   }
