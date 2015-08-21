@@ -18,7 +18,16 @@ class DbView(private val keyMap: Map[DbViewKey[_, _], Map[Id[_], Any]]) {
     new DbView(keyMap + (key -> assocObjMap))
   }
 
- def lookup[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): R = keyMap(key)(id).asInstanceOf[R]
+  def add[M <: HasId[M]](existing: ExistingDbViewModel[M]): DbView = {
+    val model = existing.model
+    add(existing.key, model.id.get, model)
+  }
+
+  def lookup[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): R =
+    keyMap(key)(id).asInstanceOf[R]
+
+  def contains[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): Boolean =
+    keyMap.get(key).flatMap(_.get(id)).isDefined
 
 }
 
@@ -40,8 +49,10 @@ class DbViewKey[M <: HasId[M], R] {
 
   /**
    * Indicates that the given model already has already been fetched in a potential DB view.
+   * The evidence indicates that it is required that the result of this key must have the same type as the model.
    */
-  def existing(model: M): ExistingDbViewModel[M] = ExistingDbViewModel(this, model)
+  def existing(model: M)(implicit ev: DbViewKey[M, R] =:= DbViewKey[M, M]): ExistingDbViewModel[M] =
+    ExistingDbViewModel(ev(this), model)
 
   /**
    * Builds a request using the given model.
@@ -79,14 +90,9 @@ object DbViewKey {
  */
 case class DbViewRequest[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]) {
 
-  /**
-   * Actually look up the request in a db view. Because the db view  is untyped,
-   * a final cast is done.
-   *
-   * @param view The subset to look up in
-   * @return The looked up result
-   */
   def lookup(view: DbView): R = view.lookup(key, id)
+
+  def contained(view: DbView): Boolean = view.contains(key, id)
 
 }
 
@@ -94,20 +100,27 @@ case class DbViewRequest[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]) {
  * Represents a wrapper of a function that requests a whole bunch of items from a potential db view, then
  * constructs a value.
  */
-case class UsingDbView[A](requests: Seq[DbViewRequest[_, _]])(fn: DbView => A)
+case class UsingDbView[A](requests: DbViewRequest[M, T] forSome { type M <: HasId[M]; type T }*)(val fn: DbView => A)
 
 /**
  * Represents that a certain model already exists and can be used for DB view requests.
  */
-case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, _], model: M)
+case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, M], model: M)
 
 /**
  * Represents a whole bunch of items that have already been fetched and exist in a DB view, along with a value that
  * is constructed in the context of that view. The value can be used on its own, or additional properties may be derived
- * from the value with thehelp of a Db view.
+ * from the value with the help of a Db view.
  *
  * The prime example is a [[com.keepit.notify.model.event.NotificationEvent]], where constructing one gives most of the
  * information needed to generate its resulting display information, [[NotificationInfo]]. By wrapping the parameters to
  * the event in this class, all the potential additional request for information can be reduced.
  */
-case class ExistingDbView[A](existing: Seq[ExistingDbViewModel[_]])(value: A)
+case class ExistingDbView[A](existing: ExDbViewModel*)(val result: A) {
+
+  def buildDbView: DbView =
+    existing.foldLeft(DbView()) { (view, existingModel) =>
+      view.add(existingModel)
+    }
+
+}

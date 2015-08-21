@@ -25,7 +25,7 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
   def build(recipient: Recipient, time: DateTime, inviter: User, invitee: User, libraryInvited: Library): ExistingDbView[OwnedLibraryNewCollabInvite] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
+      user.existing(inviter), user.existing(invitee), library.existing(libraryInvited)
     )(OwnedLibraryNewCollabInvite(
         recipient = recipient,
         time = time,
@@ -51,25 +51,25 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbView(Seq(
+    UsingDbView(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
-    )) { subset =>
-      val inviter = user(oneEvent.inviterId).lookup(subset)
-      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
-      val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
-      val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
-      NotificationInfo(
-        url = Path(inviter.username.value).encode.absolute,
-        imageUrl = inviterImageUrl,
-        title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
-        body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
-        linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
-        extraJson = Some(Json.obj(
-          "inviter" -> inviter,
-          "library" -> Json.toJson(libraryInvitedInfo)
-        ))
-      )
-    }
+    ) { subset =>
+        val inviter = user(oneEvent.inviterId).lookup(subset)
+        val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+        val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
+        val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
+        NotificationInfo(
+          url = Path(inviter.username.value).encode.absolute,
+          imageUrl = inviterImageUrl,
+          title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
+          body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
+          linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+          extraJson = Some(Json.obj(
+            "inviter" -> inviter,
+            "library" -> Json.toJson(libraryInvitedInfo)
+          ))
+        )
+      }
   }
 
 }
@@ -89,7 +89,7 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
   def build(recipient: Recipient, time: DateTime, inviter: User, invitee: User, libraryInvited: Library): ExistingDbView[OwnedLibraryNewFollowInvite] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(inviter), user.existing(invitee), library.existing(libraryInvited))
+      user.existing(inviter), user.existing(invitee), library.existing(libraryInvited)
     )(OwnedLibraryNewFollowInvite(
         recipient = recipient,
         time = time,
@@ -115,25 +115,25 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbView(Seq(
+    UsingDbView(
       user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
-    )) { subset =>
-      val inviter = user(oneEvent.inviterId).lookup(subset)
-      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
-      val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
-      val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
-      NotificationInfo(
-        url = Path(inviter.username.value).encode.absolute,
-        imageUrl = inviterImageUrl,
-        title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
-        body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
-        linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
-        extraJson = Some(Json.obj(
-          "inviter" -> inviter,
-          "library" -> Json.toJson(libraryInvitedInfo)
-        ))
-      )
-    }
+    ) { subset =>
+        val inviter = user(oneEvent.inviterId).lookup(subset)
+        val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+        val libraryInvitedInfo = libraryInfo(oneEvent.libraryId).lookup(subset)
+        val inviterImageUrl = userImageUrl(oneEvent.inviterId).lookup(subset)
+        NotificationInfo(
+          url = Path(inviter.username.value).encode.absolute,
+          imageUrl = inviterImageUrl,
+          title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
+          body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
+          linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+          extraJson = Some(Json.obj(
+            "inviter" -> inviter,
+            "library" -> Json.toJson(libraryInvitedInfo)
+          ))
+        )
+      }
   }
 
 }
@@ -152,7 +152,7 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
   def build(recipient: Recipient, time: DateTime, follower: User, libraryFollowed: Library): ExistingDbView[OwnedLibraryNewFollower] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(follower), library.existing(libraryFollowed))
+      user.existing(follower), library.existing(libraryFollowed)
     )(OwnedLibraryNewFollower(
         recipient = recipient,
         time = time,
@@ -163,25 +163,25 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
 
   override def info(event: OwnedLibraryNewFollower): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(Seq(
+    UsingDbView(
       user(event.followerId), userImageUrl(event.followerId), library(event.libraryId), libraryInfo(event.libraryId)
-    )) { subset =>
-      val follower = user(event.followerId).lookup(subset)
-      val followerImage = userImageUrl(event.followerId).lookup(subset)
-      val libraryFollowed = library(event.libraryId).lookup(subset)
-      val libraryFollowedInfo = libraryInfo(event.libraryId).lookup(subset)
-      NotificationInfo(
-        url = Path(follower.username.value).encode.absolute,
-        imageUrl = followerImage,
-        title = "New library follower",
-        body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
-        linkText = s"See ${follower.firstName}’s profile",
-        extraJson = Some(Json.obj(
-          "follower" -> BasicUser.fromUser(follower),
-          "library" -> Json.toJson(libraryFollowedInfo)
-        ))
-      )
-    }
+    ) { subset =>
+        val follower = user(event.followerId).lookup(subset)
+        val followerImage = userImageUrl(event.followerId).lookup(subset)
+        val libraryFollowed = library(event.libraryId).lookup(subset)
+        val libraryFollowedInfo = libraryInfo(event.libraryId).lookup(subset)
+        NotificationInfo(
+          url = Path(follower.username.value).encode.absolute,
+          imageUrl = followerImage,
+          title = "New library follower",
+          body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
+          linkText = s"See ${follower.firstName}’s profile",
+          extraJson = Some(Json.obj(
+            "follower" -> BasicUser.fromUser(follower),
+            "library" -> Json.toJson(libraryFollowedInfo)
+          ))
+        )
+      }
   }
 
 }
@@ -200,7 +200,7 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
   def build(recipient: Recipient, time: DateTime, collaborator: User, libraryCollaborating: Library): ExistingDbView[OwnedLibraryNewCollaborator] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(collaborator), library.existing(libraryCollaborating))
+      user.existing(collaborator), library.existing(libraryCollaborating)
     )(OwnedLibraryNewCollaborator(
         recipient = recipient,
         time = time,
@@ -211,25 +211,25 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
 
   override def info(event: OwnedLibraryNewCollaborator): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(Seq(
+    UsingDbView(
       user(event.collaboratorId), userImageUrl(event.collaboratorId), library(event.libraryId), libraryInfo(event.libraryId)
-    )) { subset =>
-      val collaborator = user(event.collaboratorId).lookup(subset)
-      val collaboratorImage = userImageUrl(event.collaboratorId).lookup(subset)
-      val libraryCollaborating = library(event.libraryId).lookup(subset)
-      val libraryCollaboratingInfo = libraryInfo(event.libraryId).lookup(subset)
-      NotificationInfo(
-        url = Path(collaborator.username.value).encode.absolute,
-        imageUrl = collaboratorImage,
-        title = "New library collaborator",
-        body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
-        linkText = s"See ${collaborator.firstName}’s profile",
-        extraJson = Some(Json.obj(
-          "follower" -> BasicUser.fromUser(collaborator), // the mobile clients read it like this
-          "library" -> Json.toJson(libraryCollaboratingInfo)
-        ))
-      )
-    }
+    ) { subset =>
+        val collaborator = user(event.collaboratorId).lookup(subset)
+        val collaboratorImage = userImageUrl(event.collaboratorId).lookup(subset)
+        val libraryCollaborating = library(event.libraryId).lookup(subset)
+        val libraryCollaboratingInfo = libraryInfo(event.libraryId).lookup(subset)
+        NotificationInfo(
+          url = Path(collaborator.username.value).encode.absolute,
+          imageUrl = collaboratorImage,
+          title = "New library collaborator",
+          body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
+          linkText = s"See ${collaborator.firstName}’s profile",
+          extraJson = Some(Json.obj(
+            "follower" -> BasicUser.fromUser(collaborator), // the mobile clients read it like this
+            "library" -> Json.toJson(libraryCollaboratingInfo)
+          ))
+        )
+      }
   }
 
 }

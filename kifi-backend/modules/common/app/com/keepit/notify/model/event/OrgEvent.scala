@@ -3,7 +3,7 @@ package com.keepit.notify.model.event
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
 import com.keepit.model.{ Organization, User }
-import com.keepit.notify.info.{ ExistingDbView, DbViewKey, NotificationInfo, UsingDbView }
+import com.keepit.notify.info._
 import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -24,7 +24,7 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
   def build(recipient: Recipient, time: DateTime, inviter: User, org: Organization): ExistingDbView[OrgNewInvite] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(inviter), organization.existing(org))
+      user.existing(inviter), organization.existing(org)
     )(OrgNewInvite(
         recipient = recipient,
         time = time,
@@ -35,20 +35,20 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
 
   override def info(event: OrgNewInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(Seq(
+    UsingDbView(
       user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
-    )) { subset =>
-      val inviter = user(event.inviterId).lookup(subset)
-      val invitedOrg = organization(event.orgId).lookup(subset)
-      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
-      NotificationInfo(
-        url = Path(invitedOrg.handle.value).encode.absolute,
-        imageUrl = inviterImage,
-        title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
-        body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
-        linkText = "Visit organization"
-      )
-    }
+    ) { subset =>
+        val inviter = user(event.inviterId).lookup(subset)
+        val invitedOrg = organization(event.orgId).lookup(subset)
+        val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+        NotificationInfo(
+          url = Path(invitedOrg.handle.value).encode.absolute,
+          imageUrl = inviterImage,
+          title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
+          body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
+          linkText = "Visit organization"
+        )
+      }
   }
 
 }
@@ -67,7 +67,7 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
   def build(recipient: Recipient, time: DateTime, accepter: User, org: Organization): ExistingDbView[OrgInviteAccepted] = {
     import DbViewKey._
     ExistingDbView(
-      Seq(user.existing(accepter), organization.existing(org))
+      user.existing(accepter), organization.existing(org)
     )(OrgInviteAccepted(
         recipient = recipient,
         time = time,
@@ -78,25 +78,25 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
 
   override def info(event: OrgInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(Seq(
+    UsingDbView(
       user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
-    )) { subset =>
-      val accepter = user(event.accepterId).lookup(subset)
-      val acceptedOrg = organization(event.orgId).lookup(subset)
-      val accepterId = userImageUrl(event.accepterId).lookup(subset)
-      val acceptedOrgInfo = organizationInfo(event.orgId).lookup(subset)
-      NotificationInfo(
-        url = Path(acceptedOrg.handle.value).encode.absolute,
-        imageUrl = accepterId,
-        title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
-        body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
-        linkText = "Visit organization",
-        extraJson = Some(Json.obj(
-          "member" -> BasicUser.fromUser(accepter),
-          "organization" -> Json.toJson(acceptedOrgInfo)
-        ))
-      )
-    }
+    ) { subset =>
+        val accepter = user(event.accepterId).lookup(subset)
+        val acceptedOrg = organization(event.orgId).lookup(subset)
+        val accepterId = userImageUrl(event.accepterId).lookup(subset)
+        val acceptedOrgInfo = organizationInfo(event.orgId).lookup(subset)
+        NotificationInfo(
+          url = Path(acceptedOrg.handle.value).encode.absolute,
+          imageUrl = accepterId,
+          title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
+          body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
+          linkText = "Visit organization",
+          extraJson = Some(Json.obj(
+            "member" -> BasicUser.fromUser(accepter),
+            "organization" -> Json.toJson(acceptedOrgInfo)
+          ))
+        )
+      }
   }
 
 }

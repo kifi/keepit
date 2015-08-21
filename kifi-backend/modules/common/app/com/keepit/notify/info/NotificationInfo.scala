@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.keepit.common.path.Path
+import com.keepit.model.NotificationCategory
 import play.api.libs.json.JsObject
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -13,6 +13,7 @@ import play.api.libs.functional.syntax._
  * @param title The title of the notification
  * @param body The body of the notification, text explaining why it happened or the relation to the user
  * @param linkText Text that goes on link hover, explains where the link goes
+ * @param category Provisional 'category' of the notification for use in clients
  * @param extraJson Assorted data that is read by clients, per-notification
  */
 case class NotificationInfo(
@@ -21,6 +22,7 @@ case class NotificationInfo(
   title: String,
   body: String,
   linkText: String,
+  category: Option[NotificationCategory] = None,
   extraJson: Option[JsObject] = None)
 
 object NotificationInfo {
@@ -31,6 +33,7 @@ object NotificationInfo {
     (__ \ "title").format[String] and
     (__ \ "body").format[String] and
     (__ \ "linkText").format[String] and
+    (__ \ "category").formatNullable[NotificationCategory] and
     (__ \ "extraJson").formatNullable[JsObject]
   )(NotificationInfo.apply, unlift(NotificationInfo.unapply))
 
