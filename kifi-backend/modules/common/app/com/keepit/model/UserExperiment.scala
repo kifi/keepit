@@ -76,6 +76,7 @@ object UserExperimentType {
   val SEARCH_LAB = UserExperimentType("search_lab")
   val READ_IT_LATER = UserExperimentType("read_id_later")
   val NEW_NOTIFS_SYSTEM = UserExperimentType("new_notifs_system")
+  val KEEP_MULTILIB = UserExperimentType("keep_multilib")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
@@ -83,7 +84,7 @@ object UserExperimentType {
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
-    NEW_NOTIFS_SYSTEM :: Nil
+    NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)
