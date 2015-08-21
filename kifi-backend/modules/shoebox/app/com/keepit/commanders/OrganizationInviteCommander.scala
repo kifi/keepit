@@ -336,7 +336,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         category = NotificationCategory.User.ORGANIZATION_JOINED,
         extra = Some(Json.obj(
           "member" -> BasicUser.fromUser(invitee),
-          "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
+          "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
         ))
       )
       elizaClient.sendNotificationEvent(OrgInviteAccepted(

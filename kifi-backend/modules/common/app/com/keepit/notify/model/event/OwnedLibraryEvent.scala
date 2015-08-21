@@ -1,8 +1,11 @@
 package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
+import com.keepit.common.path.Path
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.info.{ NeedInfo, NotificationInfo, UsingDbSubset }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient, NotificationEvent }
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -38,6 +41,37 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
     existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
   }
 
+  private val plurals = Map(
+    "someone" -> "some people",
+    "some friends" -> "a friend"
+  )
+
+  override def info(events: Set[OwnedLibraryNewCollabInvite]): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
+    // only need info for a random event, they should all have the same inviter and library
+    val oneEvent = events.head
+    UsingDbSubset(Seq(
+      user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
+    )) { subset =>
+      val inviter = subset.user(oneEvent.inviterId)
+      val libraryInvited = subset.library(oneEvent.libraryId)
+      val libraryInvitedInfo = subset.libraryInfo(oneEvent.libraryId)
+      val inviterImageUrl = subset.userImageUrl(oneEvent.inviterId)
+      NotificationInfo(
+        url = Path(inviter.username.value).encode.absolute,
+        imageUrl = inviterImageUrl,
+        title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
+        body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
+        linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+        extraJson = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(libraryInvitedInfo)
+        ))
+      )
+    }
+  }
+
 }
 
 case class OwnedLibraryNewFollowInvite(
@@ -69,6 +103,37 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
     existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
   }
 
+  private val plurals = Map(
+    "someone" -> "some people",
+    "some friends" -> "a friend"
+  )
+
+  override def info(events: Set[OwnedLibraryNewFollowInvite]): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
+    // only need info for a random event, they should all have the same inviter and library
+    val oneEvent = events.head
+    UsingDbSubset(Seq(
+      user(oneEvent.inviterId), library(oneEvent.libraryId), libraryInfo(oneEvent.libraryId), userImageUrl(oneEvent.inviteeId)
+    )) { subset =>
+      val inviter = subset.user(oneEvent.inviterId)
+      val libraryInvited = subset.library(oneEvent.libraryId)
+      val libraryInvitedInfo = subset.libraryInfo(oneEvent.libraryId)
+      val inviterImageUrl = subset.userImageUrl(oneEvent.inviterId)
+      NotificationInfo(
+        url = Path(inviter.username.value).encode.absolute,
+        imageUrl = inviterImageUrl,
+        title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
+        body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
+        linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+        extraJson = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(libraryInvitedInfo)
+        ))
+      )
+    }
+  }
+
 }
 
 case class OwnedLibraryNewFollower(
@@ -81,7 +146,7 @@ case class OwnedLibraryNewFollower(
 
 }
 
-object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower] {
+object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryNewFollower] {
 
   override val name: String = "owned_library_new_follower"
 
@@ -92,7 +157,28 @@ object OwnedLibraryNewFollower extends NotificationKind[OwnedLibraryNewFollower]
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
 
-  override def shouldGroupWith(newEvent: OwnedLibraryNewFollower, existingEvents: Set[OwnedLibraryNewFollower]): Boolean = false
+  override def info(event: OwnedLibraryNewFollower): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.followerId), userImageUrl(event.followerId), library(event.libraryId), libraryInfo(event.libraryId)
+    )) { subset =>
+      val follower = subset.user(event.followerId)
+      val followerImage = subset.userImageUrl(event.followerId)
+      val libraryFollowed = subset.library(event.libraryId)
+      val libraryFollowedInfo = subset.libraryInfo(event.libraryId)
+      NotificationInfo(
+        url = Path(follower.username.value).encode.absolute,
+        imageUrl = followerImage,
+        title = "New library follower",
+        body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
+        linkText = s"See ${follower.firstName}’s profile",
+        extraJson = Some(Json.obj(
+          "follower" -> BasicUser.fromUser(follower),
+          "library" -> Json.toJson(libraryFollowedInfo)
+        ))
+      )
+    }
+  }
 
 }
 
@@ -106,7 +192,7 @@ case class OwnedLibraryNewCollaborator(
 
 }
 
-object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewCollaborator] {
+object OwnedLibraryNewCollaborator extends NonGroupingNotificationKind[OwnedLibraryNewCollaborator] {
 
   override val name: String = "owned_library_new_collaborator"
 
@@ -117,6 +203,27 @@ object OwnedLibraryNewCollaborator extends NotificationKind[OwnedLibraryNewColla
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
 
-  override def shouldGroupWith(newEvent: OwnedLibraryNewCollaborator, existingEvents: Set[OwnedLibraryNewCollaborator]): Boolean = false
+  override def info(event: OwnedLibraryNewCollaborator): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.collaboratorId), userImageUrl(event.collaboratorId), library(event.libraryId), libraryInfo(event.libraryId)
+    )) { subset =>
+      val collaborator = subset.user(event.collaboratorId)
+      val collaboratorImage = subset.userImageUrl(event.collaboratorId)
+      val libraryCollaborating = subset.library(event.libraryId)
+      val libraryCollaboratingInfo = subset.libraryInfo(event.libraryId)
+      NotificationInfo(
+        url = Path(collaborator.username.value).encode.absolute,
+        imageUrl = collaboratorImage,
+        title = "New library collaborator",
+        body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
+        linkText = s"See ${collaborator.firstName}’s profile",
+        extraJson = Some(Json.obj(
+          "follower" -> BasicUser.fromUser(collaborator), // the mobile clients read it like this
+          "library" -> Json.toJson(libraryCollaboratingInfo)
+        ))
+      )
+    }
+  }
 
 }

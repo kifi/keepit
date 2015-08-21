@@ -1,5 +1,6 @@
 package com.keepit.notify.model.event
 
+import com.keepit.notify.info.{ NotificationInfo, UsingDbSubset }
 import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -39,6 +40,7 @@ object NewMessage extends NotificationKind[NewMessage] {
   //  override def info(events: Set[NewMessage]): ReturnsInfo[ElizaMessageNotificationInfo] = for {
   //    event <- PickOne(events)
   //  } yield ElizaMessageNotificationInfo()
+  override def info(events: Set[NewMessage]): UsingDbSubset[NotificationInfo] = ??? // todo write
 
 }
 
