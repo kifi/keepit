@@ -12,13 +12,12 @@ angular.module('kifi')
       return function (scope, element, attrs) {
         var svgElement = element[0];
 
-        // It's /very/ important to use createElementNS, setAttributeNS, etc. for SVGs.
-        var useElement = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-        useElement.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + attrs.icon);
+        var paths = angular.element('symbol#' + attrs.icon);
+        svgElement.innerHTML = paths.html();
 
         var className = svgElement.getAttribute('class') || '';
         svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
-        svgElement.appendChild(useElement);
+        svgElement.setAttribute('viewBox', '0 0 512 512')
       };
     }
   };
