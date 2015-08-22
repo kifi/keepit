@@ -88,11 +88,12 @@ class KeepToLibraryCommanderImpl @Inject() (
   }
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    ktlRepo.getAllByKeepId(keep.id.get).foreach { ktl => syncWithKeep(ktl, keep) }
+    // Sync ALL of the keeps (including the dead ones)
+    ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktl => syncWithKeep(ktl, keep) }
   }
   private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
-    ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(keep.isPrimary))
+    ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(ktl.isActive && keep.isPrimary))
   }
   def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.libraryId == library.id.get, "library.id does not match ktl.libraryId")
