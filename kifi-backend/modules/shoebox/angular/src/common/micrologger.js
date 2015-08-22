@@ -2,8 +2,7 @@
 
 angular.module('kifi')
 
-.factory('ml', ['$timeout', '$exceptionHandler', '$log',
-function($timeout, $exceptionHandler, $log){
+.factory('ml', ['$timeout', '$exceptionHandler', '$log', function($timeout, $exceptionHandler, $log){
   var micrologger = {
     specs: {},
     Assert: function(string, timeout, spec) {
@@ -53,9 +52,9 @@ function($timeout, $exceptionHandler, $log){
   };
 
   micrologger.Spec.prototype.respond = function(args) {
-    for (var _i = 0, len = this.tests.length; _i < len; _i++) {
-      this.tests[_i].respond(args[_i]);
-    }
+    this.tests.forEach(function(test, index) {
+      test.respond(args[index]);
+    });
   };
 
   return micrologger;
