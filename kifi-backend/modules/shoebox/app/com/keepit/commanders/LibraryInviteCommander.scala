@@ -17,6 +17,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
+import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model._
 import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
@@ -60,6 +61,7 @@ class LibraryInviteCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
+    notificationEventSender: NotificationEventSender,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
 
@@ -105,18 +107,18 @@ class LibraryInviteCommanderImpl @Inject() (
           }
         }
       if (invite.access == LibraryAccess.READ_WRITE) {
-        elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
+        notificationEventSender.send(LibraryCollabInviteAccepted.build(
           Recipient(inviterId),
           currentDateTime,
-          invitee.id.get,
-          lib.id.get
+          invitee,
+          lib
         ))
       } else {
-        elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
+        notificationEventSender.send(LibraryFollowInviteAccepted.build(
           Recipient(inviterId),
           currentDateTime,
-          invitee.id.get,
-          lib.id.get
+          invitee,
+          lib
         ))
       }
 
@@ -331,12 +333,17 @@ class LibraryInviteCommanderImpl @Inject() (
       ))
     )
 
+    val userLibOwner = db.readOnlyReplica { implicit session =>
+      userRepo.get(libOwner.externalId)
+    }
+
     collabInviteeSet.foreach { invitee =>
-      elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
+      notificationEventSender.send(LibraryNewCollabInvite.build(
         Recipient(invitee),
         currentDateTime,
-        inviter.id.get,
-        lib.id.get
+        inviter,
+        lib,
+        userLibOwner
       ))
     }
 
@@ -357,11 +364,12 @@ class LibraryInviteCommanderImpl @Inject() (
     )
 
     followInviteeSet.foreach { invitee =>
-      elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
+      notificationEventSender.send(LibraryNewFollowInvite.build(
         Recipient(invitee),
         currentDateTime,
-        inviter.id.get,
-        lib.id.get
+        inviter,
+        lib,
+        userLibOwner
       ))
     }
 
@@ -423,14 +431,18 @@ class LibraryInviteCommanderImpl @Inject() (
       Future.successful((): Unit)
     }
 
-    if (collabInviteeSet.nonEmpty) {
-      collabInviteeSet.foreach { userId =>
-        elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
+    val collabInviteeUsers = db.readOnlyReplica { implicit session =>
+      userRepo.getUsers(collabInviteeSet.toSeq).values
+    }
+
+    if (collabInviteeUsers.nonEmpty) {
+      collabInviteeUsers.foreach { user =>
+        notificationEventSender.send(OwnedLibraryNewCollabInvite.build(
           Recipient(lib.ownerId),
           currentDateTime,
-          inviter.id.get,
-          userId,
-          lib.id.get
+          inviter,
+          user,
+          lib
         ))
       }
     }
@@ -454,14 +466,18 @@ class LibraryInviteCommanderImpl @Inject() (
       Future.successful((): Unit)
     }
 
-    if (followInviteeSet.nonEmpty) {
-      followInviteeSet.foreach { userId =>
-        elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
+    val followInviteeUsers = db.readOnlyReplica { implicit session =>
+      userRepo.getUsers(followInviteeSet.toSeq).values
+    }
+
+    if (followInviteeUsers.nonEmpty) {
+      followInviteeUsers.foreach { user =>
+        notificationEventSender.send(OwnedLibraryNewFollowInvite.build(
           Recipient(lib.ownerId),
           currentDateTime,
-          inviter.id.get,
-          userId,
-          lib.id.get
+          inviter,
+          user,
+          lib
         ))
       }
     }

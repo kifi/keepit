@@ -22,6 +22,7 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
+import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
@@ -141,6 +142,7 @@ class UserCommander @Inject() (
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
     experimentRepo: UserExperimentRepo,
+    notificationEventSender: NotificationEventSender,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -367,10 +369,10 @@ class UserCommander @Inject() (
                 }
               }
             toNotify.foreach { userId =>
-              elizaServiceClient.sendNotificationEvent(SocialContactJoined(
+              notificationEventSender.send(SocialContactJoined.build(
                 Recipient(userId),
                 currentDateTime,
-                newUserId
+                newUser
               ))
             }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)

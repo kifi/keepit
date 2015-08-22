@@ -8,6 +8,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
+import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewSocialConnection
 import com.keepit.social.{ BasicUser, SocialNetworkType }
@@ -24,7 +25,8 @@ class FriendConnectionNotifier @Inject() (
     s3ImageStore: S3ImageStore,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
-    elizaServiceClient: ElizaServiceClient) {
+    elizaServiceClient: ElizaServiceClient,
+    notificationEventSender: NotificationEventSender) {
 
   def sendNotification(myUserId: Id[User], friendUserId: Id[User], networkTypeOpt: Option[SocialNetworkType] = None) = {
     //sending 'you are friends' email && Notification from auto-created connections from Facebook/LinkedIn
@@ -66,10 +68,10 @@ class FriendConnectionNotifier @Inject() (
         }
       }
 
-    elizaServiceClient.sendNotificationEvent(NewSocialConnection(
+    notificationEventSender.send(NewSocialConnection.build(
       Recipient(friendUserId),
       currentDateTime,
-      myUserId,
+      respondingUser,
       networkTypeOpt
     ))
 

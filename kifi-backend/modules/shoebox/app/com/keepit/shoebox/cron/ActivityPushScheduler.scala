@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
+import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewKeepActivity
 import com.keepit.social.BasicUser
@@ -87,6 +88,7 @@ class ActivityPusher @Inject() (
     libraryImageCommander: LibraryImageCommander,
     libPathCommander: PathCommander,
     s3ImageStore: S3ImageStore,
+    notificationEventSender: NotificationEventSender,
     actor: ActorInstance[ActivityPushActor],
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
@@ -179,12 +181,15 @@ class ActivityPusher @Inject() (
         ) map { _ =>
             elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
-        elizaServiceClient.sendNotificationEvent(NewKeepActivity(
+        val owner = db.readOnlyReplica { implicit session =>
+          userRepo.get(libMessage.owner.externalId)
+        }
+        notificationEventSender.send(NewKeepActivity.build(
           Recipient(activity.userId),
           currentDateTime,
-          libMessage.newKeep.userId,
-          libMessage.newKeep.id.get,
-          libMessage.lib.id.get))
+          owner,
+          libMessage.newKeep,
+          libMessage.lib))
         devices.flatten
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")

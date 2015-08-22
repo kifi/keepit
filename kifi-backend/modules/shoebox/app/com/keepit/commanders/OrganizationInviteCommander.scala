@@ -22,6 +22,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
@@ -67,7 +68,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
-    userCommander: Provider[UserCommander],
+    notificationEventSender: NotificationEventSender
+    userCommander: Provider[UserCommander]
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -236,11 +238,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
     invitees.foreach { invitee =>
-      elizaClient.sendNotificationEvent(OrgNewInvite(
+      notificationEventSender.send(OrgNewInvite.build(
         Recipient(invitee),
         currentDateTime,
-        inviter.id.get,
-        org.id.get
+        inviter,
+        org
       ))
     }
 
@@ -335,11 +337,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
         ))
       )
-      elizaClient.sendNotificationEvent(OrgInviteAccepted(
+      notificationEventSender.send(OrgInviteAccepted.build(
         Recipient(inviterId),
         currentDateTime,
-        invitee.id.get,
-        org.id.get
+        invitee,
+        org
       ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {

@@ -8,19 +8,19 @@ import com.keepit.model._
  * Represents a view, or subset, of the shoebox database, mostly from the perspective of Eliza.
  *
  * The implementation uses a map from keys to maps from ids to results. While the underlying maps are
- * untyped, types are enforced through the public facing methods [[add]] and [[lookup]].
+ * untyped, types are enforced through the public facing methods [[update]] and [[lookup]].
  */
 class DbView(private val keyMap: Map[DbViewKey[_, _], Map[Id[_], Any]]) {
 
-  def add[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M], result: R): DbView = {
+  def update[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M], result: R): DbView = {
     val objMap = keyMap.getOrElse(key, Map.empty)
     val assocObjMap = objMap + (id -> result)
     new DbView(keyMap + (key -> assocObjMap))
   }
 
-  def add[M <: HasId[M]](existing: ExistingDbViewModel[M]): DbView = {
+  def update[M <: HasId[M]](existing: ExistingDbViewModel[M]): DbView = {
     val model = existing.model
-    add(existing.key, model.id.get, model)
+    update(existing.key, model.id.get, model)
   }
 
   def lookup[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): R =
@@ -120,7 +120,7 @@ case class ExistingDbView[A](existing: ExDbViewModel*)(val result: A) {
 
   def buildDbView: DbView =
     existing.foldLeft(DbView()) { (view, existingModel) =>
-      view.add(existingModel)
+      view.update(existingModel)
     }
 
 }

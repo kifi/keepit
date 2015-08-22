@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
 import com.keepit.notify.delivery.WsNotificationDelivery
+import com.keepit.notify.info.NotificationInfo
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 
@@ -58,7 +59,7 @@ class NotificationProcessing @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent): Notification = {
+  def processNewEvent(event: NotificationEvent, info: Option[NotificationInfo]): Notification = {
     val groupIdentifier = getGroupIdentifier(event)
     val notif = groupIdentifier match {
       case Some(identifier) =>
