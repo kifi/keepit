@@ -14,8 +14,7 @@ import org.specs2.mutable._
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
   "KeepRepo" should {
-    "save and load a keep" in {
-      skipped("TODO(ryan): Figure out how to make repo.save return the actual model that is saved")
+    "save and load a keep correctly from the cache" in {
       withDb() { implicit injector =>
         db.readWrite { implicit session =>
           val savedKeep = keepRepo.save(Keep(
@@ -29,8 +28,15 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             libraryId = Some(Id[Library](4)),
             entitiesHash = Some(EntitiesHash(5))
           ))
-          keepRepo.get(savedKeep.id.get) === savedKeep
-          keepRepo.getNoCache(savedKeep.id.get) === savedKeep
+          val cacheKeep = keepRepo.get(savedKeep.id.get)
+          val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
+          cacheKeep === dbKeep
+
+          // The savedKeep is not equal to the dbKeep because of originalKeeperId
+          // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
+          // -- Ryan
+          def f(k: Keep) = (k.id.get, k.uriId, k.isPrimary, k.urlId, k.url, k.visibility, k.userId, k.source, k.libraryId, k.entitiesHash)
+          f(dbKeep) === f(savedKeep)
         }
         1 === 1
       }
