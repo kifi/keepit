@@ -34,7 +34,7 @@ class DbView(private val keyMap: Map[DbViewKey[_, _], Map[Id[_], Any]]) {
 object DbView {
 
   /**
-   * Constructs an empty MapDbView.
+   * Constructs an empty DbView.
    *
    * This is the only way to construct a DbView from the outside.
    */
