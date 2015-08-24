@@ -66,7 +66,8 @@ class KeepToUserCommanderImpl @Inject() (
   }
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    ktuRepo.getAllByKeepId(keep.id.get).foreach { ktu => syncWithKeep(ktu, keep) }
+    // Sync ALL of the connections (including the dead ones)
+    ktuRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktu => syncWithKeep(ktu, keep) }
   }
   private def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser = {
     require(ktu.keepId == keep.id.get, "keep.id does not match ktu.keepId")
