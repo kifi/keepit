@@ -92,10 +92,6 @@ class KeepToLibraryCommanderImpl @Inject() (
   }
   private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
-    val obstacleKtl = ktlRepo.getPrimaryByUriAndLibrary(keep.uriId, ktl.libraryId)
-    if (obstacleKtl.exists(_.id.get != ktl.id.get) && keep.isPrimary) {
-      log.error(s"[KTL-ERROR] About to sync $ktl with $keep, but ${obstacleKtl.get} is in the way")
-    }
     ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(keep.isPrimary))
   }
   def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {

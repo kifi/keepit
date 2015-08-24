@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.emails.activity._
-import com.keepit.commanders.{ CenteredCropImageRequest, CroppedImageSize, KeepImageCommander, KeepsCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ CenteredCropImageRequest, CroppedImageSize, KeepImageCommander, KeepCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -115,7 +115,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     activityEmailRepo: ActivityEmailRepo,
-    keepCommander: KeepsCommander,
+    keepCommander: KeepCommander,
     keepImageCommander: KeepImageCommander,
     postOffice: LocalPostOffice,
     s3Config: S3ImageConfig,

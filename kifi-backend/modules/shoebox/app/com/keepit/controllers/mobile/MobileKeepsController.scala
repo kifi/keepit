@@ -29,7 +29,7 @@ class MobileKeepsController @Inject() (
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,

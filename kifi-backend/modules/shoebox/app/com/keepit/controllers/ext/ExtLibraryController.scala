@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.commanders.{ KeepCommander, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -29,7 +29,7 @@ class ExtLibraryController @Inject() (
   db: Database,
   val libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   libPathCommander: PathCommander,

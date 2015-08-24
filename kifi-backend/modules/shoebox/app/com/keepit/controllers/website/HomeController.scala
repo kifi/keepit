@@ -49,7 +49,7 @@ class HomeController @Inject() (
   userExperimentCommander: LocalUserExperimentCommander,
   curatorServiceClient: CuratorServiceClient,
   applicationConfig: FortyTwoConfig,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   smsCommander: SmsCommander,
   clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
