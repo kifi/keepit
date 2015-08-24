@@ -17,7 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.notify.model.{ NotificationId, NotificationKind, NotificationEvent }
+import com.keepit.notify.model.{ NotificationId, NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId

@@ -98,7 +98,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "follower" -> BasicUser.fromUser(invitee),
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, owner))
         ))
       ) map { _ =>
           val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
@@ -333,7 +333,7 @@ class LibraryInviteCommanderImpl @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
         "access" -> LibraryAccess.READ_WRITE
       ))
     )
@@ -358,7 +358,7 @@ class LibraryInviteCommanderImpl @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
         "access" -> LibraryAccess.READ_ONLY
       ))
     )
@@ -423,7 +423,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
     } else {
@@ -454,7 +454,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
     } else {

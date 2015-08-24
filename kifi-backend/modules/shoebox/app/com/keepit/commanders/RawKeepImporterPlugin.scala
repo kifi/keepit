@@ -47,7 +47,7 @@ private class RawKeepImporterActor @Inject() (
     libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     libraryAnalytics: LibraryAnalytics,
-    bookmarksCommanderProvider: Provider[KeepsCommander],
+    bookmarksCommanderProvider: Provider[KeepCommander],
     libraryCommanderProvider: Provider[LibraryCommander],
     rover: RoverServiceClient,
     searchClient: SearchServiceClient,
@@ -246,7 +246,7 @@ case class RawKeepGroupImportContext(userId: Id[User], source: KeepSource, insta
 @Singleton
 class KeepTagImportHelper @Inject() (
     db: Database,
-    keepsCommanderProvider: Provider[KeepsCommander],
+    keepsCommanderProvider: Provider[KeepCommander],
     kifiInstallationRepo: KifiInstallationRepo) extends Logging {
 
   def process(rawKeepGroupImportContext: RawKeepGroupImportContext): Unit = {

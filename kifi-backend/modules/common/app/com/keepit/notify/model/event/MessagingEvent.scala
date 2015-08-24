@@ -1,24 +1,12 @@
 package com.keepit.notify.model.event
 
-import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
+import com.keepit.notify.info.{ NotificationInfo, UsingDbSubset }
+import com.keepit.notify.model.{ NotificationKind, Recipient }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait MessagingEvent extends NotificationEvent
-
-case class NewMessage(
-    recipient: Recipient,
-    time: DateTime,
-    messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
-    messageId: Long // same here
-    ) extends MessagingEvent {
-
-  val kind = NewMessage
-
-}
-
-object NewMessage extends NotificationKind[NewMessage] {
+trait NewMessageImpl extends NotificationKind[NewMessage] {
 
   override val name: String = "new_message"
 
@@ -39,6 +27,7 @@ object NewMessage extends NotificationKind[NewMessage] {
   //  override def info(events: Set[NewMessage]): ReturnsInfo[ElizaMessageNotificationInfo] = for {
   //    event <- PickOne(events)
   //  } yield ElizaMessageNotificationInfo()
+  override def info(events: Set[NewMessage]): UsingDbSubset[NotificationInfo] = ??? // todo write
 
 }
 

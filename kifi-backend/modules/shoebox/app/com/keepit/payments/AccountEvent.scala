@@ -160,6 +160,7 @@ case class AccountEvent(
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
+  def withState(state: State[AccountEvent]): AccountEvent = this.copy(state = state)
 }
 
 object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {

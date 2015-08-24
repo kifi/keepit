@@ -3,7 +3,7 @@ package com.keepit.notify.info
 import com.keepit.common.db.Id
 import com.keepit.common.path.EncodedPath
 import com.keepit.model.{ Library, User }
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 
 import scala.concurrent.Future
 

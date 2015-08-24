@@ -2,27 +2,15 @@ package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
-import com.keepit.model.{ Library, User }
-import com.keepit.notify.info.{ NotificationInfo, NeedInfo }
-import com.keepit.notify.model.{ NotificationKind, Recipient, NotificationEvent }
+import com.keepit.model.{ LibraryAccess, Library, User }
+import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait LibraryEvent extends NotificationEvent
-
-case class LibraryCollabInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryCollabInviteAccepted
-
-}
-
-object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteAccepted] {
+trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[LibraryCollabInviteAccepted] {
 
   override val name: String = "library_collab_invite_accepted"
 
@@ -33,45 +21,32 @@ object LibraryCollabInviteAccepted extends NotificationKind[LibraryCollabInviteA
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryCollabInviteAccepted.apply, unlift(LibraryCollabInviteAccepted.unapply))
 
-  override def shouldGroupWith(newEvent: LibraryCollabInviteAccepted, existingEvents: Set[LibraryCollabInviteAccepted]): Boolean = false
-
-  override val info = {
+  override def info(event: LibraryCollabInviteAccepted): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    usingOne[LibraryCollabInviteAccepted](
-      "accepter".arg(_.accepterId, user), "libraryIn".arg(_.libraryId, library),
-      "accepterImage".arg(_.accepterId, userImageUrl)
-    ) {
-        case Fetched(args, _) =>
-          val accepter = args.get[User]("accepter")
-          val libraryIn = args.get[Library]("libraryIn")
-          val accepterImage = args.get[String]("accepterImage")
-          NotificationInfo(
-            url = Path(accepter.username.value).encode.absolute,
-            imageUrl = accepterImage,
-            title = s"${accepter.firstName} is now collaborating on ${libraryIn.name}",
-            body = s"You invited ${accepter.firstName} to join ${libraryIn.name}",
-            linkText = s"See ${accepter.firstName}’s profile",
-            extraJson = Some(Json.obj(
-              "follower" -> BasicUser.fromUser(accepter),
-              "library" -> Json.toJson(Json.obj()) //todo outfit with library info
-            ))
-          )
-      }
+    UsingDbSubset(Seq(
+      user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
+    )) { subset =>
+      val accepter = user(event.accepterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = Path(accepter.username.value).encode.absolute,
+        imageUrl = accepterImage,
+        title = s"${accepter.firstName} is now collaborating on ${invitedLib.name}",
+        body = s"You invited ${accepter.firstName} to join ${invitedLib.name}",
+        linkText = s"See ${accepter.firstName}’s profile",
+        extraJson = Some(Json.obj(
+          "follower" -> BasicUser.fromUser(accepter),
+          "library" -> Json.toJson(invitedLibInfo)
+        ))
+      )
+    }
   }
 
 }
 
-case class LibraryFollowInviteAccepted(
-    recipient: Recipient,
-    time: DateTime,
-    accepterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryFollowInviteAccepted
-
-}
-
-object LibraryFollowInviteAccepted extends NotificationKind[LibraryFollowInviteAccepted] {
+trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[LibraryFollowInviteAccepted] {
 
   override val name: String = "library_follow_invite_accepted"
 
@@ -82,21 +57,32 @@ object LibraryFollowInviteAccepted extends NotificationKind[LibraryFollowInviteA
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryFollowInviteAccepted.apply, unlift(LibraryFollowInviteAccepted.unapply))
 
-  override def shouldGroupWith(newEvent: LibraryFollowInviteAccepted, existingEvents: Set[LibraryFollowInviteAccepted]): Boolean = false
+  override def info(event: LibraryFollowInviteAccepted): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.accepterId), library(event.libraryId), userImageUrl(event.accepterId), libraryInfo(event.libraryId)
+    )) { subset =>
+      val accepter = user(event.accepterId).lookup(subset)
+      val acceptedLib = library(event.libraryId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val acceptedLibInfo = libraryInfo(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = Path(accepter.username.value).encode.absolute,
+        imageUrl = accepterImage,
+        title = s"${accepter.firstName} is now following ${acceptedLib.name}",
+        body = s"You invited ${accepter.firstName} to join ${acceptedLib.name}",
+        linkText = s"See ${accepter.firstName}’s profile",
+        extraJson = Some(Json.obj(
+          "follower" -> BasicUser.fromUser(accepter),
+          "library" -> Json.toJson(acceptedLibInfo)
+        ))
+      )
+    }
+  }
 
 }
 
-case class LibraryNewCollabInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryNewCollabInvite
-
-}
-
-object LibraryNewCollabInvite extends NotificationKind[LibraryNewCollabInvite] {
+trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewCollabInvite] {
 
   override val name: String = "library_new_collab_invite"
 
@@ -107,21 +93,36 @@ object LibraryNewCollabInvite extends NotificationKind[LibraryNewCollabInvite] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewCollabInvite.apply, unlift(LibraryNewCollabInvite.unapply))
 
-  override def shouldGroupWith(newEvent: LibraryNewCollabInvite, existingEvents: Set[LibraryNewCollabInvite]): Boolean = false
+  override def info(event: LibraryNewCollabInvite): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
+      libraryUrl(event.libraryId), libraryOwner(event.libraryId)
+    )) { subset =>
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val invitedLib = library(event.libraryId).lookup(subset)
+      val invitedLibInfo = libraryInfo(event.libraryId).lookup(subset)
+      val invitedLibUrl = libraryUrl(event.libraryId).lookup(subset)
+      val invitedLibOwner = libraryOwner(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = invitedLibUrl,
+        imageUrl = inviterImage,
+        title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
+        body = s"Help ${invitedLibOwner.firstName} by sharing your knowledge in the library ${invitedLib.name}.", // todo doesn't _really_ make any sense
+        linkText = "Visit library",
+        extraJson = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(invitedLibInfo),
+          "access" -> LibraryAccess.READ_WRITE
+        ))
+      )
+    }
+  }
 
 }
 
-case class LibraryNewFollowInvite(
-    recipient: Recipient,
-    time: DateTime,
-    inviterId: Id[User],
-    libraryId: Id[Library]) extends LibraryEvent {
-
-  val kind = LibraryNewFollowInvite
-
-}
-
-object LibraryNewFollowInvite extends NotificationKind[LibraryNewFollowInvite] {
+trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewFollowInvite] {
 
   override val name: String = "library_new_follow_invite"
 
@@ -132,6 +133,31 @@ object LibraryNewFollowInvite extends NotificationKind[LibraryNewFollowInvite] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewFollowInvite.apply, unlift(LibraryNewFollowInvite.unapply))
 
-  override def shouldGroupWith(newEvent: LibraryNewFollowInvite, existingEvents: Set[LibraryNewFollowInvite]): Boolean = false
+  override def info(event: LibraryNewFollowInvite): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.inviterId), userImageUrl(event.inviterId), library(event.libraryId), libraryInfo(event.libraryId),
+      libraryUrl(event.libraryId), libraryOwner(event.libraryId)
+    )) { subset =>
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val libraryIn = library(event.libraryId).lookup(subset)
+      val libraryInInfo = libraryInfo(event.libraryId).lookup(subset)
+      val libraryInUrl = libraryUrl(event.libraryId).lookup(subset)
+      val libraryInOwner = libraryOwner(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = libraryInUrl,
+        imageUrl = inviterImage,
+        title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
+        body = s"Browse keeps in ${libraryIn.name} to find some interesting gems kept by ${libraryIn.name}.", //same
+        linkText = "Visit library",
+        extraJson = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(libraryInInfo),
+          "access" -> LibraryAccess.READ_ONLY
+        ))
+      )
+    }
+  }
 
 }

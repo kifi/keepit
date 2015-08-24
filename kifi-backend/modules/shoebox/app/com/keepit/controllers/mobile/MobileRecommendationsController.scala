@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ KeepCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -19,7 +19,7 @@ import scala.concurrent.Future
 class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
-    keepsCommander: KeepsCommander,
+    keepsCommander: KeepCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     val db: Database,
     val userRepo: UserRepo,

@@ -2,27 +2,14 @@ package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, Keep, User }
-import com.keepit.notify.info.{ NotificationInfo, NeedInfo }
-import com.keepit.notify.model.{ NotificationEvent, NotificationKind, Recipient }
+import com.keepit.notify.info.{ UsingDbSubset, NotificationInfo, NeedInfo }
+import com.keepit.notify.model.{ NonGroupingNotificationKind, NotificationKind, Recipient }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait KeepEvent extends NotificationEvent
-
-case class LibraryNewKeep(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = LibraryNewKeep
-
-}
-
-object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
+trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
 
   override val name: String = "library_new_keep"
 
@@ -34,51 +21,37 @@ object LibraryNewKeep extends NotificationKind[LibraryNewKeep] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
-  override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = false
-
-  override val info = {
+  override def info(event: LibraryNewKeep): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    usingOne[LibraryNewKeep](
-      "newKeep".arg(_.keepId, keep), "keeper".arg(_.keeperId, user), "keeperImage".arg(_.keeperId, userImageUrl),
-      "libraryKept".arg(_.libraryId, library)
-    ) {
-        case Fetched(args, _) =>
-          val newKeep = args.get[Keep]("newKeep")
-          val keeper = args.get[User]("keeper")
-          val keeperImage = args.get[String]("keeperImage")
-          val libraryKept = args.get[Library]("libraryKept")
-          NotificationInfo(
-            url = newKeep.url,
-            imageUrl = keeperImage,
-            title = s"New Keep in ${libraryKept.name}",
-            body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-            linkText = "Go to Page",
-            extraJson = Some(Json.obj(
-              "keeper" -> BasicUser.fromUser(keeper),
-              "library" -> Json.toJson(Json.obj()), // TODO fill in with library info
-              "keep" -> Json.obj(
-                "id" -> newKeep.externalId,
-                "url" -> newKeep.url
-              )
-            ))
+    UsingDbSubset(Seq(
+      user(event.keeperId), userImageUrl(event.keeperId), library(event.libraryId), keep(event.keepId),
+      libraryInfo(event.libraryId)
+    )) { subset =>
+      val newKeep = keep(event.keepId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = newKeep.url,
+        imageUrl = keeperImage,
+        title = s"New keep in ${libraryKept.name}",
+        body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
+        linkText = "Go to page",
+        extraJson = Some(Json.obj(
+          "keeper" -> BasicUser.fromUser(keeper),
+          "library" -> Json.toJson(libraryKeptInfo),
+          "keep" -> Json.obj(
+            "id" -> newKeep.externalId,
+            "url" -> newKeep.url
           )
-      }
+        ))
+      )
+    }
   }
 }
 
-// todo is this ever really used/called?
-case class NewKeepActivity(
-    recipient: Recipient,
-    time: DateTime,
-    keeperId: Id[User],
-    keepId: Id[Keep],
-    libraryId: Id[Library]) extends KeepEvent {
-
-  val kind = NewKeepActivity
-
-}
-
-object NewKeepActivity extends NotificationKind[NewKeepActivity] {
+trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
 
   override val name: String = "new_keep_activity"
 
@@ -90,37 +63,35 @@ object NewKeepActivity extends NotificationKind[NewKeepActivity] {
     (__ \ "libraryId").format[Id[Library]]
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
-  override def shouldGroupWith(newEvent: NewKeepActivity, existingEvents: Set[NewKeepActivity]): Boolean = false
-
-  override val info = {
+  override def info(event: NewKeepActivity): UsingDbSubset[NotificationInfo] = {
     import NeedInfo._
-    usingOne[NewKeepActivity](
-      "libraryKept".arg(_.libraryId, library), "keeper".arg(_.keeperId, user), "newKeep".arg(_.keepId, keep),
-      "libraryKeptUrl".arg(_.libraryId, libraryUrl), "keeperImage".arg(_.keeperId, userImageUrl)
-    ) {
-        case Fetched(args, _) =>
-          val libraryKept = args.get[Library]("libraryKept")
-          val keeper = args.get[User]("keeper")
-          val keeperBasic = BasicUser.fromUser(keeper)
-          val newKeep = args.get[Keep]("newKeep")
-          val libraryKeptUrl = args.get[String]("libraryKeptUrl")
-          val keeperImage = args.get[String]("keeperImage")
-          NotificationInfo(
-            url = libraryKeptUrl,
-            imageUrl = keeperImage,
-            title = s"New Keep in ${libraryKept.name}",
-            body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-            linkText = "Go to library",
-            extraJson = Some(Json.obj(
-              "keeper" -> keeperBasic,
-              "library" -> Json.toJson(Json.obj()), //todo fix
-              "keep" -> Json.obj(
-                "id" -> newKeep.externalId,
-                "url" -> newKeep.url
-              )
-            ))
+    UsingDbSubset(Seq(
+      library(event.libraryId), user(event.keeperId), keep(event.keepId), libraryUrl(event.libraryId),
+      userImageUrl(event.keeperId), libraryInfo(event.libraryId)
+    )) { subset =>
+      val libraryKept = library(event.libraryId).lookup(subset)
+      val keeper = user(event.keeperId).lookup(subset)
+      val keeperBasic = BasicUser.fromUser(keeper)
+      val newKeep = keep(event.keepId).lookup(subset)
+      val libraryKeptUrl = libraryUrl(event.libraryId).lookup(subset)
+      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
+      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
+      NotificationInfo(
+        url = libraryKeptUrl,
+        imageUrl = keeperImage,
+        title = s"New Keep in ${libraryKept.name}",
+        body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
+        linkText = "Go to library",
+        extraJson = Some(Json.obj(
+          "keeper" -> keeperBasic,
+          "library" -> Json.toJson(libraryKeptInfo),
+          "keep" -> Json.obj(
+            "id" -> newKeep.externalId,
+            "url" -> newKeep.url
           )
-      }
+        ))
+      )
+    }
   }
 
 }

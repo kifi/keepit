@@ -15,7 +15,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 
-class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 2) {
+class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 4) {
   val name = "KeepIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 

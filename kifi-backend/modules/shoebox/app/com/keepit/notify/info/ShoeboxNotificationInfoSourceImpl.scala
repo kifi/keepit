@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.path.EncodedPath
 import com.keepit.common.store.S3ImageStore
 import com.keepit.model.{ UserRepo, LibraryRepo, Library, User }
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Try }
