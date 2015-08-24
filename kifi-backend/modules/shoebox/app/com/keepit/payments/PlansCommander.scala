@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User, Name }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.ExecutionContext
 import scala.util.{ Try, Success, Failure }
@@ -61,6 +62,7 @@ class PlanManagementCommanderImpl @Inject() (
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
   clock: Clock,
+  airbrake: AirbrakeNotifier,
   implicit val defaultContext: ExecutionContext)
     extends PlanManagementCommander with Logging {
 
@@ -71,46 +73,54 @@ class PlanManagementCommanderImpl @Inject() (
   //very explicitely accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
-    val plan = paidPlanRepo.get(planId)
-    if (plan.state != PaidPlanStates.ACTIVE) {
-      Failure(new InvalidChange("plan_not_active"))
-    } else {
-      val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
-        case Some(pa) if pa.state == PaidAccountStates.ACTIVE => Failure(new InvalidChange("account_exists"))
-        case Some(pa) =>
-          Success(paidAccountRepo.save(PaidAccount(
-            id = pa.id,
-            orgId = orgId,
-            planId = planId,
-            credit = DollarAmount(0),
-            userContacts = Seq.empty,
-            emailContacts = Seq.empty
-          )))
-        case None =>
-          Success(paidAccountRepo.save(PaidAccount(
-            orgId = orgId,
-            planId = planId,
-            credit = DollarAmount(0),
-            userContacts = Seq.empty,
-            emailContacts = Seq.empty
-          )))
+    Try { paidPlanRepo.get(planId) } match {
+      case Success(plan) => {
+        if (plan.state != PaidPlanStates.ACTIVE) {
+          Failure(new InvalidChange("plan_not_active"))
+        } else {
+          val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
+            case Some(pa) if pa.state == PaidAccountStates.ACTIVE => Failure(new InvalidChange("account_exists"))
+            case Some(pa) =>
+              Success(paidAccountRepo.save(PaidAccount(
+                id = pa.id,
+                orgId = orgId,
+                planId = planId,
+                credit = DollarAmount(0),
+                userContacts = Seq.empty,
+                emailContacts = Seq.empty
+              )))
+            case None =>
+              Success(paidAccountRepo.save(PaidAccount(
+                orgId = orgId,
+                planId = planId,
+                credit = DollarAmount(0),
+                userContacts = Seq.empty,
+                emailContacts = Seq.empty
+              )))
+          }
+          maybeAccount.map { account =>
+            accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+              eventTime = clock.now,
+              accountId = account.id.get,
+              attribution = ActionAttribution(user = Some(creator), admin = None),
+              action = AccountEventAction.UserAdded(creator),
+              pending = true
+            ))
+            accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+              eventTime = clock.now,
+              accountId = account.id.get,
+              attribution = ActionAttribution(user = Some(creator), admin = None),
+              action = AccountEventAction.AdminAdded(creator)
+            ))
+          }
+        }
       }
-      maybeAccount.map { account =>
-        accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-          eventTime = clock.now,
-          accountId = account.id.get,
-          attribution = ActionAttribution(user = Some(creator), admin = None),
-          action = AccountEventAction.UserAdded(creator),
-          pending = true
-        ))
-        accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-          eventTime = clock.now,
-          accountId = account.id.get,
-          attribution = ActionAttribution(user = Some(creator), admin = None),
-          action = AccountEventAction.AdminAdded(creator)
-        ))
+      case Failure(ex) => {
+        airbrake.notify("Paid Plan Not available!!", ex)
+        Failure(new InvalidChange("plan_not_available"))
       }
     }
+
   }
 
   def deactivatePaidAccountForOrganziation(orgId: Id[Organization], session: RWSession): Try[Unit] = {

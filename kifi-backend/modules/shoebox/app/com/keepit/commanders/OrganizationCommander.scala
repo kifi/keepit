@@ -218,7 +218,7 @@ class OrganizationCommanderImpl @Inject() (
               throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session).get
+            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when thing sare solidified
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org))
         }
