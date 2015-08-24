@@ -46,7 +46,7 @@ class PrimaryOrgProviderImpl @Inject() (
       members <- shoebox.getOrganizationMembers(orgId)
       messageCount <- eliza.getTotalMessageCountForGroup(members)
     } yield {
-      val keeperWithMostClicks = helprankCommander.getKeeperWithMostKeepClicks(members)
+      val userWithMostClickedKeeps = helprankCommander.getUserWithMostClickedKeeps(members)
       Map(
         "orgId" -> ContextStringData(orgId.toString),
         "libraryCount" -> ContextDoubleData(shoeboxValues.libraryCount),
@@ -54,7 +54,7 @@ class PrimaryOrgProviderImpl @Inject() (
         "inviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
         "collabLibCount" -> ContextDoubleData(shoeboxValues.collabLibCount),
         "messageCount" -> ContextDoubleData(messageCount),
-        "overallKeepViews" -> ContextStringData(keeperWithMostClicks.toString)
+        "overallKeepViews" -> ContextStringData(userWithMostClickedKeeps.toString)
       )
     }
   }
