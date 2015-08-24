@@ -102,6 +102,7 @@ class KeepCommanderImpl @Inject() (
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
+    collectionCommander: CollectionCommander,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,
@@ -803,13 +804,15 @@ class KeepCommanderImpl @Inject() (
     ktlCommander.syncKeep(newKeep)
     ktuCommander.syncKeep(newKeep)
 
-    if (similarKeeps.exists(newKeep.hasStrictlyLessValuableMetadataThan)) {
-      println(s"[RPB] when moving ${keep.id.get} to URI ${newUri.id.get}, it became worthless, murdering it")
+    val mergeableKeeps = similarKeeps.filter(newKeep.hasStrictlyLessValuableMetadataThan)
+    if (mergeableKeeps.nonEmpty) {
+      mergeableKeeps.foreach(collectionCommander.copyKeepTags(newKeep, _))
+      collectionCommander.deactivateKeepTags(newKeep)
       deactivateKeep(newKeep)
       None
     } else {
       similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(newKeep)).foreach { k =>
-        println(s"[RPB] when moving ${keep.id.get} to URI ${newUri.id.get}, this keep ${k.id.get} became worthless, murdering it")
+        collectionCommander.copyKeepTags(k, newKeep)
         deactivateKeep(k)
       }
       Some(newKeep)
@@ -819,6 +822,7 @@ class KeepCommanderImpl @Inject() (
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)
     ktuCommander.removeKeepFromAllUsers(keep)
+    collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
   }
 
