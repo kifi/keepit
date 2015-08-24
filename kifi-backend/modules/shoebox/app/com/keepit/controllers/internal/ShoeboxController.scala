@@ -73,6 +73,7 @@ class ShoeboxController @Inject() (
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
+  organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
   rover: RoverServiceClient)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -520,5 +521,9 @@ class ShoeboxController @Inject() (
     val userIds = request.body.as[Set[Id[User]]]
     val orgIdsByUserId = organizationMembershipCommander.getAllForUsers(userIds).mapValues(_.map(_.organizationId))
     Ok(Json.toJson(orgIdsByUserId))
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
+    Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
   }
 }
