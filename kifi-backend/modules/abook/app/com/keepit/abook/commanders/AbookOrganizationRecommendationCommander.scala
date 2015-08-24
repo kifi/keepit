@@ -151,10 +151,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
         !mayAlreadyBeOnKifi && EmailAddress.isLikelyHuman(contacts.head.email)
     }
 
-    @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = {
-      relevantEmailAccounts.contains(emailAccountId) &&
-        !rejectedRecommendations.contains(emailAccountId)
-    }
+    @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = relevantEmailAccounts.contains(emailAccountId) && !rejectedRecommendations.contains(emailAccountId)
 
     @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
 
