@@ -114,7 +114,7 @@ case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, M], model: M)
  *
  * The prime example is a [[com.keepit.notify.model.event.NotificationEvent]], where constructing one gives most of the
  * information needed to generate its resulting display information, [[NotificationInfo]]. By wrapping the parameters to
- * the event in this class, all the potential additional request for information can be reduced.
+ * the event in this class, all potential additional requests for information can be reduced.
  */
 case class ExistingDbView[A](existing: ExDbViewModel*)(val result: A) {
 

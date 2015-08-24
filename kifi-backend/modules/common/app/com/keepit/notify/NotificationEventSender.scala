@@ -1,6 +1,7 @@
 package com.keepit.notify
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.db.Id
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.notify.NotificationEventSender.EventWithInfo
 import com.keepit.notify.info._
@@ -35,27 +36,30 @@ class NotificationEventSender @Inject() (
     }
   }
 
-  def getView(requests: Seq[DbViewRequest[M, T] forSome { type M <: HasId[M]; type T}], existing: Option[ExistingDbView[_]]): Future[DbView] = {
+  def getView(requests: Seq[ExDbViewRequest], existing: Option[ExistingDbView[_]]): Future[DbView] = {
     val existingView = existing.fold(DbView()) { existingModels =>
       existingModels.buildDbView
     }
 
-    requests.foldLeft(Future.successful(existingView)) { (viewFut, request) =>
-      viewFut.flatMap { view =>
-        if (request.contained(view)) Future.successful(view)
-        else processRequests(Seq(request), view) // todo need to batch requests
-      }
-    }
+    val grouped = requests.groupBy(_.key)
+    grouped.toList.asInstanceOf[List[(DbViewKey[M, R], Seq[DbViewRequest[M, R]]) forSome { type M <: HasId[M]; type R}]]
+    grouped.foldLeft(Future.successful(existingView))(genericFoldGrouped)
   }
 
-  def processRequests[M <: HasId[M], R](requests: Seq[DbViewRequest[M, R]], baseView: DbView): Future[DbView] =
-    for {
-      results <- requestHandler(requests)
-    } yield {
-      requests.zip(results).foldLeft(baseView) {
-        case (view, (request, result)) => view.update(request.key, request.id, result)
+  val genericFoldGrouped = (foldGrouped _).asInstanceOf[(Future[DbView], (ExDbViewKey, Seq[ExDbViewRequest])) => Future[DbView]]
+
+  def foldGrouped[M <: HasId[M], R](viewFut: Future[DbView], keyAndReqs: (DbViewKey[M, R], Seq[DbViewRequest[M, R]])): Future[DbView] =
+    keyAndReqs match {
+      case (key, reqs) =>  viewFut.flatMap { view =>
+        val toRequest = reqs.filter(req => !view.contains(key, req.id))
+        requestHandler(key, reqs).map { keyMap =>
+          keyMap.toList.foldLeft(view) {
+            case (viewAcc, (id, result)) => viewAcc.update(key, id, result)
+          }
+        }
       }
     }
+
 
 }
 

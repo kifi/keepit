@@ -11,4 +11,7 @@ package object info {
 
   type ExDbViewModel = ExistingDbViewModel[M] forSome { type M <: HasId[M] }
 
+  type ExDbViewKey = DbViewKey[M, R] forSome { type M <: HasId[M]; type R}
+  type ExDbViewRequest = DbViewRequest[M, R] forSome { type M <: HasId[M]; type R}
+
 }

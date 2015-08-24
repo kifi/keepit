@@ -2,7 +2,7 @@ package com.keepit.notify
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.inject.AppScoped
-import com.keepit.notify.info.{ElizaDbViewRequestHandlerImpl, DbViewRequestHandler}
+import com.keepit.notify.info.{ ElizaDbViewRequestHandlerImpl, DbViewRequestHandler }
 
 case class ElizaNotifyModule() extends NotifyModule {
 
