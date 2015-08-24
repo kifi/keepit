@@ -159,8 +159,7 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
   keepImagesCache: KeepImagesCache,
-  primaryOrgForUserCache: PrimaryOrgForUserCache,
-  orgTrackingValuesCache: OrgTrackingValuesCache)
+  primaryOrgForUserCache: PrimaryOrgForUserCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -812,10 +811,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
-    cacheProvider.orgTrackingValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
-      call(Shoebox.internal.getOrgTrackingValues(orgId)).map {
-        _.json.as[OrgTrackingValues]
-      }
-    }
+    call(Shoebox.internal.getOrgTrackingValues(orgId)).map { _.json.as[OrgTrackingValues] }
   }
 }
