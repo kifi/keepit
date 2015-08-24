@@ -24,6 +24,7 @@ case class PaidAccount(
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
+  def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
 }
 
 object PaidAccountStates extends States[PaidAccount]

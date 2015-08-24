@@ -12,6 +12,7 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
 
 class OrganizationCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   val modules = Seq(
@@ -25,6 +26,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+
         implicit val context = HeimdalContext.empty
 
         val user = db.readWrite { implicit session => UserFactory.user().withName("Teeny", "Tiny").saved }
@@ -73,6 +77,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+
         implicit val context = HeimdalContext.empty
 
         val users = db.readWrite { implicit session => UserFactory.users(3).saved }
@@ -116,6 +123,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
+
+        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+
         implicit val context = HeimdalContext.empty
 
         val users = db.readWrite { implicit session => UserFactory.users(3).saved }
@@ -160,6 +170,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+
         implicit val context = HeimdalContext.empty
 
         val users = db.readWrite { implicit session => UserFactory.users(4).saved }
@@ -208,6 +221,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+
         implicit val context = HeimdalContext.empty
 
         val users = db.readWrite { implicit session => UserFactory.users(5).saved }

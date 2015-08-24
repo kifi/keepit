@@ -16,6 +16,7 @@ import play.api.libs.json.{ JsArray, JsObject, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
 
 import scala.concurrent.Future
 
@@ -137,6 +138,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       "let a user create an organization" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
+          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
           val orgName = "Banana Capital, USA"
           val orgDescription = "Fun for the whole family"
