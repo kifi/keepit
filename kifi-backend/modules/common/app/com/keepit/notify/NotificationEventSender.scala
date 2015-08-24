@@ -42,10 +42,14 @@ class NotificationEventSender @Inject() (
     }
 
     val grouped = requests.groupBy(_.key)
+    // We know that after the groupBy, the type of requests is the same because they have the same key.
+    // This cast also makes the compiler know
     grouped.toList.asInstanceOf[List[(DbViewKey[M, R], Seq[DbViewRequest[M, R]]) forSome { type M <: HasId[M]; type R}]]
     grouped.foldLeft(Future.successful(existingView))(genericFoldGrouped)
   }
 
+  // Turns the type-parameterized fold into an existential fold. We know the relationship between the key and requests in
+  // the foldGrouped, but the compiler isn't very helpful with polymorphic function values in the fold.
   val genericFoldGrouped = (foldGrouped _).asInstanceOf[(Future[DbView], (ExDbViewKey, Seq[ExDbViewRequest])) => Future[DbView]]
 
   def foldGrouped[M <: HasId[M], R](viewFut: Future[DbView], keyAndReqs: (DbViewKey[M, R], Seq[DbViewRequest[M, R]])): Future[DbView] =
