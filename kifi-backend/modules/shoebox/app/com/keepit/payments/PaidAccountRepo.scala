@@ -29,7 +29,7 @@ class PaidAccountRepoImpl @Inject() (
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
 
   type RepoImpl = PaidAccountTable
-  class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_Account") {
+  class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)

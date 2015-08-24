@@ -30,6 +30,8 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
 
+  val DEFAULT = Id[PaidPlan](1L)
+
   case class Kind(name: String)
   object Kind {
     val NORMAL = Kind("normal")

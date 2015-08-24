@@ -10,19 +10,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-trait SocialEvent extends NotificationEvent
-
-case class NewSocialConnection(
-    recipient: Recipient,
-    time: DateTime,
-    friendId: Id[User],
-    networkType: Option[SocialNetworkType]) extends SocialEvent {
-
-  val kind = NewSocialConnection
-
-}
-
-object NewSocialConnection extends NotificationKind[NewSocialConnection] {
+trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConnection] {
 
   override val name: String = "new_social_connection"
 
@@ -33,48 +21,29 @@ object NewSocialConnection extends NotificationKind[NewSocialConnection] {
     (__ \ "networkType").formatNullable[SocialNetworkType]
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
-  override def shouldGroupWith(newEvent: NewSocialConnection, existingEvents: Set[NewSocialConnection]): Boolean = false
-
-  //  def build(
-  //    recipient: Recipient,
-  //    time: DateTime,
-  //    friend: User,
-  //    friendImage: String,
-  //    networkType: Option[SocialNetworkType]): EventArgs =
-  //    EventArgs(
-  //      NewSocialConnection(recipient, time, friend.id.get, networkType)
-  //    ).args("friend" -> friend, "friendImage" -> friendImage)
-
-  //  override def info(events: Set[NewSocialConnection]): ReturnsInfoResult = for {
-  //    event <- PickOne(events)
-  //    friend <- GetUser(event.friendId, "friend")
-  //    image <- GetUserImage(event.friendId, "friendImage")
-  //  } yield NotificationInfo(
-  //    url = Path(friend.username.value).encode.absolute,
-  //    imageUrl = image,
-  //    title = s"You’re connected with ${friend.firstName} ${friend.lastName} on Kifi!",
-  //    body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly.",
-  //    linkText = "Invite more friends to kifi",
-  //    extraJson = Some(Json.obj(
-  //      "friend" -> BasicUser.fromUser(friend)
-  //    ))
-  //  )
+  override def info(event: NewSocialConnection): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.friendId), userImageUrl(event.friendId)
+    )) { subset =>
+      val friend = user(event.friendId).lookup(subset)
+      val friendImage = userImageUrl(event.friendId).lookup(subset)
+      NotificationInfo(
+        url = Path(friend.username.value).encode.absolute,
+        title = s"You’re connected with ${friend.fullName} on Kifi!",
+        body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
+        imageUrl = friendImage,
+        linkText = s"View ${friend.firstName}’s profile",
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(friend)
+        ))
+      )
+    }
+  }
 
 }
 
-// todo missing, social new library through twitter (unused?)
-// todo missing, social new follower through twitter (unused?)
-
-case class SocialContactJoined(
-    recipient: Recipient,
-    time: DateTime,
-    joinerId: Id[User]) extends SocialEvent {
-
-  val kind = SocialContactJoined
-
-}
-
-object SocialContactJoined extends NotificationKind[SocialContactJoined] {
+trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJoined] {
 
   override val name: String = "social_contact_joined"
 
@@ -84,6 +53,21 @@ object SocialContactJoined extends NotificationKind[SocialContactJoined] {
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
 
-  override def shouldGroupWith(newEvent: SocialContactJoined, existingEvents: Set[SocialContactJoined]): Boolean = false
+  override def info(event: SocialContactJoined): UsingDbSubset[NotificationInfo] = {
+    import NeedInfo._
+    UsingDbSubset(Seq(
+      user(event.joinerId), userImageUrl(event.joinerId)
+    )) { subset =>
+      val joiner = user(event.joinerId).lookup(subset)
+      val joinerImage = userImageUrl(event.joinerId).lookup(subset)
+      NotificationInfo(
+        url = Path(joiner.username.value + "?intent=connect").encode.absolute,
+        title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
+        body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
+        linkText = s"Invite ${joiner.firstName} to connect",
+        imageUrl = joinerImage
+      )
+    }
+  }
 
 }

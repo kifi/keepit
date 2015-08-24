@@ -1,7 +1,7 @@
 package com.keepit.notify.delivery
 
 import com.keepit.eliza.model.NotificationItem
-import com.keepit.notify.model.{ Recipient, NotificationEvent }
+import com.keepit.notify.model.Recipient
 
 import scala.concurrent.{ ExecutionContext, Future }
 
