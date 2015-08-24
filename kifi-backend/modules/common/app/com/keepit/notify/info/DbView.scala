@@ -59,13 +59,6 @@ class DbViewKey[M <: HasId[M], R] {
    */
   def apply(id: Id[M]): DbViewRequest[M, R] = DbViewRequest(this, id)
 
-  object pattern {
-    def unapply[N <: HasId[N], S](that: (DbViewKey[N, S], Seq[DbViewRequest[N, S]])): Option[(Seq[DbViewRequest[M, R]], N => M, S => R)] =
-      if (that._1 == DbViewKey.this) {
-        Some((that._2.asInstanceOf[Seq[DbViewRequest[M, R]]], (n: N) => n.asInstanceOf[M], (s: S) => s.asInstanceOf[R]))
-      } else None
-  }
-
 }
 
 /**
