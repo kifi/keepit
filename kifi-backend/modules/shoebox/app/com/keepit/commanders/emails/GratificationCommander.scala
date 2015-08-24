@@ -54,7 +54,7 @@ class GratificationCommander @Inject() (
     val numBatches = userCount / BATCH_SIZE
 
     def processBatch(dummyAcc: Unit, batch: Int): Future[Unit] = {
-      val userIds = generateUserBatch(batch)
+      val userIds = generateUserBatch(batch).filter(filter)
       log.info(s"[GratData] Generated user batch ${userIds.head}-${userIds.last}, getting data")
       val fGratDatas = heimdal.getEligibleGratDatas(userIds).map(_.map(augmentData))
       fGratDatas.map { gratDatas => log.info(s"[GratData] Batched data received, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(gratDatas); () }
