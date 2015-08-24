@@ -101,6 +101,7 @@ class PageCommander @Inject() (
   }
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
+    val useMultilibLogic = experiments.contains(UserExperimentType.KEEP_MULTILIB)
     val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name))
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
@@ -127,7 +128,7 @@ class PageCommander @Inject() (
       }
 
       nUriOpt.map { normUri =>
-        augmentUriInfo(normUri, userId).map { info =>
+        augmentUriInfo(normUri, userId, useMultilibLogic).map { info =>
           KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
         }
       }.getOrElse {
@@ -164,7 +165,7 @@ class PageCommander @Inject() (
     (count >= (5 - credit).min(2)) && (count < (30 + credit * 50))
   }
 
-  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User]): Future[KeeperPagePartialInfo] = {
+  private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       showPublishedLibraries = true,

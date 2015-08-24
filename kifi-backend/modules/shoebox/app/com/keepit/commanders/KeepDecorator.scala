@@ -1,22 +1,31 @@
 package com.keepit.commanders
 
-import com.keepit.common.crypto.{ PublicIdConfiguration }
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageConfig, ImageSize }
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import com.keepit.common.core._
 
-class KeepDecorator @Inject() (
+@ImplementedBy(classOf[KeepDecoratorImpl])
+trait KeepDecorator {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]]
+  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[BasicKeep]]
+}
+
+@Singleton
+class KeepDecoratorImpl @Inject() (
     db: Database,
     basicUserRepo: BasicUserRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -24,6 +33,9 @@ class KeepDecorator @Inject() (
     collectionCommander: CollectionCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
+    ktuRepo: KeepToUserRepo,
+    keepCommander: KeepCommander,
     orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
@@ -34,7 +46,7 @@ class KeepDecorator @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) {
+    implicit val publicIdConfig: PublicIdConfiguration) extends KeepDecorator with Logging {
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
@@ -192,11 +204,19 @@ class KeepDecorator @Inject() (
     }
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val allKeeps = db.readOnlyReplica { implicit session =>
       val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
-      val allKeeps = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds)
-      allKeeps
+      val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds)
+      val newWay = {
+        val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId) |> keepCommander.idsToKeeps
+        val indirectViaLibraries = ktlRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).map(_.keepId) |> keepCommander.idsToKeeps
+        (direct ++ indirectViaLibraries).distinct
+      }
+      if (newWay.map(_.id.get) != oldWay.map(_.id.get)) {
+        log.error(s"[KTL-MATCH] getBasicKeeps($userId, $uriIds): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
+      }
+      if (useMultilibLogic) newWay else oldWay
     }
     val grouped = allKeeps.groupBy(_.uriId)
     uriIds.map { uriId =>
