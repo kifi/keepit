@@ -95,8 +95,10 @@ angular.module('kifi')
     };
 
     $scope.join = function ($event) {
-      $event.preventDefault();
       var isMobile = platformService.isSupportedMobilePlatform();
+      if (isMobile) {
+        $event.preventDefault();
+      }
 
       if (util.startsWith($state.current.name, 'library')) {
         $scope.$emit('getCurrentLibrary', {
@@ -114,8 +116,6 @@ angular.module('kifi')
 
             if (isMobile) {
               platformService.goToAppOrStore();
-            } else {
-              signupService.register(userData);
             }
           }
         });
@@ -126,8 +126,6 @@ angular.module('kifi')
 
         if (isMobile) {
           platformService.goToAppOrStore();
-        } else {
-          signupService.register();
         }
       }
     };

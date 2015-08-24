@@ -55,6 +55,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   // These ones already exist there:
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
+  def getCountByLibrariesSince(libraryIds: Set[Id[Library]], since: DateTime)(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
@@ -76,6 +77,7 @@ class KeepRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     val countCache: KeepCountCache,
+    keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
@@ -92,7 +94,6 @@ class KeepRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
     def source = column[KeepSource]("source", O.NotNull)
-    def kifiInstallation = column[Option[ExternalId[KifiInstallation]]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
@@ -102,7 +103,7 @@ class KeepRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
-      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
+      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
 
@@ -127,7 +128,6 @@ class KeepRepoImpl @Inject() (
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],
-      kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
@@ -166,6 +166,7 @@ class KeepRepoImpl @Inject() (
       countByLibraryCache.remove(CountByLibraryKey(id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
     }
+    keepByIdCache.remove(KeepIdKey(keep.id.get))
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
   }
@@ -178,14 +179,23 @@ class KeepRepoImpl @Inject() (
     if (keep.state == KeepStates.INACTIVE) {
       deleteCache(keep)
     } else {
+      keepByIdCache.set(KeepIdKey(keep.id.get), keep)
       keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
       countCache.remove(KeepCountKey(keep.userId))
     }
   }
 
+  override def get(id: Id[Keep])(implicit session: RSession): Keep = {
+    keepByIdCache.getOrElse(KeepIdKey(id)) {
+      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    }
+  }
+
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
-    val q = for (b <- rows if b.id.inSet(ids)) yield b
-    q.list.map { keep => (keep.id.get, keep) }.toMap
+    keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
+      val q = { for { row <- rows if row.id.inSet(missingKeys.map(_.id)) } yield row }
+      q.list.map { x => KeepIdKey(x.id.get) -> x }.toMap
+    }.map { case (key, org) => key.id -> org }
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
@@ -479,6 +489,10 @@ class KeepRepoImpl @Inject() (
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
     getCountsByLibrary(Set(libraryId)).getOrElse(libraryId, 0)
+  }
+
+  def getCountByLibrariesSince(libraryIds: Set[Id[Library]], since: DateTime)(implicit session: RSession): Int = {
+    rows.filter(k => k.keptAt > since && k.libraryId.inSet(libraryIds)).length.run
   }
 
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {

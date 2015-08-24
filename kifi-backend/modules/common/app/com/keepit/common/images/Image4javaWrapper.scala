@@ -232,7 +232,7 @@ class Image4javaWrapper @Inject() (
         .strip()
         .quality(95d)
         .dither("None")
-        .define("png:compression-filter=5")
+        .define("png:compression-filter=2")
         .define("png:compression-level=9")
         .define("png:compression-filter=5")
         .define("png:compression-strategy=1")
@@ -245,8 +245,7 @@ class Image4javaWrapper @Inject() (
     case ImageFormat.JPG =>
       operation
         .strip()
-        .gaussianBlur(0.05)
-        .quality(75d)
+        .quality(85d)
         .define("jpeg:fancy-upsampling=off")
         .colorspace("sRGB")
         .interlace("None")

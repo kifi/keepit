@@ -14,6 +14,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
+import com.keepit.common.time._
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -56,6 +57,7 @@ case class MemberStatistics(
   user: User,
   numChats: Int,
   numPublicKeeps: Int,
+  numPrivateKeeps: Int,
   numLibrariesCreated: Int,
   numLibrariesCollaborating: Int,
   numLibrariesFollowing: Int,
@@ -65,7 +67,8 @@ case class MemberStatistics(
 case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
 
 object LibCountStatistics {
-  def apply(libs: Iterable[Library]): LibCountStatistics = {
+  def apply(allLibs: Iterable[Library]): LibCountStatistics = {
+    val libs = allLibs.filter(_.kind == LibraryKind.USER_CREATED)
     LibCountStatistics(
       libs.count(_.isSecret),
       libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
@@ -83,6 +86,7 @@ case class OrganizationStatistics(
   description: Option[String],
   libStats: LibCountStatistics,
   numKeeps: Int,
+  numKeepsLastWeek: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
   membersStatistics: Map[Id[User], MemberStatistics],
@@ -101,6 +105,7 @@ class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     db: Database,
+    clock: Clock,
     kifiInstallationRepo: KifiInstallationRepo,
     keepRepo: KeepRepo,
     emailRepo: UserEmailAddressRepo,
@@ -176,6 +181,7 @@ class UserStatisticsCommander @Inject() (
           user = user,
           numChats = numChats.all,
           numPublicKeeps = numPublicKeeps,
+          numPrivateKeeps = numPrivateKeeps,
           numLibrariesCreated = numLibrariesCreated,
           numLibrariesCollaborating = numLibrariesCollaborating,
           numLibrariesFollowing = numLibrariesFollowing,
@@ -199,15 +205,16 @@ class UserStatisticsCommander @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
     }
 
-    val (org, libraries, numKeeps, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val numKeeps = libraries.map(_.keepCount).sum
+      val numKeepsLastWeek = keepRepo.getCountByLibrariesSince(libraries.map(_.id.get).toSet, clock.now().minusWeeks(1))
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-      (org, libraries, numKeeps, experiments, membersStatsFut, domains)
+      (org, libraries, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains)
     }
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
@@ -268,6 +275,7 @@ class UserStatisticsCommander @Inject() (
       description = org.description,
       libStats = LibCountStatistics(libraries),
       numKeeps = numKeeps,
+      numKeepsLastWeek = numKeepsLastWeek,
       members = members,
       candidates = candidates,
       membersStatistics = membersStats,

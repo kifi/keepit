@@ -1,0 +1,36 @@
+package com.keepit.notify.model.event
+
+import com.keepit.notify.info.{ NotificationInfo, UsingDbSubset }
+import com.keepit.notify.model.{ NotificationKind, Recipient }
+import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
+trait NewMessageImpl extends NotificationKind[NewMessage] {
+
+  override val name: String = "new_message"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "messageThreadId").format[Long] and
+    (__ \ "messageId").format[Long]
+  )(NewMessage.apply, unlift(NewMessage.unapply))
+
+  override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
+
+  override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
+    val existing = existingEvents.head
+    existing.messageThreadId == newEvent.messageThreadId
+  }
+
+  //  override def info(events: Set[NewMessage]): ReturnsInfo[ElizaMessageNotificationInfo] = for {
+  //    event <- PickOne(events)
+  //  } yield ElizaMessageNotificationInfo()
+  override def info(events: Set[NewMessage]): UsingDbSubset[NotificationInfo] = ??? // todo write
+
+}
+
+//case class ElizaMessageNotificationInfo() extends NotificationInfo(null, null, null, null, null, null)
+
+case class ElizaMessageInfo()

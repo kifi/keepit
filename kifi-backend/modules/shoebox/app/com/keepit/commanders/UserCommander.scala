@@ -22,7 +22,8 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
-import com.keepit.notify.model.SocialContactJoined
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
@@ -398,7 +399,7 @@ class UserCommander @Inject() (
               }
             toNotify.foreach { userId =>
               elizaServiceClient.sendNotificationEvent(SocialContactJoined(
-                userId,
+                Recipient(userId),
                 currentDateTime,
                 newUserId
               ))

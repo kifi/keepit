@@ -168,6 +168,8 @@ GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV1(id: ExternalId[Keep])
 POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV2(id: ExternalId[Keep])
 
+GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String])
+
 POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
@@ -245,6 +247,8 @@ POST    /m/3/recos/top                          @com.keepit.controllers.mobile.M
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
+
+#DEPRECATED: use instead /m/1/keeps/stream
 GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(limit: Int, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
@@ -368,6 +372,7 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
+GET     /site/keeps/stream          @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String])
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
@@ -968,6 +973,7 @@ GET     /internal/shoebox/database/unfriends          @com.keepit.controllers.in
 GET     /internal/shoebox/database/getOrganizationMembers          @com.keepit.controllers.internal.ShoeboxController.getOrganizationMembers(orgId: Id[Organization])
 GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.controllers.internal.ShoeboxController.getOrganizationInviteViews(orgId: Id[Organization])
 GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
+POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.controllers.internal.ShoeboxController.getOrganizationsForUsers()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 

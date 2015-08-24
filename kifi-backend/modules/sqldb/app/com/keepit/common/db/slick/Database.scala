@@ -1,6 +1,8 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import play.api.Mode.Mode
+import play.api.{ Mode, Play }
 
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
@@ -20,8 +22,12 @@ import scala.util.Failure
 
 class InSessionException(message: String) extends Exception(message)
 
-object DatabaseSessionLock {
-  val inSession = new DynamicVariable[Boolean](false)
+private object DatabaseSessionLock {
+  val tl = new ThreadLocal[Boolean]
+  sealed trait SourceState
+  case object ReadSession extends SourceState
+  case object WriteSession extends SourceState
+  case object NoSession extends SourceState
 }
 
 // this allows us to replace the database session implementation in tests and check when sessions are being obtained
@@ -70,12 +76,45 @@ class Database @Inject() (
   val dialect: DatabaseDialect[_] = db.dialect
 
   def enteringSession[T](f: => T) = {
-    if (DatabaseSessionLock.inSession.value) {
-      val message = "already in a DB session!"
-      //log.warn("Already in a DB session!", new InSessionException(message)) // todo(Andrew): re-enable
-      //throw new InSessionException("already in a DB session!")
+    val detectLayeredSessions = false && !Play.maybeApplication.exists(_.mode == Mode.Prod) // Remove `false &&` to enable this
+    if (detectLayeredSessions) {
+      val wasInSession = Option(DatabaseSessionLock.tl.get).getOrElse(false)
+      val verbose = true
+      if (wasInSession) {
+        import DatabaseSessionLock._
+        var sourceState: SourceState = NoSession
+        val databaseSources = Set("Database.scala", "DBSession.scala")
+        val stack = new InSessionException("").getStackTrace.filter(_.getClassName.contains("com.keepit")).flatMap { l =>
+          if (sourceState == WriteSession && !databaseSources.contains(l.getFileName)) {
+            sourceState = NoSession
+            Some(l.getFileName + ":" + l.getLineNumber + " \u001b[33;1mWRITE\u001b[0m")
+          } else if (sourceState == ReadSession && !databaseSources.contains(l.getFileName)) {
+            sourceState = NoSession
+            Some(l.getFileName + ":" + l.getLineNumber)
+          } else if (l.getFileName == "Database.scala") {
+            if (l.getMethodName.contains("readWrite")) {
+              sourceState = WriteSession
+            } else if (l.getMethodName.contains("readOnly")) {
+              sourceState = ReadSession
+            }
+            None
+          } else {
+            if (verbose) {
+              Some("\t" + l.getFileName + ":" + l.getLineNumber)
+            } else {
+              None
+            }
+          }
+        }
+        new InSessionException("").printStackTrace()
+        println("\uD83D\uDEA6  \u001b[31;4mMultiple sessions created:\u001b[0m\n\t" + stack.mkString("\n\t"))
+      }
+      DatabaseSessionLock.tl.set(true)
+      try f finally DatabaseSessionLock.tl.set(wasInSession)
+    } else {
+      // In production and when not trying to detect layered sessions:
+      f
     }
-    DatabaseSessionLock.inSession.withValue(true) { f }
   }
 
   def readOnlyMasterAsync[T](f: ROSession => T)(implicit location: Location): Future[T] = Future { readOnlyOneAttempt(Master)(f)(location) }
@@ -90,8 +129,6 @@ class Database @Inject() (
   def readOnlyReplica[T](f: ROSession => T)(implicit location: Location): T = readOnlyOneAttempt(Replica)(f)(location)
   def readOnlyReplica[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnlyWithAttempts(attempts, Replica)(f)(location)
 
-  private def readOnly0[T](f: ROSession => T, dbMasterReplica: DBMasterReplica, location: Location): T = readOnlyOneAttempt(dbMasterReplica)(f)(location)
-
   private def resolveDb(dbMasterReplica: DBMasterReplica) = dbMasterReplica match {
     case Master =>
       SlickDatabaseWrapper(db.masterDb, Master)
@@ -104,18 +141,10 @@ class Database @Inject() (
       }
   }
 
-  private def readOnlyOneAttempt[T](dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
-    val ro = new ROSession(dbMasterReplica, {
-      val handle = resolveDb(dbMasterReplica)
-      sessionProvider.createReadOnlySession(handle.slickDatabase)
-    }, location)
-    try f(ro) finally ro.close()
-  }
-
-  private def readOnlyWithAttempts[T](attempts: Int, dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
+  private def readOnlyWithAttempts[T](attempts: Int, dbMasterReplica: DBMasterReplica)(f: ROSession => T)(location: Location): T = enteringSession { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
-        return readOnly0(f, dbMasterReplica, location)
+        return readOnlyOneAttempt(dbMasterReplica)(f)(location)
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
@@ -123,7 +152,15 @@ class Database @Inject() (
           statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
-    readOnly0(f, dbMasterReplica, location)
+    readOnlyOneAttempt(dbMasterReplica)(f)(location)
+  }
+
+  private def readOnlyOneAttempt[T](dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
+    val ro = new ROSession(dbMasterReplica, {
+      val handle = resolveDb(dbMasterReplica)
+      sessionProvider.createReadOnlySession(handle.slickDatabase)
+    }, location)
+    try f(ro) finally ro.close()
   }
 
   private def createReadWriteSession(location: Location) = new RWSession({ //always master

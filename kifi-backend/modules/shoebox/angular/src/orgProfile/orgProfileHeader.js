@@ -23,6 +23,7 @@ angular.module('kifi')
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
+      scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
       if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
         signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
@@ -65,10 +66,19 @@ angular.module('kifi')
           });
       };
 
-      scope.onOrgProfileImageClick = function (event) {
+      scope.onClickTrack = function (event, action) {
+        if (event.which === 1) {
+          if (action === 'clickedAddCoverImage') {
+            angular.element('.kf-oph-pic-file').click();
+          }
+          orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: action });
+        }
+      };
+
+      scope.onOrgProfileImageClick = function (event) { // doesn't look like we're using this anywhere, but if so, should be merged with onClickTrack
         if (event.which === 1) {
           angular.element('.kf-oph-pic-file').click();
-          //libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
+          orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: 'clickedAddCoverImage' });
         }
       };
 

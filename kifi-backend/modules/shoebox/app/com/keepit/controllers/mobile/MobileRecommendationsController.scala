@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ KeepsCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -19,6 +19,7 @@ import scala.concurrent.Future
 class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
+    keepsCommander: KeepsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     val db: Database,
     val userRepo: UserRepo,
@@ -126,7 +127,7 @@ class MobileRecommendationsController @Inject() (
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
 
-    commander.updatesFromFollowedLibraries(request.userId, limit, beforeExtId, afterExtId).map { updatedKeeps =>
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { updatedKeeps =>
       Ok(Json.obj("updatedKeeps" -> updatedKeeps))
     }
   }

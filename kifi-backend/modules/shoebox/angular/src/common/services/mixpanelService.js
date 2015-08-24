@@ -59,7 +59,19 @@
       // filter out events we don't care about (this may duplicate some
       // server-side logic for events sent to the proxy)
       if (!_.str.startsWith($window.navigator.userAgent, 'Pingdom')) {
-        $window.amplitude.logEvent(action, props);
+
+        // translates Object keys to snake_case from camelCase
+        var snakeCaseProps = _.mapKeys(props, function(value, key) {
+          var newKey = key.replace(/([A-Z])/g, function($1) { return '_' + $1.toLowerCase(); });
+          if (newKey[0] === '_' && key[0] !== '_') {
+            // ignore leading underscore if the original key didn't have one
+            return newKey.slice(1);
+          } else {
+            return newKey;
+          }
+        });
+
+        $window.amplitude.logEvent(action, snakeCaseProps);
       }
     }
   }

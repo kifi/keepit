@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.time.Clock
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 
 @ImplementedBy(classOf[NotificationItemRepoImpl])
 trait NotificationItemRepo extends Repo[NotificationItem] {
