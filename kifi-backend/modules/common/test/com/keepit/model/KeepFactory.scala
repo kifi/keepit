@@ -25,7 +25,7 @@ object KeepFactory {
       libraryId = None,
       note = None,
       originalKeeperId = Some(userId),
-      entitiesHash = None
+      connectionsHash = None
     ))
   }
 

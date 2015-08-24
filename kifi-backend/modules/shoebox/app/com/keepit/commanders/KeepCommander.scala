@@ -763,7 +763,7 @@ class KeepCommanderImpl @Inject() (
   def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep = {
     require(users.contains(k.userId), "keep owner is not one of the connected users")
     require(libraries.contains(k.libraryId.get), "keep's library is not one of the connected libraries") // TODO(ryan): remove this, keeps don't have to be in a library
-    val keep = keepRepo.save(k.withEntities(libraries, users))
+    val keep = keepRepo.save(k.withConnections(libraries, users))
     ktuCommander.internKeepInUser(keep, keep.userId, keep.userId)
     // TODO(ryan): drop this once keeps don't need to exist in libraries
     ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
@@ -772,7 +772,7 @@ class KeepCommanderImpl @Inject() (
   private def refreshEntitiesHash(keep: Keep)(implicit session: RWSession): Keep = {
     val libraries = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
     val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-    keepRepo.save(keep.withEntities(libraries, users))
+    keepRepo.save(keep.withConnections(libraries, users))
   }
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withNote(newNote))
@@ -842,7 +842,7 @@ class KeepCommanderImpl @Inject() (
       visibility = toLibrary.visibility,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      entitiesHash = None
+      connectionsHash = Some(KeepConnections(Set(toLibrary.id.get), Set(userId)).hash)
     )
 
     currentKeepOpt match {

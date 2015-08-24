@@ -20,7 +20,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
 
-  def getByUriAndEntitiesHash(uriId: Id[NormalizedURI], entitiesHash: EntitiesHash)(implicit session: RSession): Set[Keep]
+  def getByUriAndConnectionsHash(uriId: Id[NormalizedURI], connectionsHash: KeepConnectionsHash)(implicit session: RSession): Set[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -102,11 +102,11 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
-    def entitiesHash = column[Option[EntitiesHash]]("entities_hash", O.Nullable)
+    def connectionsHash = column[Option[KeepConnectionsHash]]("connections_hash", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId, entitiesHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+        note, originalKeeperId, organizationId, connectionsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -115,7 +115,7 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
-  implicit val getEntitiesHashResult = getResultOptionFromMapper[EntitiesHash]
+  implicit val getConnectionsHashResult = getResultOptionFromMapper[KeepConnectionsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -140,7 +140,7 @@ class KeepRepoImpl @Inject() (
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
-      entitiesHash = r.<<[Option[EntitiesHash]]
+      connectionsHash = r.<<[Option[KeepConnectionsHash]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -222,8 +222,8 @@ class KeepRepoImpl @Inject() (
     }
   }
 
-  def getByUriAndEntitiesHash(uriId: Id[NormalizedURI], entitiesHash: EntitiesHash)(implicit session: RSession): Set[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.entitiesHash === entitiesHash && b.state === KeepStates.ACTIVE) yield b).list.toSet
+  def getByUriAndConnectionsHash(uriId: Id[NormalizedURI], connectionsHash: KeepConnectionsHash)(implicit session: RSession): Set[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.connectionsHash === connectionsHash && b.state === KeepStates.ACTIVE) yield b).list.toSet
   }
 
   // preserved for backward compatibility
