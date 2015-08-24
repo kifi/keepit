@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.abook.model.RichContact
+import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.time._
 import com.keepit.common.core._
@@ -23,6 +23,7 @@ import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
+import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -52,7 +53,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo,
-    aBookClient: ABookServiceClient,
+    abookClient: ABookServiceClient,
+    searchClient: SearchServiceClient,
     implicit val defaultContext: ExecutionContext,
     userIpAddressRepo: UserIpAddressRepo,
     userRepo: UserRepo,
@@ -118,7 +120,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(fail) => Future.successful(Left(fail))
       case _ => {
         val contactsByEmailAddressFut: Future[Map[EmailAddress, RichContact]] = {
-          aBookClient.internKifiContacts(inviterId, inviteeAddresses.map(BasicContact(_)).toSeq: _*).imap { kifiContacts =>
+          abookClient.internKifiContacts(inviterId, inviteeAddresses.map(BasicContact(_)).toSeq: _*).imap { kifiContacts =>
             (inviteeAddresses zip kifiContacts).toMap
           }
         }
@@ -399,57 +401,39 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
-    val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
+    val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
-        val memberCount = db.readOnlyMaster { implicit s => organizationMembershipRepo.countByOrgId(orgId) }
-        Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit + memberCount)))
-    }
-    val activeInvites = db.readOnlyMaster { implicit session =>
-      organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING, InvitationDecision.DECLINED))
-    }
-
-    val invitedUsers = activeInvites.groupBy(_.userId).collect {
-      case (Some(userId), invites) =>
-        val access = invites.map(_.role).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
-        userId -> (access, lastInvitedAt)
-    }
-
-    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
-      case (Some(emailAddress), invites) =>
-        val access = invites.map(_.role).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
-        emailAddress -> (access, lastInvitedAt)
-    }
-
-    friendsAndContactsFut.map {
-      case (users, contacts) =>
-        val existingMembers = {
-          val userIds = users.map(_._1).toSet
-          db.readOnlyMaster { implicit session =>
-            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds)
-          }.map(_.userId).toSet
+        abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit).map { orgInviteRecos =>
+          val userRecos = orgInviteRecos.collect { case reco if reco.identifier.isLeft => reco.identifier.left.get }
+          val emailRecos = orgInviteRecos.collect { case reco if reco.identifier.isRight => RichContact(email = reco.identifier.right.get, name = reco.name) }
+          (userRecos, emailRecos)
         }
-        val suggestedUsers = users.collect {
-          case (userId, basicUser) if !existingMembers.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered (they may be promoted via an invite)
-            val (role, lastInvitedAt) = invitedUsers.get(userId) match {
-              case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-              case None => invitedUsers.get(userId) match {
-                case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-                case None => (OrganizationRole.MEMBER, None) // default invite role
-              }
-            }
-            MaybeOrganizationMember(Left(basicUser), role, lastInvitedAt)
+      case Some(validQuery) =>
+        for {
+          users <- searchClient.searchUsersByName(userId, validQuery, limit)
+          emails <- abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
+        } yield {
+          (users.map(_.userId), emails.map(_.info))
+        }
+    }
+
+    usersAndEmailsFut.map {
+      case (users, contacts) =>
+        val nonMembers = db.readOnlyMaster { implicit session =>
+          val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
+          users.filter(id => !members.exists(_.userId == id))
+        }
+
+        val basicUserById = db.readOnlyReplica { implicit session => basicUserRepo.loadAllActive(nonMembers.toSet) }
+
+        val suggestedUsers = nonMembers.map { userId =>
+          MaybeOrganizationMember(Left(basicUserById(userId)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
 
         val suggestedEmailAddresses = contacts.map { contact =>
-          val (role, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
-            case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-            case None => (OrganizationRole.MEMBER, None)
-          }
-          MaybeOrganizationMember(Right(contact), role, lastInvitedAt)
+          MaybeOrganizationMember(Right(BasicContact.fromRichContact(contact)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
+
         (suggestedUsers ++ suggestedEmailAddresses).take(limit)
     }
   }
