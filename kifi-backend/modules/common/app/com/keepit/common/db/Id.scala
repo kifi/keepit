@@ -62,4 +62,6 @@ object Id {
       }
     override def unbind(key: String, id: Id[T]): String = id.id.toString
   }
+
+  implicit def convert[A](id: Id[_]): Id[A] = id.asInstanceOf[Id[A]]
 }

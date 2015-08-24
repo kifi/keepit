@@ -14,4 +14,6 @@ package object info {
   type ExDbViewKey = DbViewKey[M, R] forSome { type M <: HasId[M]; type R}
   type ExDbViewRequest = DbViewRequest[M, R] forSome { type M <: HasId[M]; type R}
 
+  type ExDbViewResult = Map[Id[M], R] forSome { type M <: HasId[M]; type R}
+
 }

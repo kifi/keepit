@@ -52,7 +52,7 @@ class NotificationEventSender @Inject() (
   // the foldGrouped, but the compiler isn't very helpful with polymorphic function values in the fold.
   val genericFoldGrouped = (foldGrouped _).asInstanceOf[(Future[DbView], (ExDbViewKey, Seq[ExDbViewRequest])) => Future[DbView]]
 
-  def foldGrouped[M <: HasId[M], R](viewFut: Future[DbView], keyAndReqs: (DbViewKey[M, R], Seq[DbViewRequest[M, R]])): Future[DbView] =
+  def foldGrouped(viewFut: Future[DbView], keyAndReqs: (DbViewKey[M, R], Seq[DbViewRequest[M, R]]) forSome { type M <: HasId[M]; type R}): Future[DbView] =
     keyAndReqs match {
       case (key, reqs) =>  viewFut.flatMap { view =>
         val toRequest = reqs.filter(req => !view.contains(key, req.id))

@@ -59,14 +59,19 @@ class DbViewKey[M <: HasId[M], R] {
    */
   def apply(id: Id[M]): DbViewRequest[M, R] = DbViewRequest(this, id)
 
+  object pattern {
+    def unapply[N <: HasId[N], S](that: (DbViewKey[N, S], Seq[DbViewRequest[N, S]])): Option[(Seq[DbViewRequest[M, R]], N => M, S => R)] =
+      if (that._1 == DbViewKey.this) {
+        Some((that._2.asInstanceOf[Seq[DbViewRequest[M, R]]], (n: N) => n.asInstanceOf[M], (s: S) => s.asInstanceOf[R]))
+      } else None
+  }
+
 }
 
 /**
  * Contains a listing of Db view keys which can be used to lookup models.
  */
-object DbViewKey {
-
-  def apply[M <: HasId[M], R] = new DbViewKey[M, R]
+trait DbViewKeyList {
 
   val user = DbViewKey[User, User]
   val library = DbViewKey[Library, Library]
@@ -77,6 +82,12 @@ object DbViewKey {
   val libraryOwner = DbViewKey[Library, User]
   val organization = DbViewKey[Organization, Organization]
   val organizationInfo = DbViewKey[Organization, OrganizationNotificationInfo]
+
+}
+
+object DbViewKey extends DbViewKeyList {
+
+  def apply[M <: HasId[M], R] = new DbViewKey[M, R]
 
 }
 
