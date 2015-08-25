@@ -14,7 +14,7 @@ import org.specs2.mutable._
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
   "KeepRepo" should {
-    "save and load a keep correctly from the cache" in {
+    "save and load a keep" in {
       withDb() { implicit injector =>
         db.readWrite { implicit session =>
           val savedKeep = keepRepo.save(Keep(
