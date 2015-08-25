@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders._
@@ -14,7 +15,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.notify.model.{ NotificationId, NotificationKind }
@@ -54,6 +55,8 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
+  orgRepo: OrganizationRepo,
+  organizationAvatarCommander: OrganizationAvatarCommander,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
   friendRequestRepo: FriendRequestRepo,
@@ -73,9 +76,12 @@ class ShoeboxController @Inject() (
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
+  s3ImageStore: S3ImageStore,
+  pathCommander: PathCommander,
   organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
-  rover: RoverServiceClient)(implicit private val clock: Clock,
+  rover: RoverServiceClient,
+  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
@@ -521,6 +527,92 @@ class ShoeboxController @Inject() (
     val userIds = request.body.as[Set[Id[User]]]
     val orgIdsByUserId = organizationMembershipCommander.getAllForUsers(userIds).mapValues(_.map(_.organizationId))
     Ok(Json.toJson(orgIdsByUserId))
+  }
+
+  def getLibraries() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Seq[Id[Library]]]
+    val libs = db.readOnlyMaster { implicit session =>
+      libraryRepo.getLibraries(libraryIds.toSet)
+    }
+    Ok(Json.toJson(libs))
+  }
+
+  def getUserImages() = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Seq[Id[User]]]
+    val userImages = db.readOnlyReplica { implicit session =>
+      userRepo.getUsers(userIds)
+    }.map {
+      case (id, user) =>
+        (id, s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https")))
+    }
+    Ok(Json.toJson(userImages))
+  }
+
+  def getKeeps() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Seq[Id[Keep]]]
+    val keeps = db.readOnlyReplica { implicit session =>
+      keepRepo.getByIds(keepIds.toSet)
+    }
+    Ok(Json.toJson(keeps))
+  }
+
+  def getLibraryUrls() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Seq[Id[Library]]]
+    val libraryUrls = db.readOnlyReplica { implicit session =>
+      libraryRepo.getLibraries(libraryIds.toSet)
+    }.map {
+      case (id, library) => (id, pathCommander.pathForLibrary(library).encode.absolute)
+    }
+    Ok(Json.toJson(libraryUrls))
+  }
+
+  def getLibraryInfos() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Seq[Id[Library]]]
+    val libraryInfos = db.readOnlyReplica { implicit session =>
+      libraryRepo.getLibraries(libraryIds.toSet).map {
+        case (id, library) =>
+          val imageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
+          val libOwner = basicUserRepo.load(library.ownerId)
+          (id, LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, imageOpt, libOwner))
+      }
+    }
+    Ok(Json.toJson(libraryInfos))
+  }
+
+  def getLibraryOwners() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Seq[Id[Library]]]
+    val libraryOwners = db.readOnlyReplica { implicit session =>
+      val libraries = libraryRepo.getLibraries(libraryIds.toSet)
+      val userIds = libraries.collect {
+        case (id, library) => library.ownerId
+      }
+      val users = userRepo.getUsers(userIds.toSeq)
+      libraries.map {
+        case (id, library) =>
+          (id, users(library.ownerId))
+      }
+    }
+    Ok(Json.toJson(libraryOwners))
+  }
+
+  def getOrganizations() = Action(parse.tolerantJson) { request =>
+    val orgIds = request.body.as[Seq[Id[Organization]]]
+    val orgs = db.readOnlyReplica { implicit session =>
+      orgRepo.getByIds(orgIds.toSet)
+    }
+    Ok(Json.toJson(orgs))
+  }
+
+  def getOrganizationInfos() = Action(parse.tolerantJson) { request =>
+    val orgIds = request.body.as[Seq[Id[Organization]]]
+    val orgInfos = db.readOnlyReplica { implicit session =>
+      orgRepo.getByIds(orgIds.toSet)
+    }.map {
+      case (id, org) =>
+        val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
+        (id, OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
+    }
+    Ok(Json.toJson(orgInfos))
   }
 
   def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>

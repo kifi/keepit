@@ -133,6 +133,14 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
+  def getLibraries(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], Library]]
+  def getUserImages(userIds: Seq[Id[User]]): Future[Map[Id[User], String]]
+  def getKeeps(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]]
+  def getLibraryUrls(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], String]]
+  def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]]
+  def getLibraryOwners(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], User]]
+  def getOrganizations(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], Organization]]
+  def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
 }
 
@@ -808,6 +816,46 @@ class ShoeboxServiceClientImpl @Inject() (
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = {
     val payload = Json.toJson(userIds)
     call(Shoebox.internal.getOrganizationsForUsers(), payload).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
+  }
+
+  def getLibraries(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], Library]] = {
+    val payload = Json.toJson(libraryIds)
+    call(Shoebox.internal.getLibraries(), payload).map { _.json.as[Map[Id[Library], Library]] }
+  }
+
+  def getUserImages(userIds: Seq[Id[User]]): Future[Map[Id[User], String]] = {
+    val payload = Json.toJson(userIds)
+    call(Shoebox.internal.getUserImages(), payload).map { _.json.as[Map[Id[User], String]] }
+  }
+
+  def getKeeps(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]] = {
+    val payload = Json.toJson(keepIds)
+    call(Shoebox.internal.getKeeps(), payload).map { _.json.as[Map[Id[Keep], Keep]] }
+  }
+
+  def getLibraryUrls(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], String]] = {
+    val payload = Json.toJson(libraryIds)
+    call(Shoebox.internal.getLibraryUrls(), payload).map { _.json.as[Map[Id[Library], String]] }
+  }
+
+  def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]] = {
+    val payload = Json.toJson(libraryIds)
+    call(Shoebox.internal.getLibraryInfos(), payload).map { _.json.as[Map[Id[Library], LibraryNotificationInfo]] }
+  }
+
+  def getLibraryOwners(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], User]] = {
+    val payload = Json.toJson(libraryIds)
+    call(Shoebox.internal.getLibraryOwners(), payload).map { _.json.as[Map[Id[Library], User]] }
+  }
+
+  def getOrganizations(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], Organization]] = {
+    val payload = Json.toJson(orgIds)
+    call(Shoebox.internal.getOrganizations(), payload).map { _.json.as[Map[Id[Organization], Organization]] }
+  }
+
+  def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]] = {
+    val payload = Json.toJson(orgIds)
+    call(Shoebox.internal.getOrganizationInfos(), payload).map { _.json.as[Map[Id[Organization], OrganizationNotificationInfo]] }
   }
 
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
