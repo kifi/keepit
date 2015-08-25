@@ -113,11 +113,6 @@ class UrlController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.UrlController.normalizationView(0))
   }
 
-  def batchURLMigration = AdminUserPage { request =>
-    uriIntegrityPlugin.batchURLMigration(500)
-    Ok("Ok. Start migration of upto 500 urls")
-  }
-
   def setFixDuplicateKeepsSeq(seq: Long) = AdminUserPage { request =>
     uriIntegrityPlugin.setFixDuplicateKeepsSeq(seq)
     Ok(s"Ok. The sequence number is set to $seq")
