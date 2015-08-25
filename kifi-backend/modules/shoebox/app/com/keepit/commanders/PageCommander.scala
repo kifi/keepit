@@ -148,7 +148,7 @@ class PageCommander @Inject() (
   def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
     libraries.filterNot { lib =>
       require(lib.state == LibraryStates.ACTIVE, s"library is not active: $lib")
-      val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA, LibraryKind.SYSTEM_READ_IT_LATER)
+      val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA, LibraryKind.SYSTEM_READ_IT_LATER, LibraryKind.SYSTEM_GUIDE)
       require(allowedLibraryKinds.contains(lib.kind), s"library.kind is not one of the allowed kinds: $lib")
       libraryQualityHelper.isBadLibraryName(lib.name)
     } sortBy (lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
