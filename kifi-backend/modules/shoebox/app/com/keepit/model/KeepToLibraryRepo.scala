@@ -20,12 +20,10 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
-
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
-
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
-  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]]
+  def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 
@@ -127,17 +125,12 @@ class KeepToLibraryRepoImpl @Inject() (
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStateOpt).list
   }
 
-  def getVisibileFirstOrderImplicitKeeps(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Keep]] = {
+  def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary] = {
     // An implicit keep is one that you have access to indirectly (e.g., through a library you follow, or an org you are a member of,
     // or the keep is published so anyone can access it.
     // A first-order implicit keep is one that only takes a single step to get to: this only happens if you are a member of a library
     // where that keep exists
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select ktl.keep_id from bookmark bm, library_membership lm, keep_to_library ktl
-                  where bm.uri_id = $uriId and bm.state = '#${KeepStates.ACTIVE}'
-                  and lm.user_id = $userId and lm.state = '#${LibraryMembershipStates.ACTIVE}'
-                  and ktl.keep_id = bm.id and ktl.library_id = lm.library_id and ktl.state = '#${KeepToLibraryStates.ACTIVE}'"""
-    q.as[Id[Keep]].list.toSet
+    rows.filter(ktl => ktl.uriId.inSet(uriIds) && ktl.libraryId.inSet(libraryIds) && ktl.state === KeepToLibraryStates.ACTIVE).list.toSet
   }
 
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit = {

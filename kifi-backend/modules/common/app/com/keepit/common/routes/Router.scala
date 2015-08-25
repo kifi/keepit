@@ -165,6 +165,7 @@ object Shoebox extends Service {
     def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/hasOrganizationMembership", Param("orgId", orgId), Param("userId", userId))
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
+    def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
   }
 }
 
@@ -242,6 +243,7 @@ object Eliza extends Service {
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
+    def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
   }
 }
 

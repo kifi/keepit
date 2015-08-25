@@ -68,8 +68,13 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             val deadOtherKeeps = uris.map(uri => KeepFactory.keep().withURIId(uri.id.get).withLibrary(deadOtherLib).saved)
             val randoKeeps = uris.map(uri => KeepFactory.keep().withURIId(uri.id.get).withLibrary(randoLib).saved)
 
-            inject[KeepToLibraryRepo].count === userKeeps.length + otherKeeps.length + deadOtherKeeps.length + randoKeeps.length
-            inject[KeepToLibraryRepo].getVisibileFirstOrderImplicitKeeps(user.id.get, uri.id.get) === (userKeeps.filter(_.uriId == uri.id.get) ++ otherKeeps.filter(_.uriId == uri.id.get)).map(_.id.get).toSet
+            val allKeeps = userKeeps ++ otherKeeps ++ deadOtherKeeps ++ randoKeeps
+            val firstOrderImplicitKeeps = userKeeps.filter(_.uriId == uri.id.get) ++ otherKeeps.filter(_.uriId == uri.id.get)
+
+            inject[KeepToLibraryRepo].count === allKeeps.length
+            val actual = inject[KeepToLibraryRepo].getVisibileFirstOrderImplicitKeeps(Set(uri.id.get), Set(userLib, otherLib).map(_.id.get)).map(_.keepId)
+            val expected = firstOrderImplicitKeeps.map(_.id.get).toSet
+            actual === expected
           }
           1 === 1
         }

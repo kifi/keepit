@@ -668,4 +668,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = Future.successful(None)
 
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = Future.successful(Map.empty)
+
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
 }
