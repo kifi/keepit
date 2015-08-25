@@ -200,8 +200,7 @@ class UserStatisticsCommander @Inject() (
     }
 
     val fMemberRecommendations = try {
-      // abook.getRecommendationsForOrg(orgId, viewerIdOpt = None, 0, numMemberRecos + members.size + candidates.size) // muted to deploy new abook route
-      Future.successful(Seq.empty)
+      abook.getRecommendationsForOrg(orgId, viewerIdOpt = None, 0, numMemberRecos + candidates.size)
     } catch {
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
     }
