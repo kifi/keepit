@@ -1,5 +1,6 @@
 package com.keepit.integrity
 
+import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -8,7 +9,10 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
+
+import scala.util.Random
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
@@ -109,7 +113,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
     }
 
     "handle collections correctly when migrating bookmarks" in {
-
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
@@ -221,7 +224,55 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         }
 
       }
+    }
 
+    "pass an extremely abusive test" in {
+      withDb(modules: _*) { implicit injector =>
+        val numUsers = 10
+        val numUrisPerUser = 50
+        val (users, lib, origUris, dupUris) = db.readWrite { implicit session =>
+
+          val users = Random.shuffle(UserFactory.users(numUsers).saved)
+          val lib = LibraryFactory.library().withOwner(users.head).withCollaborators(users.tail).saved
+
+          val urisByUser = users.map { user =>
+            val urls = for (i <- 1 to numUrisPerUser) yield s"http://${RandomStringUtils.randomAlphanumeric(10)}.com"
+            val uris = urls.map { url => normalizedURIInterner.internByUri(url, contentWanted = true) }.toSeq
+            user.id.get -> uris
+          }.toMap
+
+          uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUsers * numUrisPerUser
+          for ((user, uris) <- urisByUser) {
+            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib).withUri(uri).saved }
+          }
+
+          val allUris = Random.shuffle(urisByUser.values.toSeq.flatten)
+          val (dupUris, origUris) = allUris.splitAt(allUris.length / 3)
+
+          (users, lib, origUris, dupUris)
+        }
+
+        // Mark some of them as duplicate and schedule a URI migration
+        val plugin = inject[UriIntegrityPlugin]
+        plugin.onStart()
+        for ((origUri, dupUri) <- origUris zip dupUris) {
+          plugin.handleChangedUri(URIMigration(dupUri.id.get, origUri.id.get))
+        }
+        inject[ChangedURISeqAssigner].assignSequenceNumbers()
+
+        // Do the migration
+        plugin.batchURIMigration()
+
+        db.readOnlyMaster { implicit session =>
+          val allKeeps = inject[KeepRepo].all
+          allKeeps.count(_.isActive) === origUris.length // all the dup URIs should lead to deactivated keeps
+          allKeeps.count(_.isPrimary) === origUris.length
+          allKeeps.count(_.isInactive) === dupUris.length
+          allKeeps.count(!_.isPrimary) === dupUris.length
+          allKeeps.groupBy(k => (k.libraryId, k.isPrimary, k.uriId)).values.foreach(_.length === 1)
+        }
+        1 === 1
+      }
     }
   }
 }
