@@ -409,8 +409,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           (userRecos, emailRecos)
         }
       case Some(validQuery) =>
+        val memberCount = db.readOnlyMaster { implicit session => organizationMembershipRepo.countByOrgId(orgId) }
         for {
-          users <- searchClient.searchUsersByName(userId, validQuery, limit)
+          users <- searchClient.searchUsersByName(userId, validQuery, limit + memberCount)
           emails <- abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
         } yield {
           (users.map(_.userId), emails.map(_.info))
