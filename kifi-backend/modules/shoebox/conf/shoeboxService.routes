@@ -536,6 +536,21 @@ GET           /site/user-or-org/:handle                   @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
+GET           /site/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+GET           /site/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getCreditCardToken(pubId: PublicId[Organization])
+POST          /site/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.setCreditCardToken(pubId: PublicId[Organization])
+GET           /site/billing/contacts                      @com.keepit.controllers.website.PaymentsController.getAccountContacts(pubId: PublicId[Organization])
+POST          /site/billing/contacts                      @com.keepit.controllers.website.PaymentsController.setAccountContacts(pubId: PublicId[Organization])
+GET           /site/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getPlanFeatureSettings(pubId: PublicId[Organization])
+POST          /site/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setPlanFeatureSettings(pubId: PublicId[Organization])
+POST          /site/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
+GET           /site/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int)
+GET           /site/billing/eventsBefore                  @com.keepit.controllers.website.PaymentsController.getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[com.keepit.payments.AccountEvent])
+
+
+
+
+
 ##########################################
 # Email-Link API
 ##########################################

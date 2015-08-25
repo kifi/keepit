@@ -27,6 +27,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
   def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]]
+  def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -188,6 +189,15 @@ class OrganizationMembershipRepoImpl @Inject() (
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
     getTeammatesCompiled(userId).run.toSet
   }
+
+  def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]] = {
+    excludeState match {
+      case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.state =!= exclude && row.role == role } yield row.userId).list
+      case None => (for { row <- rows if row.organizationId === orgId && row.role == role } yield row.userId).list
+    }
+
+  }
+
 }
 
 trait OrganizationMembershipSequencingPlugin extends SequencingPlugin

@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
@@ -13,6 +13,16 @@ import play.api.libs.json.{ JsValue, JsNull, Json }
 import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
+
+@json
+case class SimpleAccountEventInfo(
+  id: PublicId[AccountEvent],
+  eventTime: DateTime,
+  shortName: String,
+  whoDunnit: String,
+  creditChange: Int,
+  paymentCharge: Int,
+  memo: String)
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 

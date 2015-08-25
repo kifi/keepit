@@ -38,7 +38,7 @@ CREATE TABLE paid_plan (
     state varchar(20) NOT NULL,
     name varchar(256) NOT NULL,
     billing_cycle int(11) NOT NULL,
-    price_per_cycle_per_user int(11) NOT NULL,
+    price_per_user_per_cycle int(11) NOT NULL,
     PRIMARY KEY (id)
 );
 
