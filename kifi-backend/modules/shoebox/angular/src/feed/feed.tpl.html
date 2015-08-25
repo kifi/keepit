@@ -4,19 +4,21 @@
     <h1 class="kf-feed-title kf-full-pane">Feed</h1>
 
     <main class="kf-feed-items kf-main-pane">
-      <div class="kf-feed-item" ng-repeat="feedItem in feed">
+      <section class="kf-reco kf-reco-recommended" ng-repeat="feedItem in feed">
         <header class="kf-feed-top">
-          <span>{{ feedItem.summary.title }}</span>
+          <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.libraries[0][0].path }}" ng-bind="feedItem.libraries[0][0].name"></a>
+          in <span ng-bind="feedItem.libraries[0].organization || 'an organization'"></span> - <span ng-bind="feedItem.createdAt | past"></span>
         </header>
-      </div>
+        <div class="kf-keep">
+          <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
+        </div>
+      </section>
     </main>
-
     <aside class="kf-feed-sidebar kf-side-pane">
       <div kf-profile-widget></div>
       <div kf-user-checklist></div>
       <div kf-people-you-may-know></div>
       <div kf-goodies></div>
     </aside>
-
   </div>
 </div>

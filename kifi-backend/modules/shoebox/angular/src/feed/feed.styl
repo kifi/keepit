@@ -17,11 +17,15 @@
   border: defaultBorder
   border-bottom: 0
   border-radius: 10px 10px 0 0
-  padding: 20px 20px 0
+  padding: 10px 20px
   background-color: #fff
   font-size: 13px
   font-weight: 400
   color: #9d9d9d
+
+  + .kf-keep
+    border-top-left-radius: 0
+    border-top-right-radius: 0
 
   // library feeds with invite need additional spacing between the control header and the invite banner
   .kf-feed-with-invite &
@@ -30,3 +34,10 @@
   span
     display: inline-block
 
+    // Note: The responsive two-column structure of this page is similar to the library page and
+    //       the general search results page.
+
+    leftColWidth = 496px  // ideal keep card width; see keepCardMaxWidth in keeps.styl
+    rightColWidth = 256px // chosen to avoid text wrapping
+    colGapWidth = 20px
+    twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px

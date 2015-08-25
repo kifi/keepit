@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfKeepCard', [
-  '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
+  '$state', '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
   'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
-  function ($analytics, extensionLiaison, util, installService, libraryService,
+  function ($state, $analytics, extensionLiaison, util, installService, libraryService,
       modalService, keepActionService, undoService, $rootScope, profileService) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
@@ -114,8 +114,10 @@ angular.module('kifi')
             // don't repeat the user at the top of the keep card in the keeper list
             _.remove(keep.keepers, {id: keep.user.id});
           }
-          if (keep.libraryId) {
+          if (keep.libraryId && $state.includes('libraries')) {
             // if on a library page, don't show the library
+            // TODO: The controller should not decide what data is SHOWN, that's
+            // the template's responsibility...
             _.remove(keep.libraries, function (pair) {
               return pair[0].id === keep.libraryId;
             });
