@@ -19,9 +19,7 @@ case class KeepToCollection(
   def isInactive: Boolean = state == KeepToCollectionStates.INACTIVE
   def withId(id: Id[KeepToCollection]): KeepToCollection = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepToCollection = this.copy(updatedAt = now)
-  def withState(newState: State[KeepToCollection]): KeepToCollection = this.copy(state = newState)
-  def withKeepId(newKeepId: Id[Keep]): KeepToCollection = this.copy(keepId = newKeepId)
-  def sanitizeForDelete: KeepToCollection = this.withState(KeepToCollectionStates.INACTIVE)
+  def inactivate(): KeepToCollection = this.copy(state = KeepToCollectionStates.INACTIVE)
 }
 
 case class CollectionsForKeepKey(keepId: Id[Keep]) extends Key[Seq[Id[Collection]]] {

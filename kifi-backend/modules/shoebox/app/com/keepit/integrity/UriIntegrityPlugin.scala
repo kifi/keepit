@@ -52,7 +52,7 @@ class UriIntegrityActor @Inject() (
   private def handleBookmarks(oldKeeps: Seq[Keep])(implicit session: RWSession): Unit = {
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
-    oldKeeps.foreach { keep =>
+    val deactivatedKeeps = oldKeeps.map { keep =>
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val newUri = urlToUriMap.getOrElse(keep.url, {
         val newUri = normalizedURIInterner.internByUri(keep.url, contentWanted = true)
@@ -66,9 +66,83 @@ class UriIntegrityActor @Inject() (
         airbrake.notify(s"double uri redirect found: keepId=${keep.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
-        keepCommander.changeUri(keep, newUri)
+        val libId = keep.libraryId.get // fail if there's no library
+        val userId = keep.userId
+        val newUriId = newUri.id.get
+        val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
+
+        currentBookmarkOpt match {
+          case None =>
+            log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
+            keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
+            val newKeep = keepCommander.changeUri(keep, newUri)
+            (Some(newKeep), None)
+          case Some(currentPrimary) =>
+            def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
+              // TODO(ryan): This is just killing the old keep. We ought to check if the Keep metadata can be merged
+              // If it can be merged, do the merge. If it can't, let both continue to exist.
+              // Eventually this is going to need to deal with the possibility of more than one Keep/(URI, Library) pair
+              // It will need to check every single Keep to see if the metadata can be merged.
+              val deadKeep = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
+              ktlCommander.syncKeep(deadKeep)
+              ktlCommander.removeKeepFromAllLibraries(deadKeep)
+              ktuCommander.syncKeep(deadKeep)
+              ktuCommander.removeKeepFromAllUsers(deadKeep)
+              keepUriUserCache.remove(KeepUriUserKey(deadKeep.uriId, deadKeep.userId))
+              val liveKeep = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
+              ktlCommander.syncKeep(liveKeep)
+              ktuCommander.syncKeep(liveKeep)
+              (Some(deadKeep), Some(liveKeep))
+            }
+
+            def orderByOldness(keep1: Keep, keep2: Keep): (Keep, Keep) = {
+              if (keep1.createdAt.getMillis < keep2.createdAt.getMillis ||
+                (keep1.createdAt.getMillis == keep2.createdAt.getMillis && keep1.id.get.id < keep2.id.get.id)) {
+                (keep1, keep2)
+              } else (keep2, keep1)
+            }
+
+            (keep.isActive, currentPrimary.isActive) match {
+              case (true, true) =>
+                // we are merging two active keeps, take the newer one
+                val (older, newer) = orderByOldness(keep, currentPrimary)
+                save(duplicate = older, primary = newer)
+
+              case (true, false) =>
+                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
+                save(duplicate = currentPrimary, primary = keep)
+
+              case _ =>
+                // keep is already inactive or duplicate, do nothing
+                (None, None)
+            }
+        }
       }
     }
+
+    val collectionsToUpdate = deactivatedKeeps.flatMap {
+      case (Some(oldBm), None) =>
+        keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
+      case (Some(oldBm), Some(newBm)) =>
+        var collections = Set.empty[Id[Collection]]
+        keepToCollectionRepo.getByKeep(oldBm.id.get, excludeState = None).foreach { ktc =>
+          collections += ktc.collectionId
+          keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId) match {
+            case Some(newKtc) =>
+              if (ktc.state == KeepToCollectionStates.ACTIVE && newKtc.state == KeepToCollectionStates.INACTIVE) {
+                keepToCollectionRepo.save(newKtc.copy(state = KeepToCollectionStates.ACTIVE))
+              }
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+            case None =>
+              keepToCollectionRepo.save(ktc.copy(keepId = newBm.id.get))
+          }
+        }
+        collections
+      case _ =>
+        Set.empty[Id[Collection]]
+    }
+
+    collectionsToUpdate.foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = true))
   }
 
   /**
