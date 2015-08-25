@@ -798,20 +798,21 @@ class KeepCommanderImpl @Inject() (
     keepRepo.getPrimaryByUriAndLibrary(uriId, targetConnections.libraries.head).toSet
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep] = {
+    val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
+    val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
+    val similarKeeps = getKeepsByUriAndConnections(newUri.id.get, KeepConnections(libIds, userIds))
+
     val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get)))
     ktlCommander.syncKeep(newKeep)
     ktuCommander.syncKeep(newKeep)
 
-    if (keep.isInactive) {
-      None
-    } else {
-      val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-      val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-      val similarKeeps = getKeepsByUriAndConnections(newUri.id.get, KeepConnections(libIds, userIds))
-
+    if (keep.isInactive) None
+    else {
       val mergeableKeeps = similarKeeps.filter(newKeep.hasStrictlyLessValuableMetadataThan)
       if (mergeableKeeps.nonEmpty) {
-        mergeableKeeps.foreach(collectionCommander.copyKeepTags(newKeep, _))
+        mergeableKeeps.foreach { k =>
+          collectionCommander.copyKeepTags(newKeep, k)
+        }
         collectionCommander.deactivateKeepTags(newKeep)
         deactivateKeep(newKeep)
         None
