@@ -809,6 +809,7 @@ class KeepCommanderImpl @Inject() (
     if (keep.isInactive) None
     else {
       val mergeableKeeps = similarKeeps.filter(newKeep.hasStrictlyLessValuableMetadataThan)
+      log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
         mergeableKeeps.foreach { k =>
           collectionCommander.copyKeepTags(newKeep, k)
@@ -817,7 +818,9 @@ class KeepCommanderImpl @Inject() (
         deactivateKeep(newKeep)
         None
       } else {
-        similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(newKeep)).foreach { k =>
+        val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(newKeep))
+        log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
+        soonToBeDeadKeeps.foreach { k =>
           collectionCommander.copyKeepTags(k, newKeep)
           deactivateKeep(k)
         }
