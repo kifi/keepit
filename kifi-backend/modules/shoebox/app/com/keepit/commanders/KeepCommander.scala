@@ -764,7 +764,7 @@ class KeepCommanderImpl @Inject() (
   def persistKeep(k: Keep, userIds: Set[Id[User]], libraryIds: Set[Id[Library]])(implicit session: RWSession): Keep = {
     require(userIds.contains(k.userId), "keep owner is not one of the connected users")
     require(libraryIds.contains(k.libraryId.get), "keep's library is not one of the connected libraries")
-    val keep = keepRepo.save(k.withConnections(libraryIds, userIds))
+    val keep = keepRepo.save(k.withLibraries(libraryIds).withUsers(userIds))
 
     userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
     val libraries = libraryRepo.getByIds(libraryIds).values
@@ -772,10 +772,13 @@ class KeepCommanderImpl @Inject() (
 
     keep
   }
-  private def refreshConnectionsHash(keep: Keep)(implicit session: RWSession): Keep = {
+  private def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep = {
     val libraries = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
+    keepRepo.save(keep.withLibraries(libraries))
+  }
+  private def refreshUsersHash(keep: Keep)(implicit session: RWSession): Keep = {
     val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-    keepRepo.save(keep.withConnections(libraries, users))
+    keepRepo.save(keep.withUsers(users))
   }
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withNote(newNote))
@@ -789,20 +792,16 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromUser(keep.id.get, keep.userId)
     val updatedKeep = keepRepo.save(keep.withOwner(newOwnerId))
     ktuCommander.internKeepInUser(keep, newOwnerId, addedBy = newOwnerId)
-    refreshConnectionsHash(updatedKeep)
+    refreshUsersHash(updatedKeep)
   }
-  private def isKeepConnectedTo(keepId: Id[Keep], targetConnections: KeepConnections)(implicit session: RSession): Boolean = {
-    val connections = KeepConnections(
-      libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet,
-      users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
-    )
-    connections == targetConnections
+  private def isKeepInLibraries(keepId: Id[Keep], targetLibraries: Set[Id[Library]])(implicit session: RSession): Boolean = {
+    ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet == targetLibraries
   }
-  private def getKeepsByUriAndConnections(uriId: Id[NormalizedURI], targetConnections: KeepConnections)(implicit session: RSession): Set[Keep] = {
+  private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
     // TODO(ryan): uncomment the line below, and get rid of the require
-    // keepRepo.getByUriAndConnectionsHash(uriId, targetConnections.hash).filter(k => isKeepConnectedTo(k.id.get, targetConnections))
-    require(targetConnections.libraries.size == 1, s"keep is not in exactly 1 library: ${targetConnections.libraries}!")
-    keepRepo.getPrimaryByUriAndLibrary(uriId, targetConnections.libraries.head).toSet
+    // keepRepo.getByUriAndLibrariesHash(uriId, LibrariesHash(targetLibraries)).filter(k => isKeepInLibraries(k.id.get, targetLibraries))
+    require(targetLibraries.size == 1, s"keep is not in exactly 1 library: $targetLibraries!")
+    keepRepo.getPrimaryByUriAndLibrary(uriId, targetLibraries.head).toSet
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
@@ -812,7 +811,7 @@ class KeepCommanderImpl @Inject() (
     } else {
       val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
       val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-      val similarKeeps = getKeepsByUriAndConnections(newUri.id.get, KeepConnections(libIds, userIds))
+      val similarKeeps = getKeepsByUriAndLibraries(newUri.id.get, libIds)
 
       val mergeableKeeps = similarKeeps.filter(keep.hasStrictlyLessValuableMetadataThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
@@ -861,7 +860,7 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
         ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
         ktlCommander.internKeepInLibrary(k, toLibrary, userId)
-        Right(refreshConnectionsHash(movedKeep))
+        Right(refreshLibrariesHash(movedKeep))
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
 
@@ -871,13 +870,13 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
         ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
 
-        Right(refreshConnectionsHash(movedKeep))
+        Right(refreshLibrariesHash(movedKeep))
       case Some(existingKeep) =>
         if (toLibrary.id.get == k.libraryId.get) {
           Left(LibraryError.AlreadyExistsInDest)
         } else {
           ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
-          refreshConnectionsHash(k)
+          refreshLibrariesHash(k)
           keepRepo.deactivate(k)
           combineTags(k.id.get, existingKeep.id.get)
           Left(LibraryError.AlreadyExistsInDest)
@@ -893,8 +892,7 @@ class KeepCommanderImpl @Inject() (
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
       source = withSource.getOrElse(k.source),
-      originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      connectionsHash = Some(KeepConnections(Set(toLibrary.id.get), Set(userId)).hash)
+      originalKeeperId = k.originalKeeperId.orElse(Some(userId))
     )
 
     currentKeepOpt match {

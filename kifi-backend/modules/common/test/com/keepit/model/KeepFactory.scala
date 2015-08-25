@@ -23,8 +23,7 @@ object KeepFactory {
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
-      originalKeeperId = Some(userId),
-      connectionsHash = None
+      originalKeeperId = Some(userId)
     ))
   }
 
