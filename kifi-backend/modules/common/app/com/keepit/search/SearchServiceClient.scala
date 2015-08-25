@@ -46,7 +46,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[DeprecatedUserSearchResult]
-  def searchUsersByName(userId: Id[User], query: String, limit: Int = 10): Future[Seq[UserSearchHit]]
+  def searchUsersByName(userId: Id[User], query: String, limit: Int = 10, acceptLangs: Seq[String], userExperiments: Set[UserExperimentType]): Future[Seq[UserPrefixSearchHit]]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean): Future[Html]
@@ -151,10 +151,10 @@ class SearchServiceClientImpl(
     }
   }
 
-  def searchUsersByName(userId: Id[User], query: String, maxHits: Int = 10): Future[Seq[UserSearchHit]] = {
-    val payload = Json.toJson(UserPrefixSearchRequest(userId, query, maxHits))
+  def searchUsersByName(userId: Id[User], query: String, limit: Int = 10, acceptLangs: Seq[String], userExperiments: Set[UserExperimentType]): Future[Seq[UserPrefixSearchHit]] = {
+    val payload = Json.toJson(UserPrefixSearchRequest(userId, query, limit, acceptLangs, userExperiments))
     call(Search.internal.searchUsersByName(), payload).map { r =>
-      Json.fromJson[Seq[UserSearchHit]](r.json).get
+      Json.fromJson[Seq[UserPrefixSearchHit]](r.json).get
     }
   }
 

@@ -5,7 +5,7 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.typeahead.{ UserSearchHit, TypeaheadHit, UserPrefixSearchRequest }
+import com.keepit.typeahead.{ UserPrefixSearchHit, TypeaheadHit, UserPrefixSearchRequest }
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
@@ -97,10 +97,10 @@ class SearchController @Inject() (
 
   def searchUsersByName() = Action.async(parse.tolerantJson) { request =>
     val searchRequest = request.body.as[UserPrefixSearchRequest]
-    val filter = SearchFilter(proximity = Some(ProximityScope.all), user = None, library = None, organization = None)
+    val filter = SearchFilter.empty
     val contextFut = Future.successful(SearchContext(None, orderBy = SearchRanking.relevancy, filter = filter, disablePrefixSearch = false, disableFullTextSearch = true))
-    userSearchCommander.searchUsers(userId = searchRequest.userId, acceptLangs = Seq.empty, experiments = Set.empty, query = searchRequest.query, contextFuture = contextFut, maxHits = searchRequest.maxHits, explain = None).map { userSearchResult =>
-      val userIdsAndScores = userSearchResult.hits.map(hit => UserSearchHit(hit.id, hit.score))
+    userSearchCommander.searchUsers(userId = searchRequest.userId, acceptLangs = searchRequest.acceptLangs, experiments = searchRequest.userExperiments, query = searchRequest.query, contextFuture = contextFut, maxHits = searchRequest.maxHits, explain = None).map { userSearchResult =>
+      val userIdsAndScores = userSearchResult.hits.map(hit => UserPrefixSearchHit(hit.id, hit.score))
       Ok(Json.toJson(userIdsAndScores))
     }
   }
