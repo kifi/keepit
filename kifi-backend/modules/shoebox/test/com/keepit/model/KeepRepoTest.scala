@@ -14,6 +14,32 @@ import org.specs2.mutable._
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
   "KeepRepo" should {
+    "save and load a keep" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit session =>
+          val savedKeep = keepRepo.save(Keep(
+            uriId = Id[NormalizedURI](1),
+            isPrimary = true,
+            url = "http://www.kifi.com",
+            visibility = LibraryVisibility.ORGANIZATION,
+            userId = Id[User](3),
+            source = KeepSource.keeper,
+            libraryId = Some(Id[Library](4)),
+            connectionsHash = Some(KeepConnectionsHash(5))
+          ))
+          val cacheKeep = keepRepo.get(savedKeep.id.get)
+          val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
+          cacheKeep === dbKeep
+
+          // The savedKeep is not equal to the dbKeep because of originalKeeperId
+          // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
+          // -- Ryan
+          def f(k: Keep) = (k.id.get, k.uriId, k.isPrimary, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connectionsHash)
+          f(dbKeep) === f(savedKeep)
+        }
+        1 === 1
+      }
+    }
     "getPrivate" in {
       withDb() { implicit injector =>
         val (user1, user2, keep1, keep2, keep3) = db.readWrite { implicit s =>
@@ -43,6 +69,36 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           inject[KeepRepo].getPrivate(user2.id.get, 0, 8).size === 8
           inject[KeepRepo].getPrivate(user2.id.get, 10, 100).size === 10
           inject[KeepRepo].getNonPrivate(user2.id.get, 0, 8).size === 8
+        }
+      }
+    }
+    "getCountByLibrariesSince" in {
+      withDb() { implicit injector =>
+        val date = inject[FakeClock].now
+        val (lib1, lib2, lib3, lib4, lib5, lib6) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+
+          val lib1 = LibraryFactory.library().withOwner(user1).discoverable().saved
+          val lib2 = LibraryFactory.library().withOwner(user1).secret().saved
+          val lib3 = LibraryFactory.library().withOwner(user1).published().saved
+
+          val lib4 = LibraryFactory.library().withOwner(user2).discoverable().saved
+          val lib5 = LibraryFactory.library().withOwner(user2).secret().saved
+          val lib6 = LibraryFactory.library().withOwner(user2).published().saved
+
+          keep().withUser(user1).withKeptAt(date.plusDays(7)).withLibrary(lib1).saved
+          keep().withUser(user1).withKeptAt(date).withLibrary(lib2).saved
+          keep().withUser(user1).withKeptAt(date.minusDays(7)).withLibrary(lib3).saved
+          keeps(20).map(_.withUser(user2).withLibrary(lib6).withKeptAt(date)).saved
+          keeps(20).map(_.withUser(user2).withLibrary(lib5).withKeptAt(date)).saved
+          (lib1.id.get, lib2.id.get, lib3.id.get, lib4.id.get, lib5.id.get, lib6.id.get)
+        }
+        db.readOnlyMaster { implicit s =>
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusMinutes(1)) === 1
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusMinutes(1)) === 2
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusYears(1)) === 0
+          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusYears(1)) === 3
         }
       }
     }

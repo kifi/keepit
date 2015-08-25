@@ -60,7 +60,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     AwsModule(),
     FakeCryptoModule(),
     DevTwilioCredentialsModule(),
-    FakeExecutionContextModule()
+    FakeExecutionContextModule(),
+    FakeActorSystemModule()
   ))
 
 trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers

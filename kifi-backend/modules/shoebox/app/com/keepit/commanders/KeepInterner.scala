@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.util.UUID
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -21,8 +22,7 @@ import com.keepit.rover.RoverServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
-import scala.util.{ Failure, Random, Success, Try }
-import com.keepit.common.akka.SafeFuture
+import scala.util.{ Failure, Success, Try }
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -31,9 +31,9 @@ trait KeepInterner {
   private[commanders] def deDuplicateRawKeep(rawKeeps: Seq[RawKeep]): Seq[RawKeep]
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
   def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation])
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation])
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation])
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation])
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
 }
 
 @Singleton
@@ -42,7 +42,7 @@ class KeepInternerImpl @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
-  keepToLibraryCommander: KeepToLibraryCommander,
+  keepCommander: KeepCommander,
   countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -121,13 +121,13 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source, installationId)
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
     (newKeeps ++ existingKeeps, failures)
   }
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source, installationId)
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source)
     if (persistedBookmarksWithUris.nonEmpty) {
       db.readWrite { implicit s =>
         libraryRepo.updateLastKept(library.id.get)
@@ -145,9 +145,9 @@ class KeepInternerImpl @Inject() (
     (newKeeps, existingKeeps, failures)
   }
 
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
     db.readWrite(attempts = 2) { implicit s =>
-      internUriAndBookmark(rawBookmark, userId, library, source, installationId)
+      internUriAndBookmark(rawBookmark, userId, library, source)
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
@@ -163,11 +163,11 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource) = {
     val (persisted, failed) = bms.map { bm =>
       bm -> Try {
         db.readWrite(attempts = 3) { implicit session =>
-          internUriAndBookmark(bm, userId, library, source, installationId).get
+          internUriAndBookmark(bm, userId, library, source).get
           // This is bad, and I'm not sure why we need to do it now. Previously, we could batch keeps into one db session.
           // It appears that when there's a problem, now, we're fetching from rover with ids that may not exist anymore.
           // So, forcing the Try evaluation to make the db session fail, and then recatching it.
@@ -188,7 +188,7 @@ class KeepInternerImpl @Inject() (
 
   private val httpPrefix = "https?://".r
 
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]])(implicit session: RWSession): Try[InternedUriAndKeep] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
@@ -203,7 +203,7 @@ class KeepInternerImpl @Inject() (
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -218,8 +218,7 @@ class KeepInternerImpl @Inject() (
       Failure(e)
   }
 
-  private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
-    installationId: Option[ExternalId[KifiInstallation]], source: KeepSource,
+  private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library, source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
@@ -247,17 +246,15 @@ class KeepInternerImpl @Inject() (
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
-            keepRepo.save(keep)
+            keepCommander.persistKeep(keep, Set(userId), Set(library.id.get))
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
-        val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         val savedAttr = sourceAttribution.map { attr => sourceAttrRepo.save(KeepSourceAttribution(attribution = attr)) }
         val keep = Keep(
           title = trimmedTitle orElse uri.title,
           userId = userId,
           uriId = uri.id.get,
-          urlId = urlObj.id.get,
           url = url,
           source = source,
           visibility = library.visibility,
@@ -265,9 +262,10 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
-          originalKeeperId = Some(userId)
+          originalKeeperId = Some(userId),
+          connectionsHash = Some(KeepConnections(Set(library.id.get), Set(userId)).hash)
         )
-        val improvedKeep = keepRepo.save(integrityHelpers.improveKeepSafely(uri, keep))
+        val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
         (true, false, improvedKeep)
     }
     if (wasInactiveKeep) {
@@ -275,7 +273,6 @@ class KeepInternerImpl @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    keepToLibraryCommander.internKeepInLibrary(internedKeep, library, internedKeep.userId)
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 

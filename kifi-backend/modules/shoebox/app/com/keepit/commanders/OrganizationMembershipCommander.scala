@@ -42,6 +42,7 @@ trait OrganizationMembershipCommander {
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
@@ -63,12 +64,12 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
-    organizationCommander: OrganizationCommander,
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    organizationExperimentRepo: OrganizationExperimentRepo,
     userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -147,6 +148,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
       organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+    }
+  }
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getAllByUserIds(userIds)
     }
   }
 
@@ -239,7 +245,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
               case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
               case None => //whatever
             }
-            if (!organizationCommander.hasFakeExperiment(org.id.get) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
+            if (!organizationExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
               notifySlackOfNewMember(org, request.targetId)
             }
             savedMembership

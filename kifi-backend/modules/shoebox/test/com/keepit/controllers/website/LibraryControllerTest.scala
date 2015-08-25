@@ -1063,10 +1063,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
@@ -1151,10 +1151,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
@@ -1523,7 +1523,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("spiders")))
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = lib1.visibility, libraryId = Some(lib1.id.get)))
 

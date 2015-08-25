@@ -290,17 +290,17 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           // the 3rd reco in savedRecoModels is expected to be one of the recommended keeps
           // we're adding this keep to newKeepsInLibrary to ensure it's not in the email twice
           val (firstRecoUri, firstReco, _) = savedRecoModels(2)
-          val keep0 = Keep(title = None, userId = user2.id.get, url = firstRecoUri.url, urlId = Id[URL](firstRecoUri.id.get.id),
+          val keep0 = Keep(title = None, userId = user2.id.get, url = firstRecoUri.url,
             uriId = firstRecoUri.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](3)),
             visibility = LibraryVisibility.SECRET)
 
-          val keep1 = Keep(title = Some("Espn"), userId = user2.id.get, url = "http://espn.com", urlId = Id[URL](40),
+          val keep1 = Keep(title = Some("Espn"), userId = user2.id.get, url = "http://espn.com",
             uriId = uriModels(0)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](1)),
             visibility = LibraryVisibility.SECRET)
-          val keep2 = Keep(title = Some("Digg"), userId = user2.id.get, url = "http://digg.com", urlId = Id[URL](41),
+          val keep2 = Keep(title = Some("Digg"), userId = user2.id.get, url = "http://digg.com",
             uriId = uriModels(1)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](2)),
             visibility = LibraryVisibility.SECRET)
-          val keep3 = Keep(title = Some("The Verge"), userId = user2.id.get, url = "http://theverge.com", urlId = Id[URL](42),
+          val keep3 = Keep(title = Some("The Verge"), userId = user2.id.get, url = "http://theverge.com",
             uriId = uriModels(2)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](4)),
             visibility = LibraryVisibility.SECRET)
           Seq(keep0, keep1, keep2, keep3)

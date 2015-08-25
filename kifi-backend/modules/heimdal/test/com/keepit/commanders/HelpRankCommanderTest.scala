@@ -24,7 +24,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
   val keepIdCounter = new AtomicInteger(0)
   def mkKeep(userId: Id[User], ts: DateTime = currentDateTime, idOpt: Option[Id[Keep]] = None, libraryId: Option[Id[Library]] = None)(uri: NormalizedURI): Keep = {
     val id = idOpt getOrElse Id[Keep](keepIdCounter.incrementAndGet)
-    Keep(id = Some(id), createdAt = ts, updatedAt = ts, uriId = uri.id.get, url = uri.url, urlId = Id[URL](uri.id.get.id), visibility = Keep.isPrivateToVisibility(false), userId = userId, source = KeepSource.keeper, libraryId = libraryId)
+    Keep(id = Some(id), createdAt = ts, updatedAt = ts, uriId = uri.id.get, url = uri.url, visibility = Keep.isPrivateToVisibility(false), userId = userId, source = KeepSource.keeper, libraryId = libraryId)
   }
 
   val uriIdCounter = new AtomicInteger(0)
@@ -218,7 +218,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
           val ck2 = keepDiscoveryRepo.getDiscoveriesByKeeper(u2.id.get)
           ck2.size === 2
 
-          val counts1 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
+          val counts1 = keepDiscoveryRepo.getDiscoveryCountsByKeepForKeeper(u1.id.get)
           counts1.keySet.size === 2
           counts1.get(k1(FORTYTWO).id.get) === Some(1)
           counts1.get(k1(KIFI).id.get) === Some(1)
@@ -231,7 +231,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
               counts1.get(keep.id.get).get == count
           } === true
 
-          val counts2 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u2.id.get)
+          val counts2 = keepDiscoveryRepo.getDiscoveryCountsByKeepForKeeper(u2.id.get)
           counts2.keySet.size === 2
           counts2.get(k2(KIFI).id.get) === Some(1)
           counts2.get(k2(GOOG).id.get) === None

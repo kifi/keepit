@@ -1,6 +1,7 @@
 package com.keepit.common.images
 
 import java.io.{ File, ByteArrayOutputStream, PrintWriter }
+import java.security.SecureRandom
 import java.util
 import javax.imageio.ImageIO
 
@@ -44,10 +45,10 @@ class Image4javaWrapper @Inject() (
     val output = new ArrayListOutputConsumer()
     convert.setOutputConsumer(output)
     handleExceptions(convert, operation)
-    println("Image Magic Version:")
-    output.getOutput foreach { line =>
-      println(line)
-    }
+    //    println("Image Magic Version:")
+    //    output.getOutput foreach { line =>
+    //      println(line)
+    //    }
   }
 
   /**
@@ -81,9 +82,7 @@ class Image4javaWrapper @Inject() (
   }
 
   def gifToPng(inputFile: File): File = {
-
-    val outputFile = TemporaryFile(prefix = "ImageMagicGifToPngImageOut", suffix = ".png").file
-    outputFile.deleteOnExit()
+    val outputFile = generateTempFile(".png")
 
     val operation = new IMOperation
     operation.addImage(inputFile.getAbsolutePath + "[0]")
@@ -96,10 +95,17 @@ class Image4javaWrapper @Inject() (
     outputFile
   }
 
+  private val random = new SecureRandom()
+  private def generateTempFile(suffix: String) = {
+    val outputFile = TemporaryFile(prefix = s"im-${Math.abs(random.nextLong()).toString.take(8)}", suffix = suffix).file
+    outputFile.deleteOnExit()
+    outputFile
+  }
+
   private def safeResizeImage(image: File, format: ImageFormat, width: Int, height: Int): File = {
     val operation = new IMOperation
 
-    val outputFile = TemporaryFile(prefix = "ImageMagicResizeImage", suffix = s".${format.value}").file
+    val outputFile = generateTempFile(s".${format.value}")
     val filePath = outputFile.getAbsolutePath
     outputFile.deleteOnExit()
 
@@ -121,9 +127,8 @@ class Image4javaWrapper @Inject() (
     log.info(s"[safeCropImage] START format=$format cropWidth=$width cropHeight=$height")
     val operation = new IMOperation
 
-    val outputFile = TemporaryFile(prefix = "ImageMagicCropImage", suffix = s".${format.value}").file
+    val outputFile = generateTempFile(s".${format.value}")
     val filePath = outputFile.getAbsolutePath
-    outputFile.deleteOnExit()
 
     operation.addImage(image.getAbsolutePath)
 
@@ -151,9 +156,8 @@ class Image4javaWrapper @Inject() (
     log.info(s"[safeCropScaleImage] START format=$format crop=${width}x${height}+${x}+${y}, scale=${finalWidth}x${finalHeight}")
     val operation = new IMOperation
 
-    val outputFile = TemporaryFile(prefix = "ImageMagicCropScaleImage", suffix = s".${format.value}").file
+    val outputFile = generateTempFile(s".${format.value}")
     val filePath = outputFile.getAbsolutePath
-    outputFile.deleteOnExit()
 
     operation.addImage(image.getAbsolutePath)
 
@@ -232,7 +236,7 @@ class Image4javaWrapper @Inject() (
         .strip()
         .quality(95d)
         .dither("None")
-        .define("png:compression-filter=5")
+        .define("png:compression-filter=2")
         .define("png:compression-level=9")
         .define("png:compression-filter=5")
         .define("png:compression-strategy=1")
@@ -245,8 +249,7 @@ class Image4javaWrapper @Inject() (
     case ImageFormat.JPG =>
       operation
         .strip()
-        .gaussianBlur(0.05)
-        .quality(75d)
+        .quality(85d)
         .define("jpeg:fancy-upsampling=off")
         .colorspace("sRGB")
         .interlace("None")

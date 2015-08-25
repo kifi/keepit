@@ -96,22 +96,9 @@ object OrganizationCard {
   )(unlift(OrganizationCard.unapply))
 }
 
-// OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
-// OrganizationInviteCommander to notify members when a new user joins their
-// organization. I would like to get rid of them.
-@json case class OrganizationImageInfo(path: ImagePath)
-object OrganizationImageInfo {
-  def createInfo(img: OrganizationAvatar) = OrganizationImageInfo(img.imagePath)
-}
-@json
-case class OrganizationNotificationInfo(
-  id: PublicId[Organization],
-  name: String,
-  handle: Option[PrimaryOrganizationHandle],
-  image: Option[OrganizationImageInfo])
-object OrganizationNotificationInfo {
+object OrganizationNotificationInfoBuilder {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(OrganizationImageInfo.createInfo))
+    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(_.imagePath))
   }
 }
 

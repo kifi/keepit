@@ -177,7 +177,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "slug" -> "l1",
           "visibility" -> "secret",
           "color" -> lib1.color,
-          "image" -> LibraryImageInfo.createInfo(lib1Image),
+          "image" -> LibraryImageInfoBuilder.createInfo(lib1Image),
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 1,
@@ -435,11 +435,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          val keep1 = keepRepo.save(Keep(title = Some("Run"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("Run"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(1)))
-          val keep2 = keepRepo.save(Keep(title = Some("Throw"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("Throw"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(2)))
-          val keep3 = keepRepo.save(Keep(title = Some("DontChoke"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+          val keep3 = keepRepo.save(Keep(title = Some("DontChoke"), userId = user1.id.get, url = url3.url,
             uriId = uri3.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(3)))
           (user1, user2, lib1, lib2, keep1, keep2, keep3)
         }
@@ -705,7 +705,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = keepRepo.save(Keep(
-      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url,
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, url = uri.url,
       source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))

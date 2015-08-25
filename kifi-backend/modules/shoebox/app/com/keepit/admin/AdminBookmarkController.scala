@@ -33,7 +33,7 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   libraryCommander: LibraryCommander,
-  keepCommander: KeepsCommander,
+  keepCommander: KeepCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,

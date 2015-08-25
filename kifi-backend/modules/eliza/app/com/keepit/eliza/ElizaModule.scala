@@ -2,6 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.cache.{ ElizaCacheModule }
 import com.keepit.common.controller.UserActionsModule
+import com.keepit.notify.NotifyModule
 import com.keepit.rover.{ RoverServiceClientModule }
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
@@ -26,6 +27,7 @@ trait ElizaModule extends ConfigurationModule with CommonServiceModule {
   val cacheModule: ElizaCacheModule
   val urbanAirshipModule: UrbanAirshipModule
   val storeModule: ElizaStoreModule
+  val notifyModule: NotifyModule
 
   // Service clients
   val serviceTypeModule = ElizaServiceTypeModule()

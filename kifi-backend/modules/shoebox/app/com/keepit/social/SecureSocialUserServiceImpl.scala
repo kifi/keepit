@@ -278,14 +278,8 @@ class SecureSocialUserPluginImpl @Inject() (
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
                 val email = socialUser.email.flatMap(EmailAddress.validate(_).toOption).getOrElse(throw new IllegalStateException(s"$user has invalid email address: ${socialUser.email}"))
                 val emailAddress = userEmailAddressCommander.intern(user.id.get, email).get
-                val cred =
-                  UserCred(
-                    userId = user.id.get,
-                    loginName = email.address,
-                    provider = "bcrypt" /* hard-coded */ ,
-                    credentials = socialUser.passwordInfo.get.password,
-                    salt = socialUser.passwordInfo.get.salt.getOrElse(""))
                 log.info(s"[save(userpass)] Saved email is $emailAddress")
+                val cred = UserCred(userId = user.id.get, credentials = socialUser.passwordInfo.get.password)
                 val savedCred = userCredRepo.save(cred)
                 log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
               } else {

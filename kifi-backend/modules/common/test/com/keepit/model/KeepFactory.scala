@@ -2,7 +2,7 @@ package com.keepit.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{ ExternalId, Id, State }
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -15,7 +15,6 @@ object KeepFactory {
     val userId = Id[User](-1 * idx.incrementAndGet())
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
-      urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
       title = Some(RandomStringUtils.randomAlphabetic(20)),
@@ -24,7 +23,8 @@ object KeepFactory {
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
-      originalKeeperId = Some(userId)
+      originalKeeperId = Some(userId),
+      connectionsHash = None
     ))
   }
 

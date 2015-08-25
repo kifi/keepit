@@ -4,6 +4,7 @@
       <span class="kf-upl-create-card-add-icon svg-create-library"></span>
       <span class="kf-upl-create-card-text">Create a Library</span>
     </button>
+    <div kf-loading-spinner hide="loaded"></div>
     <div ng-if="libraries.length > 0" kf-user-profile-library-card="::library" ng-repeat="library in libraries" profile-id="{{::me.id}}"></div>
     <div ng-show="shouldShowMoveCard()" class="kf-upl-card kf-opl-move-libraries ng-hide">
       <div class="kf-opl-move-libraries-wrapper">

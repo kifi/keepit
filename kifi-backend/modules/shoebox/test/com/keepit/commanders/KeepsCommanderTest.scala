@@ -82,15 +82,15 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-          keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9), keptAt = t1.plusMinutes(9),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-          keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+          keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), keptAt = t1.plusMinutes(6),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), state = KeepStates.INACTIVE))
 
@@ -122,7 +122,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
             KeepExport(createdAt = dateTime2, title = Some("title 31"), url = "http://www.hi.com31", tags = None) ::
             Nil
 
-        val result = inject[KeepsCommander].assembleKeepExport(keepExports)
+        val result = inject[KeepCommander].assembleKeepExport(keepExports)
 
         val expected = s"""<!DOCTYPE NETSCAPE-Bookmark-file-1>
              |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">

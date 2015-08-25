@@ -21,11 +21,8 @@ class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   type RepoImpl = UserCredTable
   class UserCredTable(tag: Tag) extends RepoTable[UserCred](db, tag, "user_cred") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def loginName = column[String]("login_name", O.NotNull)
-    def provider = column[String]("provider")
-    def salt = column[String]("salt") // TODO: char[]
     def credentials = column[String]("credentials") // TODO: char[]
-    def * = (id.?, createdAt, updatedAt, state, userId, loginName, provider, salt, credentials) <> ((UserCred.apply _).tupled, UserCred.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, userId, credentials) <> ((UserCred.apply _).tupled, UserCred.unapply _)
   }
 
   def table(tag: Tag) = new UserCredTable(tag)

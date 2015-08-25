@@ -1,6 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -9,14 +10,14 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
-import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
+import play.api.libs.json._
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
@@ -98,6 +99,8 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -110,7 +113,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> Json.toJson(recipient.pictureName.getOrElse(S3UserPictureConfig.defaultName)), "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendUserPushNotification(), payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
@@ -248,6 +251,12 @@ class ElizaServiceClientImpl @Inject() (
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
       response.json.as[Seq[GroupThreadStats]]
+    }
+  }
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
+    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users)).map { response =>
+      response.json.as[Int]
     }
   }
 }

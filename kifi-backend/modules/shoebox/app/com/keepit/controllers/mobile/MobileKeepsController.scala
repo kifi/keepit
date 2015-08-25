@@ -29,7 +29,7 @@ class MobileKeepsController @Inject() (
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
@@ -263,6 +263,15 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj(
       "numKeeps" -> keepsCommander.numKeeps(request.userId)
     ))
+  }
+
+  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String]) = UserAction.async { request =>
+    val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
+    val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
+
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { keeps =>
+      Ok(Json.obj("keeps" -> keeps))
+    }
   }
 
 }

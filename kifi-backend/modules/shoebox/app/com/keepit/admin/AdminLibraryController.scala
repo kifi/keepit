@@ -1,25 +1,24 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibrarySuggestedSearchCommander, LibraryCommander }
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ SequenceNumber, State, Id }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.commanders.{ LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.net.RichRequestHeader
 import com.keepit.common.queue.messages.SuggestedSearchTerms
+import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.json.Json
-import play.api.mvc.{ Action, AnyContent }
-import views.html
-import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
+import views.html
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -307,29 +306,14 @@ class AdminLibraryController @Inject() (
   def setLibraryOwner(libId: Id[Library]) = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
-    val newOrgOpt = body.get("org-id").map(id => Try(id.toLong).toOption).flatten.map(id => Id[Organization](id))
-    db.readWrite { implicit s =>
-      val owner = userRepo.get(newOwner)
-      assert(owner.state == UserStates.ACTIVE)
-      val lib = libraryRepo.get(libId)
-      newOrgOpt.map(id => orgRepo.get(id)) match {
-        case Some(org) =>
-          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = org.id,
-            visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO))
-        case None =>
-          libraryRepo.save(lib.copy(ownerId = newOwner, organizationId = None,
-            visibility = LibraryVisibility.PUBLISHED, seq = SequenceNumber.ZERO))
-      }
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId) match {
-        case None =>
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = newOwner, access = LibraryAccess.OWNER))
-        case Some(membership) =>
-          libraryMembershipRepo.save(membership.copy(userId = newOwner, seq = SequenceNumber.ZERO))
-      }
-      keepRepo.getByLibrary(lib.id.get, 0, 5000) foreach { keep =>
-        keepRepo.save(keep.copy(visibility = LibraryVisibility.ORGANIZATION, source = KeepSource.systemCopied, userId = newOwner, seq = SequenceNumber.ZERO))
-      }
+    val orgIdOpt = body.get("org-id").flatMap(id => Try(id.toLong).toOption).map(id => Id[Organization](id))
+    libraryCommander.unsafeTransferLibrary(libId, newOwner)
+    val modifyRequest = orgIdOpt match {
+      case Some(orgId) => LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(orgId)), visibility = Some(LibraryVisibility.ORGANIZATION))
+      case None => LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(newOwner)), visibility = Some(LibraryVisibility.PUBLISHED))
     }
+    implicit val context = HeimdalContext.empty // TODO(ryan): ask someone that cares to make a HeimdalContext.admin(request) method
+    libraryCommander.modifyLibrary(libId, newOwner, modifyRequest)
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
   }
 

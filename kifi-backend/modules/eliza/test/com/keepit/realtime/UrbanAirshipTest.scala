@@ -44,9 +44,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65"), deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f67"), deviceType = DeviceType.Android, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
         }
-        inject[Database].readOnlyMaster { implicit s =>
-          urbanAirship.getDevices(Id[User](1)).map(_.token.get).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f67")
-        }
+        urbanAirship.getDevices(Id[User](1)).map(_.token.get).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f67")
       }
     }
 
@@ -60,9 +58,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64"), deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65"), deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
         }
-        inject[Database].readOnlyMaster { implicit s =>
-          urbanAirship.getDevices(Id[User](1)).map(_.token.get).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65")
-        }
+        urbanAirship.getDevices(Id[User](1)).map(_.token.get).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65")
       }
     }
 

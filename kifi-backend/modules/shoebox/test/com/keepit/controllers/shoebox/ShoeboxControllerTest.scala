@@ -3,6 +3,7 @@ package com.keepit.controllers.internal
 import com.keepit.commanders.UserEmailAddressCommander
 import com.keepit.common.json.TupleFormat
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.notify.ShoeboxNotifyModule
 import com.keepit.social.BasicUser
 import org.specs2.mutable.Specification
 
@@ -50,7 +51,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    ShoeboxNotifyModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
