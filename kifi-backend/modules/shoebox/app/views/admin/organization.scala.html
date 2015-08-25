@@ -92,16 +92,19 @@ orgStats: OrganizationStatistics
 
 @orgStats.members.size members @orgStats.candidates.size candidates
 
-<table class="org-members table table-bordered" style="width:600px">
+<table class="org-members table table-bordered"
+       style="width:600px"
+       data-sort-name="name"
+       data-sort-order="desc">
     <tr>
-        <th>Member Id</th>
-        <th>External Id</th>
-        <th>Member Name</th>
-        <th>Role</th>
-        <th>Last Keep</th>
-        <th>Lib created</th>
-        <th>Keeps PRV/PUB</th>
-        <th>Messages all/active/started</th>
+        <th data-sortable="true">Member Id</th>
+        <th data-sortable="true">External Id</th>
+        <th data-sortable="true">Member Name</th>
+        <th data-sortable="true">Role</th>
+        <th data-sortable="true">Last Keep</th>
+        <th data-sortable="true">Lib created</th>
+        <th data-sortable="true">Keeps PRV/PUB</th>
+        <th data-sortable="true">Messages all/active/started</th>
         <th>Remove</th>
         <th>Make an owner</th>
     </tr>
@@ -123,7 +126,8 @@ orgStats: OrganizationStatistics
     }
 </table>
 
-<table class="org-candidates table table-bordered" style="width:600px">
+<table class="org-candidates table table-bordered"
+       style="width:600px">
     <tr>
         <th>Candidate Id</th>
         <th>External Id</th>

@@ -211,6 +211,13 @@ object BasePermissions {
   }
 }
 
+@json
+case class OrgTrackingValues(
+  libraryCount: Int,
+  keepCount: Int,
+  inviteCount: Int,
+  collabLibCount: Int)
+
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
   override val version = 4
   val namespace = "organization_by_id"
@@ -228,4 +235,13 @@ case class PrimaryOrgForUserKey(id: Id[User]) extends Key[Id[Organization]] {
 
 class PrimaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[PrimaryOrgForUserKey, Id[Organization]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrgTrackingValuesKey(id: Id[Organization]) extends Key[OrgTrackingValues] {
+  override val version = 1
+  val namespace = "org_tracking_values"
+  def toKey(): String = id.id.toString
+}
+
+class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

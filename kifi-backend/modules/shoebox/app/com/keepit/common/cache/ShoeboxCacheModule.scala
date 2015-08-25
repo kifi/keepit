@@ -413,6 +413,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new PrimaryOrgForUserCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
+  def orgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrgTrackingValuesCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
   def organizationExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationExperimentCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 7 days))
 

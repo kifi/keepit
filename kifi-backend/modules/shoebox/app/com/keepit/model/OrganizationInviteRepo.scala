@@ -25,6 +25,7 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit
+  def getCountByOrganization(organizationId: Id[Organization], decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Int
 }
 
 @Singleton
@@ -210,5 +211,9 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit = {
     save(model.withState(OrganizationInviteStates.INACTIVE))
+  }
+
+  def getCountByOrganization(organizationId: Id[Organization], decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]])(implicit s: RSession): Int = {
+    rows.filter(row => row.organizationId === organizationId && row.decision.inSet(decisions) && row.state =!= excludeState.orNull).length.run
   }
 }

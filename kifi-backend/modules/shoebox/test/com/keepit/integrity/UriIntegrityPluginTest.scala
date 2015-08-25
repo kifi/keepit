@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactory
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -156,21 +157,12 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
-            val hover = KeepSource.keeper
-            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-
-            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
+            val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri0).withLibrary(main).saved
+            val bm0better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri0better).withLibrary(main).saved
+            val bm1 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri1).withLibrary(main).saved
+            val bm1better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri1better).withLibrary(main).saved
+            val bm2 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri2).withLibrary(main).saved
+            val bm2better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri2better).withLibrary(main).saved
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("google")))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("googleBetter")))

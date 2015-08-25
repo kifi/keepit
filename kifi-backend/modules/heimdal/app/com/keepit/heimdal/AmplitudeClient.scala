@@ -146,12 +146,13 @@ trait AmplitudeRequestBuilder {
     val (userProps, eventProps) = (renameProperties(origUserProps), renameProperties(origEventProps))
 
     userIdOpt.map { userId =>
-      primaryOrgProvider.getPrimaryOrg(userId).map {
+      primaryOrgProvider.getPrimaryOrg(userId).flatMap {
         case Some(orgId) =>
-          val orgProps = "orgId" -> ContextStringData(orgId.toString)
-          (xformToSnakeCase(userProps + orgProps), xformToSnakeCase(eventProps + orgProps))
+          primaryOrgProvider.getOrgContextData(orgId).map { orgProps =>
+            (xformToSnakeCase(userProps ++ orgProps), xformToSnakeCase(eventProps ++ orgProps))
+          }
         case None =>
-          (xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
+          Future.successful(xformToSnakeCase(userProps), xformToSnakeCase(eventProps))
       }
     }.getOrElse(Future.successful((xformToSnakeCase(userProps), xformToSnakeCase(eventProps))))
   }

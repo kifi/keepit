@@ -164,6 +164,7 @@ object Shoebox extends Service {
     def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/hasOrganizationMembership", Param("orgId", orgId), Param("userId", userId))
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
+    def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
   }
 }
 
@@ -240,6 +241,7 @@ object Eliza extends Service {
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
+    def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
   }
 }
 
@@ -313,7 +315,7 @@ object ABook extends Service {
     def hideInviteRecommendationForUser(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideInviteRecommendation")
     def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeople")
     def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeople")
-    def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerId", viewerId), Param("disclosePrivateEmails", disclosePrivateEmails), Param("offset", offset), Param("limit", limit))
+    def getRecommendationsForOrg(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerIdOpt", viewerIdOpt.map(_.id)), Param("offset", offset), Param("limit", limit))
     def hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/org/$orgId/hideUserRecommendation")
     def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
     def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
