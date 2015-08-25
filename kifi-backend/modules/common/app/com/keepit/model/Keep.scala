@@ -35,6 +35,7 @@ case class Keep(
     organizationId: Option[Id[Organization]] = None,
     connectionsHash: Option[KeepConnectionsHash] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
+  def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
   def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, connectionsHash = Some(KeepConnections.empty.hash)) // good idea?
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
@@ -78,7 +79,6 @@ case class Keep(
   def hasStrictlyLessValuableMetadataThan(other: Keep): Boolean = {
     this.isOlderThan(other) && (true || // TODO(ryan): remove this "(true ||" once we no longer want to mindlessly murder keeps
       Seq(
-        title.isEmpty || title == other.title,
         note.isEmpty || note == other.note
       ).forall(b => b))
   }

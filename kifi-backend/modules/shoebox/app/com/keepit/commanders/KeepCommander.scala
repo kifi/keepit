@@ -88,7 +88,7 @@ trait KeepCommander {
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep]
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
@@ -793,38 +793,44 @@ class KeepCommanderImpl @Inject() (
     connections == targetConnections
   }
   private def getKeepsByUriAndConnections(uriId: Id[NormalizedURI], targetConnections: KeepConnections)(implicit session: RSession): Set[Keep] = {
+    // TODO(ryan): uncomment the line below, and get rid of the require
     // keepRepo.getByUriAndConnectionsHash(uriId, targetConnections.hash).filter(k => isKeepConnectedTo(k.id.get, targetConnections))
     require(targetConnections.libraries.size == 1, s"keep is not in exactly 1 library: ${targetConnections.libraries}!")
     keepRepo.getPrimaryByUriAndLibrary(uriId, targetConnections.libraries.head).toSet
   }
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep] = {
-    val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-    val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-    val similarKeeps = getKeepsByUriAndConnections(newUri.id.get, KeepConnections(libIds, userIds))
+  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
+    if (keep.isInactive) {
+      val newKeep = keepRepo.save(keep.withNormUriId(newUri.id.get))
+      ktlCommander.syncKeep(newKeep)
+      ktuCommander.syncKeep(newKeep)
+    } else {
+      val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
+      val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
+      val similarKeeps = getKeepsByUriAndConnections(newUri.id.get, KeepConnections(libIds, userIds))
 
-    val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get)))
-    ktlCommander.syncKeep(newKeep)
-    ktuCommander.syncKeep(newKeep)
-
-    if (keep.isInactive) None
-    else {
-      val mergeableKeeps = similarKeeps.filter(newKeep.hasStrictlyLessValuableMetadataThan)
+      val mergeableKeeps = similarKeeps.filter(keep.hasStrictlyLessValuableMetadataThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
+        val soonToBeDeadKeep = keepRepo.save(keep.withNormUriId(newUri.id.get).withPrimary(false))
+        ktlCommander.syncKeep(soonToBeDeadKeep)
+        ktuCommander.syncKeep(soonToBeDeadKeep)
+
         mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(newKeep, k)
+          collectionCommander.copyKeepTags(soonToBeDeadKeep, k)
         }
-        collectionCommander.deactivateKeepTags(newKeep)
-        deactivateKeep(newKeep)
-        None
+        collectionCommander.deactivateKeepTags(soonToBeDeadKeep)
+        deactivateKeep(soonToBeDeadKeep)
       } else {
-        val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(newKeep))
+        val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
         soonToBeDeadKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(k, newKeep)
+          collectionCommander.copyKeepTags(k, keep)
           deactivateKeep(k)
         }
-        Some(newKeep)
+
+        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get).withPrimary(true)))
+        ktlCommander.syncKeep(newKeep)
+        ktuCommander.syncKeep(newKeep)
       }
     }
   }
