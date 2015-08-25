@@ -23,9 +23,14 @@ class EventProxyController @Inject() (
       request.body.as[Seq[JsObject]].foreach { rawEvent =>
         val rawEventType = (rawEvent \ "event").as[String]
         val (eventType, intendedEventOpt) = getEventType(rawEventType)
-        val eventContext = (rawEvent \ "properties").as[HeimdalContext]
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
-        builder.addExistingContext(eventContext)
+        (rawEvent \ "properties").asOpt[HeimdalContext] match {
+          case Some(ctx) =>
+            builder.addExistingContext(ctx)
+          case None =>
+            log.warn(s"[EventProxyController] Can't parse event: $rawEvent")
+        }
+
         val fullContext = builder.build
         val event = (request, intendedEventOpt) match {
           case (_, Some(VisitorEvent)) => VisitorEvent(fullContext, eventType, sentAt)
