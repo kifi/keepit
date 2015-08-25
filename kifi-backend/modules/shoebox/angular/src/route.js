@@ -22,7 +22,6 @@ angular.module('kifi')
       .when('/:handle/libraries', '/:handle')
       .otherwise('/');  // last resort
 
-
     // Set up the states.
     $stateProvider
       .state('home', {  // Home page.

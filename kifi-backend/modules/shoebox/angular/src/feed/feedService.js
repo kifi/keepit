@@ -6,7 +6,6 @@ angular.module('kifi')
   '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net', 'ml',
   function ($http, $rootScope, profileService, routeService, $q, $analytics, net, ml) {
 
-
     var api = {
       getFeed: function (limit, beforeId, afterId) {
         ml.specs.getsFeed = new ml.Spec([
