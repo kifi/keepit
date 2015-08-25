@@ -64,12 +64,12 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
-    organizationCommander: OrganizationCommander,
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
+    organizationExperimentRepo: OrganizationExperimentRepo,
     userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -245,7 +245,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
               case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
               case None => //whatever
             }
-            if (!organizationCommander.hasFakeExperiment(org.id.get) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
+            if (!organizationExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
               notifySlackOfNewMember(org, request.targetId)
             }
             savedMembership
