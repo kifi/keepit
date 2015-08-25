@@ -21,18 +21,10 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
   def modules = Seq()
 
-  private def dummyImage(width: Int, height: Int) = {
-    new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
-  }
-
   private lazy val base64 = new Base64()
   private lazy val tinyGif = base64.decode("R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=")
   private lazy val tinyPng = base64.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVQYV2P4DwABAQEAWk1v8QAAAABJRU5ErkJggg==")
   private lazy val tinyJpg = base64.decode("/9j/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wgALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAAAAD/9oACAEBAAAAAT//2Q==")
-
-  private def testFile(name: String): File = new File("test/data/" + name)
-
-  private def readFile(file: File): Array[Byte] = IOUtils.toByteArray(new FileInputStream(file))
 
   def scaleRequest(ints: Int*) = ints.map { s => ScaleImageRequest.apply(s) }.toSet
   def cropRequest(strs: String*) = strs map { str =>
@@ -86,6 +78,8 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
     }
 
     "hash files with MD5" in {
+      def testFile(name: String): File = new File("test/data/" + name)
+
       withInjector(modules: _*) { implicit injector =>
         new FakeProcessedImageHelper {
           val hashed1 = hashImageFile(testFile("image1.png"))
