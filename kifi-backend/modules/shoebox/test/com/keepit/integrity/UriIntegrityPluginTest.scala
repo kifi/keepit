@@ -1,10 +1,12 @@
 package com.keepit.integrity
 
+import com.keepit.common.time.FakeClock
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.zookeeper.CentralConfig
@@ -45,12 +47,9 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,
-              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
+            val bm1 = KeepFactory.keep().withUser(user).withUri(nuri0).withLibrary(main.id.get).saved
+            val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main.id.get).saved
+            val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main.id.get).saved
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -68,9 +67,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
           urlRepo.getByNormUri(uris(2).id.get).size === 2
           urlRepo.getByNormUri(uris(3).id.get).size === 0
-
-          bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(0).id.get
-
         }
 
         // merge
@@ -84,11 +80,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
-
-          bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(1).id.get
-          bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
-          bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(2).id.get
-
         }
 
         val centralConfig = inject[CentralConfig]
@@ -102,10 +93,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
-
-          bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
-          bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
-
         }
 
       }
@@ -233,7 +220,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
           uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUsers * numUrisPerUser
           for ((user, uris) <- urisByUser) {
-            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib).withUri(uri).saved }
+            val keptAt = inject[FakeClock].now.minusHours(Random.nextInt(1000))
+            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib.id.get).withUri(uri).withKeptAt(keptAt).saved }
           }
 
           val allUris = Random.shuffle(urisByUser.values.toSeq.flatten)

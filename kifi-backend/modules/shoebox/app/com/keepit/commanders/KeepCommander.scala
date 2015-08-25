@@ -793,7 +793,9 @@ class KeepCommanderImpl @Inject() (
     connections == targetConnections
   }
   private def getKeepsByUriAndConnections(uriId: Id[NormalizedURI], targetConnections: KeepConnections)(implicit session: RSession): Set[Keep] = {
-    keepRepo.getByUriAndConnectionsHash(uriId, targetConnections.hash).filter(k => isKeepConnectedTo(k.id.get, targetConnections))
+    // keepRepo.getByUriAndConnectionsHash(uriId, targetConnections.hash).filter(k => isKeepConnectedTo(k.id.get, targetConnections))
+    require(targetConnections.libraries.size == 1, s"keep is not in exactly 1 library: ${targetConnections.libraries}!")
+    keepRepo.getPrimaryByUriAndLibrary(uriId, targetConnections.libraries.head).toSet
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Option[Keep] = {
     val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
