@@ -27,8 +27,8 @@ angular.module('kifi')
       .state('home', {  // Home page.
         url: '/',
         controller: ['$state', 'me', function ($state, me) {
-          var feedExperiment = (me.experiments && me.experiments.indexOf('admin') !== -1);
-          if (feedExperiment) {
+          var showFeed = (me.orgs.length > 0);
+          if (showFeed) {
             $state.go('feed');
           } else {
             $state.go('recos');
