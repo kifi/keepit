@@ -40,7 +40,7 @@ class ExtKeepImageController @Inject() (
         val imageRequest = db.readWrite { implicit session =>
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = ImageSource.UserUpload))
         }
-        val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, ImageSource.UserUpload, Some(imageRequest.id.get))
+        val setImageF = keepImageCommander.setKeepImageFromFile(request.body.file, keep.id.get, ImageSource.UserUpload, Some(imageRequest.id.get))
         setImageF.map {
           case fail: ImageStoreFailure =>
             InternalServerError(Json.obj("error" -> fail.reason))

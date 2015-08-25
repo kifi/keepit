@@ -28,7 +28,7 @@ class OrganizationAvatarController @Inject() (
   def uploadAvatar(pubId: PublicId[Organization], x: Int, y: Int, s: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.temporaryFile) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
-    val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body, cropRegion)
+    val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
     uploadImageF.map {
       case Left(fail) => InternalServerError(Json.obj("error" -> fail.reason))
       case Right(hash) =>

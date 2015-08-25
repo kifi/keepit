@@ -28,7 +28,7 @@ class RoverImageFetcher @Inject() (
   def fetchAndStoreRemoteImage(remoteImageUrl: String, imageSource: ImageSource, imagePathPrefix: String, requiredScaleSizes: Set[ScaledImageSize] = Set.empty, requiredCropSizes: Set[CroppedImageSize] = Set.empty): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashRemoteImage(remoteImageUrl).flatMap {
       case Right(sourceImage) => {
-        validateAndGetImageInfo(sourceImage.file.file) match {
+        validateAndGetImageInfo(sourceImage.file) match {
           case Success(imageInfo) =>
 
             val sourceImageSize = ImageSize(imageInfo.width, imageInfo.height)
@@ -44,7 +44,7 @@ class RoverImageFetcher @Inject() (
               case Some(sourceImageInfo) => None
               case None =>
                 val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
-                Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file.file, imageInfo, ProcessImageOperation.Original))
+                Some(ImageProcessState.ReadyToPersist(key, outFormat, sourceImage.file, imageInfo, ProcessImageOperation.Original))
             }
 
             // Prepare Processed Images
@@ -58,17 +58,16 @@ class RoverImageFetcher @Inject() (
               diffProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
             }
 
-            processAndPersistImages(sourceImage.file.file, imagePathPrefix, sourceImage.hash, sourceImage.format, requiredProcessRequests)(photoshop) match {
+            processAndPersistImages(sourceImage.file, imagePathPrefix, sourceImage.hash, sourceImage.format, requiredProcessRequests)(photoshop) match {
 
               case Right(processedImagesReadyToPersist) => {
 
                 // Upload all images
 
                 val uploads = (processedImagesReadyToPersist ++ sourceImageReadyToPersist).map { image =>
-                  val put = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).imap { _ =>
-                    ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
+                  imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).imap { _ =>
+                    (ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation), image.file)
                   }
-                  put
                 }
 
                 // Update RoverImageInfo
@@ -79,8 +78,9 @@ class RoverImageFetcher @Inject() (
                   case Right(uploadedImages) => {
                     try {
                       db.readWrite(attempts = 3) { implicit session =>
-                        uploadedImages.foreach(imageInfoRepo.intern(sourceImage.hash, imageSource, sourceImage.sourceImageUrl, _))
+                        uploadedImages.foreach(u => imageInfoRepo.intern(sourceImage.hash, imageSource, sourceImage.sourceImageUrl, u._1))
                       }
+                      uploadedImages.foreach(_._2.delete())
                       Right(sourceImage.hash)
                     } catch {
                       case imageInfoError: Exception =>
