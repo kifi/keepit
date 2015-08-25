@@ -1,6 +1,6 @@
 package com.keepit.common.concurrent
 
-import java.util.concurrent.{ LinkedBlockingQueue, ThreadPoolExecutor, TimeUnit }
+import java.util.concurrent.{Executors, LinkedBlockingQueue, ThreadPoolExecutor, TimeUnit}
 
 import com.keepit.common.healthcheck.StackTrace
 import play.api.Mode
@@ -13,7 +13,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
 
   @volatile private[this] var closed = false
   @volatile private[this] var initiated = false
-  private[this] lazy val originExecutor = new ThreadPoolExecutor(0, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue[Runnable]())
+  private[this] lazy val originExecutor = Executors.newCachedThreadPool()
   private[this] lazy val internalContext: ScalaExecutionContext = {
     initiated = true
     scala.concurrent.ExecutionContext.fromExecutorService(originExecutor)
