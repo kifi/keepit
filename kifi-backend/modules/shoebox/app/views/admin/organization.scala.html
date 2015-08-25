@@ -92,70 +92,78 @@ orgStats: OrganizationStatistics
 
 @orgStats.members.size members @orgStats.candidates.size candidates
 
-<table class="org-members table table-bordered" style="width:600px">
-    <tr>
-        <th>Member Id</th>
-        <th>External Id</th>
-        <th>Member Name</th>
-        <th>Role</th>
-        <th>Last Keep</th>
-        <th>Lib created</th>
-        <th>Keeps PRV/PUB</th>
-        <th>Messages all/active/started</th>
-        <th>Remove</th>
-        <th>Make an owner</th>
-    </tr>
-    @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+<table class="org-members table table-bordered"
+       style="width:600px"
+       data-toggle="table">
+    <thead>
         <tr>
-            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
-            <td>@orgStats.membersStatistics(membership.userId).user.externalId.id</td>
-            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
-            <td>@membership.role</td>
-            <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
-            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
-            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            <th data-sortable="true">Id</th>
+            <th data-sortable="true">Member Name</th>
+            <th data-sortable="true">Role</th>
+            <th data-sortable="true">Last Keep</th>
+            <th data-sortable="true">Libs</th>
+            <th data-sortable="true">Keeps PRV/PUB</th>
+            <th data-sortable="true">Chats</th>
+            <th>Remove</th>
+            <th>Make an owner</th>
         </tr>
-    }
+    </thead>
+    <tbody>
+        @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+            <tr>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
+                <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+                <td>@membership.role</td>
+                <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+                <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+                <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            </tr>
+        }
+    </tbody>
 </table>
 
-<table class="org-candidates table table-bordered" style="width:600px">
-    <tr>
-        <th>Candidate Id</th>
-        <th>External Id</th>
-        <th>Candidate Name</th>
-        <th>Last Keep</th>
-        <th>libraries</th>
-        <th>Keeps PRV/PUB</th>
-        <th>Chats</th>
-        <th>Remove</th>
-        <th>Make a member</th>
-        <th>Invite 2ba member</th>
-        <th>Make an owner</th>
-    </tr>
-    @for(candidate <- orgStats.candidates.toSeq) {
+<table class="org-candidates table table-bordered"
+       style="width:600px"
+       data-toggle="table">
+    <thead>
         <tr>
-            <td>@candidate.userId</td>
-            <td>@orgStats.membersStatistics(candidate.userId).user.externalId.id</td>
-            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
-            <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            <th data-sortable="true">Candidate Id</th>
+            <th data-sortable="true">Candidate Name</th>
+            <th data-sortable="true">Last Keep</th>
+            <th data-sortable="true">Boards</th>
+            <th data-sortable="true">Keeps PRV/PUB</th>
+            <th data-sortable="true">Chats</th>
+            <th>Remove</th>
+            <th>Make member</th>
+            <th>Invite member</th>
+            <th>Make owner</th>
         </tr>
-    }
+    </thead>
+    <tbody>
+        @for(candidate <- orgStats.candidates.toSeq) {
+            <tr>
+                <td>@candidate.userId</td>
+                <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+                <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+                <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+                <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            </tr>
+        }
+    </tbody>
 </table>
 <br/>
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
