@@ -4,7 +4,7 @@
       <section class="kf-reco kf-reco-recommended" ng-repeat="feedItem in feed">
         <header class="kf-feed-top">
           <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.libraries[0][0].path }}" ng-bind="feedItem.libraries[0][0].name"></a>
-          <span ng-bind="feedItem.libraries[0].organization ? 'in ' + feedItem.libraries[0].organization : ''"></span> - <span am-time-ago="feedItem.createdAt"></span>
+          <span ng-if="feedItem.libraries[0].organization" ng-bind="'in ' + feedItem.libraries[0].organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span>
         </header>
         <div class="kf-keep">
           <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
