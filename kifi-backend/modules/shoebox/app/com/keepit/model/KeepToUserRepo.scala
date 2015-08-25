@@ -20,7 +20,7 @@ trait KeepToUserRepo extends Repo[KeepToUser] {
 
   def getByKeepIdAndUserId(keepId: Id[Keep], userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Option[KeepToUser]
 
-  def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
+  def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser]
 
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit
 }
@@ -90,8 +90,8 @@ class KeepToUserRepoImpl @Inject() (
   private def getByUserIdsAndUriIdsHelper(userIds: Set[Id[User]], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
     for (row <- rows if row.userId.inSet(userIds) && row.uriId.inSet(uriIds) && row.state =!= excludeStateOpt.orNull) yield row
   }
-  def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser] = {
-    getByUserIdsAndUriIdsHelper(Set(userId), uriIds, excludeStateOpt).list
+  def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser] = {
+    getByUserIdsAndUriIdsHelper(Set(userId), uriIds, excludeStateOpt).list.toSet
   }
 
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit = {

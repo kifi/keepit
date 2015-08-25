@@ -207,11 +207,11 @@ class KeepDecoratorImpl @Inject() (
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     val allKeeps = db.readOnlyReplica { implicit session =>
       val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
-      val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds)
+      val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).toSet
       val newWay = {
-        val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId) |> keepCommander.idsToKeeps
-        val indirectViaLibraries = ktlRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).map(_.keepId) |> keepCommander.idsToKeeps
-        (direct ++ indirectViaLibraries).distinct
+        val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
+        val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
+        (direct ++ indirectViaLibraries) |> keepRepo.getByIds |> (_.values.toSet)
       }
       if (newWay.map(_.id.get) != oldWay.map(_.id.get)) {
         log.error(s"[KTL-MATCH] getBasicKeeps($userId, $uriIds): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
@@ -233,7 +233,7 @@ class KeepDecoratorImpl @Inject() (
               visibility = keep.visibility,
               libraryId = Library.publicId(libraryId)
             )
-          }.toSet
+          }
           uriId -> userKeeps
         case _ =>
           uriId -> Set.empty[BasicKeep]
