@@ -186,4 +186,7 @@ object UserStates extends States[User] {
   val PENDING = State[User]("pending")
   val BLOCKED = State[User]("blocked")
   val INCOMPLETE_SIGNUP = State[User]("incomplete_signup")
+
+  val NONACTIVE: Set[State[User]] = Set(PENDING, BLOCKED, INCOMPLETE_SIGNUP, INACTIVE)
+  val ALL: Set[State[User]] = Set(ACTIVE, INACTIVE, PENDING, BLOCKED, INCOMPLETE_SIGNUP)
 }

@@ -232,7 +232,7 @@ class KifiSiteRouter @Inject() (
 
   private object IncompleteSignupFilter extends ActionFilter[MaybeUserRequest] {
     protected def filter[A](request: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful {
-      if (request.userOpt.isEmpty && request.identityOpt.isDefined) {
+      if ((request.userOpt.isEmpty && request.identityOpt.isDefined) || request.userOpt.exists(user => user.state == UserStates.INCOMPLETE_SIGNUP)) {
         Some(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage()))
       } else None
     }

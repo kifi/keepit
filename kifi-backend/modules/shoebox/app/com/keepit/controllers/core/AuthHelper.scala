@@ -377,6 +377,7 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
+    if (user.state == UserStates.INCOMPLETE_SIGNUP) airbrake.notify(s"[finalizeSocialAccount] calling finishSignup without an active user! ${user.toString}")
     finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken,
       orgPublicId = orgPublicId, orgAuthToken = orgAuthToken, isFinalizedImmediately = isFinalizedImmediately)
   }
@@ -410,6 +411,7 @@ class AuthHelper @Inject() (
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
         val verifiedEmail = verifySignupEmail(request.userId, email, libraryPublicId, libAuthToken)
+        if (user.state == UserStates.INCOMPLETE_SIGNUP) airbrake.notify(s"[finalizeEmailPassAccount] calling finishSignup without an active user! ${user.toString}")
         finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, orgPublicId, orgAuthToken, isFinalizedImmediately = false)
     }
   }

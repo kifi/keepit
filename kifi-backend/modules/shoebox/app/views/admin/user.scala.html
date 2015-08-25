@@ -204,7 +204,7 @@
         <th>State</th>
         <td class="form-inline">
           <select id="state">
-          @for(state <- Seq(UserStates.ACTIVE, UserStates.INACTIVE, UserStates.PENDING, UserStates.BLOCKED)) {
+          @for(state <- UserStates.ALL.toSeq) {
             <option  @if(user.state.value == state.value){selected}>@state.value</option>
           }
           </select>
