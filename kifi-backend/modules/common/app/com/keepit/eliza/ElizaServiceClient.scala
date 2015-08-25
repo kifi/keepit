@@ -113,7 +113,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName.getOrElse(S3UserPictureConfig.defaultName), "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> Json.toJson(recipient.pictureName.getOrElse(S3UserPictureConfig.defaultName)), "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendUserPushNotification(), payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
