@@ -153,7 +153,7 @@ class PageCommander @Inject() (
       case lib if lib.state != LibraryStates.ACTIVE =>
         log.warn(s"[firstQualityFilterAndSort] Library is inactive ${lib.id.get}")
         true
-      case lib if allowedLibraryKinds.contains(lib.kind) =>
+      case lib if !allowedLibraryKinds.contains(lib.kind) =>
         log.warn(s"[firstQualityFilterAndSort] Library has a bad kind ${lib.kind}")
         true
       case lib => libraryQualityHelper.isBadLibraryName(lib.name)
