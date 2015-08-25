@@ -99,8 +99,12 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  private def isFake(org: Organization): Boolean = db.readOnlyMaster { implicit session =>
+    orgExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE)
+  }
+
   def realOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
-    getOrgs(page, org => !orgCommander.hasFakeExperiment(org.id.get)).map {
+    getOrgs(page, !isFake(_)).map {
       case (count, orgs) =>
         Ok(html.admin.organizations(
           orgs,
@@ -115,7 +119,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def fakeOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
-    getOrgs(page, org => orgCommander.hasFakeExperiment(org.id.get)).map {
+    getOrgs(page, !isFake(_)).map {
       case (count, orgs) =>
         Ok(html.admin.organizations(
           orgs,

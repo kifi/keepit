@@ -30,7 +30,6 @@ trait OrganizationCommander {
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
-  def hasFakeExperiment(org: Id[Organization]): Boolean
   def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
 }
 
@@ -69,10 +68,6 @@ class OrganizationCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId, viewerIdOpt) }.toMap
     }
-  }
-
-  def hasFakeExperiment(org: Id[Organization]): Boolean = db.readOnlyReplica { implicit session =>
-    orgExperimentRepo.getOrganizationExperiments(org).contains(OrganizationExperimentType.FAKE)
   }
 
   private def getOrganizationInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {

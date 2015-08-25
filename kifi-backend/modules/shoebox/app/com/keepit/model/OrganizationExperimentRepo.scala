@@ -8,6 +8,7 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[OrganizationExperimentRepoImpl])
 trait OrganizationExperimentRepo extends Repo[OrganizationExperiment] with RepoWithDelete[OrganizationExperiment] {
+  def hasExperiment(orgId: Id[Organization], experimentType: OrganizationExperimentType)(implicit session: RSession): Boolean
   def getOrganizationExperiments(orgId: Id[Organization])(implicit session: RSession): Set[OrganizationExperimentType]
   def getOrganizationsByExperiment(experimentType: OrganizationExperimentType)(implicit session: RSession): Seq[Id[Organization]]
   def getByOrganizationIdAndExperimentType(orgId: Id[Organization], experimentType: OrganizationExperimentType, excludeStates: Set[State[OrganizationExperiment]] = Set(OrganizationExperimentStates.INACTIVE))(implicit session: RSession): Option[OrganizationExperiment]
@@ -37,6 +38,10 @@ class OrganizationExperimentRepoImpl @Inject() (
     val saved = super.save(model)
     orgRepo.save(orgRepo.get(model.orgId)) // just to bump up org seqNum
     saved
+  }
+
+  def hasExperiment(orgId: Id[Organization], experimentType: OrganizationExperimentType)(implicit session: RSession): Boolean = {
+    getOrganizationExperiments(orgId).contains(experimentType)
   }
 
   def getOrganizationExperiments(orgId: Id[Organization])(implicit session: RSession): Set[OrganizationExperimentType] = {
