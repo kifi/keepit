@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import java.io.File
+import java.security.SecureRandom
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -33,14 +34,15 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     FakeWebServiceModule()
   )
 
+  private val random = new SecureRandom()
   def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    val tf = TemporaryFile(prefix = "tst1", suffix = ".png")
     tf.file.deleteOnExit()
     FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
     tf
   }
   def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
+    val tf = TemporaryFile(prefix = "tst2", suffix = ".png")
     tf.file.deleteOnExit()
     FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
     tf
