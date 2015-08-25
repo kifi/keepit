@@ -20,7 +20,9 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
+
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
