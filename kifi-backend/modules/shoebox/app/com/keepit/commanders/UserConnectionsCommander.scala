@@ -14,7 +14,8 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.notify.model.{ NewConnectionInvite, ConnectionInviteAccepted }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ ConnectionInviteAccepted, NewConnectionInvite }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType, SocialNetworks }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
@@ -196,7 +197,7 @@ class UserConnectionsCommander @Inject() (
         }
       }
     elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
-      friend.id.get,
+      Recipient(friend),
       currentDateTime,
       myUserId
     ))
@@ -239,7 +240,7 @@ class UserConnectionsCommander @Inject() (
         }
       }
     elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
-      recipient.id.get,
+      Recipient(recipient),
       currentDateTime,
       myUserId
     ))
@@ -260,17 +261,6 @@ class UserConnectionsCommander @Inject() (
           (false, "tooManySent")
         } else {
           friendRequestRepo.getBySenderAndRecipient(recipient.id.get, senderId, activeOrIgnored) map { friendReq =>
-            for {
-              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-            } yield {
-              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                case Some(sc) =>
-                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                case None =>
-                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-              }
-            }
             userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
 
             s.onTransactionSuccess {

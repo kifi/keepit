@@ -9,6 +9,7 @@ import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientMo
 import com.keepit.social.NonUserKinds
 import com.keepit.test.{ FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
+import play.api.libs.json.JsString
 import play.api.test.Helpers._
 
 import scala.concurrent.duration.Duration
@@ -28,9 +29,10 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
 
   def heimdalContext(data: (String, ContextData)*) = {
     val builder = new HeimdalContextBuilder
-    builder += ("fooBarBaz", "yay")
     builder += ("agentVersion", "1.2.3")
-    builder.addExperiments(Set(UserExperimentType.ORGANIZATION, UserExperimentType.ADMIN))
+    builder += ("kifiInstallationId", "123")
+    builder += ("userCreatedAt", "2015-06-22T06:59:01")
+    builder.addExperiments(Set(UserExperimentType.ADMIN))
     builder ++= data.toMap
     builder.build
   }
@@ -47,18 +49,32 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val visitorViewedLib: VisitorEvent = new VisitorEvent(heimdalContext(), VisitorEventTypes.VIEWED_LIBRARY)
       val anonKept: AnonymousEvent = new AnonymousEvent(heimdalContext(), AnonymousEventTypes.KEPT)
       val pingdomEvent = new VisitorEvent(heimdalContext("userAgent" -> ContextStringData("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)")), VisitorEventTypes.VIEWED_LIBRARY)
+      val userRegistered = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("registered")), UserEventTypes.JOINED, now)
+      val userInstalled = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("installed")), UserEventTypes.JOINED, now)
 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
         // testing 2 events for the same user recorded at the same time
-        amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userKept) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \\ "installation_id" === Seq(JsString("123"))
+            dat.eventData \\ "created_at" === Seq(JsString("2015-06-22T06:59:01"))
+        },
         amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
         amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
         amplitude.track(userUsedKifi) map { case _: AmplitudeEventSkipped => () },
         amplitude.track(nonUserMessaged) map { case _: AmplitudeEventSent => () },
         amplitude.track(visitorViewedLib) map { case _: AmplitudeEventSent => () },
         amplitude.track(anonKept) map { case _: AmplitudeEventSkipped => () },
-        amplitude.track(pingdomEvent) map { case _: AmplitudeEventSkipped => () }
+        amplitude.track(pingdomEvent) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(userRegistered) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_registered")
+        },
+        amplitude.track(userInstalled) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_installed")
+        }
       )
 
       val eventsF = Future.sequence(eventsFList)

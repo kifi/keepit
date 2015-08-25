@@ -18,6 +18,7 @@ import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, P
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.notify.model._
+import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
 import play.api.http.Status._
 import play.api.libs.json.Json
@@ -97,7 +98,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "follower" -> BasicUser.fromUser(invitee),
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, owner))
         ))
       ) map { _ =>
           val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
@@ -112,14 +113,14 @@ class LibraryInviteCommanderImpl @Inject() (
         }
       if (invite.access == LibraryAccess.READ_WRITE) {
         elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
-          inviterId,
+          Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
         ))
       } else {
         elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
-          inviterId,
+          Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
@@ -332,14 +333,14 @@ class LibraryInviteCommanderImpl @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
         "access" -> LibraryAccess.READ_WRITE
       ))
     )
 
     collabInviteeSet.foreach { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -357,14 +358,14 @@ class LibraryInviteCommanderImpl @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
         "access" -> LibraryAccess.READ_ONLY
       ))
     )
 
     followInviteeSet.foreach { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -422,7 +423,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
     } else {
@@ -432,7 +433,7 @@ class LibraryInviteCommanderImpl @Inject() (
     if (collabInviteeSet.nonEmpty) {
       collabInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
-          lib.ownerId,
+          Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,
@@ -453,7 +454,7 @@ class LibraryInviteCommanderImpl @Inject() (
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+          "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
     } else {
@@ -463,7 +464,7 @@ class LibraryInviteCommanderImpl @Inject() (
     if (followInviteeSet.nonEmpty) {
       followInviteeSet.foreach { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
-          lib.ownerId,
+          Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,

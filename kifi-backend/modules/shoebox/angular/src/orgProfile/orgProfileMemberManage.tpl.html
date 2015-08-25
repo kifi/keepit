@@ -1,5 +1,24 @@
-<ul class="kf-org-member-manage" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreMembers()" scroll-next="fetchMembers()">
-  <li ng-if="canInvite"><button class="kf-org-member-invite" ng-click="openInviteModal()">Invite new member</button></li>
-  <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
-  <li class="kf-opl-empty" ng-if="members.length === 0">{{ profile | name }} has no publicly viewable members.</li>
-</ul>
+<div class="kf-org-member-manage kf-container" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreMembers()" scroll-next="fetchMembers()">
+  <header class="kf-container-header">
+    <ul class="kf-container-menu">
+      <li>
+        <h1>Members</h1>
+      </li>
+    </ul>
+    <ul class="kf-container-menu">
+      <li><button ng-if="canInvite" class="kf-button" ng-click="openInviteModal()">
+        <svg
+          kf-symbol-sprite
+          icon="add-member"
+        ></svg>
+        <span>Invite new member</span>
+      </button>
+    </ul>
+  </header>
+  <main class="kf-container-main">
+    <ul class="kf-org-members">
+      <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
+      <li class="kf-opl-empty" ng-if="members.length === 0">{{ profile | name }} has no publicly viewable members.</li>
+    </ul>
+  </main>
+</div>

@@ -56,7 +56,6 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
   }
 
   def trackInvitationClicked(organization: Organization, invite: OrganizationInvite)(implicit eventContext: HeimdalContext): Unit = {
-
     val numDays = daysSinceOrganizationCreated(organization)
     SafeFuture {
       val builder = new HeimdalContextBuilder
@@ -66,10 +65,32 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       builder += ("inviterId", invite.inviterId.toString)
       builder += ("inviteeId", invite.userId.map(_.toString).getOrElse(""))
       builder += ("inviteeEmail", invite.emailAddress.map(_.address).getOrElse(""))
+      builder += ("daysSinceOrganizationCreated", numDays)
       heimdal.trackEvent(
         invite.userId.map(id => UserEvent(id, builder.build, UserEventTypes.WAS_NOTIFIED))
           .getOrElse(NonUserEvent("", NonUserKinds.email, eventContext, NonUserEventTypes.WAS_NOTIFIED))
       )
+    }
+  }
+
+  def trackOrganizationEvent(organization: Organization, requester: User, request: OrganizationRequest)(implicit eventContext: HeimdalContext): Unit = {
+    val numDays = daysSinceOrganizationCreated(organization)
+    SafeFuture {
+      val builder = new HeimdalContextBuilder
+      builder.addExistingContext(eventContext)
+      val action = request match {
+        case req: OrganizationCreateRequest => "created"
+        case req: OrganizationModifyRequest => "edited"
+        case req: OrganizationDeleteRequest => "deleted"
+        case req: OrganizationTransferRequest => "transferred"
+      }
+      builder += ("action", action)
+      builder += ("name", organization.name)
+      builder += ("organizationId", organization.id.get.toString)
+      builder += ("requesterName", requester.fullName)
+      builder += ("requesterId", requester.id.get.toString)
+      builder += ("daysSinceOrganizationCreated", numDays)
+      heimdal.trackEvent(UserEvent(requester.id.get, builder.build, UserEventTypes.CREATED_ORGANIZATION))
     }
   }
 }

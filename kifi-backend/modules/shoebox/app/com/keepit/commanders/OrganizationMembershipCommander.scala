@@ -42,6 +42,7 @@ trait OrganizationMembershipCommander {
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
@@ -149,6 +150,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
       organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
     }
   }
+  def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]] = {
+    db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getAllByUserIds(userIds)
+    }
+  }
 
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
@@ -245,11 +251,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
             savedMembership
           }
         }
-        //remove the following experiment checks/adds once ORGANIZATION experiment is killed.
-        // We need it for now since the experiment may be broken for the new members
-        if (!userExperimentRepo.hasExperiment(newMembership.userId, UserExperimentType.ORGANIZATION)) {
-          userExperimentRepo.save(UserExperiment(userId = newMembership.userId, experimentType = UserExperimentType.ORGANIZATION))
-        }
         Right(OrganizationMembershipAddResponse(request, newMembership))
     }
   }
@@ -278,7 +279,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val webhookUrl = "https://hooks.slack.com/services/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"
 
     val user = userRepo.get(userId)
-    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName} just joined <http://ww.kifi.com/${organization.handle.value}?kma=1|${organization.name}."
+    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just joined <http://www.kifi.com/${organization.handle.value}?kma=1|${organization.name}>."
     val message = BasicSlackMessage(text = text, channel = Some(channel))
 
     val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))

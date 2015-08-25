@@ -151,7 +151,15 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization], name: String, description: Option[String], ownerId: Id[User], handle: Option[OrganizationHandle])
 
 object IngestableOrganization {
-  implicit val format = Json.format[IngestableOrganization]
+  implicit val format = (
+    (__ \ 'id).formatNullable[Id[Organization]] and
+    (__ \ 'state).format[State[Organization]] and
+    (__ \ 'seq).format[SequenceNumber[Organization]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'handle).formatNullable[OrganizationHandle]
+  )(IngestableOrganization.apply _, unlift(IngestableOrganization.unapply))
 }
 
 object OrganizationStates extends States[Organization]
@@ -203,8 +211,15 @@ object BasePermissions {
   }
 }
 
+@json
+case class OrgTrackingValues(
+  libraryCount: Int,
+  keepCount: Int,
+  inviteCount: Int,
+  collabLibCount: Int)
+
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
-  override val version = 3
+  override val version = 4
   val namespace = "organization_by_id"
   def toKey(): String = id.id.toString
 }
@@ -220,4 +235,13 @@ case class PrimaryOrgForUserKey(id: Id[User]) extends Key[Id[Organization]] {
 
 class PrimaryOrgForUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[PrimaryOrgForUserKey, Id[Organization]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrgTrackingValuesKey(id: Id[Organization]) extends Key[OrgTrackingValues] {
+  override val version = 1
+  val namespace = "org_tracking_values"
+  def toKey(): String = id.id.toString
+}
+
+class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

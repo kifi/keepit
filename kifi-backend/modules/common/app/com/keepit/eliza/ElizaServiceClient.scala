@@ -9,14 +9,14 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.notify.model.NotificationEvent
+import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
-import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
+import play.api.libs.json._
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
@@ -98,6 +98,8 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -248,6 +250,12 @@ class ElizaServiceClientImpl @Inject() (
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
       response.json.as[Seq[GroupThreadStats]]
+    }
+  }
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
+    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users)).map { response =>
+      response.json.as[Int]
     }
   }
 }

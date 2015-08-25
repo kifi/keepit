@@ -21,7 +21,8 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
-import com.keepit.notify.model.{ OrgInviteAccepted, OrgNewInvite }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -36,9 +37,11 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
+  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite]
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
 }
 
 @Singleton
@@ -100,9 +103,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
       invitation.state
     } contains OrganizationInviteStates.ACTIVE
-    if (hasOrgInvite && !userExperimentRepo.hasExperiment(userId, UserExperimentType.ORGANIZATION)) {
-      userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.ORGANIZATION))
-    }
   }
 
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
@@ -150,7 +150,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           }
           val persistedInvites = invites.flatMap(persistInvitation)
 
-          sendInvitationEmails(persistedInvites, org, owner, inviter)
+          sendInvitationEmailsAndNotifications(persistedInvites, org, owner, inviter)
           organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
 
           Right(inviteeInfos)
@@ -181,12 +181,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvitationEmails(persistedInvites: Set[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+  def sendInvitationEmailsAndNotifications(persistedInvites: Set[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
     val (inviteesById, _) = persistedInvites.partition(_.userId.nonEmpty)
 
     // send notifications to kifi users only
     if (inviteesById.nonEmpty) {
-      notifyInviteeAboutInvitationToJoinOrganization(org, owner, inviter, inviteesById.flatMap(_.userId).toSet)
+      notifyInviteeAboutInvitationToJoinOrganization(org, owner, inviter, inviteesById.flatMap(_.userId))
     }
 
     // send emails to both users & non-users
@@ -227,7 +227,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val orgLink = s"""https://www.kifi.com/${org.name}"""
+    val orgLink = s"""https://www.kifi.com/${org.handle.value}"""
 
     elizaClient.sendGlobalNotification( //push sent
       userIds = invitees,
@@ -241,7 +241,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     )
     invitees.foreach { invitee =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
-        invitee,
+        Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         org.id.get
@@ -328,19 +328,19 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"Click here to see ${invitee.firstName}'s profile.",
-        linkText = s"See ${invitee.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
+        body = s"Click here to view ${org.name}’s libraries.",
+        linkText = s"See ${org.name}’s libraries",
+        linkUrl = s"https://www.kifi.com/${org.handle.value}",
         imageUrl = inviteeImage,
         sticky = false,
         category = NotificationCategory.User.ORGANIZATION_JOINED,
         extra = Some(Json.obj(
           "member" -> BasicUser.fromUser(invitee),
-          "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
+          "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
         ))
       )
       elizaClient.sendNotificationEvent(OrgInviteAccepted(
-        inviterId,
+        Recipient(inviterId),
         currentDateTime,
         invitee.id.get,
         org.id.get
@@ -389,6 +389,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
       organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+    }
+  }
+
+  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session =>
+      organizationInviteRepo.getLastSentByOrgIdAndUserId(orgId, inviteeId)
     }
   }
 
@@ -450,5 +456,15 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean = {
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
+  }
+
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo] = {
+    val userInviteOpt = viewerIdOpt.flatMap(getLastSentByOrganizationIdAndInviteeId(orgId, _))
+    val authTokenInviteOpt = authTokenOpt.flatMap(getInviteByOrganizationIdAndAuthToken(orgId, _))
+    val inviteOpt = userInviteOpt.orElse(authTokenInviteOpt)
+    inviteOpt.map { invite =>
+      val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
+      OrganizationInviteInfo.fromInvite(invite, inviter)
+    }
   }
 }

@@ -9,6 +9,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import play.api.libs.json.Json
 import play.twirl.api.{ HtmlFormat, Html }
@@ -149,6 +150,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def createOrganization() = AdminUserPage { implicit request =>
+    implicit val context = HeimdalContext.empty
     val ownerId = Id[User](request.body.asFormUrlEncoded.get.apply("owner-id").head.toLong)
     val name = request.body.asFormUrlEncoded.get.apply("name").head
     val existingOrg = db.readOnlyMaster { implicit session => orgRepo.getOrgByName(name) }
@@ -190,6 +192,7 @@ class AdminOrganizationController @Inject() (
                   existedOrgs.incrementAndGet()
                   orgByName
                 case None =>
+                  implicit val context = HeimdalContext.empty
                   orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
                     case Left(fail) =>
                       throw new Exception(s"failed creating org $orgName for user $user: $fail")
@@ -263,6 +266,7 @@ class AdminOrganizationController @Inject() (
         orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
       case None =>
+        implicit val context = HeimdalContext.empty
         orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
           case Left(fail) => NotFound
           case Right(success) =>
@@ -277,6 +281,7 @@ class AdminOrganizationController @Inject() (
     val newOwnerId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
     val oldOwnerId = org.ownerId
+    implicit val context = HeimdalContext.empty
     orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId)) match {
       case Left(fail) =>
         fail.asErrorResponse
@@ -295,9 +300,6 @@ class AdminOrganizationController @Inject() (
           orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
             case Some(candidate) => orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
             case None => //whatever
-          }
-          if (!userExperimentRepo.hasExperiment(newOwnerId, UserExperimentType.ORGANIZATION)) {
-            userExperimentRepo.save(UserExperiment(userId = newOwnerId, experimentType = UserExperimentType.ORGANIZATION))
           }
         }
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
@@ -353,7 +355,7 @@ class AdminOrganizationController @Inject() (
   def setHandle(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val handle = OrganizationHandle(request.body.asFormUrlEncoded.flatMap(_.get("handle").flatMap(_.headOption)).filter(_.length > 0).get)
     db.readWrite { implicit session =>
-      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle)
+      handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle, overrideValidityCheck = true)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
@@ -418,6 +420,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def forceDeactivate(orgId: Id[Organization]) = AdminUserAction { implicit request =>
+    implicit val context = HeimdalContext.empty
     val deleteResponse = db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))

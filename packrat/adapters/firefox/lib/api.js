@@ -362,10 +362,14 @@ exports.tabs = {
   emit: function(tab, type, data, opts) {
     var emitted;
     const page = pages[tab.id];
-    if (page === tab) {
+    if (page === tab && !page.isReload) {
       for (let worker of workerNs(page).workers) {
         if (worker.handling && worker.handling[type]) {
-          worker.port.emit(type, data);
+          try {
+            worker.port.emit(type, data);
+          } catch (err) {
+            log('[api.tabs.emit] failed to emit because worker died');
+          }
           if (!emitted) {
             emitted = true;
             log('[api.tabs.emit]', tab.id, 'type:', type, 'data:', data, 'url:', tab.url);
@@ -390,6 +394,7 @@ exports.tabs = {
         } else {
           page.toEmit = [[type, data]];
         }
+        log('[api.tabs.emit] queued!', page.toEmit)
       } else {
         log('[api.tabs.emit]', tab.id, 'type:', type, 'neither emitted nor queued for:', tab.url);
       }
@@ -445,6 +450,7 @@ exports.xhr = require('sdk/net/xhr').XMLHttpRequest;
 
 tabs
 .on('open', errors.wrap(function onTabOpen(tab) {
+  // We suspect this is not called anymore.
   log('[tabs.open]', tab.id, tab.url);
   tabsById[tab.id] = tab;
 }))
@@ -489,6 +495,15 @@ tabs
 var activeWinHasFocus = true;
 windows
 .on('open', errors.wrap(function onWindowOpen(win) {
+  for each (let tab in win.tabs) {
+    log('[windows]', tab.id, tab.url);
+    if (tab.id) {
+      tabsById[tab.id] = tab;
+      pages[tab.id] || createPage(tab);
+    } else {
+      errors.push({error: Error('Firefox tab has no ID'), tab: tab, win: win});
+    }
+  }
   log('[windows.open]', win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 }))
@@ -555,7 +570,12 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
   const tab = tabsById[tabId];
   log('[location:change]', tabId, 'newPage:', newPage, tab.url);
   if (newPage) {
+    var isReload;
+    if (pages[tab.id] && tab.url === pages[tab.id].url) {
+      isReload = true;
+    }
     let page = getPageOrHideOldAndCreatePage(tab);
+    page.isReload = isReload || false;
     let match = googleSearchRe.exec(tab.url);
     if (match) {
       let query;
@@ -628,9 +648,8 @@ var workerOnPageShow = errors.wrap(function workerOnPageShow(tab, page, worker) 
   emitQueuedMessages(page, worker);
 });
 
-var workerOnPageHide = errors.wrap(function workerOnPageHide(tabId) {
-  log('[pagehide] tab:', tabId);
-  onPageHide(tabId);
+var workerOnPageHide = errors.wrap(function workerOnPageHide(tabId, origPage) {
+  log('[api:pagehide] tab:', tabId, origPage.url);
 });
 
 var workerOnApiHandling = errors.wrap(function workerOnApiHandling(page, worker, types) {
@@ -672,9 +691,31 @@ require('./meta').contentScripts.forEach(function (arr) {
       page.injectedCss = mergeArr({}, o.styles);
       const injectedJs = mergeArr({}, o.scripts);
       workerNs(page).workers.push(worker);
+
+      // I AM SO SORRY! git blame lies
+      // We have a memory leak when a page is reloaded.
+      // When you load a page normally:
+      //  - pageHide is called (by us inside of getPageOrHideOldAndCreatePage)
+      //  - page is killed
+      //  - messages are emited, and queued (because no page exists)
+      //  - workers load in, messages emitted for reals
+      // When you reload a page:
+      //  - We reuse the page object because page is keyed by tab.id and will fail because of a race condition otherwise
+      //  - We detect the page is being reloaded, and mark it as so on page.isReload
+      //  - Queue emitted messages
+      //  - New workers come in and go "what's up?" get the queued messages.
+      //  - Because we reused the page object and didn't clear out workers, there is a memory leak on the old workers (who now do nothing)
+      // So, we let both sets of workers co-exist, and just cap the length here.
+
+      if (workerNs(page).workers.length > 10) {
+        workerNs(page).workers.shift();
+      }
+
+      page.isReload = false;
+
       worker
         .on('pageshow', workerOnPageShow.bind(null, tab, page, worker))  // pageshow/pagehide discussion at bugzil.la/766088#c2
-        .on('pagehide', workerOnPageHide.bind(null, tab.id));
+        .on('pagehide', workerOnPageHide.bind(null, tab.id, page));
       if (portHandlers) {
         bindPortHandlers(worker, page);
       }

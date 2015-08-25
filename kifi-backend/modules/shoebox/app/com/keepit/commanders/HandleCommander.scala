@@ -133,7 +133,7 @@ class HandleCommanderImpl @Inject() (
       case Success(orgWithHandle) => orgWithHandle
     } tap { orgWithHandleOpt =>
       if (orgWithHandleOpt.isEmpty) {
-        val message = s"could not find a decent username for organization $organization, tried the following candidates: $candidates"
+        val message = s"could not find a decent handle for organization $organization, tried the following candidates: $candidates"
         log.warn(message)
         airbrake.notify(message)
       }

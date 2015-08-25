@@ -1,25 +1,25 @@
 package com.keepit.integrity
 
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.model._
+import akka.pattern.{ ask, pipe }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.time._
+import com.keepit.commanders.{ KeepCommander, KeepToUserCommander, KeepToLibraryCommander }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
-import com.keepit.common.actor.ActorInstance
-import com.keepit.rover.fetcher.HttpRedirect
-import scala.concurrent.duration._
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.time._
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.RWSession
-import akka.pattern.{ ask, pipe }
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.common.core._
+import com.keepit.rover.fetcher.HttpRedirect
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 trait UriChangeMessage
 
@@ -36,6 +36,9 @@ class UriIntegrityActor @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     urlRepo: URLRepo,
     val keepRepo: KeepRepo,
+    keepCommander: KeepCommander,
+    ktlCommander: KeepToLibraryCommander,
+    ktuCommander: KeepToUserCommander,
     changedUriRepo: ChangedURIRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
@@ -46,46 +49,50 @@ class UriIntegrityActor @Inject() (
     helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
-  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
-
+  private def handleBookmarks(oldKeeps: Seq[Keep])(implicit session: RWSession): Unit = {
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
-    val deactivatedBms = oldBookmarks.map { oldBm =>
-
+    val deactivatedKeeps = oldKeeps.map { keep =>
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
-      val newUri = urlToUriMap.getOrElse(oldBm.url, {
-        val newUri = normalizedURIInterner.internByUri(oldBm.url, contentWanted = true)
-        urlToUriMap += (oldBm.url -> newUri)
+      val newUri = urlToUriMap.getOrElse(keep.url, {
+        val newUri = normalizedURIInterner.internByUri(keep.url, contentWanted = true)
+        urlToUriMap += (keep.url -> newUri)
         newUri
       })
 
       if (newUri.state == NormalizedURIStates.REDIRECTED) {
         // skipping due to double redirects. this should not happen.
-        log.error(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
-        airbrake.notify(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
+        log.error(s"double uri redirect found: keepId=${keep.id.get} uriId=${newUri.id.get}")
+        airbrake.notify(s"double uri redirect found: keepId=${keep.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
-        val libId = oldBm.libraryId.get // fail if there's no library
-        val userId = oldBm.userId
+        val libId = keep.libraryId.get // fail if there's no library
+        val userId = keep.userId
         val newUriId = newUri.id.get
         val currentBookmarkOpt = keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
 
         currentBookmarkOpt match {
           case None =>
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
-            keepUriUserCache.remove(KeepUriUserKey(oldBm.uriId, oldBm.userId)) // NOTE: we touch two different cache keys here and the following line
-            keepRepo.save(helpers.improveKeepSafely(newUri, oldBm.withNormUriId(newUriId)))
-            (Some(oldBm), None)
+            keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId)) // NOTE: we touch two different cache keys here and the following line
+            val newKeep = keepCommander.changeUri(keep, newUri)
+            (Some(newKeep), None)
           case Some(currentPrimary) =>
             def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
               // TODO(ryan): This is just killing the old keep. We ought to check if the Keep metadata can be merged
               // If it can be merged, do the merge. If it can't, let both continue to exist.
               // Eventually this is going to need to deal with the possibility of more than one Keep/(URI, Library) pair
               // It will need to check every single Keep to see if the metadata can be merged.
-              val deadBm = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
-              val liveBm = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
-              keepUriUserCache.remove(KeepUriUserKey(deadBm.uriId, deadBm.userId))
-              (Some(deadBm), Some(liveBm))
+              val deadKeep = keepRepo.save(duplicate.copy(uriId = newUriId, isPrimary = false, state = KeepStates.INACTIVE))
+              ktlCommander.syncKeep(deadKeep)
+              ktlCommander.removeKeepFromAllLibraries(deadKeep)
+              ktuCommander.syncKeep(deadKeep)
+              ktuCommander.removeKeepFromAllUsers(deadKeep)
+              keepUriUserCache.remove(KeepUriUserKey(deadKeep.uriId, deadKeep.userId))
+              val liveKeep = keepRepo.save(helpers.improveKeepSafely(newUri, primary.copy(uriId = newUriId, isPrimary = true)))
+              ktlCommander.syncKeep(liveKeep)
+              ktuCommander.syncKeep(liveKeep)
+              (Some(deadKeep), Some(liveKeep))
             }
 
             def orderByOldness(keep1: Keep, keep2: Keep): (Keep, Keep) = {
@@ -95,25 +102,25 @@ class UriIntegrityActor @Inject() (
               } else (keep2, keep1)
             }
 
-            (oldBm.isActive, currentPrimary.isActive) match {
+            (keep.isActive, currentPrimary.isActive) match {
               case (true, true) =>
                 // we are merging two active keeps, take the newer one
-                val (older, newer) = orderByOldness(oldBm, currentPrimary)
+                val (older, newer) = orderByOldness(keep, currentPrimary)
                 save(duplicate = older, primary = newer)
 
               case (true, false) =>
                 // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
-                save(duplicate = currentPrimary, primary = oldBm)
+                save(duplicate = currentPrimary, primary = keep)
 
               case _ =>
-                // oldBm is already inactive or duplicate, do nothing
+                // keep is already inactive or duplicate, do nothing
                 (None, None)
             }
         }
       }
     }
 
-    val collectionsToUpdate = deactivatedBms.flatMap {
+    val collectionsToUpdate = deactivatedKeeps.flatMap {
       case (Some(oldBm), None) =>
         keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
       case (Some(oldBm), Some(newBm)) =>

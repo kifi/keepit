@@ -110,8 +110,12 @@ angular.module('kifi')
           }
         }
 
+        function trimLeft(str) {
+          return str.replace(/^\s+/, '');
+        }
+
         function suggest() {
-          var q = scope.search.text.trimLeft();
+          var q = trimLeft(scope.search.text);
           if (q) {
             var libraryId = scope.search.libraryChip ? scope.libraryId : null;
             if (inEmptyQueryState) {
@@ -121,7 +125,7 @@ angular.module('kifi')
             scope.working = true;
             scope.searchInLibrary = !!libraryId;
             searchSuggestService.suggest(q, libraryId).then(function (data) {
-              if (scope.search.text.trimLeft() === q && (scope.search.libraryChip ? scope.libraryId : null) === libraryId) {
+              if (trimLeft(scope.search.text) === q && (scope.search.libraryChip ? scope.libraryId : null) === libraryId) {
                 scope.resultsInLibrary = !!libraryId;
                 scope.users = data.users && data.users.hits;
                 scope.libraries = data.libraries && data.libraries.hits;
@@ -133,7 +137,7 @@ angular.module('kifi')
                 });
               }
             })['finally'](function () {
-              if (scope.search.text.trimLeft() === q) {
+              if (trimLeft(scope.search.text) === q) {
                 scope.working = false;
               }
             });

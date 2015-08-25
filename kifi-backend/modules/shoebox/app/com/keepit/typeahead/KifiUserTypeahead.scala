@@ -34,7 +34,7 @@ class KifiUserTypeahead @Inject() (
     UserCache: UserIdCache) extends Typeahead[User, User, User, UserUserTypeahead] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
 
-  protected val refreshRequestConsolidationWindow = 1 seconds
+  protected val refreshRequestConsolidationWindow = 0 seconds
 
   protected val fetchRequestConsolidationWindow = 15 seconds
 
@@ -107,6 +107,6 @@ class KifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, inner
 
 case class KifiUserTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[User]] {
   val namespace = "kifi_user_typeahead"
-  override val version = 1
+  override val version = 2
   def toKey() = userId.id.toString
 }

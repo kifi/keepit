@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
@@ -10,13 +11,13 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.store.ImageSize
 import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
-import play.api.db
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class LibraryAnalytics @Inject() (
     db: Database,
+    userPropertyUpdateActor: ActorInstance[UserPropertyUpdateActor],
     implicit val executionContext: ExecutionContext,
     keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {
 
@@ -67,6 +68,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
@@ -99,6 +101,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -141,7 +144,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("editColor", edits.get("color").getOrElse(false))
       contextBuilder += ("editMadePrivate", edits.get("madePrivate").getOrElse(false))
       contextBuilder += ("editListed", edits.get("listed").getOrElse(false))
-
+      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
       contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
@@ -231,7 +234,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("action", "createdTag")
       contextBuilder += ("tagId", newTag.id.get.toString)
       heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      heimdal.incrementUserProperties(newTag.userId, "tags" -> 1)
+      userPropertyUpdateActor.ref ! (newTag.userId, UserPropertyUpdateInstruction.TagCount)
 
       // Anonymized event with tag information
       anonymise(contextBuilder)
@@ -248,7 +251,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("action", "deletedTag")
       contextBuilder += ("tagId", oldTag.id.get.toString)
       heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      heimdal.incrementUserProperties(oldTag.userId, "tags" -> -1)
+      userPropertyUpdateActor.ref ! (oldTag.userId, UserPropertyUpdateInstruction.TagCount)
     }
   }
 
@@ -260,7 +263,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("action", "undeletedTag")
       contextBuilder += ("tagId", tag.id.get.toString)
       heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      heimdal.incrementUserProperties(tag.userId, "tags" -> 1)
+      userPropertyUpdateActor.ref ! (tag.userId, UserPropertyUpdateInstruction.TagCount)
     }
   }
 
@@ -289,7 +292,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
-
+        contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (!KeepSource.imports.contains(bookmark.source)) {
@@ -301,10 +304,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder.addUrlInfo(bookmark.url)
         heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
     }
-    val kept = keeps.length
-    val keptPrivate = keeps.count(_.isPrivate)
-    val keptPublic = kept - keptPrivate
-    heimdal.incrementUserProperties(userId, "keeps" -> kept, "privateKeeps" -> keptPrivate, "publicKeeps" -> keptPublic)
+    userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
     heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
   }
 
@@ -337,7 +337,7 @@ class LibraryAnalytics @Inject() (
       val unkept = keeps.length
       val unkeptPrivate = keeps.count(_.isPrivate)
       val unkeptPublic = unkept - unkeptPrivate
-      heimdal.incrementUserProperties(userId, "keeps" -> -unkept, "privateKeeps" -> -unkeptPrivate, "publicKeeps" -> -unkeptPublic)
+      userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
     }
   }
 
@@ -355,10 +355,8 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("uriId", keep.uriId.toString)
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, rekeptAt))
       }
-      val rekept = keeps.length
-      val rekeptPrivate = keeps.count(_.isPrivate)
-      val rekeptPublic = rekept - rekeptPrivate
-      heimdal.incrementUserProperties(userId, "keeps" -> rekept, "privateKeeps" -> rekeptPrivate, "publicKeeps" -> rekeptPublic)
+
+      userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
     }
   }
 
@@ -370,10 +368,10 @@ class LibraryAnalytics @Inject() (
     if (oldKeep.isPrivate != updatedKeep.isPrivate) {
       if (updatedKeep.isPrivate) {
         contextBuilder += ("updatedPrivacy", "private")
-        heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> 1, "publicKeeps" -> -1)
+        userPropertyUpdateActor.ref ! (updatedKeep.userId, UserPropertyUpdateInstruction.KeepCounts)
       } else {
         contextBuilder += ("updatedPrivacy", "public")
-        heimdal.incrementUserProperties(updatedKeep.userId, "privateKeeps" -> -1, "publicKeeps" -> 1)
+        userPropertyUpdateActor.ref ! (updatedKeep.userId, UserPropertyUpdateInstruction.KeepCounts)
       }
     }
 
@@ -431,6 +429,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     contextBuilder += ("tagId", tag.id.get.toString)
+    if (action == "taggedPage") contextBuilder += ("organizationId", keep.organizationId.map(_.toString).getOrElse(""))
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
 
     // Anonymized event with tag information

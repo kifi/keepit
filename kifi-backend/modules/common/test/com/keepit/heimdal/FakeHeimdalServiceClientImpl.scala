@@ -8,6 +8,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.test.{ FakeRepoWithId, FakeServiceClient }
 import org.joda.time.DateTime
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Future, Promise }
 
@@ -79,6 +80,8 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val trackedEvents = ArrayBuffer[HeimdalEvent]()
   def eventsRecorded: Int = synchronized(trackedEvents.size)
 
+  val setUserPropertyCalls = mutable.ListBuffer.empty[(Id[User], Seq[(String, ContextData)])]
+
   def trackEvent(event: HeimdalEvent): Unit = synchronized {
     trackedEvents += event
   }
@@ -93,7 +96,9 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def incrementUserProperties(userId: Id[User], increments: (String, Double)*): Unit = {}
 
-  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {}
+  def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {
+    setUserPropertyCalls.append((userId, properties))
+  }
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 

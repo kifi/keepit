@@ -82,6 +82,7 @@ class AdminUserController @Inject() (
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgInviteRepo: OrganizationInviteRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -536,19 +537,6 @@ class AdminUserController @Inject() (
   def connectUsers(user1: Id[User]) = AdminUserPage { implicit request =>
     val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
     db.readWrite { implicit session =>
-      val socialUser1 = socialUserInfoRepo.getByUser(user1).find(_.networkType == SocialNetworks.FORTYTWO)
-      val socialUser2 = socialUserInfoRepo.getByUser(user2).find(_.networkType == SocialNetworks.FORTYTWO)
-      for {
-        su1 <- socialUser1
-        su2 <- socialUser2
-      } yield {
-        socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-          case Some(sc) =>
-            socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-          case None =>
-            socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-        }
-      }
       userConnectionRepo.addConnections(user1, Set(user2), requested = true)
       eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
       eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
@@ -870,35 +858,6 @@ class AdminUserController @Inject() (
     }
   }
 
-  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminUserPage.async { request =>
-    SafeFuture {
-      val toBeCreated = db.readWrite { implicit session =>
-        userConnectionRepo.all().collect {
-          case activeConnection if {
-            val user1State = userRepo.get(activeConnection.user1).state
-            val user2State = userRepo.get(activeConnection.user2).state
-            activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
-          } =>
-            val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-            if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
-              if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
-              Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
-            } else None
-        }.flatten
-      }
-
-      implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
-      implicit val userIdFormat = Id.format[User]
-      val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2) })
-      val title = "FortyTwo Connections to be created"
-      val msg = toBeCreated.mkString("\n")
-      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
-        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
-      Ok(json)
-    }
-  }
-
   def deactivate(userId: Id[User]) = AdminUserPage.async { request =>
     SafeFuture {
       val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
@@ -957,13 +916,21 @@ class AdminUserController @Inject() (
     // Libraries Data
     libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites
     libraryMembershipRepo.getWithUserId(userId).foreach { membership => libraryMembershipRepo.save(membership.withState(LibraryMembershipStates.INACTIVE)) } // Library Memberships
-    libraryRepo.getAllByOwner(userId).foreach { library => libraryRepo.save(library.withState(LibraryStates.INACTIVE)) } // Libraries
+    val ownedLibraries = libraryRepo.getAllByOwner(userId).map(_.id.get)
+    val ownsCollaborativeLibs = libraryMembershipRepo.getCollaboratorsByLibrary(ownedLibraries.toSet).exists { case (_, collaborators) => collaborators.size > 1 }
+    assert(!ownsCollaborativeLibs, "cannot deactivate a user if they own a library with collaborators: either delete the library or transfer its ownership")
 
     // Personal Info
     userSessionRepo.invalidateByUser(userId) // User Session
     kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
     userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
     emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
+
+    // Organizations Data
+    orgMembershipRepo.getAllByUserId(userId).foreach { membership => orgMembershipRepo.save(membership.withState(OrganizationMembershipStates.INACTIVE)) }
+    orgInviteRepo.getAllByUserId(userId).foreach { invite => orgInviteRepo.save(invite.withState(OrganizationInviteStates.INACTIVE)) }
+    orgMembershipCandidateRepo.getAllByUserId(userId).foreach { candidacy => orgMembershipCandidateRepo.save(candidacy.withState(OrganizationMembershipCandidateStates.INACTIVE)) }
+    assert(orgRepo.getAllByOwnerId(userId).isEmpty, "cannot deactivate a user if they own an org: either delete the org or transfer its ownership")
 
     val user = userRepo.get(userId)
 

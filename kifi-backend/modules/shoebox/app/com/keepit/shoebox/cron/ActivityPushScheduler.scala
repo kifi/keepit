@@ -5,7 +5,8 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.notify.model.NewKeepActivity
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewKeepActivity
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -169,7 +170,7 @@ class ActivityPusher @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> libMessage.owner,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(libMessage.lib, libMessage.libImageOpt, libMessage.owner)),
+            "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(libMessage.lib, libMessage.libImageOpt, libMessage.owner)),
             "keep" -> Json.obj(
               "id" -> libMessage.newKeep.externalId,
               "url" -> libMessage.newKeep.url
@@ -179,7 +180,8 @@ class ActivityPusher @Inject() (
             elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
         elizaServiceClient.sendNotificationEvent(NewKeepActivity(
-          activity.userId, currentDateTime,
+          Recipient(activity.userId),
+          currentDateTime,
           libMessage.newKeep.userId,
           libMessage.newKeep.id.get,
           libMessage.lib.id.get))

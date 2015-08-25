@@ -12,27 +12,30 @@
 
       <div class="manage-lib-content">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
-
           <div class="manage-lib-input-wrapper">
-            <span class="manage-lib-heading">Name</span>
-            <input class="manage-lib-input manage-lib-name-input pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
-            <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
-            <label class="manage-lib-slug">
-              <span class="manage-lib-slug-1">kifi.com/{{space.destination|slug}}/</span>
-              <span class="manage-lib-slug-2">
-                <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
-              </span>
-            </label>
+            <h3 class="manage-lib-heading">Name</h3>
+            <div class="manage-lib-input-area">
+              <input class="manage-lib-input manage-lib-name-input pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
+              <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
+              <label class="manage-lib-slug">
+                <span class="manage-lib-slug-1">kifi.com/{{space.destination|slug}}/</span>
+                <span class="manage-lib-slug-2">
+                  <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
+                </span>
+              </label>
+            </div>
           </div>
 
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper">
-            <span class="manage-lib-heading">Description</span><!-- for removing space between inline-block
-         --><textarea class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
+            <h3 class="manage-lib-heading">Description</h3>
+            <div class="manage-lib-input-area">
+              <textarea class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
+            </div>
           </div>
 
           <div class="manage-lib-input-wrapper" ng-if="me.orgs.length">
-            <div class="manage-lib-heading"></div>&nbsp;
-            <div class="manage-lib-body">
+            <h3 class="manage-lib-heading"></h3>
+            <div class="manage-lib-input-area">
               <label>
                 <input type="checkbox" ng-model="libraryProps.inOrg" ng-click="setOrg()" />
                 Organization library
@@ -56,8 +59,8 @@
           </div>
 
           <div class="manage-lib-input-wrapper">
-            <div class="manage-lib-heading">Privacy</div>
-            <div class="manage-lib-create-visibility-wrapper" ng-switch="library.visibility">
+            <h3 class="manage-lib-heading">Privacy</h3>
+            <div class="manage-lib-input-area manage-lib-create-visibility-wrapper" ng-switch="library.visibility">
               <div kf-library-visibility-selector library="library" space="space.destination"></div>
               <p ng-switch-when="published" class="manage-lib-create-visiblity-description">
                 Anyone can see and follow this library
@@ -72,11 +75,13 @@
           </div>
 
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper kf-color">
-            <div class="manage-lib-heading">Color</div>
-            <label ng-repeat="hex in colors" class="manage-lib-color" style="background-color:{{hex}}">
-              <input type="radio" class="manage-lib-color-radio" value="{{hex}}" ng-model="library.color">
-              <span class="svg-checkmark-thin"></span>
-            </label>
+            <h3 class="manage-lib-heading">Color</h3>
+            <div class="manage-lib-input-area">
+              <label ng-repeat="hex in colors" class="manage-lib-color" style="background-color:{{hex}}">
+                <input type="radio" class="manage-lib-color-radio" value="{{hex}}" ng-model="library.color">
+                <span class="svg-checkmark-thin"></span>
+              </label>
+            </div>
           </div>
 
 

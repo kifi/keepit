@@ -47,7 +47,7 @@ private class RawKeepImporterActor @Inject() (
     libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     libraryAnalytics: LibraryAnalytics,
-    bookmarksCommanderProvider: Provider[KeepsCommander],
+    bookmarksCommanderProvider: Provider[KeepCommander],
     libraryCommanderProvider: Provider[LibraryCommander],
     rover: RoverServiceClient,
     searchClient: SearchServiceClient,
@@ -90,10 +90,10 @@ private class RawKeepImporterActor @Inject() (
   private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).foreach {
       case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
 
-        val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
+        val context = importIdOpt.flatMap(importId => getHeimdalContext(userId, importId)).getOrElse(HeimdalContext.empty)
 
         // ------------------- helpers ---------------------
 
@@ -116,7 +116,7 @@ private class RawKeepImporterActor @Inject() (
           val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
           val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
-          val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
+          val failuresRawKeep = failures.flatMap(s => rawKeepByUrl.get(s.url)).toSet
           val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
           log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
@@ -194,9 +194,9 @@ private class RawKeepImporterActor @Inject() (
     Try {
       db.readOnlyMaster { implicit session =>
         userValueRepo.getValueStringOpt(userId, UserValueName.bookmarkImportContextName(importId))
-      }.map { jsonStr =>
+      }.flatMap { jsonStr =>
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
-      }.flatten
+      }
     }.toOption.flatten
   }
 
@@ -246,7 +246,7 @@ case class RawKeepGroupImportContext(userId: Id[User], source: KeepSource, insta
 @Singleton
 class KeepTagImportHelper @Inject() (
     db: Database,
-    keepsCommanderProvider: Provider[KeepsCommander],
+    keepsCommanderProvider: Provider[KeepCommander],
     kifiInstallationRepo: KifiInstallationRepo) extends Logging {
 
   def process(rawKeepGroupImportContext: RawKeepGroupImportContext): Unit = {
@@ -270,7 +270,7 @@ class KeepTagImportHelper @Inject() (
     // create a set of all tags
     val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
     rawKeepGroup.foreach { rk =>
-      rk.keepTags.map { tagNames =>
+      rk.keepTags.foreach { tagNames =>
         tagNames.as[Seq[String]].foreach { tagName =>
           keepTagNamesMap += (tagName.toLowerCase -> tagName)
         }
@@ -291,13 +291,13 @@ class KeepTagImportHelper @Inject() (
     successes.foreach { keep =>
       val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
         val tagIdsFromTags = rk.tagIds.map { tags =>
-          tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
+          tags.split(",").toSeq.filter(_.length > 0).flatMap { c => Try(c.toLong).map(Id[Collection]).toOption }
         }
 
         val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
-          tagArray.as[Seq[String]].map { tagName =>
+          tagArray.as[Seq[String]].flatMap { tagName =>
             keepTagMap.get(tagName.toLowerCase).map(_.id.get)
-          }.flatten
+          }
         }
 
         (tagIdsFromTags, tagIdsFromKeepTags) match {

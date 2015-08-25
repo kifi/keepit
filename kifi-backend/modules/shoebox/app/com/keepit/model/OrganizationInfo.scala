@@ -5,6 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -35,26 +36,40 @@ object OrganizationInfo {
   )(unlift(OrganizationInfo.unapply))
 }
 
-case class MembershipInfo(
-  isInvited: Boolean,
+case class OrganizationMembershipInfo(
+  isInvited: Boolean, // deprecated, kill and use invite.isDefined || invite != null instead
+  invite: Option[OrganizationInviteInfo],
   permissions: Set[OrganizationPermission],
   role: Option[OrganizationRole])
-object MembershipInfo {
-  implicit val defaultWrites: Writes[MembershipInfo] = (
+object OrganizationMembershipInfo {
+  implicit val defaultWrites: Writes[OrganizationMembershipInfo] = (
     (__ \ 'isInvited).write[Boolean] and
+    (__ \ 'invite).writeNullable[OrganizationInviteInfo] and
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
     (__ \ 'role).writeNullable[OrganizationRole]
-  )(unlift(MembershipInfo.unapply))
+  )(unlift(OrganizationMembershipInfo.unapply))
+}
+
+case class OrganizationInviteInfo(
+  inviter: BasicUser,
+  lastInvited: DateTime)
+object OrganizationInviteInfo {
+  implicit val defaultWrites: Writes[OrganizationInviteInfo] = (
+    (__ \ 'inviter).write[BasicUser] and
+    (__ \ 'lastInvited).write[DateTime])(unlift(OrganizationInviteInfo.unapply))
+  def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
+    OrganizationInviteInfo(inviter, invite.updatedAt)
+  }
 }
 
 case class OrganizationView(
   organizationInfo: OrganizationInfo,
-  membershipInfo: MembershipInfo)
+  membershipInfo: OrganizationMembershipInfo)
 
 object OrganizationView {
   implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
-      "membership" -> MembershipInfo.defaultWrites.writes(o.membershipInfo))
+      "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 }
 
@@ -81,22 +96,9 @@ object OrganizationCard {
   )(unlift(OrganizationCard.unapply))
 }
 
-// OrganizationImageInfo and OrganizationNotificationInfo are strictly for use in the
-// OrganizationInviteCommander to notify members when a new user joins their
-// organization. I would like to get rid of them.
-@json case class OrganizationImageInfo(path: ImagePath)
-object OrganizationImageInfo {
-  def createInfo(img: OrganizationAvatar) = OrganizationImageInfo(img.imagePath)
-}
-@json
-case class OrganizationNotificationInfo(
-  id: PublicId[Organization],
-  name: String,
-  handle: Option[PrimaryOrganizationHandle],
-  image: Option[OrganizationImageInfo])
-object OrganizationNotificationInfo {
+object OrganizationNotificationInfoBuilder {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(OrganizationImageInfo.createInfo))
+    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(_.imagePath))
   }
 }
 
@@ -109,16 +111,20 @@ case class OrganizationInitialValues(name: String, description: Option[String] =
     )
   }
 }
+
 object OrganizationInitialValues {
   private val defaultReads: Reads[OrganizationInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String]
+    (__ \ 'site).readNullable[String].map {
+      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
+      case Some(site) => Some(site)
+      case None => None
+    }
   )(OrganizationInitialValues.apply _)
 
   val website = defaultReads
   val mobileV1 = defaultReads
-
 }
 
 case class OrganizationModifications(
@@ -131,7 +137,11 @@ object OrganizationModifications {
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
     (__ \ 'basePermissions).readNullable[BasePermissions] and
-    (__ \ 'site).readNullable[String]
+    (__ \ 'site).readNullable[String].map {
+      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
+      case Some(site) => Some(site)
+      case None => None
+    }
   )(OrganizationModifications.apply _)
 
   val website = defaultReads

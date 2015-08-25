@@ -86,6 +86,9 @@ angular.module('kifi')
       } else if (util.startsWith(currentState, 'userProfile')) {
         typeBase += 'UserProfile';
         $analytics.eventTrack(eventName, {type: typeBase, action: action});
+      } else if (util.startsWith(currentState, 'orgProfile')) {
+        typeBase += 'Organization';
+        $analytics.eventTrack(eventName, {type: typeBase, action: action});
       }
     }
 
@@ -99,6 +102,10 @@ angular.module('kifi')
         typeBase += 'UserProfile';
         attributes = _.extend({type: typeBase}, attributes || {});
         $rootScope.$emit('trackUserProfileEvent', eventType, attributes);
+      } else if (util.startsWith(currentState, 'orgProfile')) {
+        typeBase += 'Organization';
+        attributes = _.extend({type: typeBase}, attributes || {});
+        $rootScope.$emit('trackOrgProfileEvent', eventType, attributes);
       }
     }
 
@@ -119,6 +126,10 @@ angular.module('kifi')
       } : {};
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
+
+      var libAuthTokenQueryString = params.libAuthToken ? 'authToken='+params.libAuthToken : '';
+      var orgAuthTokenQueryString = params.orgAuthToken ? 'authToken='+params.orgAuthToken : '';
+      $scope.authTokenQueryParam = params.intent === 'follow' ? libAuthTokenQueryString : orgAuthTokenQueryString;
 
       $scope.emailSubmitted = false;
 

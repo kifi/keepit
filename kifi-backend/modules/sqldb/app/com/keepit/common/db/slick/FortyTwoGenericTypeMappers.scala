@@ -1,13 +1,21 @@
 package com.keepit.common.db.slick
 
+import java.sql.{Clob, Timestamp}
+import javax.sql.rowset.serial.SerialClob
+
+import com.keepit.classify.{DomainTagName, NormalizedHostname}
 import com.keepit.common.db._
+import com.keepit.common.mail.{EmailAddress, _}
+import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.net.UserAgent
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{ Clob, Timestamp }
-import com.keepit.notify.model.{ NKind, NotificationEvent, NotificationKind }
+import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.model.{ Recipient, NKind, NotificationKind }
 import org.joda.time.{ LocalTime, DateTime }
 import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ GetResult, SetParameter }
@@ -17,19 +25,18 @@ import com.keepit.classify.{ NormalizedHostname, DomainTagName }
 import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
+import com.keepit.model.{DeepLocator, UrlHash, _}
+import com.keepit.notify.model.Recipient
+import com.keepit.search.{ArticleSearchResult, Lang, SearchConfig}
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{ SearchConfig, Lang }
-import javax.sql.rowset.serial.SerialClob
-import com.keepit.model.UrlHash
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import play.api.libs.json.JsObject
-import com.keepit.common.mail.EmailAddress
-import com.keepit.social.SocialId
-import com.keepit.model.DeepLocator
-import com.keepit.search.ArticleSearchResult
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.social.{SocialId, SocialNetworkType}
+import org.joda.time.{DateTime, LocalTime}
+import play.api.libs.json.{JsArray, JsObject, JsString, _}
+import securesocial.core.SocialUser
+
 import scala.concurrent.duration._
+import scala.slick.ast.TypedType
+import scala.slick.jdbc.{GetResult, SetParameter}
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -99,6 +106,9 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
+  implicit val keepEntitiesHashMapper = MappedColumnType.base[KeepConnectionsHash, Int](_.value, KeepConnectionsHash.apply)
+
+  implicit val recipientMapper = MappedColumnType.base[Recipient, String](recip => Recipient.unapply(recip).get, Recipient.apply)
 
   implicit val notificationEventMapper = MappedColumnType.base[NotificationEvent, String]({ event =>
     Json.stringify(Json.toJson(event))

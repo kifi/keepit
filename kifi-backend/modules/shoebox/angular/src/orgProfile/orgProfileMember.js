@@ -3,16 +3,26 @@
 angular.module('kifi')
 
 .directive('kfOrgMember', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'modalService',
+  function (profileService, modalService) {
+
     function _isMe() {
       var $scope = this;
       return $scope.member.id === profileService.me.id;
     }
 
-    function _resentInvite() {
+    function _isMeAndOwner() {
       var $scope = this;
-      return $scope._resentInvite;
+
+      return (
+        profileService.me.id === $scope.organization.ownerId &&
+        profileService.me.id === $scope.member.id
+      );
+    }
+
+    function _getResentInvite() {
+      var $scope = this;
+      return $scope.model.resentInvite;
     }
 
     function _hasAcceptedInvite() {
@@ -24,14 +34,15 @@ angular.module('kifi')
       var $scope = this;
 
       return (
-        $scope.myMembership.role === 'owner' &&
-        $scope.member.role !== 'owner' &&
+        $scope.organization.ownerId === $scope.me.id &&
+        $scope.organization.ownerId !== $scope.member.id &&
         $scope.hasAcceptedInvite()
       );
     }
 
     function _shouldShowPromote() {
       var $scope = this;
+
       return (
         $scope.myMembership.role === 'admin' &&
         $scope.member.role !== 'admin' &&
@@ -41,9 +52,10 @@ angular.module('kifi')
 
     function _shouldShowDemote() {
       var $scope = this;
+
       return (
+        !$scope.isMeAndOwner() &&
         profileService.me.id === $scope.organization.ownerId &&
-        !$scope.isMe() &&
         $scope.member.role !== 'member' &&
         $scope.hasAcceptedInvite()
       );
@@ -51,8 +63,20 @@ angular.module('kifi')
 
     function _shouldShowRemove() {
       var $scope = this;
-      var hasCorrectPermission = ($scope.myMembership.role === 'admin' && $scope.member.role !== 'admin') || (profileService.me.id === $scope.profile.ownerId);
-      return $scope.hasAcceptedInvite() && (hasCorrectPermission || $scope.isMe());
+      var hasCorrectPermission = (
+        (
+          $scope.myMembership.role === 'admin' &&
+          $scope.member.role !== 'admin'
+        ) || (
+          profileService.me.id === $scope.profile.ownerId
+        )
+      );
+
+      return (
+        !$scope.isMeAndOwner() &&
+        $scope.hasAcceptedInvite() &&
+        ($scope.isMe() || hasCorrectPermission)
+      );
     }
 
     function _shouldShowInvite() {
@@ -69,8 +93,7 @@ angular.module('kifi')
       var $scope = this;
       $scope.$emit('inviteMember', $scope.member, function (promise) {
         promise.then(function () {
-          // TODO: WHY $scope.$parent??? Is it because ng-if creates a new scope?
-          $scope.$parent._resentInvite = true;
+          $scope.model.resentInvite = true;
         });
       });
     }
@@ -87,7 +110,25 @@ angular.module('kifi')
 
     function _triggerMakeOwner() {
       var $scope = this;
-      $scope.$emit('makeOwner', $scope.member);
+
+      var opts = {
+        organization: $scope.organization,
+        member: $scope.member,
+        returnAction: function () {
+          $scope.$emit('resetAndFetch');
+          $scope.organization.ownerId = $scope.member.id;
+        }
+      };
+      for (var i=0, len=$scope.members.length; i < len; i++) {
+        if ($scope.members[i].id === $scope.organization.ownerId) {
+          opts.currentOwner = $scope.members[i];
+        }
+      }
+      modalService.open({
+        // TODO: Template name needs to be longer
+        template: 'orgProfile/orgProfileMemberOwnerTransferModal.tpl.html',
+        modalData: opts
+      });
     }
 
     function _triggerPromote() {
@@ -103,6 +144,12 @@ angular.module('kifi')
     function _triggerClickedAvatar() {
       var $scope = this;
       $scope.$emit('clickedAvatar', $scope.member);
+    }
+
+    function _role() {
+      var $scope = this;
+      return ($scope.hasAcceptedInvite() ? '' : 'Pending ') +
+        ($scope.organization.ownerId === $scope.member.id ? 'Owner' : ($scope.member.role === 'admin' ? 'Admin' : 'Member'));
     }
 
     return {
@@ -121,7 +168,7 @@ angular.module('kifi')
           }
         });
 
-        $scope._resentInvite = false;
+        $scope.model = { resentInvite: false }; // assign primitive to reference
         $scope._controlsOpen = false;
 
         $scope.open = function() {
@@ -132,7 +179,7 @@ angular.module('kifi')
         $scope.close = function() {
           if ($scope.controlsOpen) {
             $scope.controlsOpen = false;
-            $scope.resentInvite = false;
+            $scope.model.resentInvite = false;
             $scope.$emit('toggledMember', $scope.member, $scope.controlsOpen);
           }
         };
@@ -150,8 +197,9 @@ angular.module('kifi')
         };
 
         $scope.isMe = _isMe;
+        $scope.isMeAndOwner = _isMeAndOwner;
 
-        $scope.resentInvite = _resentInvite;
+        $scope.getResentInvite = _getResentInvite;
 
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
         $scope.shouldShowMakeOwner = _shouldShowMakeOwner;
@@ -167,6 +215,7 @@ angular.module('kifi')
         $scope.triggerMakeOwner = _triggerMakeOwner;
         $scope.triggerPromote = _triggerPromote;
         $scope.triggerDemote = _triggerDemote;
+        $scope.role = _role;
       }
     };
   }

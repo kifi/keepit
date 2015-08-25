@@ -3,9 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
-  function($scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
+  '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
+  function($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
     function memberPageAnalytics(args) {
+      args = _.extend(args, { type: 'orgMembers' });
       orgProfileService.trackEvent('user_clicked_page', organization, args);
     }
 
@@ -94,6 +95,7 @@ angular.module('kifi')
     $scope.me = profileService.me;
 
     function resetAndFetch() {
+      orgProfileService.invalidateOrgProfileCache();
       memberLazyLoader.reset();
       $scope.fetchMembers();
     }
@@ -110,6 +112,10 @@ angular.module('kifi')
         })
         ['catch'](handleErrorResponse);
     };
+
+    $scope.$on('resetAndFetch', function() {
+      resetAndFetch();
+    });
 
     // Let the other member lines know to close
     $scope.$on('toggledMember', function (e, member, isOpen) {
@@ -252,7 +258,7 @@ angular.module('kifi')
         }
       });
     };
-
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgMembers' });
     resetAndFetch();
   }
 ]);

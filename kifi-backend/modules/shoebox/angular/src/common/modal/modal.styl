@@ -3,7 +3,7 @@
 //
 generic-dialog-button =
   width: 100px
-  padding: 13px 0 10px
+  padding: 10px 0
   border: 1px solid rgba(166, 175, 189, 0.53)
   border-radius: 6px
   font-size: 12px
@@ -26,7 +26,10 @@ generic-dialog-button =
   top: 50%
   transform: translate(-50%, -50%)
   width: auto
-  margin: 0
+
+  box-sizing: border-box
+  border: 10px transparent solid
+
   z-index: 1050
 
 .modal-content
@@ -117,10 +120,11 @@ dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + di
     width: 2px
 
 .dialog-buttons
+  display: flex
+  justify-content: center
   margin: 0 auto
   padding: 13px 0
   background-color: #f3f5f7
-  text-align: center
 
   button
     {generic-dialog-button}
@@ -129,6 +133,9 @@ dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + di
     // Maybe the block needs to turn into a mixin or function...
     border-radius: 6px
     background: linear-gradient(to top, #f3f3f3, #fff)
+
+    + button
+      margin-left: 5px
 
     &:hover
       background: #e6e8ea

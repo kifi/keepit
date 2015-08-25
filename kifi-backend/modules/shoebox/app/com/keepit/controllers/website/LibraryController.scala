@@ -22,17 +22,14 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
-import scala.collection.mutable
-
 import org.joda.time.DateTime
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent.Future
-import scala.util.{ Try, Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 class LibraryController @Inject() (
   db: Database,
@@ -46,7 +43,7 @@ class LibraryController @Inject() (
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
   libPathCommander: PathCommander,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -136,7 +133,8 @@ class LibraryController @Inject() (
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
-      case Right(lib) =>
+      case Right(response) =>
+        val lib = response.modifiedLibrary
         val (owner, membership, org) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
@@ -195,7 +193,12 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true).map { libInfo =>
+          val useMultilibLogic = request match {
+            case u: UserRequest[_] => u.experiments.contains(UserExperimentType.KEEP_MULTILIB)
+            case _ => false
+          }
+          if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info

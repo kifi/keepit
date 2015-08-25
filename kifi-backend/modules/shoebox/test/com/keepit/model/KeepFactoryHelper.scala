@@ -1,13 +1,10 @@
 package com.keepit.model
 
 import com.google.inject.Injector
-import com.keepit.commanders.KeepToLibraryCommander
+import com.keepit.common.core._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.KeepFactory.PartialKeep
 import org.apache.commons.lang3.RandomStringUtils.random
-import com.keepit.common.core._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.LibraryFactory._
 
 object KeepFactoryHelper {
 
@@ -40,11 +37,9 @@ object KeepFactoryHelper {
         candidate
       }
 
-      val keep = {
-        val candidate = partialKeep.get
-        fixUriReferences(candidate) |> fixLibraryReferences
-      }
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None))
+      val keep = partialKeep.get |> fixUriReferences |> fixLibraryReferences
+
+      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withConnections(Set(keep.libraryId.get), Set(keep.userId)))
       val library = injector.getInstance(classOf[LibraryRepo]).get(finalKeep.libraryId.get)
 
       val ktl = KeepToLibrary(
@@ -58,6 +53,14 @@ object KeepFactoryHelper {
         organizationId = library.organizationId
       )
       injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
+      val ktu = KeepToUser(
+        keepId = finalKeep.id.get,
+        userId = finalKeep.userId,
+        addedAt = finalKeep.keptAt,
+        addedBy = finalKeep.userId,
+        uriId = finalKeep.uriId
+      )
+      injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
       finalKeep
     }
 

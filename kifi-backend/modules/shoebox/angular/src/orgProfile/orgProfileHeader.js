@@ -18,13 +18,15 @@ angular.module('kifi')
       scope.notification = null;
 
       var authToken = $location.search().authToken || '';
+      scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
       scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
+      scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
-      if (!profileService.userLoggedIn() && scope.profile && authToken) {
-        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken});
+      if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
+        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
       }
 
       scope.undo = function () {
@@ -64,10 +66,19 @@ angular.module('kifi')
           });
       };
 
-      scope.onOrgProfileImageClick = function (event) {
+      scope.onClickTrack = function (event, action) {
+        if (event.which === 1) {
+          if (action === 'clickedAddCoverImage') {
+            angular.element('.kf-oph-pic-file').click();
+          }
+          orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: action });
+        }
+      };
+
+      scope.onOrgProfileImageClick = function (event) { // doesn't look like we're using this anywhere, but if so, should be merged with onClickTrack
         if (event.which === 1) {
           angular.element('.kf-oph-pic-file').click();
-          //libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
+          orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: 'clickedAddCoverImage' });
         }
       };
 
@@ -89,11 +100,14 @@ angular.module('kifi')
       };
 
       scope.shouldShowInviteBanner = function () {
-        // TODO: Check if this user is a member already
-        return scope.membership.isInvited && !scope.acknowledgedInvite;
+        return profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !scope.acknowledgedInvite;
       };
 
-      scope.bannerButtons = [
+      scope.shouldShowSignupBanner = function () {
+        return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
+      };
+
+      scope.inviteBannerButtons = [
         {
           label: 'Decline',
           className: 'kf-decline',
@@ -113,6 +127,16 @@ angular.module('kifi')
                 orgProfileService.invalidateOrgProfileCache();
                 $state.reload();
               });
+          }
+        }
+      ];
+
+      scope.signupBannerButtons = [
+        {
+          label: 'Accept',
+          className: 'kf-accept',
+          click: function () {
+            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite });
           }
         }
       ];

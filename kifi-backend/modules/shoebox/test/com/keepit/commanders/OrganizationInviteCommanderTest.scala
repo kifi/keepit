@@ -143,10 +143,6 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           invite.userId === Some(invitedUserId)
         }
         invites.length === 20
-
-        db.readOnlyMaster { implicit session =>
-          userExperimentRepo.hasExperiment(invitedUserId, UserExperimentType.ORGANIZATION) should beTrue
-        }
       }
     }
 
@@ -186,25 +182,6 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
-
-      //      "fail when there are invitations but none are valid" in { // we don't send invites with roles anymore
-      //        withDb(modules: _*) { implicit injector =>
-      //          val inviteCommander = inject[OrganizationInviteCommander]
-      //          val inviteRepo = inject[OrganizationInviteRepo]
-      //          val memberRepo = inject[OrganizationMembershipRepo]
-      //          val inviterId = Id[User](1)
-      //          val userId = Id[User](2)
-      //          val (org, invite) = db.readWrite { implicit session =>
-      //            UserFactory.user().withId(inviterId).saved
-      //            UserFactory.user().withId(userId).saved
-      //            val org = OrganizationFactory.organization().withOwner(inviterId).withHandle(OrganizationHandle("kifi")).saved
-      //            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.MEMBER))
-      //            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.ADMIN))
-      //            (org, invite)
-      //          }
-      //          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) === Left(OrganizationFail.NO_VALID_INVITATIONS)
-      //        }
-      //      }
     }
   }
 }

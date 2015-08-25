@@ -18,6 +18,8 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
+import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.model.NotificationId
 import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
@@ -665,4 +667,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = Future.successful(None)
 
+  def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = Future.successful(Map.empty)
+
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
 }

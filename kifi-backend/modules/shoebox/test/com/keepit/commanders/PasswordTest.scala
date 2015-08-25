@@ -68,7 +68,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
       val email1b = userEmailAddressCommander.intern(userId = user1.id.get, address = emailAddr2).get._1
       val hasher = Registry.hashers.get("bcrypt").get
       val pwdInfo = hasher.hash(oldPwd1)
-      val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1a.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
+      val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, credentials = pwdInfo.password))
       val socialUserRepo = inject[SocialUserInfoRepo]
       val socialUser = SocialUser(
         identityId = IdentityId(email1a.address.address, "userpass"),

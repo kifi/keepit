@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -111,6 +112,10 @@ case class LibraryModifyRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None)
 
+case class LibraryModifyResponse(
+  modifiedLibrary: Library,
+  keepChanges: Future[Unit])
+
 case class LibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -151,7 +156,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
       color = lib.color,
-      image = image.map(LibraryImageInfo.createInfo(_)),
+      image = image.map(LibraryImageInfoBuilder.createInfo(_)),
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -222,18 +227,9 @@ object LibraryCardInfo {
   }
 }
 
-@json
-case class LibraryNotificationInfo(
-  id: PublicId[Library],
-  name: String,
-  slug: LibrarySlug,
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  owner: BasicUser)
-
-object LibraryNotificationInfo {
+object LibraryNotificationInfoBuilder {
   def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfo.createInfo(_)), owner)
+    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfoBuilder.createInfo), owner)
   }
 }
 

@@ -13,6 +13,7 @@ angular.module('kifi')
       return orgProfileService
         .getOrgLibraries(organization.id, pageNumber * pageSize, pageSize)
         .then(function (libData) {
+          $scope.loaded = true;
           return libData.libraries;
         });
     }
@@ -95,7 +96,7 @@ angular.module('kifi')
         }
       });
     };
-
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgLibraries'});
     resetAndFetchLibraries();
   }
 ]);

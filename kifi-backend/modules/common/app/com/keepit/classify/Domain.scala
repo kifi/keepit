@@ -9,7 +9,7 @@ import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
 import com.keepit.common.db.{ State, States, ModelWithState, Id }
 import com.keepit.common.time._
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.model.{ Normalization }
 import play.api.data.{ Forms, Mapping }
 import play.api.libs.functional.syntax._
@@ -67,7 +67,7 @@ object DomainInfo {
 
 case class NormalizedHostname(value: String) // use NormalizedHostname.fromHostname
 
-object NormalizedHostname {
+object NormalizedHostname extends Logging {
   private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
@@ -77,7 +77,7 @@ object NormalizedHostname {
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
     def reads(json: JsValue): JsResult[NormalizedHostname] = {
       val trimmed = json.as[String].trim
-      NormalizedHostname.fromHostname(trimmed).map(JsSuccess(_)).getOrElse { JsError("invalid_hostname") }
+      NormalizedHostname.fromHostname(trimmed).map(JsSuccess(_)).getOrElse { log.error(s"[NormalizedHostname] invalid hostname: $trimmed"); JsError("invalid_hostname") }
     }
     def writes(o: NormalizedHostname) = JsString(o.value)
   }
