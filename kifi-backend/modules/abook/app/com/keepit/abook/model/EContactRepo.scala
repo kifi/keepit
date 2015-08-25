@@ -70,19 +70,14 @@ class EContactRepoImpl @Inject() (
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
   }
 
-  private def getByIdsIter(ids: Traversable[Id[EContact]])(implicit session: RSession): CloseableIterator[EContact] = {
-    (for (f <- rows if f.id.inSet(ids)) yield f).iterator
-  }
-
   def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact] = {
     if (ids.isEmpty) Map.empty[Id[EContact], EContact]
     else {
       val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
-        val contacts = getByIdsIter(missing)
-        val res = contacts.collect {
-          case (c) if c.state == EContactStates.ACTIVE =>
-            (EContactKey(c.id.get) -> c)
+        val contacts = (for (f <- rows if f.id.inSet(missing) && f.state === EContactStates.ACTIVE) yield f).list
+        val res = contacts.map { c =>
+          EContactKey(c.id.get) -> c
         }.toMap
         log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")})] MISS: ids:(len=${ids.size})${ids.mkString(",")} res=${res.values.toSeq.take(20)}")
         res
@@ -95,11 +90,6 @@ class EContactRepoImpl @Inject() (
 
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact] = {
     (for (f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).list
-  }
-
-  def getByUserIdIter(userId: Id[User], maxRows: Int)(implicit session: RSession): CloseableIterator[EContact] = {
-    val limit = math.min(MySQL.MAX_ROW_LIMIT, maxRows)
-    (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(limit)
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Set[EContact] = {
