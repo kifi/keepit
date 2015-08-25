@@ -552,10 +552,6 @@ POST          /site/billing/plan                          @com.keepit.controller
 GET           /site/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int)
 GET           /site/billing/eventsBefore                  @com.keepit.controllers.website.PaymentsController.getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[com.keepit.payments.AccountEvent])
 
-
-
-
-
 ##########################################
 # Email-Link API
 ##########################################
