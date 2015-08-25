@@ -147,12 +147,17 @@ class PageCommander @Inject() (
   }
 
   def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
-    libraries.filterNot { lib =>
-      require(lib.state == LibraryStates.ACTIVE, s"library is not active: $lib")
-      val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA, LibraryKind.SYSTEM_READ_IT_LATER, LibraryKind.SYSTEM_GUIDE)
-      require(allowedLibraryKinds.contains(lib.kind), s"library.kind is not one of the allowed kinds: $lib")
-      libraryQualityHelper.isBadLibraryName(lib.name)
-    } sortBy (lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
+    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA, LibraryKind.SYSTEM_READ_IT_LATER, LibraryKind.SYSTEM_GUIDE)
+
+    libraries.filterNot {
+      case lib if lib.state != LibraryStates.ACTIVE =>
+        log.warn(s"[firstQualityFilterAndSort] Library is inactive ${lib.id.get}")
+        true
+      case lib if allowedLibraryKinds.contains(lib.kind) =>
+        log.warn(s"[firstQualityFilterAndSort] Library has a bad kind ${lib.kind}")
+        true
+      case lib => libraryQualityHelper.isBadLibraryName(lib.name)
+    }.sortBy(lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
   }
 
   def secondQualityFilter(libraries: Seq[Library]): Seq[Library] = libraries.filter { lib =>
