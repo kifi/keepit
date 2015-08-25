@@ -13,7 +13,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
 
   @volatile private[this] var closed = false
   @volatile private[this] var initiated = false
-  private[this] lazy val originExecutor = new ThreadPoolExecutor(0, 4, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue[Runnable])
+  private[this] lazy val originExecutor = Executors.newCachedThreadPool()
   private[this] lazy val internalContext: ScalaExecutionContext = {
     initiated = true
     scala.concurrent.ExecutionContext.fromExecutorService(originExecutor)
