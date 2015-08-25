@@ -1,18 +1,16 @@
 <div class="kf-feed-wrapper">
   <div class="kf-feed kf-row" ng-controller="FeedCtrl">
-
-    <h1 class="kf-feed-title kf-full-pane">Feed</h1>
-
-    <main class="kf-feed-items kf-main-pane">
+    <main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
       <section class="kf-reco kf-reco-recommended" ng-repeat="feedItem in feed">
         <header class="kf-feed-top">
           <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.libraries[0][0].path }}" ng-bind="feedItem.libraries[0][0].name"></a>
-          in <span ng-bind="feedItem.libraries[0].organization || 'an organization'"></span> - <span ng-bind="feedItem.createdAt | past"></span>
+          <span ng-bind="feedItem.libraries[0].organization ? 'in ' + feedItem.libraries[0].organization : ''"></span> - <span am-time-ago="feedItem.createdAt"></span>
         </header>
         <div class="kf-keep">
           <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
         </div>
       </section>
+      <div kf-loading-spinner hide="!isLoading()"></div>
     </main>
     <aside class="kf-feed-sidebar kf-side-pane">
       <div kf-profile-widget></div>

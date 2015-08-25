@@ -22,11 +22,32 @@ angular.module('kifi')
       .when('/:handle/libraries', '/:handle')
       .otherwise('/');  // last resort
 
+
     // Set up the states.
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
+        controller: ['$state', 'me', function ($state, me) {
+          var feedExperiment = (me.experiments && me.experiments.indexOf('admin') !== -1);
+          if (feedExperiment) {
+            $state.go('feed');
+          } else {
+            $state.go('recos');
+          }
+        }],
+        resolve: {
+          me: ['profileService', function (profileService) {
+            return profileService.getMe();
+          }]
+        }
+      })
+      .state('feed', {
+        url: '/',
         templateUrl: 'feed/feed.tpl.html'
+      })
+      .state('recos', {
+        url: '/',
+        templateUrl: 'recos/recosView.tpl.html'
       })
       .state('invite', {
         url: '/invite',

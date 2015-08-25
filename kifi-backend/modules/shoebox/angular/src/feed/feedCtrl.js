@@ -3,16 +3,33 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$scope', 'net', 'ml', function($scope, net, ml) {
+  '$scope', 'feedService', 'Paginator', function($scope, feedService, Paginator) {
+    function keepSource(pageNumber, pageSize) {
+      var lastKeep = $scope.feed[(pageNumber * pageSize) - 1] || $scope.feed[$scope.feed.length - 1];
+
+      return feedService.getFeed(pageSize, lastKeep && lastKeep.id)
+      .then(function(keepData) {
+        return keepData.keeps;
+      });
+    }
+
+    var keepLazyLoader = new Paginator(keepSource, 10);
+
     $scope.feed = [];
 
-    ml.specs.getsFeed = new ml.Spec([
-      new ml.Assert('Feed retrieved in 3 seconds or less', 3000),
-      new ml.Expect('Feed returns a list', function(data) { return data.length; })
-    ]);
-    net.getFeed(10).then(function(response) {
-      $scope.feed = response.data.keeps;
-      ml.specs.getsFeed.respond([null, response.data.keeps]);
-    });
+    $scope.scrollDistance = '100%';
+    $scope.hasMoreKeeps = function () {
+      return keepLazyLoader.hasMore();
+    };
+    $scope.isLoading = function () {
+      return !keepLazyLoader.hasLoaded();
+    };
+    $scope.fetchKeeps = function () {
+      keepLazyLoader
+      .fetch()
+      .then(function (keeps) {
+        $scope.feed = keeps;
+      });
+    };
   }
 ]);

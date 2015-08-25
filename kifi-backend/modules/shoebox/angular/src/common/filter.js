@@ -132,52 +132,6 @@ angular.module('kifi')
   return Date;
 })
 
-.filter('past', ['$filter', function ($filter) {
-  function timeSince(timestamp) {
-    var seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
-    var interval = Math.floor(seconds / 31536000);
-
-    if (interval > 1) {
-      return interval + ' years';
-    }
-    interval = Math.floor(seconds / 2592000);
-    if (interval > 1) {
-      return interval + ' months';
-    }
-    interval = Math.floor(seconds / 684800);
-    if (interval > 1) {
-      return interval + ' weeks';
-    }
-    interval = Math.floor(seconds / 86400);
-    if (interval > 1) {
-      return interval + ' days';
-    }
-    interval = Math.floor(seconds / 3600);
-    if (interval > 1) {
-      return interval + ' hours';
-    }
-    interval = Math.floor(seconds / 60);
-    if (interval > 1) {
-      return interval + ' minutes';
-    }
-    return Math.floor(seconds) + ' seconds';
-  }
-
-  return function (timestamp) {
-    var now = new Date();
-    var date = new Date(timestamp);
-
-    var seconds = Math.floor((now - date) / 1000);
-    var days = seconds / 86400;
-
-    if (days > 14) {
-      return 'on ' + $filter('date')(timestamp);
-    } else {
-      return timeSince(timestamp) + ' ago';
-    }
-  };
-}])
-
 .filter('noteHtml', [
   'HTML', '$filter',
   function (HTML, $filter) {
