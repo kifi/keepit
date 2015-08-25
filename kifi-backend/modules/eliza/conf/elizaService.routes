@@ -77,7 +77,7 @@ POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.i
 POST  /internal/eliza/sharedThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getSharedThreadsForGroupByWeek
 POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getAllThreadsForGroupByWeek
 
-GET  /internal/eliza/getTotalMessageCountForGroup       @com.keepit.eliza.controllers.internal.ElizaController.getTotalMessageCountForGroup
+POST  /internal/eliza/getTotalMessageCountForGroup       @com.keepit.eliza.controllers.internal.ElizaController.getTotalMessageCountForGroup
 
 GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
 
