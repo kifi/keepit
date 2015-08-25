@@ -241,7 +241,7 @@ object Eliza extends Service {
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
-    def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
+    def getTotalMessageCountForGroup = ServiceRoute(GET, "/internal/eliza/getTotalMessageCountForGroup")
   }
 }
 
