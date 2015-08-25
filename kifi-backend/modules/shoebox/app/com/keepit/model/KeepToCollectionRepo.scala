@@ -25,6 +25,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def remove(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit
   def getOpt(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
   def insertAll(k2c: Seq[KeepToCollection])(implicit session: RWSession): Unit
+  def deactivate(model: KeepToCollection)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -120,9 +121,7 @@ class KeepToCollectionRepoImpl @Inject() (
 
   def remove(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit = {
     val q = for (r <- rows if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r
-    q.list.map { ktc => //there should be only [0, 1], iterating on possibly more for safty
-      save(ktc.inactivate())
-    }
+    q.list.foreach(deactivate)
   }
 
   def insertAll(k2c: Seq[KeepToCollection])(implicit session: RWSession): Unit = {
@@ -137,6 +136,10 @@ class KeepToCollectionRepoImpl @Inject() (
         }
       }
     }
+  }
+
+  def deactivate(model: KeepToCollection)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 
 }
