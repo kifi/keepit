@@ -43,7 +43,6 @@ class CollectionCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryAnalytics: LibraryAnalytics,
     basicCollectionCache: BasicCollectionByIdCache,
-    keepToCollectionRepo: KeepToCollectionRepo,
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
@@ -225,17 +224,4 @@ class CollectionCommander @Inject() (
       }
     }
   }
-  def copyKeepTags(source: Keep, dest: Keep)(implicit session: RWSession): Unit = {
-    keepToCollectionRepo.getByKeep(source.id.get).foreach { ktc =>
-      val newKtcTemplate = ktc.withKeepId(dest.id.get)
-      val existingKtcOpt = keepToCollectionRepo.getOpt(dest.id.get, ktc.collectionId)
-      keepToCollectionRepo.save(newKtcTemplate.copy(id = existingKtcOpt.map(_.id.get)))
-      collectionRepo.collectionChanged(ktc.collectionId, inactivateIfEmpty = true)
-    }
-  }
-
-  def deactivateKeepTags(keep: Keep)(implicit session: RWSession): Unit = {
-    keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
-  }
-
 }
