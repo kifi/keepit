@@ -17,7 +17,7 @@ class NotificationProcessing @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     delivery: WsNotificationDelivery,
-    notifExperimentCheck: NotifExperimentCheck,
+    notifExperimentCheck: NotificationExperimentCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {

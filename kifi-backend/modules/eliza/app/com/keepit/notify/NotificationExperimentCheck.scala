@@ -13,7 +13,7 @@ import scala.concurrent.duration._
  * The results are cached in the user recipient object for later checks.
  */
 @Singleton
-class NotifExperimentCheck @Inject() (
+class NotificationExperimentCheck @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient) {
 
   def checkExperiment(recipient: Recipient): (Boolean, Recipient) = recipient match {
