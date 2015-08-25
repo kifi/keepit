@@ -97,7 +97,8 @@ class SearchController @Inject() (
 
   def searchUsersByName() = Action.async(parse.tolerantJson) { request =>
     val searchRequest = request.body.as[UserPrefixSearchRequest]
-    val contextFut = Future.successful(SearchContext(context = None, orderBy = SearchRanking.relevancy, filter = SearchFilter.empty, disablePrefixSearch = false, disableFullTextSearch = true))
+    val filter = SearchFilter.empty
+    val contextFut = Future.successful(SearchContext(None, orderBy = SearchRanking.relevancy, filter = filter, disablePrefixSearch = false, disableFullTextSearch = true))
     userSearchCommander.searchUsers(userId = searchRequest.userId, acceptLangs = searchRequest.acceptLangs, experiments = searchRequest.userExperiments, query = searchRequest.query, contextFuture = contextFut, maxHits = searchRequest.maxHits, explain = None).map { userSearchResult =>
       val userIdsAndScores = userSearchResult.hits.map(hit => UserPrefixSearchHit(hit.id, hit.score))
       Ok(Json.toJson(userIdsAndScores))
