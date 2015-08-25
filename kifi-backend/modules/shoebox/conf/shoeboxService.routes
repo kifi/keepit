@@ -633,7 +633,6 @@ GET     /admin/data/setFixDuplicateKeepsSeq/:seq                               @
 GET     /admin/data/normalization/:page                                        @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/renormalization/:page                                      @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
 GET     /admin/data/batchURIMigration                                          @com.keepit.controllers.admin.UrlController.batchURIMigration
-GET     /admin/data/batchURLMigration                                          @com.keepit.controllers.admin.UrlController.batchURLMigration
 POST    /admin/data/normalization/submit                                       @com.keepit.controllers.admin.UrlController.submitNormalization
 GET     /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.getPatterns
 POST    /admin/data/patterns                                                   @com.keepit.controllers.admin.UrlController.savePatterns

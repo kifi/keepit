@@ -56,7 +56,7 @@ trait URIWanderingTestHelper {
   def genUserGraphUpdate(i: Int, firstName: String, lastName: String) = {
     UserGraphUpdate(UserFactory.user().withId(i).withName(firstName, lastName).withUsername("test").withSeq(i).get)
   }
-  def genKeepUpdate(userId: Int, keepId: Int) = KeepGraphUpdate(Keep(id = Some(Id[Keep](keepId)), uriId = Id[NormalizedURI](keepId), urlId = Id[URL](keepId), url = "url" + keepId,
+  def genKeepUpdate(userId: Int, keepId: Int) = KeepGraphUpdate(Keep(id = Some(Id[Keep](keepId)), uriId = Id[NormalizedURI](keepId), url = "url" + keepId,
     userId = Id[User](userId), source = KeepSource("site"), seq = SequenceNumber(keepId), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](keepId)))) // libId == keepId (?)
 
   val userUpdate1 = genUserGraphUpdate(1, "Bei", "Liu")

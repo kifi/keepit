@@ -41,7 +41,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
-  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
@@ -89,7 +88,6 @@ class KeepRepoImpl @Inject() (
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
-    def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
@@ -104,7 +102,7 @@ class KeepRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def connectionsHash = column[Option[KeepConnectionsHash]]("connections_hash", O.Nullable)
 
-    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId, connectionsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
@@ -126,7 +124,6 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
-      urlId = r.<<[Id[URL]],
       url = r.<<[String],
       isPrivate = r.<<[Boolean],
       userId = r.<<[Id[User]],
@@ -442,9 +439,6 @@ class KeepRepoImpl @Inject() (
   }
 
   def getBookmarksChanged(num: SequenceNumber[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = super.getBySequenceNumber(num, limit)
-
-  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep] =
-    (for (b <- rows if b.urlId === urlId) yield b).list
 
   def delete(id: Id[Keep])(implicit sesion: RWSession): Unit = {
     val q = (for (b <- rows if b.id === id) yield b)

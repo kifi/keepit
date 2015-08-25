@@ -162,7 +162,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val muricaUris = for (site <- muricaSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
       val muricaUrls = for (uri <- muricaUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val muricaKeeps = for (i <- 0 to muricaSites.length - 1) yield {
-        keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = muricaUrls(i).url, urlId = muricaUrls(i).id.get,
+        keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = muricaUrls(i).url,
           uriId = muricaUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(i),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       }
@@ -171,7 +171,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val scienceUris = for (site <- scienceSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
       val scienceUrls = for (uri <- scienceUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val scienceKeeps = for (i <- 0 to scienceSites.length - 1) yield {
-        keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = scienceUrls(i).url, urlId = scienceUrls(i).id.get,
+        keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = scienceUrls(i).url,
           uriId = scienceUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(muricaSites.length + i),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libScience.id.get)))
       }
@@ -179,7 +179,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       val ironUris = for (site <- ironSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
       val ironUrls = for (uri <- ironUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val ironKeeps = for (i <- 0 to ironSites.length - 1) yield {
-        keepRepo.save(Keep(title = Some("Reddit"), userId = userIron.id.get, url = ironUrls(i).url, urlId = ironUrls(i).id.get,
+        keepRepo.save(Keep(title = Some("Reddit"), userId = userIron.id.get, url = ironUrls(i).url,
           uriId = ironUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(i),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libIron.id.get)))
       }
