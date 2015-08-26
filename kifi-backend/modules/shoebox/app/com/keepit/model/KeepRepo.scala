@@ -583,7 +583,7 @@ class KeepRepoImpl @Inject() (
         $ORDER_BY_LIMIT
     """
 
-    sql"""select #$bookmarkColumnOrder FROM (#$keepsFromLibraries UNION #$keepsFromOrganizations) bm #$ORDER_BY_LIMIT""".as[Keep].list
+    sql"""select #$bookmarkColumnOrder FROM ((#$keepsFromLibraries) UNION (#$keepsFromOrganizations)) bm #$ORDER_BY_LIMIT""".as[Keep].list
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
