@@ -40,7 +40,8 @@ angular.module('kifi')
           me: ['profileService', function (profileService) {
             return profileService.getMe();
           }]
-        }
+        },
+        deepStateRedirect: true
       })
       .state('home.feed', {
         url: '',

@@ -17,7 +17,7 @@ angular.module('kifi')
 
     $scope.feed = [];
 
-    $scope.scrollDistance = '100%';
+    $scope.scrollDistance = '0';
     $scope.hasMoreKeeps = function () {
       return keepLazyLoader.hasMore();
     };
@@ -31,5 +31,8 @@ angular.module('kifi')
         $scope.feed = keeps;
       });
     };
+
+    // Initialize
+    $scope.fetchKeeps();
   }
 ]);

@@ -46,3 +46,48 @@
     rightColWidth = 256px // chosen to avoid text wrapping
     colGapWidth = 20px
     twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
+
+.kf-feed-get-more-container
+  display: block
+  margin-bottom: 20px
+  border: defaultBorder
+  border-radius: 10px
+  padding: 12px 0
+  text-align: center
+  background: #fff
+  cursor: pointer
+
+  @media (min-width: appMinWidth)
+    display: none
+
+  @media (min-width: twoColMinWidth)
+    margin-bottom: 70px
+
+.kf-feed-get-more
+.kf-feed-get-more-loading
+.kf-feed-no-more
+  font-size: 16px
+  font-weight: bold
+  color: #006bb2
+
+.kf-feed-get-more:hover
+  text-decoration: underline
+  cursor: pointer
+
+
+.kf-feed-item
+  margin-bottom: 20px
+
+.kf-feed-item.ng-leave
+  opacity: 1
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-leave.ng-leave-active
+  opacity: 0
+
+.kf-feed-item.ng-enter
+  opacity: 0
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-enter.ng-enter-active
+  opacity: 1
