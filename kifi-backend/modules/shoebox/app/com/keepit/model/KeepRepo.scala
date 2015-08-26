@@ -562,12 +562,15 @@ class KeepRepoImpl @Inject() (
 
     val AND_FILTER_STATE = s"AND state='${KeepStates.ACTIVE}'"
 
+    val ORDER_BY_LIMIT = s"ORDER BY kept_at DESC, id DESC LIMIT $limit"
+
     val keepsFromLibraries = s"""
       SELECT * FROM bookmark WHERE
         library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='${LibraryMembershipStates.ACTIVE}')
         $AND_FILTER_STATE
         $AND_FILTER_USER_ID
         $AND_FILTER_KEPT_AT
+        $ORDER_BY_LIMIT
     """
 
     val keepsFromOrganizations = s"""
@@ -577,9 +580,10 @@ class KeepRepoImpl @Inject() (
         $AND_FILTER_STATE
         $AND_FILTER_USER_ID
         $AND_FILTER_KEPT_AT
+        $ORDER_BY_LIMIT
     """
 
-    sql"""select #$bookmarkColumnOrder FROM (#$keepsFromLibraries UNION #$keepsFromOrganizations) bm ORDER BY kept_at DESC, id DESC LIMIT $limit""".as[Keep].list
+    sql"""select #$bookmarkColumnOrder FROM (#$keepsFromLibraries UNION #$keepsFromOrganizations) bm #$ORDER_BY_LIMIT""".as[Keep].list
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
