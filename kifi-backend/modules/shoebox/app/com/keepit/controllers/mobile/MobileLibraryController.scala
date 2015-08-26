@@ -17,6 +17,7 @@ import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -40,6 +41,7 @@ class MobileLibraryController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
   keepsCommander: KeepCommander,
   pageCommander: PageCommander,
   keepDecorator: KeepDecorator,
@@ -98,6 +100,37 @@ class MobileLibraryController @Inject() (
     res match {
       case Left(fail) => sendFailResponse(fail)
       case Right(response) => Ok(Json.toJson(constructLibraryInfo(response.modifiedLibrary)))
+    }
+  }
+
+  def modifyLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
+
+    val libModifyRequest = db.readOnlyReplica { implicit session =>
+      val space = externalLibraryModifyRequest.externalSpace map {
+        case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+        case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+      }
+      LibraryModifyRequest(
+        name = externalLibraryModifyRequest.name,
+        slug = externalLibraryModifyRequest.slug,
+        visibility = externalLibraryModifyRequest.visibility,
+        description = externalLibraryModifyRequest.description,
+        color = externalLibraryModifyRequest.color,
+        listed = externalLibraryModifyRequest.listed,
+        whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
+        subscriptions = externalLibraryModifyRequest.subscriptions,
+        space = space
+      )
+    }
+
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
+      case Left(fail) =>
+        Status(fail.status)(Json.obj("error" -> fail.message))
+      case Right(response) =>
+        Ok(Json.obj("library" -> Json.toJson(constructLibraryInfo(response.modifiedLibrary))))
     }
   }
 
