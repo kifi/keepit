@@ -55,7 +55,7 @@ class PaymentsController @Inject() (
         planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution)
         Ok
       }
-      case None => BadRequest("token_missing")
+      case None => BadRequest(Json.obj("error" -> "token_missing"))
     }
   }
 
@@ -105,11 +105,11 @@ class PaymentsController @Inject() (
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
         planCommander.changePlan(request.orgId, planId, attribution) match {
           case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
-          case Failure(ex) => BadRequest(ex.getMessage)
+          case Failure(ex) => BadRequest(Json.obj("error" -> ex.getMessage))
         }
 
       }
-      case Failure(ex) => BadRequest("invalid_plan_id")
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_plan_id"))
     }
   }
 
@@ -124,7 +124,7 @@ class PaymentsController @Inject() (
         val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       }
-      case Failure(ex) => BadRequest("invalid_before_id")
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
     }
 
   }
