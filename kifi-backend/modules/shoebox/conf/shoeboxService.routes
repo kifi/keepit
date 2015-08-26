@@ -257,7 +257,6 @@ POST    /m/1/feed                               @com.keepit.controllers.mobile.M
 GET     /m/1/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
 GET     /m/2/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
-POST    /m/2/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibraryV2()
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
 GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
