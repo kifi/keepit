@@ -37,7 +37,7 @@ class NotificationInfoProcessing @Inject() (
     keyAndReqs match {
       case (key, reqs) =>  viewFut.flatMap { view =>
         val toRequest = reqs.filter(req => !view.contains(key, req.id))
-        requestHandler(key, reqs).map { keyMap =>
+        requestHandler(key, toRequest).map { keyMap =>
           keyMap.toList.foldLeft(view) {
             case (viewAcc, (id, result)) => viewAcc.update(key, id, result)
           }
