@@ -88,12 +88,17 @@ class PlanManagementCommanderImpl @Inject() (
     implicit val s = session
     Try { paidPlanRepo.get(planId) } match {
       case Success(plan) => {
+        log.info(s"[PAC] $orgId: Plan exists.")
         if (plan.state != PaidPlanStates.ACTIVE) {
           Failure(new InvalidChange("plan_not_active"))
         } else {
           val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
-            case Some(pa) if pa.state == PaidAccountStates.ACTIVE => Failure(new InvalidChange("account_exists"))
+            case Some(pa) if pa.state == PaidAccountStates.ACTIVE => {
+              log.info(s"[PAC] $orgId: Account already exists.")
+              Failure(new InvalidChange("account_exists"))
+            }
             case Some(pa) =>
+              log.info(s"[PAC] $orgId: Recreating Account")
               Success(paidAccountRepo.save(PaidAccount(
                 id = pa.id,
                 orgId = orgId,
@@ -103,6 +108,7 @@ class PlanManagementCommanderImpl @Inject() (
                 emailContacts = Seq.empty
               )))
             case None =>
+              log.info(s"[PAC] $orgId: Creating Account")
               Success(paidAccountRepo.save(PaidAccount(
                 orgId = orgId,
                 planId = planId,
@@ -112,6 +118,7 @@ class PlanManagementCommanderImpl @Inject() (
               )))
           }
           maybeAccount.map { account =>
+            log.info(s"[PAC] $orgId: Registering First User")
             accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
               eventTime = clock.now,
               accountId = account.id.get,
@@ -119,6 +126,7 @@ class PlanManagementCommanderImpl @Inject() (
               action = AccountEventAction.UserAdded(creator),
               pending = true
             ))
+            log.info(s"[PAC] $orgId: Registering First Admin")
             accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
               eventTime = clock.now,
               accountId = account.id.get,
@@ -129,6 +137,7 @@ class PlanManagementCommanderImpl @Inject() (
         }
       }
       case Failure(ex) => {
+        log.error(s"[PAC] $orgId: Plan does not exist!", ex)
         airbrake.notify("Paid Plan Not available!!", ex)
         Failure(new InvalidChange("plan_not_available"))
       }

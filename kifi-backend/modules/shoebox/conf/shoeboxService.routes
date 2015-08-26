@@ -899,6 +899,9 @@ GET           /admin/goodies/ids/all                                            
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
 
+
+GET           /admin/payments/backfillAccounts             @com.keepit.controllers.admin.AdminPaymentsController.backfillPaidAccounts()
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
