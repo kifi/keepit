@@ -275,7 +275,8 @@ class FeedDigestEmailSender @Inject() (
     )
 
     log.info(s"Sending Digest email: userId=$userId recos=${digestRecos.size} libraryKeeps=${newLibraryItems.size} isFacebookConnected=$isFacebookConnected")
-    shoebox.processAndSendMail(emailToSend).map { sent =>
+    //shoebox.processAndSendMail(emailToSend).map { sent =>
+    Future.successful(false) map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
