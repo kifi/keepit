@@ -13,6 +13,13 @@ angular.module('kifi')
       });
     }
 
+    function libraryKeptTo (keep) {
+      var libraryAndUser = keep.libraries.filter(function(libraryAndUser) {
+        return libraryAndUser[0].id === keep.libraryId;
+      })[0] || keep.libraries[0];
+      return libraryAndUser[0];
+    }
+
     var keepLazyLoader = new Paginator(keepSource, 10);
 
     $scope.feed = [];
@@ -28,7 +35,11 @@ angular.module('kifi')
       keepLazyLoader
       .fetch()
       .then(function (keeps) {
-        $scope.feed = keeps;
+        var updatedKeeps = keeps.map(function(keep) {
+          keep.library = libraryKeptTo(keep);
+          return keep;
+        });
+        $scope.feed = updatedKeeps;
       });
     };
 
