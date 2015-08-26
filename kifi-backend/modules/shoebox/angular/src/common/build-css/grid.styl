@@ -41,16 +41,16 @@ row()
   justify-content: flex-start
   align-items: stretch
   flex-wrap: wrap
-  margin-left: (-1 * grid_gutter/2)
-  margin-right: (-1 * grid_gutter/2)
+  margin-left: (-1 * (grid_gutter/2))
+  margin-right: (-1 * (grid_gutter/2))
 
 column-universals()
   // For smaller CSS, this can be applied in one rule, rather
   // than in a loop for every type of column.
   clear: none
   display: block
-  margin-left: grid_gutter/2
-  margin-right: grid_gutter/2
+  margin-left: (grid_gutter/2)
+  margin-right: (grid_gutter/2)
 
 measure-columns(columns, prop)
   if (prop == "width")
@@ -114,21 +114,21 @@ column(columns = 12, left = 0, right = 0, constants = true)
   // Look for keywords
   if (columns == "half")
     +gt(showPartialColumns)
-      set-column(grid_columns/2, left, right)
+      set-column((grid_columns/2), left, right)
 
   else if (columns == "third")
     +gt(showPartialColumns)
-      set-column(grid_columns/2, left, right)
+      set-column((grid_columns/2), left, right)
 
     +gt(showFullColumns)
-      set-column(grid_columns/3, left, right)
+      set-column((grid_columns/3), left, right)
 
   else if (columns == "twothirds")
     +gt(showPartialColumns)
-      set-column(grid_columns/2, left, right)
+      set-column((grid_columns/2), left, right)
 
     +gt(showFullColumns)
-      set-column((grid_columns * 2/3), left, right)
+      set-column((grid_columns * (2/3)), left, right)
 
   else
     // No keywords found, pass in values.

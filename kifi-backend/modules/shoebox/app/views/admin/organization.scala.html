@@ -111,7 +111,7 @@ orgStats: OrganizationStatistics
             <tr>
                 <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
                 <td>@membership.role</td>
-                <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+                <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
                 <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
                 <td>@orgStats.membersStatistics(membership.userId).numChats</td>
@@ -143,7 +143,7 @@ orgStats: OrganizationStatistics
         @for(candidate <- orgStats.candidates.toSeq) {
             <tr>
                 <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
-                <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+                <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numChats</td>

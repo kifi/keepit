@@ -34,6 +34,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
+
+  args(skipAll = true)
+
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeHealthcheckModule(),

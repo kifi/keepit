@@ -228,18 +228,14 @@ angular.module('kifi')
           }, HIGHLIGHT_TIMEOUT);
         }
 
-        var clonedKeepButton = null;
-        scope.getKeepButton = function () {
-          clonedKeepButton = clonedKeepButton || angular.element('.kf-keep-keep-btn').first().clone();
-          angular.element('.kf-uc-example-keep-btn').append(clonedKeepButton);
+        scope.keepCardExists = function () {
+          return angular.element('.kf-keep-card').length > 0;
         };
 
         scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-reco');
 
-        var clonedFollowButton = null;
-        scope.getFollowButton = function () {
-          clonedFollowButton = clonedFollowButton || angular.element('.kf-rcl-follow-btn').first().clone();
-          angular.element('.kf-uc-example-follow-btn').append(clonedFollowButton);
+        scope.followCardExists = function () {
+          return angular.element('.kf-rcl-card').length > 0;
         };
 
         scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-reco');

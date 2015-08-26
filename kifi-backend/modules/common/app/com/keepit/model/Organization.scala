@@ -46,6 +46,8 @@ case class Organization(
     this.withBasePermissions(BasePermissions(Map(None -> Set())))
   }
 
+  def abbreviatedName = this.name.abbreviate(33)
+
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
 
