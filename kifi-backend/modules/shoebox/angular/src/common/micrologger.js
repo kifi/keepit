@@ -25,7 +25,7 @@ angular.module('kifi')
       },
       pass: function(message) {
         // Only fires if window.ml.pass() is defined.
-        if ($window.ml.pass) {
+        if ($window.ml && $window.ml.pass) {
           $window.ml.pass(function() {
             $log.info('%c[PASS]: ' + message, 'color: green');
           });
