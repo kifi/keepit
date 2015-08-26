@@ -5,6 +5,7 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.typeahead.{ UserPrefixSearchHit, TypeaheadHit, UserPrefixSearchRequest }
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
@@ -92,6 +93,15 @@ class SearchController @Inject() (
     val userSearchRequest = Json.fromJson[DeprecatedUserSearchRequest](request.body).get
     val res = userSearchCommander.searchUsers(userSearchRequest)
     Ok(Json.toJson(res))
+  }
+
+  def searchUsersByName() = Action.async(parse.tolerantJson) { request =>
+    val searchRequest = request.body.as[UserPrefixSearchRequest]
+    val contextFut = Future.successful(SearchContext(None, orderBy = SearchRanking.relevancy, filter = SearchFilter.empty, disablePrefixSearch = false, disableFullTextSearch = true))
+    userSearchCommander.searchUsers(userId = searchRequest.userId, acceptLangs = searchRequest.acceptLangs, experiments = searchRequest.userExperiments, query = searchRequest.query, contextFuture = contextFut, maxHits = searchRequest.maxHits, explain = None).map { userSearchResult =>
+      val userIdsAndScores = userSearchResult.hits.map(hit => UserPrefixSearchHit(hit.id, hit.score))
+      Ok(Json.toJson(userIdsAndScores))
+    }
   }
 
   def userTypeahead() = Action(parse.json) { request =>
