@@ -265,7 +265,7 @@ class PlanManagementCommanderImpl @Inject() (
   def getSimpleContactInfos(orgId: Id[Organization]): Seq[SimpleAccountContactInfo] = db.readOnlyMaster { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
     val registered: Map[Id[User], Boolean] = account.userContacts.toSet.map { userId: Id[User] => (userId, true) }.toMap
-    val potential: Map[Id[User], Boolean] = orgMembershipRepo.getByRole(orgId, OrganizationRole.ADMIN).toSet.map { userId: Id[User] => (userId, true) }.toMap
+    val potential: Map[Id[User], Boolean] = orgMembershipRepo.getByRole(orgId, OrganizationRole.ADMIN).toSet.map { userId: Id[User] => (userId, false) }.toMap
     val all = potential ++ registered
     val bus = basicUserRepo.loadAll(all.keySet)
     all.map {
@@ -472,7 +472,7 @@ class PlanManagementCommanderImpl @Inject() (
       whoDunnit = whoDunnit,
       creditChange = event.creditChange.cents,
       paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
-      memo = event.memo.getOrElse("")
+      memo = event.memo
     )
   }
 

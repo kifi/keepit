@@ -22,7 +22,7 @@ case class SimpleAccountEventInfo(
   whoDunnit: String,
   creditChange: Int,
   paymentCharge: Int,
-  memo: String)
+  memo: Option[String])
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 

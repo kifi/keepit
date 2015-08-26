@@ -10,7 +10,7 @@ import com.keepit.payments._
 
 import com.kifi.macros.json
 
-import play.api.libs.json.Json
+import play.api.libs.json.{ Json, JsSuccess, JsError }
 
 import scala.util.{ Try, Success, Failure }
 
@@ -67,34 +67,37 @@ class PaymentsController @Inject() (
   case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean)
 
   def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request =>
-    request.body.asOpt[Seq[SimpleAccountContactSettingRequest]].map { contacts =>
-      val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-      contacts.foreach { contact =>
-        planCommander.updateUserContact(request.orgId, contact.id, contact.enabled, attribution)
+    request.body.validate[Seq[SimpleAccountContactSettingRequest]] match {
+      case JsSuccess(contacts, _) => {
+        val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+        contacts.foreach { contact =>
+          planCommander.updateUserContact(request.orgId, contact.id, contact.enabled, attribution)
+        }
+        Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
       }
-      Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
-    } getOrElse {
-      BadRequest
+      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
     }
   }
 
   def getPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: This is currently a dummy
     val dummyFeatureOne = PlanFeature(name = "keeping", displayName = "Users can keep things", editable = false, default = true)
     val dummyFeatureTwo = PlanFeature(name = "messaging", displayName = "Users can send messages", editable = true, default = true)
-    Ok(Json.toJson((Seq(
+    val settings = Seq(
       PlanFeatureSetting(dummyFeatureOne, enabled = true),
       PlanFeatureSetting(dummyFeatureTwo, enabled = false)
-    ))))
+    )
+    Ok(Json.toJson(
+      Json.obj("settings" -> settings)
+    ))
   }
 
   @json
   case class SimplePlanFeaureSettingRequest(name: String, enabled: Boolean)
 
   def setPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
-    request.body.asOpt[Seq[SimplePlanFeaureSettingRequest]].map { settings =>
-      Ok
-    } getOrElse {
-      BadRequest
+    request.body.validate[Seq[SimplePlanFeaureSettingRequest]] match {
+      case JsSuccess(settings, _) => Ok
+      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
     }
   }
 
@@ -114,14 +117,18 @@ class PaymentsController @Inject() (
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
     val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
-    Ok(Json.toJson(infos))
+    Ok(Json.toJson(
+      Json.obj("events" -> infos)
+    ))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
         val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
-        Ok(Json.toJson(infos))
+        Ok(Json.toJson(
+          Json.obj("events" -> infos)
+        ))
       }
       case Failure(ex) => BadRequest("invalid_before_id")
     }
