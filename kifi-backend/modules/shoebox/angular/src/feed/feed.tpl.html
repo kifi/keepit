@@ -1,8 +1,8 @@
 <main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
   <section class="kf-feed-item" ng-repeat="feedItem in feed">
     <header class="kf-feed-top">
-      <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.libraries[0][0].path }}" ng-bind="feedItem.libraries[0][0].name"></a>
-      <span ng-if="feedItem.libraries[0].organization" ng-bind="'in ' + feedItem.libraries[0].organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span>
+      <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.library.path }}" ng-bind="feedItem.library.name"></a>
+      <span ng-if="feedItem.library.organization" ng-bind="'in ' + feedItem.library.organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span>
     </header>
     <div class="kf-keep">
       <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
