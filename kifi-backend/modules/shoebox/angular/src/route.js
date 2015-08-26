@@ -24,31 +24,38 @@ angular.module('kifi')
 
     // Set up the states.
     $stateProvider
+    // TODO: We won't need this one when we open the activity feed for all users.
       .state('home', {  // Home page.
         url: '/',
-        templateUrl: 'home/home.tpl.html',
+        template: '<ui-view />',
         controller: ['$state', 'me', function ($state, me) {
-          var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
-          var showFeed = (me.orgs.length > 0 && hasExperiment);
-          if (showFeed) {
-            $state.go('home.feed');
-          } else {
-            $state.go('home.recos');
-          }
+            var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
+            var showFeed = (me.orgs.length > 0 && hasExperiment);
+
+            if (showFeed) {
+              $state.go('feed.activity');
+            } else {
+              $state.go('feed.recos');
+            }
         }],
         resolve: {
           me: ['profileService', function (profileService) {
             return profileService.getMe();
           }]
-        },
-        deepStateRedirect: true
+        }
       })
-      .state('home.feed', {
+      .state('feed', {
+        url: '/',
+        templateUrl: 'home/home.tpl.html',
+        'abstract': true
+      })
+      .state('feed.activity', {
         url: '',
         controller: 'FeedCtrl',
         templateUrl: 'feed/feed.tpl.html'
       })
-      .state('home.recos', {
+      // TODO: We won't need this when we open the activity feed for all users.
+      .state('feed.recos', {
         url: '',
         controller: 'RecosCtrl',
         templateUrl: 'recos/recosView.tpl.html'
