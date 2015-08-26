@@ -25,12 +25,12 @@ angular.module('kifi')
     // Set up the states.
     $stateProvider
       .state('home', {  // Home page.
-        'abstract': true,
         url: '/',
         templateUrl: 'home/home.tpl.html',
         controller: ['$state', 'me', function ($state, me) {
-          var showFeed = (me.orgs.length > 0);
-          if (!showFeed) {
+          var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
+          var showFeed = (me.orgs.length > 0 && hasExperiment);
+          if (showFeed) {
             $state.go('home.feed');
           } else {
             $state.go('home.recos');
