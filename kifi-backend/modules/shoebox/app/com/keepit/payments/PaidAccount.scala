@@ -4,12 +4,18 @@ import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.social.BasicUser
+
+import com.kifi.macros.json
 
 import org.joda.time.DateTime
 
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
 }
+
+@json
+case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
