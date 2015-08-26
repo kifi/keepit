@@ -2,6 +2,8 @@ package com.keepit.common.images
 
 import java.awt.image.BufferedImage
 import java.io.{ ByteArrayOutputStream, File, FileOutputStream }
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{ LinkOption, Paths }
 import javax.imageio.ImageIO
 
 import com.keepit.model.ImageFormat
@@ -27,7 +29,7 @@ class Image4javaWrapperTest extends Specification with CommonTestInjector {
   }
 
   def imageByteSize(img: File): Int = {
-    img.getAbsoluteFile.length().toInt
+    img.length().toInt
   }
 
   "ImageMagic4javaWrapper" should {

@@ -1,9 +1,7 @@
 package com.keepit.common.images
 
 import java.io.{ File, ByteArrayOutputStream, PrintWriter }
-import java.security.SecureRandom
 import java.util
-import javax.imageio.ImageIO
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.logging.Logging
@@ -13,10 +11,9 @@ import org.im4java.core._
 import org.im4java.process.ArrayListOutputConsumer
 import play.api.Mode
 import play.api.Mode._
-import play.api.libs.Files.TemporaryFile
 
 import scala.collection.JavaConversions._
-import scala.util.Try
+import scala.util.{ Failure, Try }
 
 /**
  * Image resize
@@ -31,7 +28,7 @@ class Image4javaWrapper @Inject() (
 
   def imageInfo(image: File): Try[RawImageInfo] = {
     Try {
-      val info = new Info(image.getAbsolutePath, true)
+      val info = new Info(image.getPath, true)
       RawImageInfo(info.getImageFormat, info.getImageWidth, info.getImageHeight)
     }
   }
@@ -57,7 +54,9 @@ class Image4javaWrapper @Inject() (
   def resizeImage(image: File, format: ImageFormat, width: Int, height: Int): Try[File] = Try {
     if (format == ImageFormat.UNKNOWN) throw new UnsupportedOperationException(s"Can't resize format $format")
     if (format == ImageFormat.GIF) {
-      safeResizeImage(gifToPng(image), ImageFormat.PNG, width, height)
+      val pngVersion = gifToPng(image)
+      val resized = safeResizeImage(pngVersion, ImageFormat.PNG, width, height)
+      resized
     } else {
       safeResizeImage(image, format, width, height)
     }
@@ -85,9 +84,9 @@ class Image4javaWrapper @Inject() (
     val outputFile = generateTempFile(".png")
 
     val operation = new IMOperation
-    operation.addImage(inputFile.getAbsolutePath + "[0]")
+    operation.addImage(inputFile.getPath + "[0]")
 
-    operation.addImage(outputFile.getAbsolutePath)
+    operation.addImage(outputFile.getPath)
 
     val convert = command()
 
@@ -95,9 +94,8 @@ class Image4javaWrapper @Inject() (
     outputFile
   }
 
-  private val random = new SecureRandom()
   private def generateTempFile(suffix: String) = {
-    val outputFile = TemporaryFile(prefix = s"im-${Math.abs(random.nextLong()).toString.take(8)}", suffix = suffix).file
+    val outputFile = File.createTempFile("im-", suffix)
     outputFile.deleteOnExit()
     outputFile
   }
@@ -106,10 +104,9 @@ class Image4javaWrapper @Inject() (
     val operation = new IMOperation
 
     val outputFile = generateTempFile(s".${format.value}")
-    val filePath = outputFile.getAbsolutePath
-    outputFile.deleteOnExit()
+    val filePath = outputFile.getPath
 
-    operation.addImage(image.getAbsolutePath)
+    operation.addImage(image.getPath)
     operation.resize(width, height)
 
     addOptions(format, operation)
@@ -119,7 +116,7 @@ class Image4javaWrapper @Inject() (
 
     handleExceptions(convert, operation)
 
-    log.info(s"resize image from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
+    log.info(s"resize image from ${image.getPath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
@@ -128,9 +125,9 @@ class Image4javaWrapper @Inject() (
     val operation = new IMOperation
 
     val outputFile = generateTempFile(s".${format.value}")
-    val filePath = outputFile.getAbsolutePath
+    val filePath = outputFile.getPath
 
-    operation.addImage(image.getAbsolutePath)
+    operation.addImage(image.getPath)
 
     // minimum resize while preserving aspect ratio
     operation.resize(width, height, '^')
@@ -148,7 +145,7 @@ class Image4javaWrapper @Inject() (
     val convert = command()
     handleExceptions(convert, operation)
 
-    log.info(s"[safeCropImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
+    log.info(s"[safeCropImage] from ${image.getPath} (${imageByteSize(image)} bytes) to ${width}x$height at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
@@ -157,9 +154,9 @@ class Image4javaWrapper @Inject() (
     val operation = new IMOperation
 
     val outputFile = generateTempFile(s".${format.value}")
-    val filePath = outputFile.getAbsolutePath
+    val filePath = outputFile.getPath
 
-    operation.addImage(image.getAbsolutePath)
+    operation.addImage(image.getPath)
 
     operation.crop(width, height, x, y)
 
@@ -171,7 +168,7 @@ class Image4javaWrapper @Inject() (
     val convert = command()
     handleExceptions(convert, operation)
 
-    log.info(s"[safeCropScaleImage] from ${image.getAbsolutePath} (${imageByteSize(image)} bytes) to ${finalWidth}x$finalHeight at $filePath (${imageByteSize(outputFile)} bytes)")
+    log.info(s"[safeCropScaleImage] from ${image.getPath} (${imageByteSize(image)} bytes) to ${finalWidth}x$finalHeight at $filePath (${imageByteSize(outputFile)} bytes)")
     outputFile
   }
 
@@ -200,7 +197,7 @@ class Image4javaWrapper @Inject() (
   private def handleExceptions(convert: ConvertCmd, operation: IMOperation): Unit = {
     if (playMode == Mode.Test) {
       // If you need the script printed in tests, uncomment this:
-      // println(getScript(convert, operation))
+      //println(getScript(convert, operation))
     }
     try {
       convert.run(operation)

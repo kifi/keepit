@@ -219,7 +219,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
         }
     }.flatMap { imageFile =>
       implicit val context = heimdalContextBuilder.build
-      libraryImageCommander.uploadLibraryImageFromFile(imageFile, libraryId, LibraryImagePosition(None, None), ImageSource.TwitterSync, userId, None)
+      libraryImageCommander.uploadLibraryImageFromFile(imageFile.file, libraryId, LibraryImagePosition(None, None), ImageSource.TwitterSync, userId, None).map { _ =>
+        imageFile.file // To force imageFile not to be GCed
+      }
     }
   }
 }
