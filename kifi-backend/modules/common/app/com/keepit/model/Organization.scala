@@ -46,7 +46,7 @@ case class Organization(
     this.withBasePermissions(BasePermissions(Map(None -> Set())))
   }
 
-  def truncatedName = if (this.name.length > 30) this.name.take(30) + "..." else this.name
+  def abbreviatedName = this.name.abbreviate(33)
 
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)

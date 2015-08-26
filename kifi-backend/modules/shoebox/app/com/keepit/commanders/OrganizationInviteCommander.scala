@@ -231,8 +231,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
     elizaClient.sendGlobalNotification( //push sent
       userIds = invitees,
-      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.truncatedName}!",
-      body = s"Help ${org.truncatedName} by sharing your knowledge with them.",
+      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.abbreviatedName}!",
+      body = s"Help ${org.abbreviatedName} by sharing your knowledge with them.",
       linkText = "Let's do it!",
       linkUrl = orgLink,
       imageUrl = userImage,
@@ -323,13 +323,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} accepted your invitation to join ${org.truncatedName}!"
+      val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"Click here to view ${org.truncatedName}’s libraries.",
-        linkText = s"See ${org.truncatedName}’s libraries",
+        body = s"Click here to view ${org.abbreviatedName}’s libraries.",
+        linkText = s"See ${org.abbreviatedName}’s libraries",
         linkUrl = s"https://www.kifi.com/${org.handle.value}",
         imageUrl = inviteeImage,
         sticky = false,
