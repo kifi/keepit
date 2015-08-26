@@ -19,7 +19,9 @@ object Id {
   }
 
   implicit def format[T]: Format[Id[T]] =
-    Format(__.read[Long].map(Id(_)), new Writes[Id[T]] { def writes(o: Id[T]) = JsNumber(o.id) })
+    Format(__.read[Long].map(Id(_)), new Writes[Id[T]] {
+      def writes(o: Id[T]) = JsNumber(o.id)
+    })
 
   implicit def mapOfIdToObjectFormat[S, T](implicit t: Format[T]): Format[Map[Id[S], T]] = new Format[Map[Id[S], T]] {
     def reads(json: JsValue): JsResult[Map[Id[S], T]] = {
@@ -49,6 +51,7 @@ object Id {
         case _ => Left("Unable to bind an Id")
       }
     }
+
     override def unbind(key: String, id: Id[T]): String = {
       longBinder.unbind(key, id.id)
     }
@@ -60,8 +63,7 @@ object Id {
         case Right(id) => Right(Id(id))
         case _ => Left("Unable to bind an Id")
       }
+
     override def unbind(key: String, id: Id[T]): String = id.id.toString
   }
-
-  implicit def convert[A](id: Id[_]): Id[A] = id.asInstanceOf[Id[A]]
 }
