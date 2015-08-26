@@ -78,8 +78,6 @@ class AccountEventRepoImpl @Inject() (
     (for (row <- rows if row.accountId === accountId && row.state === state) yield row).list
   }
 
-  def getEventsBefore(accountId: Id[PaidAccount], before: DateTime, limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    val accountEvents = rows.filter(row => row.accountId === accountId && row.eventTime < before && row.state =!= AccountEventStates.INACTIVE)
   def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
     val accountEvents = rows.filter(row => row.accountId === accountId && (row.eventTime < beforeTime || (row.eventTime === beforeTime && row.id < beforeId)) && row.state =!= AccountEventStates.INACTIVE)
     val relevantEvents = onlyRelatedToBillingOpt match {
