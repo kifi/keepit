@@ -56,7 +56,7 @@ orgStats: OrganizationStatistics
         <th>Active</th>
         <td>
             @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
-                <button type="submit" class="btn btn-default">Set inactive</button>
+                <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
             </form>
         </td>
     </tr>
@@ -67,7 +67,7 @@ orgStats: OrganizationStatistics
             Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
             Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
             Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.members.map(m => orgStats.membersStatistics(m.userId).user.externalId.id).mkString(", \n"))}</textarea><br/>
-            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
+            <button id="admin-chat-button" class="btn btn-default btn-xs">Start Chat</button>
     </tr>
 
 </table>
@@ -87,7 +87,7 @@ orgStats: OrganizationStatistics
 
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
     <input type="text" name="domainName" placeholder="Domain name">
-    <button type="submit" class="btn btn-default">Add Ownership</button>
+    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
 </form>
 
 @orgStats.members.size members @orgStats.candidates.size candidates
@@ -96,12 +96,12 @@ orgStats: OrganizationStatistics
        style="width:600px">
     <thead>
         <tr>
-            <th data-sortable="true">Member Name</th>
-            <th data-sortable="true">Role</th>
-            <th data-sortable="true">Last Keep</th>
-            <th data-sortable="true">Libs</th>
-            <th data-sortable="true">Keeps PRV/PUB</th>
-            <th data-sortable="true">Chats</th>
+            <th>Member Name</th>
+            <th>Role</th>
+            <th class="sorter-mmddyy">Last Keep</th>
+            <th>Libs</th>
+            <th>Keeps PRV/PUB</th>
+            <th>Chats</th>
             <th>Remove</th>
             <th>Make an owner</th>
         </tr>
@@ -116,9 +116,9 @@ orgStats: OrganizationStatistics
                 <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
                 <td>@orgStats.membersStatistics(membership.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Make Owner</button></form></td>
             </tr>
         }
     </tbody>
@@ -128,11 +128,11 @@ orgStats: OrganizationStatistics
        style="width:600px">
     <thead>
         <tr>
-            <th data-sortable="true">Candidate Name</th>
-            <th data-sortable="true">Last Keep</th>
-            <th data-sortable="true">Boards</th>
-            <th data-sortable="true">Keeps PRV/PUB</th>
-            <th data-sortable="true">Chats</th>
+            <th>Candidate Name</th>
+            <th class="sorter-mmddyy">Last Keep</th>
+            <th>Boards</th>
+            <th>Keeps PRV/PUB</th>
+            <th>Chats</th>
             <th>Remove</th>
             <th>Make member</th>
             <th>Invite member</th>
@@ -148,13 +148,13 @@ orgStats: OrganizationStatistics
                 <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Member</button></form></td>
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Member</button></form></td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite</button></form></td>
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Invite</button></form></td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Owner</button></form></td>
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Owner</button></form></td>
             </tr>
         }
     </tbody>
