@@ -24,10 +24,9 @@ angular.module('kifi')
 
     // Set up the states.
     $stateProvider
-    // TODO: We won't need this one when we open the activity feed for all users.
+      // TODO: We won't need this state when the activity feed for all users.
       .state('home', {  // Home page.
         url: '/',
-        template: '<ui-view />',
         controller: ['$state', 'me', function ($state, me) {
             var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
             var showFeed = (me.orgs.length > 0 && hasExperiment);
