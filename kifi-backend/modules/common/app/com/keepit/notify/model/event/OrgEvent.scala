@@ -32,8 +32,8 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
       NotificationInfo(
         url = Path(invitedOrg.handle.value).encode.absolute,
         imageUrl = inviterImage,
-        title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.name}!",
-        body = s"Help ${invitedOrg.name} by sharing your knowledge with them.",
+        title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.truncatedName}!",
+        body = s"Help ${invitedOrg.truncatedName} by sharing your knowledge with them.",
         linkText = "Visit organization"
       )
     }
@@ -64,8 +64,8 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
       NotificationInfo(
         url = Path(acceptedOrg.handle.value).encode.absolute,
         imageUrl = accepterId,
-        title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.name}!",
-        body = s"You invited ${accepter.firstName} to join ${acceptedOrg.name}",
+        title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.truncatedName}!",
+        body = s"You invited ${accepter.firstName} to join ${acceptedOrg.truncatedName}",
         linkText = "Visit organization",
         extraJson = Some(Json.obj(
           "member" -> BasicUser.fromUser(accepter),
