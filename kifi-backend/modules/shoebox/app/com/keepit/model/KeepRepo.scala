@@ -558,19 +558,28 @@ class KeepRepoImpl @Inject() (
       }
     }
 
-    sql"""
-      SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE
-        (
-          (library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='#${LibraryMembershipStates.ACTIVE}'))
-          OR
-          (visibility != '#${LibraryVisibility.SECRET}' AND organization_id IN (SELECT organization_id FROM organization_membership WHERE user_id=$userId AND state='#${OrganizationMembershipStates.ACTIVE}'))
-        )
-        AND state='#${KeepStates.ACTIVE}'
-        #${if (includeOwnKeeps) "" else s"AND user_id != $userId"}
-        #$AND_FILTER_KEPT_AT
-      ORDER BY kept_at DESC, id DESC
-      LIMIT $limit;
-    """.as[Keep].list
+    val AND_FILTER_USER_ID = if (includeOwnKeeps) "" else s"AND user_id != $userId"
+
+    val AND_FILTER_STATE = s"AND state='${KeepStates.ACTIVE}'"
+
+    val keepsFromLibraries = s"""
+      SELECT * FROM bookmark WHERE
+        library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='${LibraryMembershipStates.ACTIVE}')
+        $AND_FILTER_STATE
+        $AND_FILTER_USER_ID
+        $AND_FILTER_KEPT_AT
+    """
+
+    val keepsFromOrganizations = s"""
+      SELECT * FROM bookmark WHERE
+        organization_id IN (SELECT organization_id FROM organization_membership WHERE user_id=$userId AND state='${OrganizationMembershipStates.ACTIVE}')
+        AND visibility != '${LibraryVisibility.SECRET}'
+        $AND_FILTER_STATE
+        $AND_FILTER_USER_ID
+        $AND_FILTER_KEPT_AT
+    """
+
+    sql"""select #$bookmarkColumnOrder FROM (#$keepsFromLibraries UNION #$keepsFromOrganizations) bm ORDER BY kept_at DESC, id DESC LIMIT $limit""".as[Keep].list
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
