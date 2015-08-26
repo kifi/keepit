@@ -128,6 +128,6 @@ class OrganizationInviteController @Inject() (
 
   def suggestMembers(pubId: PublicId[Organization], query: Option[String], limit: Int) = OrganizationUserAction(pubId).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
-    organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit).map { members => Ok(Json.obj("members" -> members)) }
+    organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit, request.request).map { members => Ok(Json.obj("members" -> members)) }
   }
 }

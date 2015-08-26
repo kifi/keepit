@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.controller.UserRequest
 import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -40,7 +41,7 @@ trait OrganizationInviteCommander {
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
   def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite]
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
-  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
 }
@@ -400,7 +401,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
     val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
         abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit).map { orgInviteRecos =>
@@ -411,7 +412,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(validQuery) =>
         val memberCount = db.readOnlyMaster { implicit session => organizationMembershipRepo.countByOrgId(orgId) }
         for {
-          users <- searchClient.searchUsersByName(userId, validQuery, limit + memberCount)
+          users <- searchClient.searchUsersByName(userId, validQuery, limit + memberCount, request.acceptLanguages.map(_.toString), request.experiments)
           emails <- abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
         } yield {
           (users.map(_.userId), emails.map(_.info))
