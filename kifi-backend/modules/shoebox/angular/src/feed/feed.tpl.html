@@ -10,7 +10,7 @@
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="fetchKeeps()">
     <span ng-if="!isLoading() && hasMoreKeeps()" class="kf-feed-get-more">See more</span>
-    <span ng-if="!isLoading() && !hasMoreKeeps()" class="kf-feed-no-more">No more activity right now.</span>
+    <span ng-if="!isLoading() && !hasMoreKeeps()" class="kf-feed-no-more">There is no more activity to show.</span>
     <span ng-if="isLoading()" class="kf-feed-get-more-loading">Loading...</span>
   </div>
   <div kf-loading-spinner hide="!isLoading()"></div>
