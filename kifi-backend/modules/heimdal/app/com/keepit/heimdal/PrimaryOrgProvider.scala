@@ -41,21 +41,24 @@ class PrimaryOrgProviderImpl @Inject() (
   }
 
   def getOrgContextData(orgId: Id[Organization]): Future[Map[String, ContextData]] = {
+    val shoeboxValuesFut = getOrgTrackingValues(orgId)
+    val membersFut = shoebox.getOrganizationMembers(orgId)
+    val messageCountFut = membersFut.flatMap(eliza.getTotalMessageCountForGroup)
+    val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
     for {
-      shoeboxValues <- getOrgTrackingValues(orgId)
-      members <- shoebox.getOrganizationMembers(orgId)
-      messageCount <- eliza.getTotalMessageCountForGroup(members)
+      shoeboxValues <- shoeboxValuesFut
+      members <- membersFut
+      messageCount <- messageCountFut
+      userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
-      val userWithMostClickedKeeps = helprankCommander.getUserWithMostClickedKeeps(members)
       Map(
         "orgId" -> ContextStringData(orgId.toString),
         "libraryCount" -> ContextDoubleData(shoeboxValues.libraryCount),
         "keepCount" -> ContextDoubleData(shoeboxValues.keepCount),
         "inviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
         "collabLibCount" -> ContextDoubleData(shoeboxValues.collabLibCount),
-        "messageCount" -> ContextDoubleData(messageCount),
-        "overallKeepViews" -> ContextStringData(userWithMostClickedKeeps.map(_.toString).getOrElse(""))
-      )
+        "messageCount" -> ContextDoubleData(messageCount)
+      ) ++ userWithMostClickedKeeps.map(userId => Map("overallKeepViews" -> ContextStringData(userId.toString))).getOrElse(Map.empty)
     }
   }
 }
