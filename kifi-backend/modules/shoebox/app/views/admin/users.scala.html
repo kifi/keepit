@@ -96,43 +96,57 @@
           <a href="@otherPagesRoute(0)">Clear search</a>
         }
       </form>
-      <table class="table table-bordered">
-        <tr>
-          <th>Id</th>
-          <th>User</th>
-          <th>Last Kept</th>
-          <th>org mem/cand</th>
-          <th>kifi Conns</th>
-          <th>Invited By</th>
-          <th>Invite Sent</th>
-          <th>Messages all/active/started</th>
-          <th>Lib create/follow</th>
-          <th>Network</th>
-          <th>Keeps PRV/PUB</th>
-          <th>Email Address</th>
-          <th>Version</th>
-          <th>Date Joined</th>
-          <th>Experiment</th>
-        </tr>
-      @for(userStatistics <- userData.users) {
-        <tr>
-          <td><span class="badge">@userStatistics.user.id.get.id</span></td>
-          <td>@adminHelper.userDisplay(userStatistics.user)</td>
-          <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
-          <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
-          <td>@userStatistics.connections</td>
-          <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
-          <td>@userStatistics.invitations</td>
-          <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
-          <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
-          <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
-          <td>@userStatistics.privateKeeps / @userStatistics.publicKeeps</td>
-          <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
-          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
-          <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
-          <td>@userStatistics.experiments.mkString(", ")</td>
-        </tr>
-      }
+
+      <table id="users" class="table table-bordered tablesorter">
+        <thead>
+            <tr>
+              <th>Id</th>
+              <th>User</th>
+              <th>Last Kept</th>
+              <th>org mem/cand</th>
+              <th>kifi Conns</th>
+              <th>Invited By</th>
+              <th>Invite Sent</th>
+              <th>Messages all/active/started</th>
+              <th>Lib create/follow</th>
+              <th>Network</th>
+              <th>Keeps PRV/PUB</th>
+              <th>Email Address</th>
+              <th>Version</th>
+              <th>Date Joined</th>
+              <th>Experiment</th>
+            </tr>
+        </thead>
+        <tbody>
+          @for(userStatistics <- userData.users) {
+            <tr>
+              <td><span class="badge">@userStatistics.user.id.get.id</span></td>
+              <td>@adminHelper.userDisplay(userStatistics.user)</td>
+              <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+              <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
+              <td>@userStatistics.connections</td>
+              <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
+              <td>@userStatistics.invitations</td>
+              <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
+              <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
+              <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+              <td>@userStatistics.privateKeeps / @userStatistics.publicKeeps</td>
+              <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
+              <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
+              <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
+              <td>@userStatistics.experiments.mkString(", ")</td>
+            </tr>
+          }
+        </tbody>
       </table>
+      <script type="text/javascript">
+
+        $(function(){
+          $("#users").tablesorter({ theme : "green", widgets : ['zebra']  });
+        });
+
+      </script>
+
   }
+
 }
