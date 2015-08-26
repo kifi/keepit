@@ -93,8 +93,8 @@ private[mail] class MailSenderActor @Inject() (
         mail
       case _ =>
         val (newTo, newCC) = db.readOnlyReplica { implicit session =>
-          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNonactive(_))
-          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNonactive(_))
+          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNotActive(_))
+          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNotActive(_))
           (newTo, newCC)
         }
         if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
@@ -122,12 +122,12 @@ private[mail] class MailSenderActor @Inject() (
     }
   }
 
-  def userIsNonactive(address: EmailAddress)(implicit session: RSession): Boolean = {
+  def userIsNotActive(address: EmailAddress)(implicit session: RSession): Boolean = {
     val userEmailAddressOpt = emailAddressRepo.getByAddress(address)
     userEmailAddressOpt match {
       case Some(emailAddress) =>
         val userId = emailAddress.userId
-        db.readOnlyReplica { implicit session => UserStates.NONACTIVE.contains(userRepo.get(userId).state) }
+        db.readOnlyReplica { implicit session => userRepo.get(userId).state != UserStates.ACTIVE }
       case None => false
     }
   }
