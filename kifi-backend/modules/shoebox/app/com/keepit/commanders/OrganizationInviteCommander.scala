@@ -411,9 +411,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
       case Some(validQuery) =>
         val memberCount = db.readOnlyMaster { implicit session => organizationMembershipRepo.countByOrgId(orgId) }
+        val usersFut = searchClient.searchUsersByName(userId, validQuery, limit + memberCount, request.acceptLanguages.map(_.toString), request.experiments)
+        val emailsFut = abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
         for {
-          users <- searchClient.searchUsersByName(userId, validQuery, limit + memberCount, request.acceptLanguages.map(_.toString), request.experiments)
-          emails <- abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
+          users <- usersFut
+          emails <- emailsFut
         } yield {
           (users.map(_.userId), emails.map(_.info))
         }
