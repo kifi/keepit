@@ -86,9 +86,7 @@ class PaymentsController @Inject() (
       PlanFeatureSetting(dummyFeatureOne, enabled = true),
       PlanFeatureSetting(dummyFeatureTwo, enabled = false)
     )
-    Ok(Json.toJson(
-      Json.obj("settings" -> settings)
-    ))
+    Ok(Json.obj("settings" -> settings))
   }
 
   @json
@@ -117,18 +115,14 @@ class PaymentsController @Inject() (
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
     val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
-    Ok(Json.toJson(
-      Json.obj("events" -> infos)
-    ))
+    Ok(Json.obj("events" -> infos))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
         val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
-        Ok(Json.toJson(
-          Json.obj("events" -> infos)
-        ))
+        Ok(Json.obj("events" -> infos))
       }
       case Failure(ex) => BadRequest("invalid_before_id")
     }
