@@ -30,30 +30,34 @@
         <button type="submit" class="btn btn-primary">Search all organizations by name</button>
     </form>
     @views.html.admin.adminHelper.pagination(paginationPage, paginationCount, paginationSize, otherPagesRoute) {
-        <table class="orgs-summary table table-bordered">
-            <tr><th>Id</th>
-                <th>Name</th>
-                <th>Members</th>
-                <th>Membership candidates</th>
-                <th>Libs prv/org/pub</th>
-                <th>Org keeps</th>
-                <th>Chats between members</th>
-                <th>All member chats</th>
-                <th>Creation date</th>
-            </tr>
-            @for(orgStats <- orgs) {
-                <tr>
-                    <td>@orgStats.orgId</td>
-                    <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
-                    <td>@orgStats.members.filterNot(_.id == fakeOwnerId).size</td>
-                    <td>@orgStats.candidates.filterNot(_.id == fakeOwnerId).size</td>
-                    <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td>
-                    <td>@orgStats.numKeeps</td>
-                    <td>@orgStats.internalMemberChatStats</td>
-                    <td>@orgStats.allMemberChatStats</td>
-                    <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
+        <table id="orgs" class="orgs-summary table table-bordered tablesorter">
+            <thead>
+                <tr><th>Id</th>
+                    <th>Name</th>
+                    <th>Members</th>
+                    <th>Membership candidates</th>
+                    <th>Libs prv/org/pub</th>
+                    <th>Org keeps</th>
+                    <th>Chats between members</th>
+                    <th>All member chats</th>
+                    <th>Creation date</th>
                 </tr>
-            }
+            </thead>
+            <tbody>
+                @for(orgStats <- orgs) {
+                    <tr>
+                        <td>@orgStats.orgId</td>
+                        <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
+                        <td>@orgStats.members.filterNot(_.id == fakeOwnerId).size</td>
+                        <td>@orgStats.candidates.filterNot(_.id == fakeOwnerId).size</td>
+                        <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td>
+                        <td>@orgStats.numKeeps</td>
+                        <td>@orgStats.internalMemberChatStats</td>
+                        <td>@orgStats.allMemberChatStats</td>
+                        <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
+                    </tr>
+                }
+            </tbody>
         </table>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.createOrganization()" method="POST" class="form-inline create-org">
             <input id="create-org-owner-id-input" type="text" name="owner-id" value="@fakeOwnerId" placeholder="Creater Id (default @fakeOwnerId)">
@@ -62,6 +66,9 @@
         </form>
     }
     <script type="text/javascript">
+        $(function(){
+          $("#orgs").tablesorter({ theme : "green", widgets : ['zebra'] });
+        });
         $('#create-org-input').typeahead(null, {
             name: 'orgs',
             display: 'name',
