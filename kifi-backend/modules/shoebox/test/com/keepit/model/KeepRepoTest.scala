@@ -129,7 +129,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val user1 = user().saved
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10, None, None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None)
           1 === 1
         }
       }
