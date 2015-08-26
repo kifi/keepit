@@ -226,7 +226,7 @@ angular.module('kifi')
     }
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
-      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide && !profileService.prefs.auto_show_persona);
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
     }, function (show) {
       if (show) {
         extensionLiaison.triggerGuide();

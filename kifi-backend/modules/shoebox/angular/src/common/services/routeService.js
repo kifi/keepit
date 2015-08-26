@@ -215,20 +215,6 @@ angular.module('kifi')
       },
       getMutualConnections: function (userId) {
         return route('/users/' + userId + '/connections/mutual');
-      },
-
-
-      /////////////////////////////
-      // User Personas           //
-      /////////////////////////////
-      getPersonas: function () {
-        return route('/user/personas');
-      },
-      addPersona: function (personaName) {
-        return route('/user/personas/' + personaName);
-      },
-      removePersona: function (personaName) {
-        return route('/user/personas/' + personaName);
       }
     };
   }
