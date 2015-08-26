@@ -670,4 +670,20 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = Future.successful(Map.empty)
 
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
+
+  def getLibraries(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], Library]] = Future.successful(Map.empty)
+
+  def getLibraryUrls(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], String]] = Future.successful(Map.empty)
+
+  def getLibraryOwners(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], User]] = Future.successful(Map.empty)
+
+  def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]] = Future.successful(Map.empty)
+
+  def getKeeps(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]] = Future.successful(Map.empty)
+
+  def getUserImages(userIds: Seq[Id[User]]): Future[Map[Id[User], String]] = Future.successful(Map.empty)
+
+  def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]] = Future.successful(Map.empty)
+
+  def getOrganizations(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], Organization]] = Future.successful(Map.empty)
 }
