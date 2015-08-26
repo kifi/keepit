@@ -117,7 +117,7 @@ trait ProcessedImageHelper {
           case Left(err) => Left(err)
         }
       case Failure(ex) =>
-        log.error(s"s[pih] validateAndGetImageInfo failure", ex)
+        log.error(s"[pih] validateAndGetImageInfo failure", ex)
         Left(ImageProcessState.InvalidImage(ex))
     }
   }

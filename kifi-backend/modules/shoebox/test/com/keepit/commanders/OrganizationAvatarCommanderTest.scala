@@ -22,16 +22,16 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
   def modules = Seq()
 
-  def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+  def genNewFakeFile1 = {
+    val tf = File.createTempFile("tst1", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf)
     tf
   }
-  def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
+  def genNewFakeFile2 = {
+    val tf = File.createTempFile("tst2", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image2.png"), tf)
     tf
   }
   def setup()(implicit injector: Injector) = {
@@ -56,11 +56,13 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         // upload an image
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1.file, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
+          val file = genNewFakeFile1
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, file, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          file.delete()
         }
 
         store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
@@ -79,10 +81,12 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         val (_, _, org1, _) = setup()
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1.file, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
+          val file = genNewFakeFile1
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+          file.delete()
         }
 
         store.all.keySet.size === OrganizationAvatarConfiguration.numSizes
@@ -92,7 +96,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
 
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile2.file, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile2, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
@@ -119,10 +123,12 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         val n = 20
         for (x <- 1 to n) {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, fakeFile1.file, cropRegion = SquareImageCropRegion(ImageOffset(x, x), 50))
+          val file = genNewFakeFile1
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(x, x), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+          file.delete()
         }
 
         store.all.keySet.size === n * OrganizationAvatarConfiguration.numSizes
