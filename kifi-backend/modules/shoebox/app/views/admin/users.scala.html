@@ -122,7 +122,7 @@
             <tr>
               <td><span class="badge">@userStatistics.user.id.get.id</span></td>
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
-              <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
+              <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
               <td>@adminHelper.orgsDisplay(userStatistics.orgs) / @adminHelper.orgsDisplay(userStatistics.orgCandidates)</td>
               <td>@userStatistics.connections</td>
               <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
