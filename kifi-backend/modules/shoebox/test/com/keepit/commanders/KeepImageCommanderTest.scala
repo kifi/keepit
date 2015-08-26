@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import java.io.File
+import java.security.SecureRandom
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -33,14 +34,15 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     FakeWebServiceModule()
   )
 
+  private val random = new SecureRandom()
   def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    val tf = TemporaryFile(prefix = "tst1", suffix = ".png")
     tf.file.deleteOnExit()
     FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
     tf
   }
   def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
+    val tf = TemporaryFile(prefix = "tst2", suffix = ".png")
     tf.file.deleteOnExit()
     FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
     tf
@@ -53,11 +55,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
-      val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url, urlId = url.id.get,
+      val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
 
-      val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url, urlId = url.id.get,
+      val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
       (user, lib, uri, keep1, keep2)

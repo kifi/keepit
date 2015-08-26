@@ -138,14 +138,6 @@ class UriIntegrityActor @Inject() (
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI]): Unit = {
     db.readWrite { implicit s => handleURLMigrationNoBookmarks(url, newUriId) }
-
-    val bms = db.readWrite { implicit s => keepRepo.getByUrlId(url.id.get) }
-
-    // process keeps for each user
-    bms.groupBy(_.userId).foreach {
-      case (_, keeps) =>
-        db.readWrite { implicit s => handleBookmarks(keeps) }
-    }
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
@@ -323,7 +315,7 @@ class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) exten
     val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
     if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
       val urlObj = urlRepo.get(uri.url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-      keepWithTitle.copy(url = urlObj.url, urlId = urlObj.id.get)
+      keepWithTitle.copy(url = urlObj.url)
     } else keepWithTitle
   }
 

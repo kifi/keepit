@@ -21,7 +21,6 @@ case class Keep(
     title: Option[String] = None,
     uriId: Id[NormalizedURI],
     isPrimary: Boolean = true, // trick to let us have multiple inactive Keeps while keeping integrity constraints
-    urlId: Id[URL],
     url: String, // denormalized for efficiency
     visibility: LibraryVisibility, // denormalized from this keep’s library
     userId: Id[User],
@@ -36,6 +35,7 @@ case class Keep(
     organizationId: Option[Id[Organization]] = None,
     connectionsHash: Option[KeepConnectionsHash] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
+  def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
   def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, connectionsHash = Some(KeepConnections.empty.hash)) // good idea?
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
@@ -59,8 +59,6 @@ case class Keep(
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
-  def withUrlId(urlId: Id[URL]) = copy(urlId = urlId)
-
   def withUrl(url: String) = copy(url = url)
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
@@ -81,7 +79,6 @@ case class Keep(
   def hasStrictlyLessValuableMetadataThan(other: Keep): Boolean = {
     this.isOlderThan(other) && (true || // TODO(ryan): remove this "(true ||" once we no longer want to mindlessly murder keeps
       Seq(
-        title.isEmpty || title == other.title,
         note.isEmpty || note == other.note
       ).forall(b => b))
   }
@@ -106,10 +103,10 @@ object Keep {
   }
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
-    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
+    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId, connectionsHash)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
-        uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, urlId = urlId, url = url,
+        uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, url = url,
         userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
@@ -119,25 +116,25 @@ object Keep {
   // is_primary: trueOrNull in db
   def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
-    urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
+    url: String, isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], connectionsHash: Option[KeepConnectionsHash]): Keep = {
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url,
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
       visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId, connectionsHash)
   }
 
   def unapplyToDbRow(k: Keep) = {
     Some(
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
-        k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url),
+        k.uriId, if (k.isPrimary) Some(true) else None, k.url),
       (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
         k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.connectionsHash)
     )
   }
 
-  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Id[URL], String)
+  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
   private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], Option[KeepConnectionsHash])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
@@ -148,7 +145,6 @@ object Keep {
       (__ \ 'title).readNullable[String] and
       (__ \ 'uriId).read(Id.format[NormalizedURI]) and
       (__ \ 'isPrimary).readNullable[Boolean] and
-      (__ \ 'urlId).read(Id.format[URL]) and
       (__ \ 'url).read[String]).tupled
     val fields10Up: Reads[KeepRestArguments] = (
       (__ \ 'isPrivate).readNullable[Boolean].map(_.getOrElse(false)) and
@@ -183,7 +179,6 @@ object Keep {
         "title" -> k.title,
         "uriId" -> k.uriId,
         "isPrimary" -> k.isPrimary,
-        "urlId" -> k.urlId,
         "url" -> k.url,
         "bookmarkPath" -> (None: Option[String]),
         "visibility" -> k.visibility,

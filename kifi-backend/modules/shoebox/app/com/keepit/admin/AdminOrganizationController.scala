@@ -11,6 +11,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
+import play.api.{ Mode, Play }
 import play.api.libs.json.Json
 import play.twirl.api.{ HtmlFormat, Html }
 import play.api.mvc.{ Action, AnyContent, Result }
@@ -46,7 +47,7 @@ class AdminOrganizationController @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
-  import AdminOrganizationController.fakeOwnerId
+  val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
   private val pageSize = 30
 
   // needed to coerce the passed in Int => Call to Int => Html
@@ -99,8 +100,12 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  private def isFake(org: Organization): Boolean = db.readOnlyMaster { implicit session =>
+    orgExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE)
+  }
+
   def realOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
-    getOrgs(page, org => !orgCommander.hasFakeExperiment(org.id.get)).map {
+    getOrgs(page, !isFake(_)).map {
       case (count, orgs) =>
         Ok(html.admin.organizations(
           orgs,
@@ -115,7 +120,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def fakeOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
-    getOrgs(page, org => orgCommander.hasFakeExperiment(org.id.get)).map {
+    getOrgs(page, !isFake(_)).map {
       case (count, orgs) =>
         Ok(html.admin.organizations(
           orgs,

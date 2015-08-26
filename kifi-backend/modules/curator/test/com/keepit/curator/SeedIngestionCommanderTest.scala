@@ -67,7 +67,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           visibility = LibraryVisibility.SECRET))
         shoebox.saveBookmarks(Keep(
           uriId = Id[NormalizedURI](5),
-          urlId = Id[URL](5),
           url = "https://kifi.com",
           userId = user1,
           state = KeepStates.ACTIVE,
@@ -99,7 +98,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         val keep1 = shoebox.saveBookmarks(Keep(
           uriId = Id[NormalizedURI](1),
-          urlId = Id[URL](1),
           url = "https://kifi.com",
           userId = user1,
           state = KeepStates.INACTIVE,
@@ -110,7 +108,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         val keep2 = shoebox.saveBookmarks(Keep(
           uriId = Id[NormalizedURI](1),
-          urlId = Id[URL](1),
           url = "https://kifi.com",
           userId = user2,
           state = KeepStates.ACTIVE,

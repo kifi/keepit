@@ -185,7 +185,7 @@ object Search extends Service {
     def getLibraryDocument() = ServiceRoute(POST, s"/internal/search/index/library/document")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
-    def searchUsersByName() = ServiceRoute(POST, "/internal/search/search/userByName")
+    def searchUsersByName() = ServiceRoute(POST, "/internal/search/search/users/name")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
     def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
       ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
