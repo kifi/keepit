@@ -36,6 +36,7 @@ class LibraryAnalytics @Inject() (
       builder += ("numUserInvited", numUsers)
       builder += ("numNonUserInvited", numEmails)
       builder += ("daysSinceLibraryCreated", numDays)
+      library.organizationId.foreach(orgId => builder += ("organizationId", orgId.toString))
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED, when))
     }
   }
@@ -50,6 +51,7 @@ class LibraryAnalytics @Inject() (
       builder += ("category", "libraryInvitation")
       builder += ("libraryId", library.id.get.toString)
       builder += ("daysSinceLibraryCreated", numDays)
+      library.organizationId.foreach(orgId => builder += ("organizationId", orgId.toString))
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED, when))
     }
   }
@@ -68,7 +70,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
-      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
@@ -87,6 +89,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("followerCount", library.memberCount - 1)
       contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
@@ -101,7 +104,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
-      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -117,6 +120,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("description", library.description.map(_.length).getOrElse(0))
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder += ("daysSinceLibraryCreated", numDays)
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
@@ -144,7 +148,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("editColor", edits.get("color").getOrElse(false))
       contextBuilder += ("editMadePrivate", edits.get("madePrivate").getOrElse(false))
       contextBuilder += ("editListed", edits.get("listed").getOrElse(false))
-      contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
@@ -162,7 +166,7 @@ class LibraryAnalytics @Inject() (
     builder += ("action", "viewed")
     builder += ("ownerId", library.ownerId.toString)
     builder += ("libraryId", library.id.get.toString)
-
+    library.organizationId.foreach(orgId => builder += ("organizationId", orgId.toString))
     SafeFuture {
       viewerId match {
         case Some(userId) =>
@@ -187,6 +191,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageHeight", imageSize.height)
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -203,6 +208,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("imageHeight", imageSize.height)
       contextBuilder += ("libraryId", library.id.get.toString)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
+      library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder ++= addLibraryKindContext(library).data
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
@@ -275,6 +281,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("libraryOwnerId", library.ownerId.toString)
     contextBuilder += ("libraryKeepCount", numKeepsInLibrary)
     contextBuilder += ("daysSinceLibraryCreated", numDays)
+    library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
     contextBuilder ++= addLibraryKindContext(library).data
     contextBuilder.build
   }
@@ -292,7 +299,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
-        contextBuilder += ("organizationId", library.organizationId.map(_.toString).getOrElse(""))
+        library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (!KeepSource.imports.contains(bookmark.source)) {
@@ -331,6 +338,7 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)
+        library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
         contextBuilder ++= populateLibraryInfoForKeep(library).data
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, when))
       }
@@ -429,7 +437,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     contextBuilder += ("tagId", tag.id.get.toString)
-    if (action == "taggedPage") contextBuilder += ("organizationId", keep.organizationId.map(_.toString).getOrElse(""))
+    if (action == "taggedPage") keep.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
 
     // Anonymized event with tag information
