@@ -86,13 +86,6 @@ angular.module('kifi')
       profileService.setNewPrimaryEmail(emailToBeSaved);
     };
 
-    $scope.showPersonaModal = function() {
-      $analytics.eventTrack('user_clicked_page', {type: 'settings', action: 'clickedUpdateInterests'});
-      modalService.open({
-        template: 'persona/managePersonaModal.tpl.html'
-      });
-    };
-
     $scope.showBiographyModal = function() {
       modalService.open({
         template: 'profile/editUserBiographyModal.tpl.html',
