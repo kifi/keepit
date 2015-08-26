@@ -41,7 +41,6 @@ class AdminPaymentsController @Inject() (
           paidAccountRepo.maybeGetByOrgId(org.id.get) match {
             case Some(_) => {
               channel.push(s"Paid account already exists. Doing nothing.\n")
-              Thread.sleep(200)
             }
             case None => {
               planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.userId, session) match {
@@ -54,10 +53,10 @@ class AdminPaymentsController @Inject() (
                   printStackTraceToChannel(ex, channel)
                 }
               }
-              Thread.sleep(300)
             }
           }
         }
+        Thread.sleep(200)
       }
     }
 
