@@ -25,13 +25,15 @@ angular.module('kifi')
     // Set up the states.
     $stateProvider
       .state('home', {  // Home page.
+        'abstract': true,
         url: '/',
+        templateUrl: 'home/home.tpl.html',
         controller: ['$state', 'me', function ($state, me) {
           var showFeed = (me.orgs.length > 0);
-          if (showFeed) {
-            $state.go('feed');
+          if (!showFeed) {
+            $state.go('home.feed');
           } else {
-            $state.go('recos');
+            $state.go('home.recos');
           }
         }],
         resolve: {
@@ -40,12 +42,14 @@ angular.module('kifi')
           }]
         }
       })
-      .state('feed', {
-        url: '/',
+      .state('home.feed', {
+        url: '',
+        controller: 'FeedCtrl',
         templateUrl: 'feed/feed.tpl.html'
       })
-      .state('recos', {
-        url: '/',
+      .state('home.recos', {
+        url: '',
+        controller: 'RecosCtrl',
         templateUrl: 'recos/recosView.tpl.html'
       })
       .state('invite', {

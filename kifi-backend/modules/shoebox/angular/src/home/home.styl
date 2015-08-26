@@ -1,0 +1,26 @@
+.kf-home
+  display: flex
+  margin: 20px auto
+  justify-content: center
+  align-items: center
+  flex-direction: column
+
+  @media (min-width: appMinWidth)
+    align-items: initial
+    flex-direction: row
+
+.kf-home-items
+  flex: 1
+  max-width: 496px
+
+  .kf-feed-items
+    width: auto
+
+  .kf-keep
+    max-width: none
+
+.kf-home-sidebar
+  width: 250px
+
+  > * + *
+    margin-top: 10px
