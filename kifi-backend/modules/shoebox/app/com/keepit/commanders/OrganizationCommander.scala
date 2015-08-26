@@ -206,7 +206,8 @@ class OrganizationCommanderImpl @Inject() (
     Try {
       db.readWrite { implicit session =>
         getValidationError(request) match {
-          case Some(fail) => Left(fail)
+          case Some(fail) =>
+            Left(fail)
           case None =>
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
@@ -220,9 +221,13 @@ class OrganizationCommanderImpl @Inject() (
         }
       }
     } match {
-      case Success(Left(fail)) => Left(fail)
-      case Success(Right(response)) => Right(response)
-      case Failure(ex) => log.error(ex.getMessage); Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Success(Left(fail)) =>
+        Left(fail)
+      case Success(Right(response)) =>
+        Right(response)
+      case Failure(ex) =>
+        log.error(s"could not create organization via $request", ex)
+        Left(OrganizationFail.HANDLE_UNAVAILABLE)
     }
   }
 

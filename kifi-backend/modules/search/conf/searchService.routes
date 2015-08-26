@@ -80,6 +80,7 @@ POST        /internal/search/index/library/document  @com.keepit.search.controll
 
 
 POST        /internal/search/search/users        @com.keepit.search.controllers.search.SearchController.searchUsers()
+POST        /internal/search/search/users/name         @com.keepit.search.controllers.search.SearchController.searchUsersByName()
 POST        /internal/search/search/userTypeahead        @com.keepit.search.controllers.search.SearchController.userTypeahead()
 
 GET         /internal/search/searchConfig/:id        @com.keepit.search.controllers.search.SearchConfigController.showUserConfig(id: Id[User])

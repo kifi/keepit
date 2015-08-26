@@ -250,13 +250,11 @@ class KeepInternerImpl @Inject() (
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
-        val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         val savedAttr = sourceAttribution.map { attr => sourceAttrRepo.save(KeepSourceAttribution(attribution = attr)) }
         val keep = Keep(
           title = trimmedTitle orElse uri.title,
           userId = userId,
           uriId = uri.id.get,
-          urlId = urlObj.id.get,
           url = url,
           source = source,
           visibility = library.visibility,

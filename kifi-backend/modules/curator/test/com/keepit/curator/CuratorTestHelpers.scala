@@ -27,7 +27,6 @@ trait CuratorTestHelpers {
     (startId to startId + howMany - 1).flatMap { i =>
       shoebox.saveBookmarks(Keep(
         uriId = Id[NormalizedURI](i),
-        urlId = Id[URL](i),
         url = "https://kifi.com",
         userId = userId,
         state = KeepStates.ACTIVE,
@@ -41,7 +40,6 @@ trait CuratorTestHelpers {
     (1 to howMany).flatMap { i =>
       shoebox.saveBookmarks(Keep(
         uriId = Id[NormalizedURI](i),
-        urlId = Id[URL](i),
         url = "https://kifi.com",
         userId = userId,
         state = KeepStates.ACTIVE,

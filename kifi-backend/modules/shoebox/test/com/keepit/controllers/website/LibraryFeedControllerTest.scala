@@ -45,10 +45,10 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, note = Some("Google Note"),
+          val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, note = Some("Google Note"),
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
             visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, urlId = url2.id.get, note = None,
+          val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, note = None,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
         }

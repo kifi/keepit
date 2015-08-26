@@ -105,6 +105,7 @@ final class KeepVisibilityEvaluator(
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
+  private[this] val organization = LibraryFields.Visibility.ORGANIZATION
   private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
@@ -135,20 +136,24 @@ final class KeepVisibilityEvaluator(
         }
       } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
         Visibility.MEMBER // the keep is in an authorized library
-      } else if (orgIds.findIndex(orgId) >= 0) { // keep is owned by an org that I am a member of
-        Visibility.MEMBER
-      } else if (visibilityDocValues.get(docId) == published) {
-        if (myFriendIds.findIndex(keeperId) >= 0) {
-          Visibility.NETWORK // the keep is in a published library, and my friend kept it
-        } else if (trustedLibraryIds.findIndex(libId) >= 0) {
-          Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
-        } else if (restrictedUserIds.findIndex(keeperId) >= 0) {
-          Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
-        } else {
-          Visibility.OTHERS // another published keep
-        }
       } else {
-        Visibility.RESTRICTED
+        val visibility = visibilityDocValues.get(docId)
+        if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
+          if (visibility == organization || visibility == published) Visibility.MEMBER // library is owned by an org that I am a member of
+          else Visibility.RESTRICTED
+        } else if (visibility == published) {
+          if (myFriendIds.findIndex(keeperId) >= 0) {
+            Visibility.NETWORK // the keep is in a published library, and my friend kept it
+          } else if (trustedLibraryIds.findIndex(libId) >= 0) {
+            Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
+          } else if (restrictedUserIds.findIndex(keeperId) >= 0) {
+            Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
+          } else {
+            Visibility.OTHERS // another published keep
+          }
+        } else {
+          Visibility.RESTRICTED
+        }
       }
     } else {
       Visibility.RESTRICTED
@@ -168,6 +173,7 @@ final class LibraryVisibilityEvaluator(
     visibilityDocValues: NumericDocValues) {
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
+  private[this] val organization = LibraryFields.Visibility.ORGANIZATION
   private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
@@ -191,11 +197,12 @@ final class LibraryVisibilityEvaluator(
         } else {
           Visibility.MEMBER // a library I am a member of
         }
-      } else if (orgIdDocValues != null && orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
-        // library is owned by an org that I am a member of
-        Visibility.MEMBER
       } else {
-        if (visibilityDocValues.get(docId) == published) {
+        val visibility = visibilityDocValues.get(docId)
+        if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
+          if (visibility == organization || visibility == published) Visibility.MEMBER // library is owned by an org that I am a member of
+          else Visibility.RESTRICTED
+        } else if (visibility == published) {
           val ownerId = ownerIdDocValues.get(docId)
           if (myFriendIds.findIndex(ownerId) >= 0) {
             Visibility.NETWORK // a published library owned by my friend
