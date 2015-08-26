@@ -26,6 +26,31 @@ angular.module('kifi')
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
+        templateUrl: 'home/home.tpl.html',
+        controller: ['$state', 'me', function ($state, me) {
+          var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
+          var showFeed = (me.orgs.length > 0 && hasExperiment);
+          if (showFeed) {
+            $state.go('home.feed');
+          } else {
+            $state.go('home.recos');
+          }
+        }],
+        resolve: {
+          me: ['profileService', function (profileService) {
+            return profileService.getMe();
+          }]
+        },
+        deepStateRedirect: true
+      })
+      .state('home.feed', {
+        url: '',
+        controller: 'FeedCtrl',
+        templateUrl: 'feed/feed.tpl.html'
+      })
+      .state('home.recos', {
+        url: '',
+        controller: 'RecosCtrl',
         templateUrl: 'recos/recosView.tpl.html'
       })
       .state('invite', {

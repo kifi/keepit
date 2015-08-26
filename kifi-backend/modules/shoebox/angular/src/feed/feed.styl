@@ -1,0 +1,93 @@
+.kf-feed-items
+  .kf-loading-spinner
+    display: block
+    width: 100px
+    margin: auto
+
+.kf-feed-title
+  font-size: 1.6rem
+  margin-bottom: 20px
+
+.kf-feed-sidebar
+
+  > div
+    margin-bottom: 20px
+
+.kf-feed-top
+  position: relative
+  border: defaultBorder
+  border-bottom: 0
+  border-radius: 10px 10px 0 0
+  padding: 10px 20px
+  background-color: #fff
+  font-size: 13px
+  font-weight: 400
+  color: #9d9d9d
+
+  + .kf-keep
+    padding-top: 20px
+    border-top-left-radius: 0
+    border-top-right-radius: 0
+
+    .kf-keep-top
+      display: none
+
+  // library feeds with invite need additional spacing between the control header and the invite banner
+  .kf-feed-with-invite &
+    padding-bottom: 10px
+
+  span
+    display: inline-block
+
+    // Note: The responsive two-column structure of this page is similar to the library page and
+    //       the general search results page.
+
+    leftColWidth = 496px  // ideal keep card width; see keepCardMaxWidth in keeps.styl
+    rightColWidth = 256px // chosen to avoid text wrapping
+    colGapWidth = 20px
+    twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
+
+.kf-feed-get-more-container
+  display: block
+  margin-bottom: 20px
+  border: defaultBorder
+  border-radius: 10px
+  padding: 12px 0
+  text-align: center
+  background: #fff
+  cursor: pointer
+
+  @media (min-width: appMinWidth)
+    display: none
+
+  @media (min-width: twoColMinWidth)
+    margin-bottom: 70px
+
+.kf-feed-get-more
+.kf-feed-get-more-loading
+.kf-feed-no-more
+  font-size: 16px
+  font-weight: bold
+  color: #006bb2
+
+.kf-feed-get-more:hover
+  text-decoration: underline
+  cursor: pointer
+
+
+.kf-feed-item
+  margin-bottom: 20px
+
+.kf-feed-item.ng-leave
+  opacity: 1
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-leave.ng-leave-active
+  opacity: 0
+
+.kf-feed-item.ng-enter
+  opacity: 0
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-enter.ng-enter-active
+  opacity: 1
