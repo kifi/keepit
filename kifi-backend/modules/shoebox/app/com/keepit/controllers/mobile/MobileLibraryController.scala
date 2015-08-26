@@ -69,23 +69,6 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val jsonBody = request.body
-    val name = (jsonBody \ "name").as[String]
-    val description = (jsonBody \ "description").asOpt[String]
-    val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
-    val color = (jsonBody \ "color").asOpt[LibraryColor]
-    val whoCanInvite = (jsonBody \ "whoCanInvite").asOpt[LibraryInvitePermissions]
-    val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, whoCanInvite = whoCanInvite)
-
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => sendFailResponse(fail)
-      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
-    }
-  }
-
-  def createLibraryV2() = UserAction(parse.tolerantJson) { request =>
     val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
 
     externalAddRequestValidated match {
