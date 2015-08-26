@@ -8,6 +8,8 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
 
+import scala.util.control.NoStackTrace
+
 sealed abstract class OrganizationRequest
 
 case class OrganizationCreateRequest(requesterId: Id[User], initialValues: OrganizationInitialValues) extends OrganizationRequest
@@ -60,7 +62,7 @@ case class OrganizationInviteCancelRequest(orgId: Id[Organization], requesterId:
 case class OrganizationInviteSendResponse(request: OrganizationInviteSendRequest)
 case class OrganizationInviteCancelResponse(request: OrganizationInviteCancelRequest, cancelledEmails: Set[EmailAddress], cancelledUserIds: Set[Id[User]])
 
-sealed abstract class OrganizationFail(val status: Int, val message: String) {
+sealed abstract class OrganizationFail(val status: Int, val message: String) extends Exception(message) with NoStackTrace {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
 

@@ -212,7 +212,7 @@ class OrganizationCommanderImpl @Inject() (
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-              throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
+              throw OrganizationFail.HANDLE_UNAVAILABLE
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when thing sare solidified
@@ -221,13 +221,10 @@ class OrganizationCommanderImpl @Inject() (
         }
       }
     } match {
-      case Success(Left(fail)) =>
-        Left(fail)
-      case Success(Right(response)) =>
-        Right(response)
-      case Failure(ex) =>
-        log.error(s"could not create organization via $request", ex)
-        Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Success(Left(fail)) => Left(fail)
+      case Success(Right(response)) => Right(response)
+      case Failure(OrganizationFail.HANDLE_UNAVAILABLE) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Failure(ex) => throw ex
     }
   }
 
