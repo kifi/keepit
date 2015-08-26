@@ -31,7 +31,7 @@ angular.module('kifi')
           var hasExperiment = (me.experiments.indexOf('fake') !== -1 || me.experiments.indexOf('admin') !== -1);
           var showFeed = (me.orgs.length > 0 && hasExperiment);
 
-          if (!showFeed) {
+          if (showFeed) {
             $state.go('feed.activity');
           } else {
             $state.go('feed.recos');
