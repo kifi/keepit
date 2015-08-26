@@ -39,12 +39,12 @@ object AmplitudeClient {
   val propertyRenames = Map(
     "kifiInstallationId" -> "installation_id",
     "userCreatedAt" -> "created_at",
-    "$email" -> "user_email"
+    "$email" -> "email"
   )
 
   // classifies properties with these names as "user properties"
   val userPropertyNames = Set(
-    "firstName", "lastName", "$email",
+    "firstName", "lastName", "$email", "gender",
     "keeps", "kifiConnections", "privateKeeps", "publicKeeps", "socialConnections", "tags",
     "daysSinceLibraryCreated", "daysSinceUserJoined")
 
