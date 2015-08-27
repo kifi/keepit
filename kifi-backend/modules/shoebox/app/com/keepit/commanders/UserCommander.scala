@@ -1,10 +1,10 @@
 package com.keepit.commanders
 
 import akka.actor.Scheduler
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
-import com.keepit.commanders.emails.EmailSenderProvider
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender, EmailSenderProvider }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.core._
@@ -114,7 +114,7 @@ class UserCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
-    organizationCommander: OrganizationCommander,
+    organizationCardCommander: OrganizationCardCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
@@ -130,11 +130,11 @@ class UserCommander @Inject() (
     s3ImageStore: S3ImageStore,
     heimdalClient: HeimdalServiceClient,
     userImageUrlCache: UserImageUrlCache,
-    libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
-    emailSender: EmailSenderProvider,
+    welcomeEmailSender: Provider[WelcomeEmailSender],
+    contactJoinedEmailSender: Provider[ContactJoinedEmailSender],
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
@@ -289,7 +289,7 @@ class UserCommander @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgCards = organizationCommander.getOrganizationCards(orgs, user.id).values.toSeq
+      val orgCards = organizationCardCommander.getOrganizationCards(orgs, user.id).values.toSeq
 
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
     }
@@ -319,37 +319,6 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User]): User = {
-    val newUser: User = db.readWrite(attempts = 3) { implicit session =>
-      val user = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
-      val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
-        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] SINCE WE DIDN'T FIND A USERNAME!!!")
-      }
-      userWithUsername
-    }
-
-    SafeFuture {
-      db.readWrite(attempts = 3) { implicit session =>
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true) // todo, this shouldn't be true for all users, like when they were invited to a lib
-        userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
-      }
-      searchClient.warmUpUser(newUser.id.get)
-      searchClient.updateUserIndex()
-    }
-
-    val userId = newUser.id.get
-    libraryCommander.internSystemGeneratedLibraries(userId)
-    if (userId.id % 2 == 0) { //for half of the users
-      libraryCommander.createReadItLaterLibrary(userId)
-      db.readWrite { implicit session =>
-        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.READ_IT_LATER))
-      }
-    }
-
-    newUser
-  }
-
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]] = synchronized {
     require(newUser.id.isDefined, "UserCommander.tellUsersWithContactOfNewUserImmediate: newUser.id is required")
 
@@ -373,7 +342,7 @@ class UserCommander @Inject() (
             val toNotify = contacts.diff(alreadyConnectedUsers) - newUserId
 
             log.info("sending new user contact notifications to: " + toNotify)
-            val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
+            val emailsF = toNotify.map { userId => contactJoinedEmailSender.get.apply(userId, newUserId) }
 
             elizaServiceClient.sendGlobalNotification( //push sent
               userIds = toNotify,
@@ -416,7 +385,7 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
-      val emailF = emailSender.welcome(newUser.id.get, targetEmailOpt, isPlainEmail)
+      val emailF = welcomeEmailSender.get.apply(newUser.id.get, targetEmailOpt, isPlainEmail)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
         ()

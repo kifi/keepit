@@ -32,7 +32,7 @@ class UserProfileController @Inject() (
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
-    userConnectionsCommander: UserConnectionsCommander,
+    userMutualConnectionsCommander: UserMutualConnectionsCommander,
     collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
@@ -347,7 +347,7 @@ class UserProfileController @Inject() (
       userRepo.getOpt(extUserId)
     } match {
       case Some(user) if user.id.get != request.userId =>
-        val userIds = userConnectionsCommander.getMutualFriends(request.userId, user.id.get)
+        val userIds = userMutualConnectionsCommander.getMutualFriends(request.userId, user.id.get)
         val (userMap, countMap) = userCommander.loadBasicUsersAndConnectionCounts(userIds, userIds)
         val userJsonObjs = userIds.flatMap { id =>
           userMap.get(id).map { basicUser =>

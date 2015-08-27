@@ -70,12 +70,40 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
+    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
+      airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
+    }
+    val org = orgRepo.get(orgId)
+    val orgHandle = org.handle
+    val orgName = org.name
+    val description = org.description
+
+    val ownerId = userRepo.get(org.ownerId).externalId
+
+    val numMembers = orgMembershipRepo.countByOrgId(orgId)
+    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
+
+    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
+
+    OrganizationCard(
+      orgId = Organization.publicId(orgId),
+      ownerId = ownerId,
+      handle = orgHandle,
+      name = orgName,
+      description = description,
+      avatarPath = avatarPath,
+      numMembers = numMembers,
+      numLibraries = numLibraries)
+  }
+
   private def getOrganizationInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
 
     val org = orgRepo.get(orgId)
+    if (org.state == OrganizationStates.INACTIVE) throw new Exception(s"inactive org: $org")
     val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
@@ -110,34 +138,6 @@ class OrganizationCommanderImpl @Inject() (
     }
     val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
     OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
-  }
-
-  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
-    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
-      airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
-    }
-    val org = orgRepo.get(orgId)
-    if (org.state == OrganizationStates.INACTIVE) throw new Exception(s"inactive org: $org")
-    val orgHandle = org.handle
-    val orgName = org.name
-    val description = org.description
-
-    val ownerId = userRepo.get(org.ownerId).externalId
-
-    val numMembers = orgMembershipRepo.countByOrgId(orgId)
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
-
-    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-
-    OrganizationCard(
-      orgId = Organization.publicId(orgId),
-      ownerId = ownerId,
-      handle = orgHandle,
-      name = orgName,
-      description = description,
-      avatarPath = avatarPath,
-      numMembers = numMembers,
-      numLibraries = numLibraries)
   }
 
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {

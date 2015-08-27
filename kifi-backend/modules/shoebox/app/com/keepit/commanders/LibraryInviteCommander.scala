@@ -29,7 +29,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[LibraryInviteCommanderImpl])
 trait LibraryInviteCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def declineLibrary(userId: Id[User], libraryId: Id[Library])
   def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit
   def inviteAnonymousToLibrary(libraryId: Id[Library], inviterId: Id[User], access: LibraryAccess, message: Option[String])(implicit context: HeimdalContext): Either[LibraryFail, (LibraryInvite, Library)]
@@ -63,12 +62,6 @@ class LibraryInviteCommanderImpl @Inject() (
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
-
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
-      libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
-    }
-  }
 
   def declineLibrary(userId: Id[User], libraryId: Id[Library]) = {
     db.readWrite { implicit s =>
