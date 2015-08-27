@@ -55,8 +55,7 @@ class ExtMessagingController @Inject() (
     val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
     val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
 
-    val url = (o \ "url").asOpt[String]
-    val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
+    val url = (o \ "url").as[String]
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "extension")
@@ -66,18 +65,15 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("guided", true)
     }
 
-    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map {
-        case (message, threadInfoOpt, messages) =>
-          Ok(Json.obj(
-            "id" -> message.externalId.id,
-            "parentId" -> message.threadExtId.id,
-            "createdAt" -> message.createdAt,
-            "threadInfo" -> threadInfoOpt,
-            "messages" -> messages.reverse))
-      }
-
-    messageSubmitResponse // todo(Martin, Jared, Léo): return meaningful error about invalid participants
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, url, request.userId, contextBuilder.build).map {
+      case (message, threadInfoOpt, messages) =>
+        Ok(Json.obj(
+          "id" -> message.externalId.id,
+          "parentId" -> message.threadExtId.id,
+          "createdAt" -> message.createdAt,
+          "threadInfo" -> threadInfoOpt,
+          "messages" -> messages.reverse))
+    }
 
   }
 

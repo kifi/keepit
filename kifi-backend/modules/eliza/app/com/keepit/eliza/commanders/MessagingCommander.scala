@@ -17,7 +17,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicUser, NonUserKinds }
+import com.keepit.social.{ NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -78,11 +78,11 @@ class MessagingCommander @Inject() (
     notificationCommander.sendPushNotification(userId, notification, force)
   }
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
-    val allInvolvedUsers: Seq[Id[User]] = threads.flatMap { _.participants.map(_.allUsers).getOrElse(Set()) }
+    val allInvolvedUsers = threads.flatMap { _.participants.map(_.allUsers).getOrElse(Set()) }
     //get all basic users
-    val userId2BasicUser: Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
+    val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
     //get all messages
     val messagesByThread: Map[Id[MessageThread], Seq[Message]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getThreadMessages(thread))
@@ -94,47 +94,51 @@ class MessagingCommander @Inject() (
       }
     }.toMap
 
-    threads.map { thread =>
+    userId2BasicUserF.map { userId2BasicUser =>
+      threads.map { thread =>
 
-      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
-      if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
-      val lastMessage = lastMessageOpt.get
+        val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
+        if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
+        val lastMessage = lastMessageOpt.get
 
-      val messageTimes = messagesByThread(thread.id.get).take(10).map { message =>
-        (message.externalId, message.createdAt)
-      }.toMap
+        val messageTimes = messagesByThread(thread.id.get).take(10).map { message =>
+          (message.externalId, message.createdAt)
+        }.toMap
 
-      val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set()).map(NonUserParticipant.toBasicNonUser)
+        val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set()).map(NonUserParticipant.toBasicNonUser)
 
-      ElizaThreadInfo(
-        externalId = thread.externalId,
-        participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
-        digest = lastMessage.messageText,
-        lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
-        messageCount = messagesByThread(thread.id.get).length,
-        messageTimes = messageTimes,
-        createdAt = thread.createdAt,
-        lastCommentedAt = lastMessage.createdAt,
-        lastMessageRead = userThreads(thread.id.get).lastSeen,
-        nUrl = thread.nUrl,
-        url = requestUrl,
-        muted = userThreads(thread.id.get).muted)
+        ElizaThreadInfo(
+          externalId = thread.externalId,
+          participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
+          digest = lastMessage.messageText,
+          lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
+          messageCount = messagesByThread(thread.id.get).length,
+          messageTimes = messageTimes,
+          createdAt = thread.createdAt,
+          lastCommentedAt = lastMessage.createdAt,
+          lastMessageRead = userThreads(thread.id.get).lastSeen,
+          nUrl = thread.nUrl,
+          url = requestUrl,
+          muted = userThreads(thread.id.get).muted)
+      }
     }
   }
 
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
-    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map {
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Left(nUri) =>
         val threads = db.readOnlyReplica { implicit session =>
           val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
-        val unsortedInfos = buildThreadInfos(userId, threads, Some(url))
-        val infos = unsortedInfos sortWith { (a, b) =>
-          a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+        buildThreadInfos(userId, threads, Some(url)).map { unsortedInfos =>
+          val infos = unsortedInfos sortWith { (a, b) =>
+            a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+          }
+          (nUri.url, infos)
         }
-        (nUri.url, infos)
-      case Right(prenormalizedUrl) => (prenormalizedUrl, Seq[ElizaThreadInfo]())
+      case Right(prenormalizedUrl) =>
+        Future.successful((prenormalizedUrl, Seq[ElizaThreadInfo]()))
     })
   }
 
@@ -199,73 +203,75 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): Future[(MessageThread, Message)] = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
-    val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
-    val uri = urlOpt.map { url: String =>
-      URI.parse(url) match {
-        case Success(parsed) => parsed
-        case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
-      }
-    }
-    val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u.toString(), contentWanted = true), 10 seconds) } // todo: Remove Await
-    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
-    val uriIdOpt = nUriOpt.flatMap(_.id)
-    val (thread, isNew) = db.readWrite { implicit session =>
-      val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
-      if (isNew) {
-        checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
-        nonUserRecipients.foreach { nonUser =>
-          nonUserThreadRepo.save(NonUserThread(
-            createdBy = from,
-            participant = nonUser,
-            threadId = thread.id.get,
-            uriId = uriIdOpt,
-            notifiedCount = 0,
-            lastNotifiedAt = None,
-            threadUpdatedByOtherAt = Some(thread.createdAt),
-            muted = false
-          ))
-        }
-        userParticipants.foreach { userId =>
-          userThreadRepo.save(UserThread(
-            user = userId,
-            threadId = thread.id.get,
-            uriId = uriIdOpt,
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull,
-            unread = false,
-            started = userId == from
-          ))
-        }
-      } else {
-        log.info(s"Not actually a new thread. Merging.")
-      }
-      (thread, isNew)
+
+    val uriFetch = URI.parse(url) match {
+      case Success(parsed) =>
+        shoebox.internNormalizedURI(parsed.toString(), contentWanted = true).map(n => (parsed, n.id.get, n.url, n.title))
+      case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
     }
 
-    //this is code for a special status message used in the client to do the email preview
-    if (!nonUserRecipients.isEmpty) {
-      db.readWrite { implicit session =>
-        messageRepo.save(Message(
-          from = MessageSender.System,
-          thread = thread.id.get,
-          threadExtId = thread.externalId,
-          messageText = "",
-          source = source,
-          auxData = Some(Json.arr("start_with_emails", from.id.toString,
-            userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
-          )),
-          sentOnUrl = None,
-          sentOnUriId = None
-        ))
-      }
-    }
+    uriFetch.map {
+      case ((uri, nUriId, nUrl, nTitleOpt)) =>
+        statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
 
-    sendMessage(MessageSender.User(from), thread, messageText, source, uri, nUriOpt, Some(isNew))
+        val (thread, isNew) = db.readWrite { implicit session =>
+          val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, Some(url), Some(nUriId), Some(nUrl), titleOpt.orElse(nTitleOpt))
+          if (isNew) {
+            checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
+            nonUserRecipients.foreach { nonUser =>
+              nonUserThreadRepo.save(NonUserThread(
+                createdBy = from,
+                participant = nonUser,
+                threadId = thread.id.get,
+                uriId = Some(nUriId),
+                notifiedCount = 0,
+                lastNotifiedAt = None,
+                threadUpdatedByOtherAt = Some(thread.createdAt),
+                muted = false
+              ))
+            }
+            userParticipants.foreach { userId =>
+              userThreadRepo.save(UserThread(
+                user = userId,
+                threadId = thread.id.get,
+                uriId = Some(nUriId),
+                lastSeen = None,
+                lastMsgFromOther = None,
+                lastNotification = JsNull,
+                unread = false,
+                started = userId == from
+              ))
+            }
+          } else {
+            log.info(s"Not actually a new thread. Merging.")
+          }
+          (thread, isNew)
+        }
+
+        //this is code for a special status message used in the client to do the email preview
+        if (nonUserRecipients.nonEmpty) {
+          db.readWrite { implicit session =>
+            messageRepo.save(Message(
+              from = MessageSender.System,
+              thread = thread.id.get,
+              threadExtId = thread.externalId,
+              messageText = "",
+              source = source,
+              auxData = Some(Json.arr("start_with_emails", from.id.toString,
+                userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
+              )),
+              sentOnUrl = None,
+              sentOnUriId = None
+            ))
+          }
+        }
+
+        sendMessage(MessageSender.User(from), thread, messageText, source, Some(uri), Some(nUriId), Some(isNew))
+    }
 
   }
 
@@ -295,7 +301,7 @@ class MessagingCommander @Inject() (
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
       case MessageSender.User(id) =>
         if (!thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
@@ -314,7 +320,7 @@ class MessagingCommander @Inject() (
         threadExtId = thread.externalId,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.map(_.toString).orElse(thread.url),
+        sentOnUrl = urlOpt.map(_.toString()).orElse(thread.url),
         sentOnUriId = thread.uriId
       ))
     }
@@ -324,7 +330,7 @@ class MessagingCommander @Inject() (
 
     val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
-    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1.seconds) // todo: remove await
     val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -344,12 +350,12 @@ class MessagingCommander @Inject() (
     )
 
     // send message through websockets immediately
-    thread.participants.map(_.allUsers.par.foreach { user =>
+    thread.participants.foreach(_.allUsers.foreach { user =>
       notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
     // update user thread of the sender
-    from.asUser.map { sender =>
+    from.asUser.foreach { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
     }
@@ -387,12 +393,12 @@ class MessagingCommander @Inject() (
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
-      (nUriOpt match {
+      (nUriIdOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url.toString, contentWanted = true) //Note, this also needs to include canonical/og when we have detached threads
-      }) foreach { nUri =>
+        case None => shoebox.internNormalizedURI(url.toString(), contentWanted = true).map(_.id.get) //Note, this also needs to include canonical/og when we have detached threads
+      }) foreach { nUriId =>
         db.readWrite { implicit session =>
-          messageRepo.updateUriId(message, nUri.id.get)
+          messageRepo.updateUriId(message, nUriId)
         }
       }
     }
@@ -544,9 +550,9 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, true)
+  def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = true)
 
-  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, false)
+  def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = false)
 
   def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
 
@@ -609,8 +615,7 @@ class MessagingCommander @Inject() (
     source: Option[MessageSource],
     userExtRecipients: Seq[ExternalId[User]],
     nonUserRecipients: Seq[BasicContact],
-    url: Option[String],
-    urls: JsObject, //wtf its not Seq[String]?
+    url: String,
     userId: Id[User],
     context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
@@ -621,26 +626,22 @@ class MessagingCommander @Inject() (
     val resFut = for {
       userRecipients <- userRecipientsFuture
       nonUserRecipients <- nonUserRecipientsFuture
+      (thread, message) <- sendNewMessage(userId, userRecipients, nonUserRecipients, url, title, text, source)(context)
+      (messageThread, messagesWithBasicUser) <- basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
+      threadInfos <- buildThreadInfos(userId, Seq(thread), Some(url))
     } yield {
       val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
         case NonUserEmailParticipant(address) => (Right(address), "message")
       }
       shoebox.addInteractions(userId, actions)
-      val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
-      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
 
-      val threadInfoOpt = url.flatMap { url =>
-        buildThreadInfos(userId, Seq(thread), Some(url)).headOption
-      }
+      val threadInfoOpt = threadInfos.headOption
 
-      messageThreadFut.map {
-        case (_, messages) =>
-          val tDiff = currentDateTime.getMillis - tStart.getMillis
-          statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
-          (message, threadInfoOpt, messages)
-      }
+      val tDiff = currentDateTime.getMillis - tStart.getMillis
+      statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
+      (message, threadInfoOpt, messagesWithBasicUser)
     }
-    resFut.flatten
+    resFut
   }
 
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]] = rawUsers.map(_.validate[ExternalId[User]])
