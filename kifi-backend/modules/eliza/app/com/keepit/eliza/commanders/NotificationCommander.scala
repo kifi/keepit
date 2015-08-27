@@ -22,13 +22,17 @@ class NotificationCommander @Inject() (
     }.toSet
   }
 
-  def tryNotificationMuted(id: ExternalId[Notification], mute: Boolean): Option[Notification] = {
-    val notifOpt = db.readWrite { implicit session =>
-      notificationRepo.getOpt(id).map { notif =>
-        notificationRepo.save(notif.copy(disabled = mute))
+  def updateNotificationStatus(id: ExternalId[Notification], mute: Boolean): Boolean = {
+    db.readWrite { implicit session =>
+      notificationRepo.getOpt(id).exists { notif =>
+        if (notif.disabled == mute) {
+          false
+        } else {
+          notificationRepo.save(notif.copy(disabled = mute))
+          true
+        }
       }
     }
-    notifOpt
   }
 
 }

@@ -214,7 +214,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def changedMute(userId: Id[User], threadExternalId: ExternalId[MessageThread], mute: Boolean, existingContext: HeimdalContext): Unit = {
+  def changedMute(userId: Id[User], threadExternalId: ExternalId[_], mute: Boolean, existingContext: HeimdalContext): Unit = {
     val changedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
