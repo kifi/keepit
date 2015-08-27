@@ -133,6 +133,7 @@ def _upload_part(bucketname, multipart_id, part_num,
 
   def _upload(retries_left=amount_of_retries):
     try:
+
       conn = S3Connection(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
       bucket = conn.get_bucket(bucketname)
       for mp in bucket.get_all_multipart_uploads():
@@ -178,7 +179,7 @@ def multipart_upload(bucketname, source_path, keyname, acl='private', headers={}
       remaining_bytes = source_size - offset
       bytes = min([bytes_per_chunk, remaining_bytes])
       part_num = i + 1
-      pool.apply_async(_upload_part, [bucketname, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, mp.id,
+      pool.apply_async(_upload_part, [bucketname, mp.id,
         part_num, source_path, offset, bytes])
     pool.close()
     pool.join()
