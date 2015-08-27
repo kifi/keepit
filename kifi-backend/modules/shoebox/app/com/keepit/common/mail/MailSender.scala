@@ -70,7 +70,7 @@ private[mail] class MailSenderActor @Inject() (
         log.info(s"mail $mailId is in state ${mail.state}, skip it")
       } else {
         log.info(s"Processing email to send: ${mail.id.get}")
-        val newMail = takeOutOptOutsAndInactiveUsers(mail).clean()
+        val newMail = takeOutOptOutsAndNonactiveUsers(mail).clean()
         if (newMail.state != ElectronicMailStates.OPT_OUT) {
           log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
           mailProvider.sendMail(newMail)
@@ -86,15 +86,15 @@ private[mail] class MailSenderActor @Inject() (
     NotificationCategory.User.RESET_PASSWORD,
     NotificationCategory.User.APPROVED
   ).map(c => ElectronicMailCategory(c.category))
-  def takeOutOptOutsAndInactiveUsers(mail: ElectronicMail) = { // say that 3 times fast
+  def takeOutOptOutsAndNonactiveUsers(mail: ElectronicMail) = { // say that 3 times fast
 
     mail.category match {
       case sendAnyway if sendAnywayCategories.contains(sendAnyway) =>
         mail
       case _ =>
         val (newTo, newCC) = db.readOnlyReplica { implicit session =>
-          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsInactive(_))
-          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsInactive(_))
+          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNotActive(_))
+          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsNotActive(_))
           (newTo, newCC)
         }
         if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
@@ -122,12 +122,12 @@ private[mail] class MailSenderActor @Inject() (
     }
   }
 
-  def userIsInactive(address: EmailAddress)(implicit session: RSession): Boolean = {
+  def userIsNotActive(address: EmailAddress)(implicit session: RSession): Boolean = {
     val userEmailAddressOpt = emailAddressRepo.getByAddress(address)
     userEmailAddressOpt match {
       case Some(emailAddress) =>
         val userId = emailAddress.userId
-        db.readOnlyReplica { implicit session => userRepo.get(userId).state == UserStates.INACTIVE }
+        db.readOnlyReplica { implicit session => userRepo.get(userId).state != UserStates.ACTIVE }
       case None => false
     }
   }

@@ -771,9 +771,6 @@ class LibraryCommanderImpl @Inject() (
             db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
               implicit val session: RWSession = s
               keepCommander.syncWithLibrary(k, lib)
-              ktlRepo.getByKeepIdAndLibraryId(k.id.get, targetLib.id.get).foreach {
-                ktlCommander.syncWithLibrary(_, lib)
-              }
             }
             if (iter < 200) { // to prevent infinite loops if there's an issue updating keeps.
               updateKeepVisibility(changedVisibility, iter + 1)
@@ -835,8 +832,8 @@ class LibraryCommanderImpl @Inject() (
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) => // TODO(ryan): Can this session be made implicit?
-        ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
-        keepRepo.deactivate(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
+        // ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
+        keepCommander.deactivateKeep(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)

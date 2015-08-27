@@ -235,7 +235,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     elizaClient.sendGlobalNotification( //push sent
       userIds = invitees,
       title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.abbreviatedName}!",
-      body = s"Help ${org.abbreviatedName} by sharing your knowledge with them.",
+      body = s"Join the ${org.abbreviatedName} team, so you can access and build your team's knowledge",
       linkText = "Let's do it!",
       linkUrl = orgLink,
       imageUrl = userImage,

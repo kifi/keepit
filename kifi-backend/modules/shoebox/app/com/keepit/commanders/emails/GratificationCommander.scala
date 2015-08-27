@@ -45,7 +45,7 @@ class GratificationCommander @Inject() (
   def getGratData(userId: Id[User]): Future[GratificationData] = heimdal.getGratData(userId).map { augmentData }
 
   def generateUserBatch(batchNum: Int): Seq[Id[User]] = {
-    db.readOnlyReplica { implicit s => userRepo.pageAscendingIds(batchNum, BATCH_SIZE, excludeStates = Set(UserStates.INACTIVE)) }
+    db.readOnlyReplica { implicit s => userRepo.pageAscendingIds(batchNum, BATCH_SIZE, excludeStates = (UserStates.ALL - UserStates.ACTIVE)) }
   }
 
   def batchSendEmails(filter: Id[User] => Boolean, sendTo: Option[EmailAddress] = None): Unit = {

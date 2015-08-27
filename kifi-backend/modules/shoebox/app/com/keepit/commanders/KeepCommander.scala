@@ -761,13 +761,15 @@ class KeepCommanderImpl @Inject() (
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
-  def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep = {
-    require(users.contains(k.userId), "keep owner is not one of the connected users")
-    require(libraries.contains(k.libraryId.get), "keep's library is not one of the connected libraries") // TODO(ryan): remove this, keeps don't have to be in a library
-    val keep = keepRepo.save(k.withConnections(libraries, users))
-    ktuCommander.internKeepInUser(keep, keep.userId, keep.userId)
-    // TODO(ryan): drop this once keeps don't need to exist in libraries
-    ktlCommander.internKeepInLibrary(keep, libraryRepo.get(keep.libraryId.get), keep.userId)
+  def persistKeep(k: Keep, userIds: Set[Id[User]], libraryIds: Set[Id[Library]])(implicit session: RWSession): Keep = {
+    require(userIds.contains(k.userId), "keep owner is not one of the connected users")
+    require(libraryIds.contains(k.libraryId.get), "keep's library is not one of the connected libraries")
+    val keep = keepRepo.save(k.withConnections(libraryIds, userIds))
+
+    userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
+    val libraries = libraryRepo.getByIds(libraryIds).values
+    libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
+
     keep
   }
   private def refreshConnectionsHash(keep: Keep)(implicit session: RWSession): Keep = {
@@ -780,10 +782,14 @@ class KeepCommanderImpl @Inject() (
   }
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
     require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
+    ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get).foreach { ktl => ktlCommander.syncWithLibrary(ktl, library) }
     keepRepo.save(keep.withLibrary(library))
   }
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
-    keepRepo.save(keep.withOwner(newOwnerId))
+    ktuCommander.removeKeepFromUser(keep.id.get, keep.userId)
+    val updatedKeep = keepRepo.save(keep.withOwner(newOwnerId))
+    ktuCommander.internKeepInUser(keep, newOwnerId, addedBy = newOwnerId)
+    refreshConnectionsHash(updatedKeep)
   }
   private def isKeepConnectedTo(keepId: Id[Keep], targetConnections: KeepConnections)(implicit session: RSession): Boolean = {
     val connections = KeepConnections(

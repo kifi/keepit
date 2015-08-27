@@ -117,6 +117,7 @@ class OrganizationCommanderImpl @Inject() (
       airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
     val org = orgRepo.get(orgId)
+    if (org.state == OrganizationStates.INACTIVE) throw new Exception(s"inactive org: $org")
     val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
@@ -212,7 +213,7 @@ class OrganizationCommanderImpl @Inject() (
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-              throw new Exception(OrganizationFail.HANDLE_UNAVAILABLE.message)
+              throw OrganizationFail.HANDLE_UNAVAILABLE
             }
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when thing sare solidified
@@ -221,13 +222,10 @@ class OrganizationCommanderImpl @Inject() (
         }
       }
     } match {
-      case Success(Left(fail)) =>
-        Left(fail)
-      case Success(Right(response)) =>
-        Right(response)
-      case Failure(ex) =>
-        log.error(s"could not create organization via $request", ex)
-        Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Success(Left(fail)) => Left(fail)
+      case Success(Right(response)) => Right(response)
+      case Failure(OrganizationFail.HANDLE_UNAVAILABLE) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
+      case Failure(ex) => throw ex
     }
   }
 
