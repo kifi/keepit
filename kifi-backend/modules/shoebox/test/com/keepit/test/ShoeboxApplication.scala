@@ -27,6 +27,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.normalizer.FakeNormalizationServiceModule
+import com.keepit.notify.{ FakeShoeboxNotifyModule, ShoeboxNotifyModule }
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -61,7 +62,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeCryptoModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
-    FakeActorSystemModule()
+    FakeActorSystemModule(),
+    FakeShoeboxNotifyModule()
   ))
 
 trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
@@ -99,7 +101,8 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeHttpClientModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
-    FakeSocialGraphModule()
+    FakeSocialGraphModule(),
+    FakeShoeboxNotifyModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]
