@@ -117,7 +117,8 @@ case class LibraryModifyRequest(
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,
-  keepChanges: Future[Unit])
+  keepChanges: Future[Unit],
+  edits: Map[String, Boolean])
 
 case class LibraryInfo(
   id: PublicId[Library],
