@@ -14,9 +14,10 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
 
-import scala.util.Try
+import scala.util.{ Random, Try }
 
 class OrganizationCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+  implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
@@ -32,13 +33,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
-          implicit val context = HeimdalContext.empty
-
           val user = db.readWrite { implicit session => UserFactory.user().withName("Teeny", "Tiny").saved }
 
           val createRequest = OrganizationCreateRequest(requesterId = user.id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+          createResponse must beRight
           val org = createResponse.right.get.newOrg
 
           db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === org
@@ -50,7 +49,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
       "not hide valid exceptions" in {
         withDb(modules: _*) { implicit injector =>
-          implicit val context = HeimdalContext.empty
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
           val createRequest = OrganizationCreateRequest(requesterId = Id[User](42), OrganizationInitialValues(name = "Kifi"))
           Try(inject[OrganizationCommander].createOrganization(createRequest)) must beFailedTry
@@ -95,13 +93,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
-          implicit val context = HeimdalContext.empty
-
           val users = db.readWrite { implicit session => UserFactory.users(3).saved }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+          createResponse must beRight
           val org = createResponse.right.get.newOrg
 
           db.readWrite { implicit session =>
@@ -124,7 +120,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
             modifications = OrganizationModifications(name = Some("The view is nice from up here"), site = Some("www.kifi.com")))
           val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
-          ownerModifyResponse must haveClass[Right[OrganizationModifyRequest, Organization]]
+          ownerModifyResponse must beRight
           ownerModifyResponse.right.get.request === ownerModifyRequest
           ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
           ownerModifyResponse.right.get.modifiedOrg.site.get === "www.kifi.com"
@@ -141,13 +137,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
-          implicit val context = HeimdalContext.empty
-
           val users = db.readWrite { implicit session => UserFactory.users(3).saved }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+          createResponse must beRight
           val org = createResponse.right.get.newOrg
 
           db.readWrite { implicit session =>
@@ -166,13 +160,13 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
 
           val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
-          orgModifyResponse must haveClass[Right[OrganizationFail, OrganizationModifyResponse]]
+          orgModifyResponse must beRight
           orgModifyResponse.right.get.request === orgModifyRequest
           orgModifyResponse.right.get.modifiedOrg.basePermissions === betterBasePermissions
 
           // Now the member should be able to invite others
           val try2 = orgMembershipCommander.addMembership(memberInviteMember)
-          try2 must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
+          try2 must beRight
 
           val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
           allMembers.size === 3
@@ -190,13 +184,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
-          implicit val context = HeimdalContext.empty
-
           val users = db.readWrite { implicit session => UserFactory.users(4).saved }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+          createResponse must beRight
           val org = createResponse.right.get.newOrg
 
           db.readWrite { implicit session =>
@@ -222,13 +214,46 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           // The OG owner can do whatever they want
           val trueOwnerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = users(0).id.get)
           val trueOwnerDeleteResponse = orgCommander.deleteOrganization(trueOwnerDeleteRequest)
-          trueOwnerDeleteResponse must haveClass[Right[OrganizationDeleteRequest, Organization]]
+          trueOwnerDeleteResponse must beRight
           trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
+        }
+      }
+      "properly delete an organization" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, members, orgLibs, personalLibs) = db.readWrite { implicit session =>
+            val users = Random.shuffle(UserFactory.users(10).saved)
+            val (owner, members) = (users.head, users.tail)
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
+            val orgLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user).withOrganization(org)).saved.toSet }.toMap
+            val personalLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user)).saved.toSet }.toMap
+            (org, owner, members, orgLibs, personalLibs)
+          }
+
+          val users = members.toSet + owner
+
+          db.readOnlyMaster { implicit session =>
+            handleCommander.getByHandle(org.handle) must beSome
+            orgRepo.get(org.id.get).state === OrganizationStates.ACTIVE
+            orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId) === users.map(_.id.get)
+            libraryRepo.getBySpace(org.id.get) === orgLibs.values.flatten.toSet
+            for (u <- users) {
+              libraryRepo.getAllByOwner(u.id.get).map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
+              libraryRepo.getBySpace(u.id.get).map(_.id.get) === personalLibs(u.id.get).map(_.id.get)
+            }
+          }
+
+          val maybeResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get))
+          maybeResponse must beRight
 
           db.readOnlyMaster { implicit session =>
             handleCommander.getByHandle(org.handle) must beNone
             orgRepo.get(org.id.get).state === OrganizationStates.INACTIVE
-            orgMembershipRepo.getAllByOrgId(org.id.get).size === 0
+            orgMembershipRepo.getAllByOrgId(org.id.get) === Set.empty
+            libraryRepo.getBySpace(org.id.get) === Set.empty
+            for (u <- users) {
+              libraryRepo.getAllByOwner(u.id.get).map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
+              libraryRepo.getBySpace(u.id.get).map(_.id.get) === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
+            }
           }
           1 === 1
         }
@@ -243,13 +268,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
 
-          implicit val context = HeimdalContext.empty
-
           val users = db.readWrite { implicit session => UserFactory.users(5).saved }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must haveClass[Right[OrganizationFail, OrganizationCreateResponse]]
+          createResponse must beRight
           val org = createResponse.right.get.newOrg
 
           db.readWrite { implicit session =>
@@ -275,7 +298,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           // The OG owner can do whatever they want
           val trueOwnerTransferRequest = OrganizationTransferRequest(orgId = org.id.get, requesterId = users(0).id.get, newOwner = users(2).id.get)
           val trueOwnerTransferResponse = orgCommander.transferOrganization(trueOwnerTransferRequest)
-          trueOwnerTransferResponse must haveClass[Right[OrganizationTransferRequest, Organization]]
+          trueOwnerTransferResponse must beRight
           trueOwnerTransferResponse.right.get.request === trueOwnerTransferRequest
 
           val (modifiedOrg, newOwnerMembership) = db.readOnlyMaster { implicit session =>
