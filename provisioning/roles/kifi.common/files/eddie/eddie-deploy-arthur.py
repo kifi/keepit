@@ -260,8 +260,6 @@ if __name__=="__main__":
 
     assets = S3Assets(args.serviceType, "fortytwo-builds")
 
-    print(args.version)
-
     if args.version == 'latest':
 
       last_build = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/api/json').json()
@@ -278,7 +276,7 @@ if __name__=="__main__":
           for chunk in jenkins_file.iter_content(1024):
             handle.write(chunk)
         multipart_upload('fortytwo-builds', source_path, source_path)
-        print('Uploaded build asset %s' % relative_path)
+        log('Uploaded build asset %s' % relative_path)
 
       shutil.rmtree('deploy-tmp/')
 
@@ -354,6 +352,6 @@ if __name__=="__main__":
       lock.unlock()
       log("Deployment Complete")
   except Exception, e:
-    #log("@channel: FATAL ERROR: " + str(e))
+    log("@channel: FATAL ERROR: " + str(e))
     raise
 
