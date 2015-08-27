@@ -33,6 +33,7 @@ class LibraryImageController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryOwnerAction(pubId)).async(parse.temporaryFile) { request =>
+    // TODO(cam): this handler is used by mobile and needs to be versioned in case required fields are added or removed
     val libraryId = Library.decodePublicId(pubId).get
     val imageRequest = db.readWrite { implicit session =>
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))

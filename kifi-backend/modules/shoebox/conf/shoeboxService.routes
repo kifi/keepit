@@ -302,6 +302,7 @@ POST    /m/1/organizations/:id/members/invites/decline   @com.keepit.controllers
 POST    /m/1/organizations/:id/members/invites/link      @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/members/modify            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMembers(id: PublicId[Organization])
 POST    /m/1/organizations/:id/members/remove            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.removeMembers(id: PublicId[Organization])
+GET     /m/1/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int, limit: Int)
 
 ##########################################
 # Website
