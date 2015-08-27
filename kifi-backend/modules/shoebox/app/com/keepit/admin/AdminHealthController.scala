@@ -46,15 +46,15 @@ class AdminHealthController @Inject() (
   }
 
   //see https://github.com/google/guice/wiki/Grapher
-  def getGuiceGraph() = AdminUserPage { implicit request =>
+  def getGuiceGraph() = Action { implicit request =>
     val global = Play.current.global.asInstanceOf[FortyTwoGlobal] // fail hard
     val injector = global.injector
     val stringWriter = new StringWriter()
     val writer = new PrintWriter(stringWriter)
     val grapher = Guice.createInjector(new GraphvizModule()).getInstance(classOf[GraphvizGrapher])
     grapher.setOut(writer)
-    grapher.setRankdir("TB");
-    grapher.graph(injector);
+    grapher.setRankdir("TB")
+    grapher.graph(injector)
     Ok(stringWriter.toString)
   }
 
