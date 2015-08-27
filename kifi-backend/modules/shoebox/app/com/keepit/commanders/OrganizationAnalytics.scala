@@ -48,8 +48,8 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       builder += ("channel", "email")
       builder += ("organizationId", organization.id.get.toString)
       builder += ("inviterId", inviterId.toString)
-      builder += ("inviteeId", inviteeId.map(_.toString).getOrElse(""))
-      builder += ("inviteeEmail", emailOpt.map(_.address).getOrElse(""))
+      inviteeId.foreach(id => builder += ("inviteeId", id.toString))
+      emailOpt.foreach(email => builder += ("inviteeEmail", email.address))
       builder += ("daysSinceOrganizationCreated", numDays)
       heimdal.trackEvent(UserEvent(inviterId, builder.build, UserEventTypes.INVITED))
     }
@@ -63,8 +63,8 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       builder += ("action", "clickedOrgURL")
       builder += ("organizationId", organization.id.get.toString)
       builder += ("inviterId", invite.inviterId.toString)
-      builder += ("inviteeId", invite.userId.map(_.toString).getOrElse(""))
-      builder += ("inviteeEmail", invite.emailAddress.map(_.address).getOrElse(""))
+      invite.userId.foreach(inviteeId => builder += ("inviteeId", inviteeId.toString))
+      invite.emailAddress.foreach(email => builder += ("inviteeEmail", email.address))
       builder += ("daysSinceOrganizationCreated", numDays)
       heimdal.trackEvent(
         invite.userId.map(id => UserEvent(id, builder.build, UserEventTypes.WAS_NOTIFIED))

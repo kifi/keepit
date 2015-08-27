@@ -53,14 +53,14 @@ trait ProcessedImageHelper {
   val log: Logger
   val webService: WebService
 
-  def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"[pih] Fetching ${file.file.getAbsolutePath}")
+  def fetchAndHashLocalImage(file: File): Future[Either[ImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
+    log.info(s"[pih] Fetching ${file.getAbsolutePath}")
 
     val formatOpt = detectImageType(file)
 
     formatOpt match {
       case Some(format) =>
-        hashImageFile(file.file) match {
+        hashImageFile(file) match {
           case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
             Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
           case Success(hash) => // blacklisted hash
@@ -82,7 +82,7 @@ trait ProcessedImageHelper {
         case (format, file) =>
           hashImageFile(file.file) match {
             case Success(hash) if !ProcessedImageHelper.blacklistedHash.contains(hash.hash) =>
-              Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
+              Right(ImageProcessState.ImageLoadedAndHashed(file.file, format, hash, Some(imageUrl)))
             case Success(hash) => // blacklisted hash
               Left(ImageProcessState.BlacklistedImage)
             case Failure(ex) =>
@@ -99,9 +99,9 @@ trait ProcessedImageHelper {
   def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed, baseLabel: String, scaleCandidates: Seq[ScaledImageSize],
     cropCandidates: Seq[CroppedImageSize])(implicit photoshop: Photoshop): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
 
-    validateAndGetImageInfo(sourceImage.file.file) match {
+    validateAndGetImageInfo(sourceImage.file) match {
       case Success(imageInfo) =>
-        val image = sourceImage.file.file
+        val image = sourceImage.file
         val outFormat = inputFormatToOutputFormat(sourceImage.format)
         val imageSize = ImageSize(imageInfo.width, imageInfo.height)
         val sizes = calcSizesForImage(imageSize, scaleCandidates, cropCandidates)
@@ -117,7 +117,7 @@ trait ProcessedImageHelper {
           case Left(err) => Left(err)
         }
       case Failure(ex) =>
-        log.error(s"s[pih] validateAndGetImageInfo failure", ex)
+        log.error(s"[pih] validateAndGetImageInfo failure", ex)
         Left(ImageProcessState.InvalidImage(ex))
     }
   }
@@ -279,12 +279,12 @@ trait ProcessedImageHelper {
     case _ => None
   }
 
-  protected def detectImageType(file: TemporaryFile): Option[ImageFormat] = {
-    val is = new BufferedInputStream(new FileInputStream(file.file))
+  protected def detectImageType(file: File): Option[ImageFormat] = {
+    val is = new BufferedInputStream(new FileInputStream(file))
     val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
       mimeTypeToImageFormat(mimeType)
     }.orElse {
-      imageFilenameToFormat(file.file.getName)
+      imageFilenameToFormat(file.getName)
     }
     is.close()
     formatOpt
@@ -305,8 +305,7 @@ trait ProcessedImageHelper {
           if (headers.status != 200) {
             Future.failed(new RuntimeException(s"Image returned non-200 code, ${headers.status}, $imageUrl"))
           } else {
-            val tempFile = TemporaryFile(prefix = "remote-file")
-            tempFile.file.deleteOnExit()
+            val tempFile = TemporaryFile("remote-file")
             val outputStream = new FileOutputStream(tempFile.file)
 
             val maxSize = 1024 * 1024 * 16
@@ -326,7 +325,7 @@ trait ProcessedImageHelper {
               case _ =>
                 outputStream.close()
             } flatMap { _ =>
-              formatOpt.orElse(detectImageType(tempFile)) map { format =>
+              formatOpt.orElse(detectImageType(tempFile.file)) map { format =>
                 Future.successful((format, tempFile))
               } getOrElse {
                 Future.failed(new Exception(s"Unknown image type, ${headers.headers.get("Content-Type")}, $imageUrl"))

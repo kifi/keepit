@@ -59,7 +59,11 @@ object UserIpAddressRules {
     "San Francisco International Airport", "Nomad Digital", "Choopa, LLC", "Linode", "Voxility S.R.L.", "ServerStack").map(_.toLowerCase)
 }
 
-case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true)
+case class UserIpAddressEvent(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true) {
+  if (ip.datacenterIp) {
+    throw new IllegalArgumentException(s"IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged. User $userId, ip $ip, agent $userAgent")
+  }
+}
 
 class UserIpAddressActor @Inject() (userIpAddressEventLogger: UserIpAddressEventLogger, airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) {
 
@@ -98,9 +102,6 @@ class UserIpAddressEventLogger @Inject() (
   private val clusterMemoryTime = Period.days(2) // How long back do we look and still consider a user to be part of a cluster
 
   def logUser(event: UserIpAddressEvent): Unit = {
-    if (event.ip.ip.toString.startsWith("10.")) {
-      throw new IllegalArgumentException(s"IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged. User ${event.userId}, ip ${event.ip}, agent ${event.userAgent}")
-    }
     val now = clock.now()
     val agentType = simplifyUserAgent(event.userAgent)
     if (agentType == "NONE") {
@@ -226,19 +227,21 @@ class UserIpAddressEventLogger @Inject() (
 
 class UserIpAddressCommander @Inject() (
     db: Database,
+    airbrake: AirbrakeNotifier,
     userIpAddressRepo: UserIpAddressRepo,
     actor: ActorInstance[UserIpAddressActor]) extends Logging {
-
-  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true): Unit = {
-    actor.ref ! UserIpAddressEvent(userId, ip, userAgent, reportNewClusters)
-  }
 
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
     val userId = request.userId
     val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
     val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val ip = IpAddress(raw_ip_string.split(",").head)
-    actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
+    try {
+      actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
+    } catch {
+      case e: Exception =>
+        airbrake.notify(s"error logging user $userId with headers: ${request.headers.toMap.mkString(", ")}", e)
+    }
   }
 
   def countByUser(userId: Id[User]): Int = {

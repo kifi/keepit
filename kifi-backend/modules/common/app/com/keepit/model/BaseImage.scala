@@ -73,7 +73,7 @@ sealed abstract class ImageStoreFailure(val reason: String, val cause: Option[Th
 
 object ImageProcessState {
   // In-progress
-  case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
+  case class ImageLoadedAndHashed(file: File, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
   case class ImageValid(image: File, format: ImageFormat, hash: ImageHash, processOperation: ProcessImageOperation) extends ImageStoreInProgress
   case class ReadyToPersist(key: ImagePath, format: ImageFormat, file: File, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress
   case class UploadedImage(key: ImagePath, format: ImageFormat, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress

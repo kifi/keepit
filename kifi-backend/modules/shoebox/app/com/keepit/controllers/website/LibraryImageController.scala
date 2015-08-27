@@ -38,8 +38,10 @@ class LibraryImageController @Inject() (
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
     }
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(
-      request.body, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get))
+    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body.file, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get)).map { s =>
+      request.body.file.delete()
+      s
+    }
     uploadImageF.map {
       case fail: ImageStoreFailure =>
         InternalServerError(Json.obj("error" -> fail.reason))

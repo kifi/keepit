@@ -179,10 +179,7 @@ class S3ImageStoreImpl @Inject() (
           val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
           updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
         case Failure(e) =>
-          airbrake.notify(AirbrakeError(
-            exception = e,
-            message = Some(s"Failed to upload picture $pictureName - $externalId of $sui to S3")
-          ))
+          airbrake.notify(s"Failed to upload picture $pictureName - $externalId of $sui to S3", e)
       }
       future
     }

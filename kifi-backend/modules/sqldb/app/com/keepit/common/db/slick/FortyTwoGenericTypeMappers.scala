@@ -216,6 +216,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
   implicit val setEmailAddressParameter = setParameterFromMapper[EmailAddress]
   implicit val setHashtagParameter = setParameterFromMapper[Hashtag]
+  implicit val setLibraryVisibilityParameter = setParameterFromMapper[LibraryVisibility]
 
   // GetResult mappers to be used for interpolated query results
 

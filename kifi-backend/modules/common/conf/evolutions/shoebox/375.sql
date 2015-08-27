@@ -38,7 +38,7 @@ CREATE TABLE paid_plan (
     state varchar(20) NOT NULL,
     name varchar(256) NOT NULL,
     billing_cycle int(11) NOT NULL,
-    price_per_cycle_per_user int(11) NOT NULL,
+    price_per_user_per_cycle int(11) NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -53,7 +53,7 @@ CREATE TABLE account_event (
     account_id bigint(20) NOT NULL,
     billing_related boolean NOT NULL,
     whodunnit bigint(20) NULL,
-    who_dunnit_extra text NOT NULL,
+    whodunnit_extra text NOT NULL,
     kifi_admin_involved bigint(20) NULL,
     event_type varchar(128) NOT NULL,
     event_type_extras text NOT NULL,

@@ -49,7 +49,10 @@ class TwitterPublishingCommander @Inject() (
             }
             imageOpt match {
               case None => twitterSocialGraph.sendTweet(sui, None, msg)
-              case Some(imageFuture) => imageFuture.map { imageFile => twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg) }
+              case Some(imageFuture) => imageFuture.map { imageFile =>
+                twitterSocialGraph.sendTweet(sui, Some(imageFile.file), msg)
+                imageFile.file.delete()
+              }
             }
           }
       }

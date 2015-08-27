@@ -168,7 +168,7 @@ GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV1(id: ExternalId[Keep])
 POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV2(id: ExternalId[Keep])
 
-GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String])
+GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
@@ -249,7 +249,7 @@ POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.M
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 #DEPRECATED: use instead /m/1/keeps/stream
-GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(limit: Int, beforeId: Option[String], afterId: Option[String])
+GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
 
@@ -373,7 +373,7 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream          @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String])
+GET     /site/keeps/stream          @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
@@ -541,6 +541,17 @@ POST          /site/organizations/:id/avatar/upload             @com.keepit.cont
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
+
+GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getCreditCardToken(pubId: PublicId[Organization])
+POST          /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.setCreditCardToken(pubId: PublicId[Organization])
+GET           /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.getAccountContacts(pubId: PublicId[Organization])
+POST          /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.setAccountContacts(pubId: PublicId[Organization])
+GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getPlanFeatureSettings(pubId: PublicId[Organization])
+POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setPlanFeatureSettings(pubId: PublicId[Organization])
+POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
+GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int)
+GET           /site/admin/billing/eventsBefore                  @com.keepit.controllers.website.PaymentsController.getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[com.keepit.payments.AccountEvent])
 
 ##########################################
 # Email-Link API
@@ -888,6 +899,9 @@ POST          /admin/goodies/performRegexTest                                   
 GET           /admin/goodies/ids/all                                             @com.keepit.controllers.admin.AdminGoodiesController.listAllExternalIds
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
+
+
+GET           /admin/payments/backfillAccounts             @com.keepit.controllers.admin.AdminPaymentsController.backfillPaidAccounts()
 
 ##########################################
 # Common Healthcheck / service routes
