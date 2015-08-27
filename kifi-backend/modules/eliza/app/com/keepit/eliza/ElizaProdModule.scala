@@ -6,7 +6,6 @@ import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.common.store.ElizaProdStoreModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
-import com.keepit.realtime.ElizaUrbanAirshipModule
 import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -16,7 +15,6 @@ case class ElizaProdModule() extends ElizaModule with CommonProdModule {
 
   val userActionsModule = ProdRemoteUserActionsHelperModule()
   val cacheModule = ElizaCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
-  val urbanAirshipModule = ElizaUrbanAirshipModule()
   val storeModule = ElizaProdStoreModule()
   val notifyModule = ElizaNotifyModule()
 
