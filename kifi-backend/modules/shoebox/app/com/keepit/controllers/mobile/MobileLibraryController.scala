@@ -43,7 +43,6 @@ class MobileLibraryController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
-  libraryMembershipRepo: LibraryMembershipRepo,
   keepsCommander: KeepCommander,
   pageCommander: PageCommander,
   keepDecorator: KeepDecorator,
@@ -70,7 +69,7 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest](ExternalLibraryAddRequest.readsMobileV1)
 
     externalAddRequestValidated match {
       case JsError(errs) =>
