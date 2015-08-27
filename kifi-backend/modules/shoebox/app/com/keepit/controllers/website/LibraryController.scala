@@ -66,34 +66,34 @@ class LibraryController @Inject() (
   }
 
   def addLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest](ExternalLibraryAddRequest.reads)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.reads)
 
-    externalAddRequestValidated match {
+    externalCreateRequestValidated match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
-      case JsSuccess(externalAddRequest, _) =>
-        val libAddRequest = db.readOnlyReplica { implicit session =>
-          val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
-          val space = externalAddRequest.space map {
+      case JsSuccess(externalCreateRequest, _) =>
+        val libCreateRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalCreateRequest.slug.getOrElse(LibrarySlug.generateFromName(externalCreateRequest.name))
+          val space = externalCreateRequest.space map {
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryAddRequest(
-            name = externalAddRequest.name,
+          LibraryCreateRequest(
+            name = externalCreateRequest.name,
             slug = slug,
-            visibility = externalAddRequest.visibility,
-            description = externalAddRequest.description,
-            color = externalAddRequest.color,
-            listed = externalAddRequest.listed,
-            whoCanInvite = externalAddRequest.whoCanInvite,
-            subscriptions = externalAddRequest.subscriptions,
+            visibility = externalCreateRequest.visibility,
+            description = externalCreateRequest.description,
+            color = externalCreateRequest.color,
+            listed = externalCreateRequest.listed,
+            whoCanInvite = externalCreateRequest.whoCanInvite,
+            subscriptions = externalCreateRequest.subscriptions,
             space = space
           )
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+        libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(newLibrary) =>
@@ -149,7 +149,7 @@ class LibraryController @Inject() (
   def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    libraryCommander.removeLibrary(id, request.userId) match {
+    libraryCommander.deleteLibrary(id, request.userId) match {
       case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case _ => Ok(JsString("success"))
     }

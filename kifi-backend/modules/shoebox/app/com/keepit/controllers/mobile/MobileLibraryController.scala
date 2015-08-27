@@ -69,34 +69,34 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest](ExternalLibraryAddRequest.readsMobileV1)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.readsMobileV1)
 
-    externalAddRequestValidated match {
+    externalCreateRequestValidated match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
-      case JsSuccess(externalAddRequest, _) =>
-        val libAddRequest = db.readOnlyReplica { implicit session =>
-          val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
-          val space = externalAddRequest.space map {
+      case JsSuccess(externalCreateRequest, _) =>
+        val libCreateRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalCreateRequest.slug.getOrElse(LibrarySlug.generateFromName(externalCreateRequest.name))
+          val space = externalCreateRequest.space map {
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryAddRequest(
-            name = externalAddRequest.name,
+          LibraryCreateRequest(
+            name = externalCreateRequest.name,
             slug = slug,
-            visibility = externalAddRequest.visibility,
-            description = externalAddRequest.description,
-            color = externalAddRequest.color,
-            listed = externalAddRequest.listed,
-            whoCanInvite = externalAddRequest.whoCanInvite,
-            subscriptions = externalAddRequest.subscriptions,
+            visibility = externalCreateRequest.visibility,
+            description = externalCreateRequest.description,
+            color = externalCreateRequest.color,
+            listed = externalCreateRequest.listed,
+            whoCanInvite = externalCreateRequest.whoCanInvite,
+            subscriptions = externalCreateRequest.subscriptions,
             space = space
           )
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+        libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(newLibrary) =>
@@ -165,7 +165,7 @@ class MobileLibraryController @Inject() (
   def deleteLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val libId = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    libraryCommander.removeLibrary(libId, request.userId) match {
+    libraryCommander.deleteLibrary(libId, request.userId) match {
       case Some(fail) => sendFailResponse(fail)
       case _ => NoContent
     }

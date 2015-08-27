@@ -277,6 +277,10 @@ class OrganizationCommanderImpl @Inject() (
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
+          libraryRepo.getBySpace(org.id.get, excludeStates = Set.empty).foreach { lib =>
+            libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
+          }
+
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
           planManagementCommander.deactivatePaidAccountForOrganziation(org.id.get, session)

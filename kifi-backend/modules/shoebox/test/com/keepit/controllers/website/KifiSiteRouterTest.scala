@@ -182,8 +182,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Libraries
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
-          val libraryRequest = LibraryAddRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
-          libraryCommander.addLibrary(libraryRequest, user1.id.get)
+          val libraryRequest = LibraryCreateRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
+          libraryCommander.createLibrary(libraryRequest, user1.id.get)
         }
         actionsHelper.unsetUser
         route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beWebApp

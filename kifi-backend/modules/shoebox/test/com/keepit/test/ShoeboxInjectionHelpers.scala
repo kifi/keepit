@@ -1,6 +1,6 @@
 package com.keepit.test
 
-import com.keepit.commanders.{ UserEmailAddressCommander, HandleCommanderImpl, HandleCommander }
+import com.keepit.commanders._
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -52,4 +52,10 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def personaRepo(implicit injector: Injector) = inject[PersonaRepo]
   def userPersonaRepo(implicit injector: Injector) = inject[UserPersonaRepo]
   def handleCommander(implicit injector: Injector) = inject[HandleCommander].asInstanceOf[HandleCommanderImpl]
+  def orgRepo(implicit injector: Injector) = inject[OrganizationRepo]
+  def orgMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
+  def orgInviteRepo(implicit injector: Injector) = inject[OrganizationInviteRepo]
+  def orgCommander(implicit injector: Injector) = inject[OrganizationCommander]
+  def orgMembershipCommander(implicit injector: Injector) = inject[OrganizationMembershipCommander]
+  def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
 }

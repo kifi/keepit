@@ -110,7 +110,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
     (entryOpt, suiOpt, syncOpt) match {
       case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
-        val addRequest = LibraryAddRequest(
+        val addRequest = LibraryCreateRequest(
           name = s"Interesting links from @$handle",
           visibility = LibraryVisibility.PUBLISHED,
           slug = s"interesting-links-from-$handle",
@@ -120,7 +120,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           listed = Some(true)
         )
         implicit val context = heimdalContextBuilder.build
-        libraryCommander.addLibrary(addRequest, userId).fold({ fail =>
+        libraryCommander.createLibrary(addRequest, userId).fold({ fail =>
           Left(fail.message)
         }, { lib =>
           db.readWrite { implicit session =>
