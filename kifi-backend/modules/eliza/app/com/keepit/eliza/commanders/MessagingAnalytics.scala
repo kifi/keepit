@@ -245,8 +245,8 @@ class MessagingAnalytics @Inject() (
   private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
     orgIdsByUserIdFut.foreach { orgIdsByUserId =>
-      val commonOrgs = orgIdsByUserId.values.reduce[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      contextBuilder += ("organizationId", commonOrgs.map(_.toString).toSeq)
+      val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
+      contextBuilder += ("organizationId", commonOrgs.map(_.head.toString).toSeq)
     }
   }
 }
