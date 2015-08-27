@@ -552,10 +552,10 @@ class KeepRepoImpl @Inject() (
     val ktu_WHERE_THIS_USER = s"""keep_to_user ktu where ktu.state = 'active' and ktu.user_id = $userId"""
 
     def getFirstAddedAt(keepId: Id[Keep]): Option[DateTime] = {
-      sql"""SELECT min(*) FROM
-        (SELECT ktl.added_at FROM #$ktl_JOIN_lm_WHERE_THIS_USER AND ktl.keep_id = $keepId)
-        UNION (SELECT ktl.added_at FROM #$ktl_JOIN_om_WHERE_THIS_USER AND ktl.keep_id = $keepId)
-        UNION (SELECT ktu.added_at FROM #$ktu_WHERE_THIS_USER AND ktu.keep_id = $keepId)
+      sql"""SELECT min(added_at) FROM
+        (SELECT ktl.added_at as added_at FROM #$ktl_JOIN_lm_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktl.added_at as added_at FROM #$ktl_JOIN_om_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktu.added_at as added_at FROM #$ktu_WHERE_THIS_USER AND ktu.keep_id = $keepId)
       """.as[Option[DateTime]].first
     }
 
