@@ -37,7 +37,7 @@ case class LibraryFail(status: Int, message: String)
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
-case class ExternalLibraryAddRequest(
+case class ExternalLibraryCreateRequest(
   name: String,
   visibility: LibraryVisibility,
   slug: Option[String],
@@ -49,8 +49,8 @@ case class ExternalLibraryAddRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[ExternalLibrarySpace] = None)
 
-object ExternalLibraryAddRequest {
-  val readsMobileV1: Reads[ExternalLibraryAddRequest] = (
+object ExternalLibraryCreateRequest {
+  val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -61,11 +61,11 @@ object ExternalLibraryAddRequest {
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace]
-  )(ExternalLibraryAddRequest.apply _)
+  )(ExternalLibraryCreateRequest.apply _)
   val reads = readsMobileV1
 }
 
-case class LibraryAddRequest(
+case class LibraryCreateRequest(
   name: String,
   visibility: LibraryVisibility,
   slug: String,
