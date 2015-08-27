@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
+import com.keepit.model.{KeepSource, UserExperimentType, KifiInstallation, User}
 import play.api.Play
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
@@ -60,6 +60,12 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   override def identityOpt = identityOpt0.awaitGet
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
+  lazy val source = {
+    if (req.path.startsWith("/site/")) KeepSource.site
+    else if (req.path.startsWith("/m/")) KeepSource.mobile
+    else if (req.path.startsWith("/ext/")) KeepSource.keeper
+    else KeepSource.unknown
+  }
 }
 
 // for backward-compatibility
