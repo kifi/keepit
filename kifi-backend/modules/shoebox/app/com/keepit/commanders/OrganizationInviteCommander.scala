@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -68,7 +68,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
-    userCommander: UserCommander,
+    userCommander: Provider[UserCommander],
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -426,7 +426,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case (users, contacts) =>
         val nonMembers = db.readOnlyMaster { implicit session =>
           val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
-          val fakes = userCommander.getAllFakeUsers()
+          val fakes = userCommander.get().getAllFakeUsers()
           users.filter(id => !members.exists(_.userId == id) && !fakes.contains(id))
         }
 
