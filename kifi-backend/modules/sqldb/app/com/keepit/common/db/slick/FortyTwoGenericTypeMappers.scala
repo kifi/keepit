@@ -1,11 +1,11 @@
 package com.keepit.common.db.slick
 
-import java.sql.{Clob, Timestamp}
+import java.sql.{ Clob, Timestamp }
 import javax.sql.rowset.serial.SerialClob
 
-import com.keepit.classify.{DomainTagName, NormalizedHostname}
+import com.keepit.classify.{ DomainTagName, NormalizedHostname }
 import com.keepit.common.db._
-import com.keepit.common.mail.{EmailAddress, _}
+import com.keepit.common.mail.{ EmailAddress, _ }
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.ImagePath
@@ -25,18 +25,18 @@ import com.keepit.classify.{ NormalizedHostname, DomainTagName }
 import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
-import com.keepit.model.{DeepLocator, UrlHash, _}
+import com.keepit.model.{ DeepLocator, UrlHash, _ }
 import com.keepit.notify.model.Recipient
-import com.keepit.search.{ArticleSearchResult, Lang, SearchConfig}
+import com.keepit.search.{ ArticleSearchResult, Lang, SearchConfig }
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.social.{SocialId, SocialNetworkType}
-import org.joda.time.{DateTime, LocalTime}
-import play.api.libs.json.{JsArray, JsObject, JsString, _}
+import com.keepit.social.{ SocialId, SocialNetworkType }
+import org.joda.time.{ DateTime, LocalTime }
+import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 import securesocial.core.SocialUser
 
 import scala.concurrent.duration._
 import scala.slick.ast.TypedType
-import scala.slick.jdbc.{GetResult, SetParameter}
+import scala.slick.jdbc.{ GetResult, SetParameter }
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 

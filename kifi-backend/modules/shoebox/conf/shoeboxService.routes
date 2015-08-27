@@ -901,6 +901,7 @@ GET           /admin/goodies/externalIdsByPublicId                              
 
 
 GET           /admin/payments/backfillAccounts             @com.keepit.controllers.admin.AdminPaymentsController.backfillPaidAccounts()
+POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
 
 ##########################################
 # Common Healthcheck / service routes

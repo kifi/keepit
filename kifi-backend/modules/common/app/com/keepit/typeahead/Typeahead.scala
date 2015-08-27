@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.{UserExperimentType, UserExperiment, User}
+import com.keepit.model.{ UserExperimentType, UserExperiment, User }
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

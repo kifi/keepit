@@ -2,9 +2,10 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationRepo, OrganizationStates }
+import com.keepit.model.{ OrganizationRepo, OrganizationStates, Organization, User }
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 
@@ -20,6 +21,8 @@ class AdminPaymentsController @Inject() (
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
     db: Database) extends AdminUserActions {
+
+  val EXTRA_SPECIAL_ADMINS = Seq[Id[User]](Id[User](1), Id[User](243))
 
   def backfillPaidAccounts = AdminUserAction { request =>
     def printStackTraceToChannel(t: Throwable, channel: Concurrent.Channel[String]) = {
@@ -67,6 +70,29 @@ class AdminPaymentsController @Inject() (
       }
     )
     Ok.chunked(enum)
+  }
+
+  def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
+    val amount = request.body.asFormUrlEncoded.get.apply("amount").head.toInt
+    val passphrase = request.body.asFormUrlEncoded.get.apply("passphrase").head.toString
+    val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString
+    val memo = if (memoRaw == "") None else Some(memoRaw)
+    val dollarAmount = DollarAmount(amount)
+
+    val org = db.readOnlyMaster { implicit session => organizationRepo.get(orgId) }
+
+    val passphraseCorrect: Boolean = org.primaryHandle.exists(handle => handle.normalized.value == passphrase.reverse)
+
+    if ((amount < 0 || amount > 10000) && !(EXTRA_SPECIAL_ADMINS.contains(request.userId))) {
+      Ok("You are not special enough to deduct credit or grant more than $100.")
+    } else if (amount == 0) {
+      Ok("Umm, 0 credit?")
+    } else if (!passphraseCorrect) {
+      Ok("So sorry, but your passphrase isn't right.")
+    } else {
+      planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), memo)
+      Ok(s"Sucessfully granted special credit of $dollarAmount to Organization #orgId.")
+    }
   }
 
 }
