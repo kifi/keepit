@@ -276,7 +276,7 @@ if __name__=="__main__":
         with open(source_path, 'wb') as handle:
           for chunk in jenkins_file.iter_content(1024):
             handle.write(chunk)
-        multipart_upload('fortytwo-builds', source_path, source_path)
+        multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
         log('Uploaded build asset %s' % relative_path)
 
       shutil.rmtree('deploy-tmp/')
