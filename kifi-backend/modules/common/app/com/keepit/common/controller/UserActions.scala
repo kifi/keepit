@@ -60,12 +60,6 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   override def identityOpt = identityOpt0.awaitGet
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
-  lazy val source = {
-    if (req.path.startsWith("/site/")) KeepSource.site
-    else if (req.path.startsWith("/m/")) KeepSource.mobile
-    else if (req.path.startsWith("/ext/")) KeepSource.keeper
-    else KeepSource.unknown
-  }
 }
 
 // for backward-compatibility
