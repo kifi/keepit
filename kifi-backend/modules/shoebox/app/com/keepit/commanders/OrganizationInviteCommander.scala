@@ -431,7 +431,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
 
         val uniqueEmailsWithName = {
-          val distinctContacts = contacts.groupBy(_.email.address.toLowerCase).map { case (address, contacts) => (address, contacts.find(_.userId.isDefined).getOrElse(contacts.head)) }
+          val distinctContacts = contacts.groupBy(_.email.address.toLowerCase).map { case (address, contacts) => (address, contacts.find(_.name.isDefined).getOrElse(contacts.head)) }
           contacts.map(contact => distinctContacts(contact.email.address))
         }
 
