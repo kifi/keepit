@@ -118,7 +118,7 @@ class ExtAuthController @Inject() (
     Ok(Json.obj(
       "user" -> BasicUser.fromUser(request.user),
       "libraryIds" -> Seq(libraries._1.id.get, libraries._2.id.get).map(Library.publicId),
-      "orgIds" -> organizations,
+      "orgs" -> organizations,
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11
