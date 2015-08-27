@@ -1,9 +1,17 @@
 package com.keepit.controllers.admin
 
+import java.io.{ StringWriter, ByteArrayOutputStream, PrintWriter }
+
+import com.keepit.FortyTwoGlobal
 import com.keepit.common.time.RichDateTime
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.cache.GlobalCacheStatistics
 import com.keepit.common.healthcheck._
+import com.google.inject.{ Guice, Injector, Inject };
+import com.google.inject.grapher.graphviz.GraphvizGrapher;
+import com.google.inject.grapher.graphviz.GraphvizModule
+import play.api.Play
+import play.api.Application;
 
 import scala.util.Random
 
@@ -15,7 +23,6 @@ import securesocial.core.SecureSocial
 import views.html
 
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.google.inject.Inject
 
 class AdminHealthController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -36,6 +43,19 @@ class AdminHealthController @Inject() (
 
   def getErrors() = AdminUserPage { implicit request =>
     Ok(healthcheckPlugin.errors().mkString("\n"))
+  }
+
+  //see https://github.com/google/guice/wiki/Grapher
+  def getGuiceGraph() = AdminUserPage { implicit request =>
+    val global = Play.current.global.asInstanceOf[FortyTwoGlobal] // fail hard
+    val injector = global.injector
+    val stringWriter = new StringWriter()
+    val writer = new PrintWriter(stringWriter)
+    val grapher = Guice.createInjector(new GraphvizModule()).getInstance(classOf[GraphvizGrapher])
+    grapher.setOut(writer)
+    grapher.setRankdir("TB");
+    grapher.graph(injector);
+    Ok(stringWriter.toString)
   }
 
   def reportErrors() = AdminUserPage { implicit request =>

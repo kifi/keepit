@@ -908,6 +908,7 @@ GET           /admin/payments/backfillAccounts             @com.keepit.controlle
 # Using a get so we can invoke from browser and have it take care of the auth part
 GET     /admin/server               @com.keepit.controllers.admin.AdminHealthController.serviceView()
 GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
+GET     /admin/guiceGraph           @com.keepit.controllers.admin.AdminHealthController.getGuiceGraph()
 GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
 GET     /admin/healthcheck/reportDeployment    @com.keepit.controllers.admin.AdminHealthController.reportDeployment()
 GET     /admin/healthcheck/causeAirbrakeError @com.keepit.controllers.admin.AdminHealthController.causeAirbrakeError(message: String ?= "[No Worry] Fake Airbrake Exception triggered from admin")
