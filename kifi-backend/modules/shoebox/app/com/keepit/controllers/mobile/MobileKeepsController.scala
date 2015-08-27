@@ -33,7 +33,7 @@ class MobileKeepsController @Inject() (
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
-  libraryCommander: LibraryCommander,
+  libraryFetchCommander: LibraryFetchCommander,
   rawBookmarkFactory: RawBookmarkFactory,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
@@ -85,7 +85,7 @@ class MobileKeepsController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val libraryId = {
       db.readWrite { implicit session =>
-        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        val (main, secret) = libraryFetchCommander.getMainAndSecretLibrariesForUser(request.userId)
         fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
           if (priv) secret.id.get else main.id.get
         }.getOrElse(main.id.get)
@@ -107,7 +107,7 @@ class MobileKeepsController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val libraryId = {
       db.readWrite { implicit session =>
-        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        val (main, secret) = libraryFetchCommander.getMainAndSecretLibrariesForUser(request.userId)
         rawBookmark.isPrivate.map { priv =>
           if (priv) secret.id.get else main.id.get
         }.getOrElse(main.id.get)
@@ -153,7 +153,7 @@ class MobileKeepsController @Inject() (
             libraryId <- keep.libraryId
           } yield libraryId
           libIdOpt.getOrElse {
-            libraryCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
+            libraryFetchCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
           }
         }
       }

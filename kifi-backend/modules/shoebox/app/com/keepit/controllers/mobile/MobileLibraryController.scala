@@ -40,6 +40,7 @@ class MobileLibraryController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
+  libraryModifierCommander: LibraryModifierCommander,
   keepsCommander: KeepCommander,
   pageCommander: PageCommander,
   keepDecorator: KeepDecorator,
@@ -51,6 +52,7 @@ class MobileLibraryController @Inject() (
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
+  libraryFetchCommander: LibraryFetchCommander,
   val libraryCommander: LibraryCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -94,7 +96,7 @@ class MobileLibraryController @Inject() (
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
-    val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
+    val res = libraryModifierCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
       case Right(response) => Ok(Json.toJson(constructLibraryInfo(response.modifiedLibrary)))
@@ -147,7 +149,7 @@ class MobileLibraryController @Inject() (
 
   private def getLibraryByPath(request: MaybeUserRequest[AnyContent], handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
+    libraryFetchCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
@@ -195,7 +197,7 @@ class MobileLibraryController @Inject() (
     val libraryCards = db.readOnlyReplica { implicit session =>
       val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryFetchCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 

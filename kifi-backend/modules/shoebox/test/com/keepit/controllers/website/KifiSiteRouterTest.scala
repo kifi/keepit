@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.commanders.{LibraryModifierCommander, LibraryCommander, UserCommander}
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
@@ -181,6 +181,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // Libraries
         val libraryCommander = inject[LibraryCommander]
+        val libraryModifierCommander = inject[LibraryModifierCommander]
         val Right(library) = {
           val libraryRequest = LibraryAddRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
           libraryCommander.addLibrary(libraryRequest, user1.id.get)
@@ -193,7 +194,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/abeZ1234/awesome-lib?auth=abcdefghiklmnop")) must beRedirect(303, "/abe.z1234/awesome-lib?auth=abcdefghiklmnop")
         route(FakeRequest("GET", "/abeZ1234/awesome-lib/find?q=weee")) must beRedirect(303, "/abe.z1234/awesome-lib/find?q=weee")
 
-        libraryCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifyRequest(slug = Some("most-awesome-lib")))
+        libraryModifierCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifyRequest(slug = Some("most-awesome-lib")))
         route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beRedirect(301, "/abe.z1234/most-awesome-lib")
         route(FakeRequest("GET", "/abe.z1234/most-awesome-lib")) must beWebApp
 

@@ -86,7 +86,6 @@ trait KeepCommander {
   def numKeeps(userId: Id[User]): Int
   def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
-  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
@@ -116,7 +115,8 @@ class KeepCommanderImpl @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     curator: CuratorServiceClient,
     clock: Clock,
-    libraryCommander: LibraryCommander,
+    libraryModifierCommander: LibraryModifierCommander,
+    libraryFetchCommander: LibraryFetchCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -535,7 +535,7 @@ class KeepCommanderImpl @Inject() (
 
   def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
     val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
-      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryCommander.canModifyLibrary(id, userId))
+      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryModifierCommander.canModifyLibrary(id, userId))
       keepIds map keepRepo.get partition { keep =>
         keep.libraryId.exists(canAccess)
       }
@@ -750,7 +750,7 @@ class KeepCommanderImpl @Inject() (
   private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
   private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
     val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+      def call() = libraryFetchCommander.getMainAndSecretLibrariesForUser(userId)
     })
     if (isPrivate) {
       secret
@@ -779,11 +779,6 @@ class KeepCommanderImpl @Inject() (
   }
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
     keepRepo.save(keep.withNote(newNote))
-  }
-  def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
-    require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
-    ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get).foreach { ktl => ktlCommander.syncWithLibrary(ktl, library) }
-    keepRepo.save(keep.withLibrary(library))
   }
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
     ktuCommander.removeKeepFromUser(keep.id.get, keep.userId)

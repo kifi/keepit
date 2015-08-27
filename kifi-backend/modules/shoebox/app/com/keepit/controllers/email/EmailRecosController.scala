@@ -1,7 +1,7 @@
 package com.keepit.controllers.email
 
 import com.keepit.common.time._
-import com.keepit.commanders.{ LibraryCommander, RawBookmarkRepresentation, KeepInterner }
+import com.keepit.commanders.{ LibraryFetchCommander, LibraryCommander, RawBookmarkRepresentation, KeepInterner }
 import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -19,7 +19,7 @@ class EmailRecosController @Inject() (
   clock: Clock,
   uriRepo: NormalizedURIRepo,
   curator: CuratorServiceClient,
-  libraryCommander: LibraryCommander,
+  libraryFetchCommander: LibraryFetchCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends UserActions with ShoeboxServiceController with HandleDeepLinkRequests {
 
@@ -43,7 +43,7 @@ class EmailRecosController @Inject() (
       implicit val context = hcb.build
 
       val rawBookmark = RawBookmarkRepresentation(url = uri.url, isPrivate = None, keptAt = Some(clock.now))
-      val (main, _) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
+      val (main, _) = db.readWrite(libraryFetchCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
       keepInterner.internRawBookmark(rawBookmark, request.userId, main, source)
 
       curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),

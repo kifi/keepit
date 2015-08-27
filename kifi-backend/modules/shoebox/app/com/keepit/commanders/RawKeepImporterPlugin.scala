@@ -48,7 +48,7 @@ private class RawKeepImporterActor @Inject() (
     airbrake: AirbrakeNotifier,
     libraryAnalytics: LibraryAnalytics,
     bookmarksCommanderProvider: Provider[KeepCommander],
-    libraryCommanderProvider: Provider[LibraryCommander],
+    libraryFetchCommander: LibraryFetchCommander,
     rover: RoverServiceClient,
     searchClient: SearchServiceClient,
     clock: Clock,
@@ -205,7 +205,7 @@ private class RawKeepImporterActor @Inject() (
   private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
   private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
     val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommanderProvider.get.getMainAndSecretLibrariesForUser(userId)
+      def call() = libraryFetchCommander.getMainAndSecretLibrariesForUser(userId)
     })
     if (isPrivate) secret else main
   }
