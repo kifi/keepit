@@ -159,22 +159,6 @@ angular.module('kifi')
           })['catch'](modalService.openGenericErrorModal);
         };
 
-        $rootScope.$on('editKeepNote', function(e, event, keep) { scope.editKeepNote(event, keep); });
-
-        scope.editKeepNote = function (event, keep) {
-          if (keep.user.id !== profileService.me.id) { return; }
-          var keepEl = angular.element(event.target).closest('.kf-keep');
-          var editor = keepEl.find('.kf-knf-editor');
-          if (!editor.length) {
-            var noteEl = keepEl.find('.kf-keep-note');
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.libraryId, keep.id, function update(noteText) {
-              keep.note = noteText;
-            });
-          } else {
-            editor.focus();
-          }
-        };
-
         scope.deleteKeep = function (event, keep) {
           angular.element(event.target).closest('.kf-keep').find('.kf-knf').remove();
           var libraryId = keep.library.id;
