@@ -135,7 +135,7 @@ class RecommendationsCommander @Inject() (
     seqOfSeqs.flatMap(_.take(maxPerSeq))
   }
   def maybeUpdatesFromFollowedLibraries(userId: Id[User], maxUpdates: Int = 20, maxUpdatesPerLibrary: Int = 5): Future[Option[FullLibUpdatesRecoInfo]] = {
-    val keepsOpt: Option[Seq[Keep]] = db.readOnlyReplica { implicit session =>
+    val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
       val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
       if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
