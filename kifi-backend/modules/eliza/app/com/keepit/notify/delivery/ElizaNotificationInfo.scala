@@ -15,7 +15,7 @@ object ElizaNotificationInfo {
       "id" -> NotificationItem.externalIdFromItems(items),
       "time" -> maxTime,
       "thread" -> notif.externalId,
-      "unread" -> Json.toJson(notif.lastEvent > notif.lastChecked),
+      "unread" -> Json.toJson(!notif.disabled && notif.lastEvent > notif.lastChecked),
       "category" -> "triggered",
       "fullCategory" -> "replace me",
       "title" -> info.title,
