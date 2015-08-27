@@ -6,7 +6,7 @@ import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{ UserIpAddressCommander, AuthCommander, LibraryCommander, LocalUserExperimentCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
@@ -30,7 +30,7 @@ class ExtAuthController @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
   authCommander: AuthCommander,
-  libraryCommander: LibraryCommander,
+  libraryFetchCommander: LibraryFetchCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   experimentCommander: LocalUserExperimentCommander,
@@ -67,7 +67,7 @@ class ExtAuthController @Inject() (
         })
 
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+      val libraries = libraryFetchCommander.getMainAndSecretLibrariesForUser(userId)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {

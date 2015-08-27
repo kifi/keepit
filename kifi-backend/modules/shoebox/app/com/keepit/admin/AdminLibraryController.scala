@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.commanders.{ LibraryFetchCommander, LibraryModifierCommander, LibraryCommander, LibrarySuggestedSearchCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -51,12 +51,14 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryFetchCommander: LibraryFetchCommander,
     libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
     db: Database,
     clock: Clock,
     searchClient: SearchServiceClient,
+    libraryModifierCommander: LibraryModifierCommander,
     suggestedSearchCommander: LibrarySuggestedSearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
@@ -200,7 +202,7 @@ class AdminLibraryController @Inject() (
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminUserPage { implicit request =>
-    val res = libraryCommander.internSystemGeneratedLibraries(userId)
+    val res = libraryFetchCommander.internSystemGeneratedLibraries(userId)
 
     Ok(res.toString)
   }
@@ -215,7 +217,7 @@ class AdminLibraryController @Inject() (
     }.flatten
 
     val result = confirmedIds.map { userId =>
-      userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
+      userId.id + " -> " + libraryFetchCommander.internSystemGeneratedLibraries(userId)
     }
 
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
@@ -313,7 +315,7 @@ class AdminLibraryController @Inject() (
       case None => LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(newOwner)), visibility = Some(LibraryVisibility.PUBLISHED))
     }
     implicit val context = HeimdalContext.empty // TODO(ryan): ask someone that cares to make a HeimdalContext.admin(request) method
-    libraryCommander.modifyLibrary(libId, newOwner, modifyRequest)
+    libraryModifierCommander.modifyLibrary(libId, newOwner, modifyRequest)
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
   }
 

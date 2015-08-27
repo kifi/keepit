@@ -53,6 +53,8 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       implicit val config = inject[PublicIdConfiguration]
       val commander = inject[UserProfileCommander]
       val libraryCommander = inject[LibraryCommander]
+      val libraryModifierCommander = inject[LibraryModifierCommander]
+      val libraryFetchCommander = inject[LibraryFetchCommander]
 
       val (owner, other, userCreatedLibs) = db.readWrite { implicit s =>
         val owner = user().saved
@@ -99,7 +101,7 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         (owner, other, ownerLibs)
       }
 
-      val (mainLib, secretLib) = libraryCommander.internSystemGeneratedLibraries(owner.id.get)
+      val (mainLib, secretLib) = libraryFetchCommander.internSystemGeneratedLibraries(owner.id.get)
       val allLibs = userCreatedLibs ++ Seq(mainLib, secretLib)
 
       val paginator = Paginator(0, 15)

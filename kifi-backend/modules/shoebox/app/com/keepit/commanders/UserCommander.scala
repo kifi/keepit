@@ -131,6 +131,7 @@ class UserCommander @Inject() (
     heimdalClient: HeimdalServiceClient,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
+    libraryFetchCommander: LibraryFetchCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -339,7 +340,7 @@ class UserCommander @Inject() (
     }
 
     val userId = newUser.id.get
-    libraryCommander.internSystemGeneratedLibraries(userId)
+    libraryFetchCommander.internSystemGeneratedLibraries(userId)
     if (userId.id % 2 == 0) { //for half of the users
       libraryCommander.createReadItLaterLibrary(userId)
       db.readWrite { implicit session =>

@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ PathCommander, LibraryCommander, LocalUserExperimentCommander, UserCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.seo.{ AtomCommander, FeedCommander }
 import com.keepit.inject.FortyTwoConfig
@@ -14,6 +14,7 @@ import scala.concurrent.Future
 class LibraryFeedController @Inject() (
     userCommander: UserCommander,
     libraryCommander: LibraryCommander,
+    libraryFetchCommander: LibraryFetchCommander,
     libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     feedCommander: FeedCommander,
@@ -37,7 +38,7 @@ class LibraryFeedController @Inject() (
   def libraryRSSFeed(username: Username, librarySlug: String, authToken: Option[String] = None, count: Int = 20, offset: Int = 0) = MaybeUserAction.async { implicit request =>
     lookupUsername(username) flatMap {
       case (user, userRedirectStatusOpt) =>
-        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
+        libraryFetchCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
@@ -60,7 +61,7 @@ class LibraryFeedController @Inject() (
   def libraryAtomFeed(username: Username, librarySlug: String, authToken: Option[String] = None, count: Int = 20, offset: Int = 0) = MaybeUserAction.async { implicit request =>
     lookupUsername(username) flatMap {
       case (user, userRedirectStatusOpt) =>
-        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
+        libraryFetchCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))

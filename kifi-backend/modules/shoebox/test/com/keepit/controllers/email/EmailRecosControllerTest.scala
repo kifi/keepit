@@ -1,7 +1,7 @@
 package com.keepit.controllers.email
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryFetchCommander, LibraryCommander }
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -45,7 +45,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           val controller = inject[EmailRecosController]
           if (isAuthenticated) {
             helper.setUser(userOpt.get)
-            inject[LibraryCommander].internSystemGeneratedLibraries(userOpt.get.id.get)
+            inject[LibraryFetchCommander].internSystemGeneratedLibraries(userOpt.get.id.get)
           }
 
           val call = com.keepit.controllers.email.routes.EmailRecosController.viewReco(uri1.externalId)

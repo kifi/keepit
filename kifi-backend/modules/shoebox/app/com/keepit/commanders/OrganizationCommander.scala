@@ -49,7 +49,7 @@ class OrganizationCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    libraryCommander: LibraryCommander,
+    libraryFetchCommander: LibraryFetchCommander,
     airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
     organizationAnalytics: OrganizationAnalytics,
@@ -145,7 +145,7 @@ class OrganizationCommanderImpl @Inject() (
       val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
       val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
       val viewerOpt = userIdOpt.map(userRepo.get)
-      libraryCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      libraryFetchCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 

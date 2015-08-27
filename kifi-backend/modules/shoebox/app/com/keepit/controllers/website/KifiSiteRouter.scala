@@ -26,7 +26,7 @@ class KifiSiteRouter @Inject() (
   handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
-  libraryCommander: LibraryCommander,
+  libraryFetchCommander: LibraryFetchCommander,
   libPathCommander: PathCommander,
   orgInviteCommander: OrganizationInviteCommander,
   libraryMetadataCache: LibraryMetadataCache,
@@ -144,7 +144,7 @@ class KifiSiteRouter @Inject() (
           case Left(org) => org.id.get
           case Right(user) => user.id.get
         }
-        val libraryOpt = libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
+        val libraryOpt = libraryFetchCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
         libraryOpt map {
           case (library, isLibraryAlias) =>
             val libraryHasBeenMoved = isLibraryAlias

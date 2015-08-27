@@ -45,6 +45,7 @@ class LibraryController @Inject() (
   libPathCommander: PathCommander,
   keepsCommander: KeepCommander,
   keepDecorator: KeepDecorator,
+  libraryFetchCommander: LibraryFetchCommander,
   userCommander: UserCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
@@ -53,6 +54,7 @@ class LibraryController @Inject() (
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
   airbrake: AirbrakeNotifier,
+  libraryModifierCommander: LibraryModifierCommander,
   val libraryCommander: LibraryCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -101,7 +103,7 @@ class LibraryController @Inject() (
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            val libCardInfo = libraryCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            val libCardInfo = libraryFetchCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
             Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
@@ -130,7 +132,7 @@ class LibraryController @Inject() (
     }
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
+    libraryModifierCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(response) =>
@@ -179,7 +181,7 @@ class LibraryController @Inject() (
     val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      val info = libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryFetchCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
     val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
@@ -188,7 +190,7 @@ class LibraryController @Inject() (
 
   def getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
+    libraryFetchCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
@@ -234,7 +236,7 @@ class LibraryController @Inject() (
   def getLibrarySummariesByUser = UserAction.async { request =>
     val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
-      libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
+      libraryFetchCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
@@ -667,7 +669,7 @@ class LibraryController @Inject() (
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {
-    libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
+    libraryFetchCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>
