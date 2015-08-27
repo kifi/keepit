@@ -60,11 +60,11 @@ trait LibraryCommander {
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
   def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
-  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
-  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
+  def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
@@ -554,16 +554,16 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+  def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
-      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) {
-        log.info(s"[addLibrary] Invalid name ${libAddReq.name} for $ownerId")
+      if (libCreateReq.name.isEmpty || !Library.isValidName(libCreateReq.name)) {
+        log.info(s"[addLibrary] Invalid name ${libCreateReq.name} for $ownerId")
         Some("invalid_name")
-      } else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) {
-        log.info(s"[addLibrary] Invalid slug ${libAddReq.slug} for $ownerId")
+      } else if (libCreateReq.slug.isEmpty || !LibrarySlug.isValidSlug(libCreateReq.slug)) {
+        log.info(s"[addLibrary] Invalid slug ${libCreateReq.slug} for $ownerId")
         Some("invalid_slug")
-      } else if (LibrarySlug.isReservedSlug(libAddReq.slug)) {
-        log.info(s"[addLibrary] Attempted reserved slug ${libAddReq.slug} for $ownerId")
+      } else if (LibrarySlug.isReservedSlug(libCreateReq.slug)) {
+        log.info(s"[addLibrary] Attempted reserved slug ${libCreateReq.slug} for $ownerId")
         Some("reserved_slug")
       } else {
         None
@@ -572,8 +572,8 @@ class LibraryCommanderImpl @Inject() (
     badMessage match {
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
       case _ => {
-        val validSlug = LibrarySlug(libAddReq.slug)
-        val targetSpace = libAddReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
+        val validSlug = LibrarySlug(libCreateReq.slug)
+        val targetSpace = libCreateReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
         val orgIdOpt = targetSpace match {
           case OrganizationSpace(orgId) => Some(orgId)
           case _ => None
@@ -585,7 +585,7 @@ class LibraryCommanderImpl @Inject() (
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
-          val sameNameOpt = libraryRepo.getBySpaceAndName(targetSpace, libAddReq.name)
+          val sameNameOpt = libraryRepo.getBySpaceAndName(targetSpace, libCreateReq.name)
           val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
           (userHasPermissionToCreateInSpace, sameNameOpt, sameSlugOpt)
         } match {
@@ -596,19 +596,19 @@ class LibraryCommanderImpl @Inject() (
           case (_, _, Some(sameSlug)) =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
           case (_, None, None) =>
-            val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor()))
-            val newListed = libAddReq.listed.getOrElse(true)
-            val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
-            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
+            val newColor = libCreateReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor()))
+            val newListed = libCreateReq.listed.getOrElse(true)
+            val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)
+            val newInviteToCollab = libCreateReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
               libraryRepo.getBySpaceAndSlug(ownerId, validSlug, excludeStates = Set.empty) match {
                 case None =>
-                  val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind,
+                  val lib = libraryRepo.save(Library(ownerId = ownerId, name = libCreateReq.name, description = libCreateReq.description,
+                    visibility = libCreateReq.visibility, slug = validSlug, color = newColor, kind = newKind,
                     memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
-                  libAddReq.subscriptions match {
+                  libCreateReq.subscriptions match {
                     case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
                     case None =>
                   }
@@ -619,7 +619,7 @@ class LibraryCommanderImpl @Inject() (
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
                   }
-                  libAddReq.subscriptions match {
+                  libCreateReq.subscriptions match {
                     case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
                     case None =>
                   }
@@ -815,7 +815,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail] = {
+  def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail] = {
     val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (oldLibrary.ownerId != userId) {
       Some(LibraryFail(FORBIDDEN, "permission_denied"))
