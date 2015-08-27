@@ -15,10 +15,12 @@ angular.module('kifi')
     }
 
     function libraryKeptTo (keep) {
-      var libraryAndUser = keep.libraries.filter(function(libraryAndUser) {
-        return libraryAndUser[0].id === keep.libraryId;
-      })[0] || keep.libraries[0];
-      return libraryAndUser[0];
+      if (keep.libraries.length) {
+        var libraryAndUser = keep.libraries.filter(function(libraryAndUser) {
+          return libraryAndUser[0].id === keep.libraryId;
+        })[0] || keep.libraries[0];
+        return libraryAndUser[0];
+      }
     }
 
     var keepLazyLoader = new Paginator(keepSource, 10);
