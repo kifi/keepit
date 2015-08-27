@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import java.io.{ InputStream, FileInputStream }
+import java.io.{ File, InputStream, FileInputStream }
 import java.sql.SQLException
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -14,7 +14,6 @@ import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImagePath, RoverImageStore, ImageSize, S3ImageConfig }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
-import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -29,7 +28,7 @@ trait LibraryImageCommander {
   def getUrl(libraryImage: LibraryImage): String
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage]
   def getBestImageForLibraries(libraryIds: Set[Id[Library]], idealSize: ImageSize): Map[Id[Library], LibraryImage]
-  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
+  def uploadLibraryImageFromFile(image: File, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]] = None)(implicit content: HeimdalContext): Future[ImageProcessDone]
   def positionLibraryImage(libraryId: Id[Library], position: LibraryImagePosition): Seq[LibraryImage]
   def removeImageForLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Boolean // Returns true if images were removed, false otherwise
 }
@@ -66,7 +65,7 @@ class LibraryImageCommanderImpl @Inject() (
     }
   }
 
-  def uploadLibraryImageFromFile(image: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
+  def uploadLibraryImageFromFile(image: File, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource, userId: Id[User], requestId: Option[Id[LibraryImageRequest]])(implicit context: HeimdalContext): Future[ImageProcessDone] = {
     fetchAndSet(image, libraryId, position, source)(requestId).map { done =>
       finalizeImageRequestState(libraryId, requestId, done)
       done match {
@@ -118,7 +117,7 @@ class LibraryImageCommanderImpl @Inject() (
   // Internal helper methods!
   //
 
-  private def fetchAndSet(imageFile: TemporaryFile, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
+  private def fetchAndSet(imageFile: File, libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     runFetcherAndPersist(libraryId, position, source)(fetchAndHashLocalImage(imageFile))
   }
 
@@ -143,15 +142,14 @@ class LibraryImageCommanderImpl @Inject() (
     val uploads = toPersist.map { image =>
       log.info(s"[lic] Persisting ${image.key}")
 
-      val put = imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation)
+      imageStore.put(image.key, image.file, imageFormatToMimeType(image.format)).map { r =>
+        (ImageProcessState.UploadedImage(image.key, image.format, image.imageInfo, image.processOperation), image.file)
       }
-      put
     }
 
     Future.sequence(uploads).map { results =>
       val libraryImages = results.map {
-        case uploadedImage =>
+        case (uploadedImage, _) =>
           val isOriginal = uploadedImage.processOperation match {
             case Original => true
             case _ => false
@@ -167,7 +165,9 @@ class LibraryImageCommanderImpl @Inject() (
         val existingImages = libraryImageRepo.getAllForLibraryId(libraryId).toSet
         replaceOldLibraryImagesWithNew(existingImages, libraryImages, position)
       }
-      ImageProcessState.StoreSuccess(originalImage.format, libraryImages.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
+      val success = ImageProcessState.StoreSuccess(originalImage.format, libraryImages.filter(_.isOriginal).head.dimensions, originalImage.file.length.toInt)
+      results.foreach(_._2.delete())
+      success
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist library image", ex)

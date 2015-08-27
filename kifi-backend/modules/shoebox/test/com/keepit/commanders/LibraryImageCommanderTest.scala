@@ -23,16 +23,16 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
   def modules = Seq()
 
-  def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+  def genNewFakeFile1 = {
+    val tf = File.createTempFile("tst1", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf)
     tf
   }
-  def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
+  def genNewFakeFile2 = {
+    val tf = File.createTempFile("tst2", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image2.png"), tf)
     tf
   }
   def setup()(implicit injector: Injector) = {
@@ -55,11 +55,13 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload an image
         {
+          val file = genNewFakeFile1
           val position = LibraryImagePosition(Some(40), None)
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
+          val savedF = commander.uploadLibraryImageFromFile(file, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          file.delete()
         }
 
         inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
@@ -72,10 +74,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload same image
         {
+          val file = genNewFakeFile1
           val position = LibraryImagePosition(Some(0), Some(100))
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
+          val savedF = commander.uploadLibraryImageFromFile(file, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          file.delete()
         }
         inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
         db.readOnlyMaster { implicit s =>
@@ -86,10 +90,12 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload another image
         {
+          val file = genNewFakeFile2
           val position = LibraryImagePosition(None, Some(77))
-          val savedF = commander.uploadLibraryImageFromFile(fakeFile2, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
+          val savedF = commander.uploadLibraryImageFromFile(file, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
+          file.delete()
         }
 
         inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 4
@@ -112,7 +118,8 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
 
         // upload may not specify a position
         val position = LibraryImagePosition(None, None)
-        val savedF = commander.uploadLibraryImageFromFile(fakeFile1, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
+        val file = genNewFakeFile1
+        val savedF = commander.uploadLibraryImageFromFile(file, lib.id.get, position, ImageSource.UserUpload, user.id.get)(HeimdalContext.empty)
         val saved = Await.result(savedF, Duration("10 seconds"))
         saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
 

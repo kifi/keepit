@@ -65,7 +65,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
@@ -76,7 +76,11 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
 class KeepRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    val countCache: KeepCountCache,
+    libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToLibraryRepo: KeepToLibraryRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
@@ -540,20 +544,58 @@ class KeepRepoImpl @Inject() (
     keeps.list.toSet
   }
 
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-    (beforeIdOpt.flatMap(getOpt), afterIdOpt.flatMap(getOpt)) match {
-      case (Some(before), _) =>
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at <= ${before.keptAt} AND id < ${before.id.get} ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
-      case (None, Some(after)) =>
-        // This case is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
-        // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
-        // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated kept_at fields.
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at > ${after.keptAt} ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
-      case (None, None) =>
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
+    val ktl_JOIN_lm_WHERE_THIS_USER = s"""keep_to_library ktl inner join library_membership lm on (ktl.library_id = lm.library_id) where lm.state = 'active' and ktl.state = 'active' and lm.user_id = $userId"""
+    val ktl_JOIN_om_WHERE_THIS_USER = s"""keep_to_library ktl inner join organization_membership om on (ktl.organization_id = om.organization_id) where om.state = 'active' and ktl.state = 'active' and om.user_id = $userId"""
+    val ktu_WHERE_THIS_USER = s"""keep_to_user ktu where ktu.state = 'active' and ktu.user_id = $userId"""
+
+    def getFirstAddedAt(keepId: Id[Keep]): Option[DateTime] = {
+      sql"""SELECT min(*) FROM
+        (SELECT ktl.added_at FROM #$ktl_JOIN_lm_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktl.added_at FROM #$ktl_JOIN_om_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktu.added_at FROM #$ktu_WHERE_THIS_USER AND ktu.keep_id = $keepId)
+      """.as[Option[DateTime]].first
     }
+
+    def getKeepIdAndFirstAddedAt(id: ExternalId[Keep]): Option[(Id[Keep], DateTime)] = {
+      for {
+        keep <- getOpt(id)
+        keepId <- keep.id
+        firstAddedAtForUser <- getFirstAddedAt(keepId)
+      } yield (keepId, firstAddedAtForUser)
+    }
+
+    val added_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
+      case None => "true"
+      case Some((keepId, before)) => s"added_at <= '$before' AND keep_id < $keepId"
+    }
+
+    val added_at_AFTER = afterIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
+      case None => "true"
+      case Some((_, after)) => s"added_at > '$after'"
+      // This is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
+      // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
+      // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated added_at fields.
+    }
+
+    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_lm_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
+    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_om_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
+    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE"""
+
+    val keepsAndFirstAddedAt = sql"""
+      SELECT k.id as keep_id, min(k.first_added_at) as added_at
+      FROM ((#$keepsFromLibraries) UNION (#$keepsFromOrganizations) UNION (#$keepsFromUser)) as k
+      GROUP BY k.id
+      HAVING #$added_at_AFTER AND #$added_at_BEFORE
+      ORDER BY added_at DESC, keep_id DESC
+      LIMIT $limit
+    """.as[(Id[Keep], DateTime)].list
+
+    val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
+    val keepsById = getByIds(keepIds.toSet)
+    keepIds.map(keepsById(_))
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {

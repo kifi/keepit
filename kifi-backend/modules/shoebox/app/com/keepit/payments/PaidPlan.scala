@@ -1,15 +1,32 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId, PublicIdConfiguration }
 import com.keepit.common.time._
-import com.keepit.model.Name
+import com.keepit.model.{ Name, BasePermissions }
+
+import com.kifi.macros.json
 
 import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
 
 case class BillingCycle(month: Int) extends AnyVal
+
+@json
+case class PlanFeature(name: String, displayName: String, editable: Boolean, default: Boolean)
+
+@json
+case class PlanFeatureSetting(feature: PlanFeature, enabled: Boolean)
+
+object PlanFeatureSetting {
+  def toBasePermissions(settings: Seq[PlanFeatureSetting]): BasePermissions = ??? //ZZZ TODO: When we know what the right permissions actually are.
+}
+
+@json
+case class PaidPlanInfo(
+  id: PublicId[PaidPlan],
+  name: String)
 
 case class PaidPlan(
     id: Option[Id[PaidPlan]] = None,
@@ -24,6 +41,11 @@ case class PaidPlan(
   def withId(id: Id[PaidPlan]): PaidPlan = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
   def withState(state: State[PaidPlan]): PaidPlan = this.copy(state = state)
+
+  def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
+    id = PaidPlan.publicId(id.get),
+    name = name.name
+  )
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {

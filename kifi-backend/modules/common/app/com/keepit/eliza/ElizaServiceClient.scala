@@ -255,7 +255,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
-    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users)).map { response =>
+    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users), callTimeouts = longTimeout).map { response =>
       response.json.as[Int]
     }
   }

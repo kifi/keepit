@@ -21,6 +21,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
+  def getByIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
@@ -148,6 +149,12 @@ class LibraryRepoImpl @Inject() (
     idCache.getOrElse(LibraryIdKey(id)) {
       getCompiled(id).first
     }
+  }
+  def getByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
+    idCache.bulkGetOrElse(ids.map(LibraryIdKey(_))) { missingKeys =>
+      val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }) } yield row }
+      q.list.map { x => LibraryIdKey(x.id.get) -> x }.toMap
+    }.map { case (key, lib) => key.id -> lib }
   }
 
   override def deleteCache(library: Library)(implicit session: RSession): Unit = {

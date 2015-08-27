@@ -140,7 +140,7 @@ class RecommendationsCommander @Inject() (
       if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
 
-        val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId, 5 * maxUpdates, None, None)
+        val recentlyUpdatedKeeps = keepRepo.getRecentKeeps(userId, 10 * maxUpdates, None, None).filterNot(_.userId == userId)
         val keepsByLibrary = recentlyUpdatedKeeps.groupBy(_.libraryId).values.toList
         val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxUpdatesPerLibrary)
         val result = fairlySampledKeeps.sortBy(_.keptAt).reverse.take(maxUpdates)

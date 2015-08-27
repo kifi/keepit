@@ -9,13 +9,7 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
 .kf-recos-view
   box-sizing: border-box
   max-width: twoColMinWidth
-  margin: 0 auto
-  padding: 0 appSidePad1
-
-.kf-recos-wrap
-  @media (max-width: (twoColMinWidth - 1px))
-    max-width: leftColWidth
-    margin: 0 auto;
+  margin: 0 7px
 
 .kf-recos-title
   font-size: 25px
@@ -23,20 +17,9 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   font-weight: 300
   padding: 16px 0
 
-.kf-reco-cols
-  @media (min-width: twoColMinWidth)
-    display: table
-    width: 100%
-    table-layout: fixed
 
 .kf-reco-col-1
   position: relative // for .kf-recos-update-personas
-
-  @media (min-width: twoColMinWidth)
-    display: table-cell
-    vertical-align: top
-    width: leftColWidth
-    max-width: leftColWidth
 
 .kf-reco-col-2
   margin: 0 auto 50px
@@ -44,14 +27,6 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
 
   > * + *
     margin-top: 20px;
-
-  @media (min-width: twoColMinWidth)
-    display: table-cell
-    vertical-align: top
-    margin: 0
-    width: rightColWidth
-    padding-left: colGapWidth
-
 
 .kf-reco
   margin-bottom: 20px
@@ -261,11 +236,9 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   cursor: pointer
 
 .kf-reco-loading-logo
-  position: relative
-  left: 30px
   width: 50px
   height: 50px
-  margin: 60px auto 0
+  margin: 0 auto
   opacity: 0.5
   animation: jump-spin 2s linear infinite
 
