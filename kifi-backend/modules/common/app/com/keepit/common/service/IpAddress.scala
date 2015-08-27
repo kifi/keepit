@@ -20,5 +20,7 @@ case class IpAddress(ip: String) {
   if (!ip.matches(IpAddress.ipPattern)) {
     throw new IllegalArgumentException(s"ip address $ip does not match ip pattern")
   }
+  def datacenterIp: Boolean = ip.toString.startsWith("10.")
+
   override def toString(): String = ip
 }

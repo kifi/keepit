@@ -117,6 +117,7 @@ class OrganizationCommanderImpl @Inject() (
       airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
     val org = orgRepo.get(orgId)
+    if (org.state == OrganizationStates.INACTIVE) throw new Exception(s"inactive org: $org")
     val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
