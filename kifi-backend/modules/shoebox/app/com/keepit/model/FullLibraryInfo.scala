@@ -50,7 +50,7 @@ case class ExternalLibraryAddRequest(
   space: Option[ExternalLibrarySpace] = None)
 
 object ExternalLibraryAddRequest {
-  implicit val reads: Reads[ExternalLibraryAddRequest] = (
+  val readsMobileV1: Reads[ExternalLibraryAddRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -62,6 +62,7 @@ object ExternalLibraryAddRequest {
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace]
   )(ExternalLibraryAddRequest.apply _)
+  val reads = readsMobileV1
 }
 
 case class LibraryAddRequest(

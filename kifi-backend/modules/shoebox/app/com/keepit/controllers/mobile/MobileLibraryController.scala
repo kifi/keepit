@@ -36,13 +36,13 @@ class MobileLibraryController @Inject() (
   db: Database,
   fortyTwoConfig: FortyTwoConfig,
   libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
-  libraryMembershipRepo: LibraryMembershipRepo,
   keepsCommander: KeepCommander,
   pageCommander: PageCommander,
   keepDecorator: KeepDecorator,
@@ -69,19 +69,39 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val jsonBody = request.body
-    val name = (jsonBody \ "name").as[String]
-    val description = (jsonBody \ "description").asOpt[String]
-    val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
-    val color = (jsonBody \ "color").asOpt[LibraryColor]
-    val whoCanInvite = (jsonBody \ "whoCanInvite").asOpt[LibraryInvitePermissions]
-    val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, whoCanInvite = whoCanInvite)
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest](ExternalLibraryAddRequest.readsMobileV1)
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => sendFailResponse(fail)
-      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
+    externalAddRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
+      case JsSuccess(externalAddRequest, _) =>
+        val libAddRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalAddRequest.slug.getOrElse(LibrarySlug.generateFromName(externalAddRequest.name))
+          val space = externalAddRequest.space map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryAddRequest(
+            name = externalAddRequest.name,
+            slug = slug,
+            visibility = externalAddRequest.visibility,
+            description = externalAddRequest.description,
+            color = externalAddRequest.color,
+            listed = externalAddRequest.listed,
+            whoCanInvite = externalAddRequest.whoCanInvite,
+            subscriptions = externalAddRequest.subscriptions,
+            space = space
+          )
+        }
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        libraryCommander.addLibrary(libAddRequest, request.userId) match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(newLibrary) =>
+            Ok(Json.toJson(constructLibraryInfo(newLibrary)))
+        }
     }
   }
 
