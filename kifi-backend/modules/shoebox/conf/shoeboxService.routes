@@ -921,7 +921,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
-
+GET     /internal/guiceGraph                          @com.keepit.controllers.admin.AdminHealthController.getGuiceGraph()
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)

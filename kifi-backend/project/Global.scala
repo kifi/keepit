@@ -73,6 +73,7 @@ object Global {
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "4.0",
     "com.google.inject.extensions" % "guice-multibindings" % "4.0",
+    "com.google.inject.extensions" % "guice-grapher" % "4.0",
     "net.codingwell" %% "scala-guice" % "4.0.0",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
