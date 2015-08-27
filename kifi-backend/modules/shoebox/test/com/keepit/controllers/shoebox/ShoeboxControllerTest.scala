@@ -51,8 +51,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
-    FakeCuratorServiceClientModule(),
-    ShoeboxNotifyModule()
+    FakeCuratorServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

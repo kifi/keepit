@@ -74,7 +74,6 @@ trait LibraryCommander {
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def createReadItLaterLibrary(userId: Id[User]): Library
-  def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
@@ -1130,76 +1129,6 @@ class LibraryCommanderImpl @Inject() (
         newFollowerId,
         lib.id.get
       ))
-    }
-  }
-
-  def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
-    newKeeps.foreach { newKeep =>
-      // old way, should be safe to remove
-      if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
-    }
-    val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
-      val relevantFollowers: Set[Id[User]] = libraryMembershipRepo.getWithLibraryId(library.id.get).filter(_.subscribedToUpdates).map(_.userId).toSet
-      val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
-      (relevantFollowers, usersById)
-    }
-    val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-    val owner = usersById(library.ownerId)
-    newKeeps.foreach { newKeep =>
-      val toBeNotified = relevantFollowers - newKeep.userId
-      if (toBeNotified.nonEmpty) {
-        val keeper = usersById(newKeep.userId)
-        val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification(
-          userIds = toBeNotified,
-          title = s"New Keep in ${library.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to Page",
-          linkUrl = newKeep.url,
-          imageUrl = s3ImageStore.avatarUrlByUser(keeper),
-          sticky = false,
-          category = NotificationCategory.User.NEW_KEEP,
-          extra = Some(Json.obj(
-            "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
-            "keep" -> Json.obj(
-              "id" -> newKeep.externalId,
-              "url" -> newKeep.url
-            )
-          ))
-        ).foreach { _ =>
-            if (toBeNotified.size > 100) {
-              airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
-            }
-            val libTrunc = if (library.name.length > 30) { library.name.take(30) + "…" } else { library.name }
-            val message = newKeep.title match {
-              case Some(title) =>
-                val trunc = if (title.length > 30) { title.take(30) + "…" } else { title }
-                s"“$trunc” added to $libTrunc"
-              case None =>
-                s"New keep added to $libTrunc"
-            }
-            FutureHelpers.sequentialExec(toBeNotified) { userId =>
-              elizaClient.sendLibraryPushNotification(
-                userId,
-                message = message,
-                libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
-                pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-                category = LibraryPushNotificationCategory.LibraryChanged
-              )
-            }
-          }
-        toBeNotified foreach { userId =>
-          elizaClient.sendNotificationEvent(LibraryNewKeep(
-            Recipient(userId),
-            currentDateTime,
-            newKeep.userId,
-            newKeep.id.get,
-            library.id.get
-          ))
-        }
-      }
     }
   }
 

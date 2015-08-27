@@ -58,7 +58,7 @@ class KeepInternerImpl @Inject() (
   elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
-  libraryCommander: LibraryCommander,
+  libraryNewFollowersCommander: LibraryNewFollowersCommander,
   subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
@@ -151,7 +151,7 @@ class KeepInternerImpl @Inject() (
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
-        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryCommander.notifyFollowersOfNewKeeps(library, bookmark) }
+        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, bookmark) }
         libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
