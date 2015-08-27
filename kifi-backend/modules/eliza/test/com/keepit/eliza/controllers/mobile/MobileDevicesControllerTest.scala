@@ -29,7 +29,6 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
     FakeElizaServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeActorSystemModule(),
-    FakeUrbanAirshipModule(),
     FakeAppBoyModule(),
     FakeHttpClientModule(),
     FakeElizaStoreModule(),

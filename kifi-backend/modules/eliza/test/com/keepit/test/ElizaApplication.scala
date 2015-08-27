@@ -14,7 +14,6 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.realtime.FakeUrbanAirshipModule
 
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends DbTestApplication(path, overridingModules, Seq(
@@ -36,7 +35,6 @@ trait ElizaApplicationInjector extends TestInjectorProvider with ApplicationInje
 
 trait ElizaTestInjector extends TestInjector with DbInjectionHelper with ElizaInjectionHelpers {
   val module = Modules.combine(
-    FakeUrbanAirshipModule(),
     ElizaServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),

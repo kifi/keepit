@@ -8,7 +8,6 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.SearchServiceClientModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
-import com.keepit.realtime.UrbanAirshipModule
 import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.abook.ABookServiceClientModule
 import com.keepit.common.store.{ ElizaStoreModule }
@@ -25,7 +24,6 @@ trait ElizaModule extends ConfigurationModule with CommonServiceModule {
   // Common Functional Modules
   val userActionsModule: UserActionsModule
   val cacheModule: ElizaCacheModule
-  val urbanAirshipModule: UrbanAirshipModule
   val storeModule: ElizaStoreModule
   val notifyModule: NotifyModule
 
