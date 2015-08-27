@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -68,6 +68,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
+    userCommander: Provider[UserCommander],
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -404,7 +405,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
     val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
-        abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit).map { orgInviteRecos =>
+        abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit + 9).map { orgInviteRecos =>
           val userRecos = orgInviteRecos.collect { case reco if reco.identifier.isLeft => reco.identifier.left.get }
           val emailRecos = orgInviteRecos.collect { case reco if reco.identifier.isRight => RichContact(email = reco.identifier.right.get, name = reco.name) }
           (userRecos, emailRecos)
@@ -412,7 +413,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(validQuery) =>
         val memberCount = db.readOnlyMaster { implicit session => organizationMembershipRepo.countByOrgId(orgId) }
         val usersFut = searchClient.searchUsersByName(userId, validQuery, limit + memberCount, request.acceptLanguages.map(_.toString), request.experiments)
-        val emailsFut = abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit))
+        val emailsFut = abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit + 9))
         for {
           users <- usersFut
           emails <- emailsFut
@@ -425,7 +426,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case (users, contacts) =>
         val nonMembers = db.readOnlyMaster { implicit session =>
           val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
-          users.filter(id => !members.exists(_.userId == id))
+          val fakes = userCommander.get().getAllFakeUsers()
+          users.filter(id => !members.exists(_.userId == id) && !fakes.contains(id))
+        }
+
+        val uniqueEmailsWithName = {
+          val distinctContacts = contacts.groupBy(_.email.address.toLowerCase).map { case (address, contacts) => (address, contacts.find(_.name.isDefined).getOrElse(contacts.head)) }
+          contacts.map(contact => distinctContacts(contact.email.address))
         }
 
         val basicUserById = db.readOnlyReplica { implicit session => basicUserRepo.loadAllActive(nonMembers.toSet) }
@@ -434,7 +441,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           MaybeOrganizationMember(Left(basicUserById(userId)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
 
-        val suggestedEmailAddresses = contacts.map { contact =>
+        val suggestedEmailAddresses = uniqueEmailsWithName.map { contact =>
           MaybeOrganizationMember(Right(BasicContact.fromRichContact(contact)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
 

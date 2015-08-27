@@ -66,7 +66,7 @@ class LibraryController @Inject() (
   }
 
   def addLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest]
+    val externalAddRequestValidated = request.body.validate[ExternalLibraryAddRequest](ExternalLibraryAddRequest.reads)
 
     externalAddRequestValidated match {
       case JsError(errs) =>

@@ -258,6 +258,7 @@ GET     /m/1/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.Mo
 GET     /m/2/users/:handle/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(handle: Handle, slug: LibrarySlug, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
+POST    /m/2/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibraryV2(id: PublicId[Library])
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
 GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
 POST    /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV1()
@@ -920,7 +921,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
-
+GET     /internal/guiceGraph                          @com.keepit.controllers.admin.AdminHealthController.getGuiceGraph()
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
@@ -1063,7 +1064,7 @@ GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRoute
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
-GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
-GET     /:name/:library/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
+GET     /:handle/:slug/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
+GET     /:handle/:slug/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
 GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)

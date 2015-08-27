@@ -50,7 +50,7 @@ case class ExternalLibraryAddRequest(
   space: Option[ExternalLibrarySpace] = None)
 
 object ExternalLibraryAddRequest {
-  implicit val reads: Reads[ExternalLibraryAddRequest] = (
+  val readsMobileV1: Reads[ExternalLibraryAddRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -62,6 +62,7 @@ object ExternalLibraryAddRequest {
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace]
   )(ExternalLibraryAddRequest.apply _)
+  val reads = readsMobileV1
 }
 
 case class LibraryAddRequest(
@@ -88,7 +89,7 @@ case class ExternalLibraryModifyRequest(
   externalSpace: Option[ExternalLibrarySpace] = None)
 
 object ExternalLibraryModifyRequest {
-  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
+  val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'slug).readNullable[String] and
     (__ \ 'visibility).readNullable[LibraryVisibility] and
@@ -99,6 +100,8 @@ object ExternalLibraryModifyRequest {
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace]
   )(ExternalLibraryModifyRequest.apply _)
+
+  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
 }
 
 case class LibraryModifyRequest(
