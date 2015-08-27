@@ -1,9 +1,9 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.commanders.{LibraryCommander, LibraryImageCommander, ProcessedImageSize}
-import com.keepit.common.controller.{ShoeboxServiceController, UserActions, UserActionsHelper}
-import com.keepit.common.crypto.{PublicId, PublicIdConfiguration}
+import com.keepit.commanders.{ LibraryCommander, LibraryImageCommander, ProcessedImageSize }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
@@ -31,7 +31,7 @@ class MobileLibraryImageController @Inject() (
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
-  extends UserActions with LibraryAccessActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryOwnerAction(pubId)).async(parse.temporaryFile) { request =>
     val libraryId = Library.decodePublicId(pubId).get
@@ -105,7 +105,7 @@ class MobileLibraryImageController @Inject() (
   }
 }
 
-object LibraryImageController {
+object MobileLibraryImageController {
   val defaultImageSize = ProcessedImageSize.XLarge.idealSize
   val pathHashRe = "library/([^_]+)_.*".r
 }
