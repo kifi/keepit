@@ -1,4 +1,7 @@
 .kf-feed-items
+  a:hover
+    text-decoration: underline
+
   .kf-loading-spinner
     display: block
     width: 100px
@@ -38,6 +41,9 @@
 
   span
     display: inline-block
+
+  a
+    color: accentGreen
 
     // Note: The responsive two-column structure of this page is similar to the library page and
     //       the general search results page.
@@ -87,3 +93,36 @@
 
 .kf-feed-item.ng-enter.ng-enter-active
   opacity: 1
+
+.kf-feed-empty-keep
+.kf-feed-empty-add-keep
+  font-size: .85rem
+
+.kf-feed-empty-searches
+  column-count: 2
+  column-gap: 20px
+  text-align: left
+
+.kf-feed-empty-searches-query
+  width: 140px
+  margin: 0 auto 5px
+  padding-top: 5px
+
+.kf-keep.kf-feed-empty-add-keep
+  padding-bottom: 15px
+
+.kf-feed-empty-dummy-libs
+  display: flex
+  justify-content: space-around
+  margin-top: 15px
+
+.kf-feed-empty-dummy-lib
+  a
+    display: block
+
+.kf-feed-empty-dummy-lib-image
+  display: inline-block
+  width: 84px
+  height: 116px
+  background-size: cover
+  background-repeat: no-repeat

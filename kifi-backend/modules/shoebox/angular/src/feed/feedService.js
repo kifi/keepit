@@ -6,11 +6,31 @@ angular.module('kifi')
   '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net', 'ml',
   function ($http, $rootScope, profileService, routeService, $q, $analytics, net, ml) {
 
+    function invalidateFeedCache() {
+      [
+        net.getKeepStream
+      ].forEach(function (endpoint) {
+        endpoint.clearCache();
+      });
+    }
+
+    [
+      'keepAdded',
+      'libraryJoined',
+      'libraryLeft',
+      'libraryDeleted',
+      'libraryKeepCountChanged'
+    ].forEach(function (feedItemEvent) {
+      $rootScope.$on(feedItemEvent, function () {
+        invalidateFeedCache();
+      });
+    });
+
     var api = {
       getFeed: function (limit, beforeId, afterId) {
         ml.specs.getsFeed = new ml.Spec([
           new ml.Assert('Feed retrieved in 3 seconds or less', 3000),
-          new ml.Expect('Feed returns a list', function(data) { return data.length; })
+          new ml.Expect('Feed returns a list', function(data) { return typeof data.length !== 'undefined'; })
         ]);
 
         return net.getKeepStream(limit, beforeId, afterId)

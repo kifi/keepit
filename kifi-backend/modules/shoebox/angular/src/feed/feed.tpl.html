@@ -1,14 +1,48 @@
 <main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
+  <section ng-if="!isLoading() && feed.length === 0" class="kf-feed-item">
+    <header class="kf-feed-top">
+      <h3>Your feed is currently empty</h3>
+    </header>
+    <div class="kf-keep">
+      <div class="kf-feed-empty-keep">
+        <span>Follow top libraries from our <a href="/libraries/featured">Featured Libraries</a></span>
+        <ul class="kf-feed-empty-dummy-libs">
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="jen/analytics-data"><img src="/img/feed/analytics-data@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="/ashley-mcgregordey/social-community"><img src="/img/feed/social-community@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="brandon-loudermilkphd/machine-learning-resources"><img src="/img/feed/machine-learning-resources@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+        </ul>
+        <p>Search to find libraries and keeps from intriguing search queries:</p>
+        <ul class="kf-feed-empty-searches">
+          <li class="kf-feed-empty-searches-query" ng-repeat="search in suggestedSearches">
+            <a ng-href="/find?q={{ search.query }}" ng-bind="search.title"></a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
   <section class="kf-feed-item" ng-repeat="feedItem in feed">
     <header class="kf-feed-top">
-      <span ng-bind="feedItem.user | name"></span> kept this into <a ng-href="{{ feedItem.library.path }}" ng-bind="feedItem.library.name"></a>
-      <span ng-if="feedItem.library.organization" ng-bind="'in ' + feedItem.library.organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span>
+      <h4><a ng-href="{{ feedItem.user | slug }}" ng-bind="feedItem.user | name"></a> kept this into <a ng-href="{{ feedItem.library.path }}" ng-bind="feedItem.library.name"></a>
+      <span ng-if="feedItem.library.organization" ng-bind="'in ' + feedItem.library.organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span></h4>
     </header>
     <div class="kf-keep">
       <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
     </div>
   </section>
-  <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="fetchKeeps()">
+  <section class="kf-feed-item" ng-if="!isLoading() && feed.length < 10" >
+    <div class="kf-feed-top"><h3>Add a keep</h3></div>
+      <div class="kf-keep kf-feed-empty-add-keep">
+        <div kf-create-keep-widget></div>
+      </div>
+    </div>
+  </section>
+  <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">
     <span ng-if="!isLoading() && hasMoreKeeps()" class="kf-feed-get-more">See more</span>
     <span ng-if="!isLoading() && !hasMoreKeeps()" class="kf-feed-no-more">There is no more activity to show.</span>
     <span ng-if="isLoading()" class="kf-feed-get-more-loading">Loading...</span>
