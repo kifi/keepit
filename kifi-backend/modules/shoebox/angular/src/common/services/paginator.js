@@ -4,12 +4,14 @@ angular.module('kifi')
 
 .factory('Paginator', [
   function () {
-    function Paginator(sourceFunction, fetchPageSize) {
+    function Paginator(sourceFunction, fetchPageSize, whenDone) {
       this.sourceFunction = sourceFunction;
       this.fetchPageSize = fetchPageSize || 12;
-
+      this.whenDone = whenDone || Paginator.DONE_WHEN_RESPONSE_IS_LESS_THAN_A_FULL_PAGE;
       this.reset();
     }
+    Paginator.DONE_WHEN_RESPONSE_IS_EMPTY = 'DONE_WHEN_RESPONSE_IS_EMPTY';
+    Paginator.DONE_WHEN_RESPONSE_IS_LESS_THAN_A_FULL_PAGE = 'DONE_WHEN_RESPONSE_IS_LESS_THAN_A_FULL_PAGE';
 
     Paginator.prototype.reset = function () {
       this.fetchPageNumber = 0;
@@ -18,6 +20,18 @@ angular.module('kifi')
       this.loading = false;
       this.items = [];
       this._cachedFetch = null;
+    };
+
+    Paginator.prototype._calcServerHasMore = function (items) {
+      if (this.whenDone === Paginator.DONE_WHEN_RESPONSE_IS_EMPTY) {
+        var responseIsEmpty = (items.length === 0);
+        return !responseIsEmpty; // has more if not empty
+      } else if (this.whenDone === Paginator.DONE_WHEN_RESPONSE_IS_LESS_THAN_A_FULL_PAGE) {
+        var lessThanFullPage = (items.length < this.fetchPageSize);
+        return !lessThanFullPage; // has more if the response has at least a full page
+      } else {
+        return true; // otherwise, continue indefinitely
+      }
     };
 
     Paginator.prototype.fetch = function (sourceFunction, pageNumber, pageSize) {
@@ -34,7 +48,7 @@ angular.module('kifi')
 
       var fetchPromise = sourceFunction(pageNumber, pageSize)
         .then(function (items) {
-          this.hasMoreItems = (items.length === this.fetchPageSize);
+          this.hasMoreItems = this._calcServerHasMore(items);
           this.loading = false;
           this.init = true;
           this.items = this.items.concat(items);
