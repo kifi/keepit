@@ -179,7 +179,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   private def getByUserId(userId: Id[User], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
-    (for (b <- rows if b.ownerId === userId && !b.state.inSet(excludeStates)) yield b).list.toSet
+    (for (b <- rows if b.ownerId === userId && b.orgId.isEmpty && !b.state.inSet(excludeStates)) yield b).list.toSet
   }
   private def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
     (for (b <- rows if b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).list.toSet

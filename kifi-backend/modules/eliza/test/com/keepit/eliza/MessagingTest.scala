@@ -13,7 +13,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ UserFactory, User }
-import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
+import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.social.BasicUser
@@ -21,7 +21,7 @@ import com.keepit.test.ElizaTestInjector
 import org.specs2.mutable._
 import play.api.libs.json.{ JsObject, Json }
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class MessagingTest extends Specification with ElizaTestInjector {
@@ -37,7 +37,6 @@ class MessagingTest extends Specification with ElizaTestInjector {
       FakeElizaServiceClientModule(),
       FakeActorSystemModule(),
       FakeABookServiceClientModule(),
-      FakeUrbanAirshipModule(),
       FakeAppBoyModule(),
       FakeCryptoModule(),
       FakeElizaStoreModule(),
@@ -61,6 +60,10 @@ class MessagingTest extends Specification with ElizaTestInjector {
     (user1, user2, user3, user2n3Seq, shoebox)
   }
 
+  def waitFor[T](f: => Future[T]) = {
+    Await.result(f, Duration(4, "seconds"))
+  }
+
   "Messaging Contoller" should {
 
     "send correctly" in {
@@ -70,11 +73,11 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val messagingCommander = inject[MessagingCommander]
         val messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationDeliveryCommander]
-        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!", None)
+        val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://thenextgoogle.com", Some("title"), "World!", None))
 
         val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None, None)
 
-        Await.result(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false), Duration(4, "seconds")).length === 1
+        waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
         val messageIds: Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
         val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
@@ -106,8 +109,8 @@ class MessagingTest extends Specification with ElizaTestInjector {
             }
           }
 
-          val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat", None)
-          val (thread2, msg2) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!", None)
+          val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat", None))
+          val (thread2, msg2) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://kifi.com", Some("title"), "Hello Chat again!", None))
 
           messagingCommander.getUnreadUnmutedThreadCount(user1) === 0
 
@@ -142,16 +145,16 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val messagingCommander = inject[MessagingCommander]
         val notificationCommander = inject[NotificationDeliveryCommander]
 
-        val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo", None)
+        val (thread, msg) = waitFor(messagingCommander.sendNewMessage(user1, Seq(user2), Nil, "http://kifi.com", Some("title"), "Fortytwo", None))
 
         inject[WatchableExecutionContext].drain()
-        Await.result(notificationCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false), Duration(4, "seconds")).length === 1
-        Await.result(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false), Duration(4, "seconds")).length === 0
+        waitFor(notificationCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
+        waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
         messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty, None)
         inject[WatchableExecutionContext].drain()
-        Await.result(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false), Duration(4, "seconds")).length === 1
+        waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }
     }
 
@@ -160,7 +163,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val (user1, user2, _, user2n3Seq, _) = setup()
         val userThreadRepo = inject[UserThreadRepo]
         val messagingCommander = inject[MessagingCommander]
-        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "https://kifi.com"), Some("title"), "Search!", None)
+        val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "https://kifi.com", Some("title"), "Search!", None))
 
         val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get) }
         user2Threads.size === 1

@@ -23,15 +23,13 @@ import scala.concurrent.duration.FiniteDuration
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
-  def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
-  def organizationMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
 
   def setup(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
       userEmailAddressCommander.intern(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")).get
       val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
-      val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
+      val membership = orgMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
       (org, owner, membership)
     }
   }
@@ -67,9 +65,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val (org, owner, _) = setup
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
           val inviter = db.readWrite { implicit session =>
-            val bond = UserFactory.user.withName("James", "Bond").saved
+            val bond = UserFactory.user().withName("James", "Bond").saved
             val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
-            organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
+            orgMembershipRepo.save(membership.copy(permissions = membership.permissions + OrganizationPermission.INVITE_MEMBERS))
             bond
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }
@@ -89,8 +87,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val (org, _, _) = setup
           val invitees = Set.empty[Either[Id[User], EmailAddress]]
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
-            val bond = UserFactory.user.withName("James", "Bond").saved
-            organizationMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
+            val bond = UserFactory.user().withName("James", "Bond").saved
+            orgMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
             bond
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }

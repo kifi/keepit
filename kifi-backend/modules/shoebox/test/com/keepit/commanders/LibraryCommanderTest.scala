@@ -238,25 +238,25 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryRepo.count === 0
           }
 
-          val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
+          val lib1Request = LibraryCreateRequest(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
 
-          val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
+          val lib2Request = LibraryCreateRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-          val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
+          val lib3Request = LibraryCreateRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
 
-          val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+          val lib4Request = LibraryCreateRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
           val libraryCommander = inject[LibraryCommander]
-          val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
+          val add1 = libraryCommander.createLibrary(lib1Request, userAgent.id.get)
           add1 must beRight
           add1.right.get.name === "Avengers Missions"
-          val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
+          val add2 = libraryCommander.createLibrary(lib2Request, userCaptain.id.get)
           add2 must beRight
           add2.right.get.name === "MURICA"
-          val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
+          val add3 = libraryCommander.createLibrary(lib3Request, userIron.id.get)
           add3 must beRight
           add3.right.get.name === "Science and Stuff"
-          libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
+          libraryCommander.createLibrary(lib4Request, userIron.id.get).isRight === false
 
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
@@ -276,7 +276,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           db.readWrite { implicit s =>
             libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
           }
-          libraryCommander.addLibrary(lib3Request, userIron.id.get) must beRight
+          libraryCommander.createLibrary(lib3Request, userIron.id.get) must beRight
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
             allLibs.length === 3
@@ -295,8 +295,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
-          val addResponse = libraryCommander.addLibrary(addRequest, owner.id.get)
+          val addRequest = LibraryCreateRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.createLibrary(addRequest, owner.id.get)
           addResponse must beRight
         }
       }
@@ -314,8 +314,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
-          val addResponse = libraryCommander.addLibrary(addRequest, member.id.get)
+          val addRequest = LibraryCreateRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.createLibrary(addRequest, member.id.get)
           addResponse must beLeft
         }
       }
@@ -329,8 +329,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryAddRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
-          val addResponse = libraryCommander.addLibrary(addRequest, rando.id.get)
+          val addRequest = LibraryCreateRequest(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addResponse = libraryCommander.createLibrary(addRequest, rando.id.get)
           addResponse must beLeft
         }
       }
@@ -610,7 +610,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val keeps = db.readOnlyMaster { implicit s => keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000) }
         keeps.size === 3
 
-        libraryCommander.removeLibrary(libMurica.id.get, userCaptain.id.get)
+        libraryCommander.deleteLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
@@ -632,8 +632,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
         }
 
-        libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)
-        libraryCommander.removeLibrary(libShield.id.get, userAgent.id.get)
+        libraryCommander.deleteLibrary(libScience.id.get, userIron.id.get)
+        libraryCommander.deleteLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0

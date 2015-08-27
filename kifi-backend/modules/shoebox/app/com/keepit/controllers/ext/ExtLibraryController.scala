@@ -84,9 +84,9 @@ class ExtLibraryController @Inject() (
     val name = (body \ "name").as[String]
     val visibility = (body \ "visibility").as[LibraryVisibility]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, slug = slug)
+    val addRequest = LibraryCreateRequest(name = name, visibility = visibility, slug = slug)
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
+    libraryCommander.createLibrary(addRequest, request.userId) match {
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
         val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
@@ -128,7 +128,7 @@ class ExtLibraryController @Inject() (
   def deleteLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      libraryCommander.removeLibrary(libraryId, request.userId) match {
+      libraryCommander.deleteLibrary(libraryId, request.userId) match {
         case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case _ => NoContent
       }
