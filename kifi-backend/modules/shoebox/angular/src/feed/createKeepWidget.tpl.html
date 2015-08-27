@@ -1,0 +1,18 @@
+<div class="kf-create-keep-widget">
+  <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL.</div>
+  <div class="kf-add-keep-error" ng-show="state.alreadyKept">That keep is already in that library.</div>
+  <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
+  <button type="button" class="add-keep-to-library-dropdown"
+    kf-keep-to-library-widget widget-action-text="Add keep" library-select-action="onLibrarySelected(selectedLibrary)"
+    lib-select-down-offset="0" lib-select-max-up-offset="110" lib-select-left-offset="0">
+    <span ng-switch="selectedLibrary.kind" class="keep-to-library-lib-icon-container">
+      <div class="kf-klw-library-card" ng-style="{'background-color': selectedLibrary.color}">
+        <div ng-if="selectedLibrary.kind === 'system_main'" class="kf-klw-star-icon svg-card-star"></div>
+        <div ng-if="selectedLibrary.visibility === 'secret'" class="kf-klw-lock-icon svg-card-lock"></div>
+      </div>
+    </span>
+    {{selectedLibrary.name}}
+    <span class="add-keep-to-library-dropdown-arrow"></span>
+  </button>
+  <button class="kf-button kf-create-keep-button" ng-click="keepToLibrary()">Add Keep</button>
+</div>
