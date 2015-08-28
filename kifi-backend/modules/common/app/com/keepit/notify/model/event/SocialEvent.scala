@@ -21,12 +21,12 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     (__ \ "networkType").formatNullable[SocialNetworkType]
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
-  override def info(event: NewSocialConnection): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.friendId)
+  override def info(event: NewSocialConnection): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.friendId)
     )) { subset =>
-      val friendInfo = user(event.friendId).lookup(subset)
+      val friendInfo = RequestUser(event.friendId).lookup(subset)
       val friend = friendInfo.user
       NotificationInfo(
         url = friendInfo.path.encode.absolute,
@@ -53,12 +53,12 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
 
-  override def info(event: SocialContactJoined): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.joinerId)
+  override def info(event: SocialContactJoined): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.joinerId)
     )) { subset =>
-      val joinerInfo = user(event.joinerId).lookup(subset)
+      val joinerInfo = RequestUser(event.joinerId).lookup(subset)
       val joiner = joinerInfo.user
       NotificationInfo(
         url = joinerInfo.path.encode.absolute,

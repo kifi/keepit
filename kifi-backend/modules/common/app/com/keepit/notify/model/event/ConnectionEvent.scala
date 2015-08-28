@@ -22,12 +22,12 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
 
-  override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.inviterId)
+  override def info(event: NewConnectionInvite): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.inviterId)
     )) { subset =>
-      val inviterInfo = user(event.inviterId).lookup(subset)
+      val inviterInfo = RequestUser(event.inviterId).lookup(subset)
       val inviter = inviterInfo.user
       NotificationInfo(
         url = inviterInfo.path.encode.absolute,
@@ -54,12 +54,12 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     (__ \ "accepterId").format[Id[User]]
   )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
 
-  override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.accepterId)
+  override def info(event: ConnectionInviteAccepted): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.accepterId)
     )) { subset =>
-      val accepterInfo = user(event.accepterId).lookup(subset)
+      val accepterInfo = RequestUser(event.accepterId).lookup(subset)
       val accepter = accepterInfo.user
       NotificationInfo(
         url = accepterInfo.path.encode.absolute,

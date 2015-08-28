@@ -1,8 +1,9 @@
-package com.keepit.model
+package com.keepit.notify.info
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 

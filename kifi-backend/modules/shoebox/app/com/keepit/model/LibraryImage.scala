@@ -5,6 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
+import com.keepit.notify.info.LibraryImageInfo
 import org.joda.time.DateTime
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._

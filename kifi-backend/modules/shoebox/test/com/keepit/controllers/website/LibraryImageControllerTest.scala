@@ -12,6 +12,7 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId, FakeCryptoMod
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
+import com.keepit.notify.info.LibraryImageInfo
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils

@@ -21,14 +21,14 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     (__ \ "orgId").format[Id[Organization]]
   )(OrgNewInvite.apply, unlift(OrgNewInvite.unapply))
 
-  override def info(event: OrgNewInvite): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.inviterId), organization(event.orgId)
+  override def info(event: OrgNewInvite): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.inviterId), RequestOrganization(event.orgId)
     )) { subset =>
-      val inviterInfo = user(event.inviterId).lookup(subset)
+      val inviterInfo = RequestUser(event.inviterId).lookup(subset)
       val inviter = inviterInfo.user
-      val invitedOrg = organization(event.orgId).lookup(subset)
+      val invitedOrg = RequestOrganization(event.orgId).lookup(subset)
       NotificationInfo(
         url = invitedOrg.path.encode.absolute,
         imageUrl = inviterInfo.imageUrl,
@@ -52,14 +52,14 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     (__ \ "orgId").format[Id[Organization]]
   )(OrgInviteAccepted.apply, unlift(OrgInviteAccepted.unapply))
 
-  override def info(event: OrgInviteAccepted): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.accepterId), organization(event.orgId)
+  override def info(event: OrgInviteAccepted): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.accepterId), RequestOrganization(event.orgId)
     )) { subset =>
-      val accepterInfo = user(event.accepterId).lookup(subset)
+      val accepterInfo = RequestUser(event.accepterId).lookup(subset)
       val accepter = accepterInfo.user
-      val acceptedOrg = organization(event.orgId).lookup(subset)
+      val acceptedOrg = RequestOrganization(event.orgId).lookup(subset)
       NotificationInfo(
         url = acceptedOrg.path.encode.absolute,
         imageUrl = accepterInfo.imageUrl,

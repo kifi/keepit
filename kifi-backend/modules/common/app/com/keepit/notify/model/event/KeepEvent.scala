@@ -21,16 +21,16 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
-  override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      library(event.libraryId), keep(event.keepId)
+  override def info(event: LibraryNewKeep): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestLibrary(event.libraryId), RequestKeep(event.keepId)
     )) { subset =>
-      val newKeepInfo = keep(event.keepId).lookup(subset)
+      val newKeepInfo = RequestKeep(event.keepId).lookup(subset)
       val newKeep = newKeepInfo.keep
       val keeperInfo = newKeepInfo.keeper
       val keeper = keeperInfo.user
-      val libraryKeptInfo = library(event.libraryId).lookup(subset)
+      val libraryKeptInfo = RequestLibrary(event.libraryId).lookup(subset)
       NotificationInfo(
         url = newKeep.url,
         imageUrl = keeperInfo.imageUrl,
@@ -62,13 +62,13 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     (__ \ "libraryId").format[Id[Library]]
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
-  override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      library(event.libraryId), keep(event.keepId)
+  override def info(event: NewKeepActivity): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestLibrary(event.libraryId), RequestKeep(event.keepId)
     )) { subset =>
-      val libraryKeptInfo = library(event.libraryId).lookup(subset)
-      val newKeepInfo = keep(event.keepId).lookup(subset)
+      val libraryKeptInfo = RequestLibrary(event.libraryId).lookup(subset)
+      val newKeepInfo = RequestKeep(event.keepId).lookup(subset)
       val newKeep = newKeepInfo.keep
       val keeperInfo = newKeepInfo.keeper
       val keeper = keeperInfo.user

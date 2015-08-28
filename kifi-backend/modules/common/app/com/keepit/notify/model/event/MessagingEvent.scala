@@ -1,6 +1,6 @@
 package com.keepit.notify.model.event
 
-import com.keepit.notify.info.{ NotificationInfo, UsingDbView }
+import com.keepit.notify.info.{ NotificationInfo, RequestingNotificationInfos }
 import com.keepit.notify.model.{ NotificationKind, Recipient }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -27,7 +27,7 @@ trait NewMessageImpl extends NotificationKind[NewMessage] {
   //  override def info(events: Set[NewMessage]): ReturnsInfo[ElizaMessageNotificationInfo] = for {
   //    event <- PickOne(events)
   //  } yield ElizaMessageNotificationInfo()
-  override def info(events: Set[NewMessage]): UsingDbView[NotificationInfo] = ??? // todo write
+  override def info(events: Set[NewMessage]): RequestingNotificationInfos[NotificationInfo] = ??? // todo write
 
 }
 

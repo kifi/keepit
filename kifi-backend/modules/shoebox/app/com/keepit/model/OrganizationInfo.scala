@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
+import com.keepit.notify.info.OrganizationNotificationInfo
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime

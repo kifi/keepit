@@ -21,6 +21,7 @@ import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource 
 import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.notify.info.LibraryImageInfo
 import com.keepit.social.BasicUser
 import play.twirl.api.Html
 

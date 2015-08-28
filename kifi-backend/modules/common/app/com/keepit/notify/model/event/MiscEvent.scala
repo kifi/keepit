@@ -1,6 +1,6 @@
 package com.keepit.notify.model.event
 
-import com.keepit.notify.info.{ Requests, NotificationInfo, UsingDbView }
+import com.keepit.notify.info.{ Requests, NotificationInfo, RequestingNotificationInfos }
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -33,10 +33,10 @@ trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] 
     case n => items.init.mkString(", ") + ", and " + items.last
   }
 
-  override def info(events: Set[DepressedRobotGrumble]): UsingDbView[NotificationInfo] = {
+  override def info(events: Set[DepressedRobotGrumble]): RequestingNotificationInfos[NotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
 
-    UsingDbView(Requests()) { subset =>
+    RequestingNotificationInfos(Requests()) { subset =>
       NotificationInfo(
         url = "http://goo.gl/PqN7Cs",
         imageUrl = "http://i.imgur.com/qs8QofA.png",

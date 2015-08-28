@@ -33,17 +33,17 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     "some friends" -> "a friend"
   )
 
-  override def info(events: Set[OwnedLibraryNewCollabInvite]): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
+  override def info(events: Set[OwnedLibraryNewCollabInvite]): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbView(Requests(
-      user(oneEvent.inviterId), library(oneEvent.libraryId)
+    RequestingNotificationInfos(Requests(
+      RequestUser(oneEvent.inviterId), RequestLibrary(oneEvent.libraryId)
     )) { subset =>
-      val inviterInfo = user(oneEvent.inviterId).lookup(subset)
+      val inviterInfo = RequestUser(oneEvent.inviterId).lookup(subset)
       val inviter = inviterInfo.user
-      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+      val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(subset)
       NotificationInfo(
         url = inviterInfo.path.encode.absolute,
         imageUrl = inviterInfo.imageUrl,
@@ -83,17 +83,17 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     "some friends" -> "a friend"
   )
 
-  override def info(events: Set[OwnedLibraryNewFollowInvite]): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
+  override def info(events: Set[OwnedLibraryNewFollowInvite]): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
-    UsingDbView(Requests(
-      user(oneEvent.inviterId), library(oneEvent.libraryId)
+    RequestingNotificationInfos(Requests(
+      RequestUser(oneEvent.inviterId), RequestLibrary(oneEvent.libraryId)
     )) { subset =>
-      val inviterInfo = user(oneEvent.inviterId).lookup(subset)
+      val inviterInfo = RequestUser(oneEvent.inviterId).lookup(subset)
       val inviter = inviterInfo.user
-      val libraryInvited = library(oneEvent.libraryId).lookup(subset)
+      val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(subset)
       NotificationInfo(
         url = inviterInfo.path.encode.absolute,
         imageUrl = inviterInfo.imageUrl,
@@ -121,14 +121,14 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
 
-  override def info(event: OwnedLibraryNewFollower): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.followerId), library(event.libraryId)
+  override def info(event: OwnedLibraryNewFollower): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.followerId), RequestLibrary(event.libraryId)
     )) { subset =>
-      val followerInfo = user(event.followerId).lookup(subset)
+      val followerInfo = RequestUser(event.followerId).lookup(subset)
       val follower = followerInfo.user
-      val libraryFollowed = library(event.libraryId).lookup(subset)
+      val libraryFollowed = RequestLibrary(event.libraryId).lookup(subset)
       NotificationInfo(
         url = followerInfo.path.encode.absolute,
         imageUrl = followerInfo.imageUrl,
@@ -156,14 +156,14 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     (__ \ "libraryId").format[Id[Library]]
   )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
 
-  override def info(event: OwnedLibraryNewCollaborator): UsingDbView[NotificationInfo] = {
-    import DbViewKey._
-    UsingDbView(Requests(
-      user(event.collaboratorId), library(event.libraryId)
+  override def info(event: OwnedLibraryNewCollaborator): RequestingNotificationInfos[NotificationInfo] = {
+    import NotificationInfoRequest._
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.collaboratorId), RequestLibrary(event.libraryId)
     )) { subset =>
-      val collaboratorInfo = user(event.collaboratorId).lookup(subset)
+      val collaboratorInfo = RequestUser(event.collaboratorId).lookup(subset)
       val collaborator = collaboratorInfo.user
-      val libraryCollaborating = library(event.libraryId).lookup(subset)
+      val libraryCollaborating = RequestLibrary(event.libraryId).lookup(subset)
       NotificationInfo(
         url = collaboratorInfo.path.encode.absolute,
         imageUrl = collaboratorInfo.imageUrl,
