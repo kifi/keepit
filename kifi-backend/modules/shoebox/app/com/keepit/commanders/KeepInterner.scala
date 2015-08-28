@@ -262,8 +262,7 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
-          originalKeeperId = Some(userId),
-          connectionsHash = Some(KeepConnections(Set(library.id.get), Set(userId)).hash)
+          originalKeeperId = Some(userId)
         )
         val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
         (true, false, improvedKeep)
