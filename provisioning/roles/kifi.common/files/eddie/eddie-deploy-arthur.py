@@ -269,19 +269,24 @@ if __name__=="__main__":
       latest_asset = None
       for artifact in last_build['artifacts']:
         relative_path = artifact['relativePath']
-        potential_asset = S3Asset(Key("fortytwo-builds", os.path.basename(relative_path)))
+        potential_key = Key(assets.bucket, os.path.basename(relative_path))
+        potential_asset = S3Asset(potential_key)
         if potential_asset.serviceType == args.serviceType:
-          source_path = 'deploy-tmp/%s' % relative_path
-          os.makedirs(os.path.dirname(source_path))
-          jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
-          with open(source_path, 'wb') as handle:
-            for chunk in jenkins_file.iter_content(1024):
-              handle.write(chunk)
-          multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
-          log('Uploaded build asset %s' % relative_path)
+          if potential_key.exists():
+            log('Build asset %s already exists, continuing with deploy' % relative_path)
+          else:
+            source_path = 'deploy-tmp/%s' % relative_path
+            os.makedirs(os.path.dirname(source_path))
+            jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
+            with open(source_path, 'wb') as handle:
+              for chunk in jenkins_file.iter_content(1024):
+                handle.write(chunk)
+            multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
+            log('Uploaded build asset %s' % relative_path)
           latest_asset = potential_asset
 
-      shutil.rmtree('deploy-tmp/')
+      if os.path.exists('deploy-tmp/'):
+        shutil.rmtree('deploy-tmp/')
 
       version = latest_asset.hash
       full_version = latest_asset.name + " (latest)"
@@ -301,7 +306,7 @@ if __name__=="__main__":
       command.append("force")
     else:
       if (not args.nolock) and (not lock.lock()):
-        print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
+        log("There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business.")
         sys.exit(0)
 
     log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))
