@@ -35,7 +35,37 @@
           kf-user-tooltip="::feedItem.user"
           ng-bind="feedItem.user | name"
         ></a>
-        kept this into
+        <span>kept this into</span>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'secret'"
+          data-kf-tooltip="This library is only viewable to those you invite"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="lock"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A private library"
+          ></svg>
+        </div>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'discoverable'"
+          data-kf-tooltip="This library is viewable to others in search results"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="star"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A discoverable library"
+            ng-show="feedItem.library.visibility === 'discoverable'"
+          ></svg>
+        </div>
+        <span><!-- Separate the inline-block elements from each other --></span>
         <a
           class="kf-feed-tooltip-target"
           ng-href="{{ feedItem.library.path }}"
