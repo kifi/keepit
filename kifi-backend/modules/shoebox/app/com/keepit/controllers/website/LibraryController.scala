@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders.{ RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
@@ -500,13 +501,18 @@ class LibraryController @Inject() (
   def addKeeps(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     (request.body \ "keeps").asOpt[Seq[RawBookmarkRepresentation]] map { fromJson =>
+      val cleanBookmarks = fromJson.filterNot { bookmark =>
+        val fail = URI.parse(bookmark.url).isFailure
+        if (fail) log.error(s"will not add keep for user ${request.user} for unparsable url: $bookmark")
+        fail
+      }
       val source = KeepSource.site
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
       val existingKeeps = db.readOnlyMaster { implicit s =>
         keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
-      val (keeps, _, failures, _) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, false)
+      val (keeps, _, failures, _) = keepsCommander.keepMultiple(cleanBookmarks, libraryId, request.userId, source, None, false)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
 
       log.info(s"kept ${keeps.size} keeps")
