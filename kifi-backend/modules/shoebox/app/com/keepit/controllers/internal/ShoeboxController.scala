@@ -529,23 +529,8 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(orgIdsByUserId))
   }
 
-  def getLibraries() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Seq[Id[Library]]]
-    val libs = db.readOnlyMaster { implicit session =>
-      libraryRepo.getLibraries(libraryIds.toSet)
-    }
-    Ok(Json.toJson(libs))
-  }
-
-  def getUserImages() = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[Seq[Id[User]]]
-    val userImages = db.readOnlyReplica { implicit session =>
-      userRepo.getUsers(userIds)
-    }.map {
-      case (id, user) =>
-        (id, s3ImageStore.avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https")))
-    }
-    Ok(Json.toJson(userImages))
+  def getUserInfos() = Action(parse.tolerantJson) { request =>
+    ???
   }
 
   def getKeeps() = Action(parse.tolerantJson) { request =>
@@ -554,16 +539,6 @@ class ShoeboxController @Inject() (
       keepRepo.getByIds(keepIds.toSet)
     }
     Ok(Json.toJson(keeps))
-  }
-
-  def getLibraryUrls() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Seq[Id[Library]]]
-    val libraryUrls = db.readOnlyReplica { implicit session =>
-      libraryRepo.getLibraries(libraryIds.toSet)
-    }.map {
-      case (id, library) => (id, pathCommander.pathForLibrary(library).encode.absolute)
-    }
-    Ok(Json.toJson(libraryUrls))
   }
 
   def getLibraryInfos() = Action(parse.tolerantJson) { request =>
@@ -579,30 +554,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(libraryInfos))
   }
 
-  def getLibraryOwners() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Seq[Id[Library]]]
-    val libraryOwners = db.readOnlyReplica { implicit session =>
-      val libraries = libraryRepo.getLibraries(libraryIds.toSet)
-      val userIds = libraries.collect {
-        case (id, library) => library.ownerId
-      }
-      val users = userRepo.getUsers(userIds.toSeq)
-      libraries.map {
-        case (id, library) =>
-          (id, users(library.ownerId))
-      }
-    }
-    Ok(Json.toJson(libraryOwners))
-  }
-
-  def getOrganizations() = Action(parse.tolerantJson) { request =>
-    val orgIds = request.body.as[Seq[Id[Organization]]]
-    val orgs = db.readOnlyReplica { implicit session =>
-      orgRepo.getByIds(orgIds.toSet)
-    }
-    Ok(Json.toJson(orgs))
-  }
-
   def getOrganizationInfos() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Seq[Id[Organization]]]
     val orgInfos = db.readOnlyReplica { implicit session =>
@@ -615,7 +566,4 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(orgInfos))
   }
 
-  def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
-    Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
-  }
 }

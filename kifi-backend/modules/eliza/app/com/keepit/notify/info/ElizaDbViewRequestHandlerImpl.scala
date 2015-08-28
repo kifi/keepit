@@ -12,5 +12,5 @@ class ElizaDbViewRequestHandlerImpl @Inject() (
     implicit val ec: ExecutionContext) extends DbViewRequestHandler {
 
   override def apply[M <: HasId[M], R](key: DbViewKey[M, R], requests: Seq[DbViewRequest[M, R]]): Future[Map[Id[M], R]] = ???
-  
+
 }
