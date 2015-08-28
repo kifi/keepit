@@ -91,7 +91,7 @@ class AdminPaymentsController @Inject() (
       Ok("So sorry, but your passphrase isn't right.")
     } else {
       planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), memo)
-      Ok(s"Sucessfully granted special credit of $dollarAmount to Organization #orgId.")
+      Ok(s"Sucessfully granted special credit of $dollarAmount to Organization $orgId.")
     }
   }
 
