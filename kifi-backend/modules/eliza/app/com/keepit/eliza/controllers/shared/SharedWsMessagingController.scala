@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationDeliveryCommander, MessagingCommander }
+import com.keepit.eliza.commanders.{ NotificationCommander, MessageFetchingCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
@@ -27,7 +27,8 @@ import com.keepit.common.store.KifiInstallationStore
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
-  notificationCommander: NotificationDeliveryCommander,
+  notificationDeliveyCommander: NotificationDeliveryCommander,
+  notificationCommander: NotificationCommander,
   val userActionsHelper: UserActionsHelper,
   protected val websocketRouter: WebSocketRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
@@ -103,7 +104,7 @@ class SharedWsMessagingController @Inject() (
     // inbox notification/thread handlers
     "get_one_thread" -> {
       case JsNumber(requestId) +: JsString(threadId) +: _ =>
-        val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
         fut.foreach { json =>
           socket.channel.push(Json.arr(requestId.toLong, json.obj))
         }
@@ -114,7 +115,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_latest_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
@@ -126,7 +127,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -137,7 +138,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
         fut.foreach {
           case (notices, numTotal) =>
             socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
@@ -149,7 +150,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -160,7 +161,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -171,7 +172,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -182,7 +183,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
         fut.foreach {
           case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
             socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
@@ -194,7 +195,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads_before" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val fut = notificationDeliveyCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -208,7 +209,7 @@ class SharedWsMessagingController @Inject() (
         val messageId = ExternalId[Message](notifId)
         val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
         val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-        val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
+        val lastModified = notificationDeliveyCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
         socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
 
@@ -231,7 +232,11 @@ class SharedWsMessagingController @Inject() (
     "mute_thread" -> {
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        if (notificationCommander.tryNotificationMuted(ExternalId[Notification](jsThreadId), true).isDefined) {
+
+        } else {
+          messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        }
     },
     "unmute_thread" -> {
       case JsString(jsThreadId) +: _ =>

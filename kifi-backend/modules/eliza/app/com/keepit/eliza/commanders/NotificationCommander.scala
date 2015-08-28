@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ Notification, NotificationItem, NotificationItemRepo, NotificationRepo }
@@ -20,6 +20,15 @@ class NotificationCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notification)
     }.toSet
+  }
+
+  def tryNotificationMuted(id: ExternalId[Notification], mute: Boolean): Option[Notification] = {
+    val notifOpt = db.readWrite { implicit session =>
+      notificationRepo.getOpt(id).map { notif =>
+        notificationRepo.save(notif.copy(disabled = mute))
+      }
+    }
+    notifOpt
   }
 
 }

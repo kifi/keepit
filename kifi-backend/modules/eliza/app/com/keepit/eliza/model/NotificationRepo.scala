@@ -3,14 +3,14 @@ package com.keepit.eliza.model
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
+import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.model.User
 import com.keepit.notify.model.{ Recipient, NKind }
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[NotificationRepoImpl])
-trait NotificationRepo extends Repo[Notification] {
+trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[Notification] {
 
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification]
 
@@ -21,7 +21,7 @@ trait NotificationRepo extends Repo[Notification] {
 @Singleton
 class NotificationRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends NotificationRepo with DbRepo[Notification] {
+    val clock: Clock) extends NotificationRepo with DbRepo[Notification] with ExternalIdColumnDbFunction[Notification] {
 
   import db.Driver.simple._
 

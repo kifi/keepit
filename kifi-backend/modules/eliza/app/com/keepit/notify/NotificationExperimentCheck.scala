@@ -41,4 +41,14 @@ class NotificationExperimentCheck @Inject() (
     newRecipient
   }
 
+  def ifElseExperiment(recipient: Recipient)(f: (Recipient) => Unit)(elseF: (Recipient) => Unit): Recipient = {
+    val (experiment, newRecipient) = checkExperiment(recipient)
+    if (experiment) {
+      f(newRecipient)
+    } else {
+      elseF(newRecipient)
+    }
+    newRecipient
+  }
+
 }
