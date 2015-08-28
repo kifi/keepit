@@ -26,7 +26,7 @@ class NotificationRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = NotificationTable
-  class NotificationTable(tag: Tag) extends RepoTable[Notification](db, tag, "notification") {
+  class NotificationTable(tag: Tag) extends RepoTable[Notification](db, tag, "notification") with ExternalIdColumn[Notification] {
 
     def recipient = column[Recipient]("recipient", O.NotNull)
     def lastChecked = column[DateTime]("last_checked", O.NotNull)

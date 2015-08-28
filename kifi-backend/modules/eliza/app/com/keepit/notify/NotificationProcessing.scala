@@ -90,7 +90,7 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.getAllForNotification(notif.id.get)
     }.toSet
     notifExperimentCheck.ifExperiment(notif.recipient) { recipient =>
-      delivery.deliver(recipient, items)
+      delivery.deliver(recipient, notif, items, info)
     }
     notif
   }
