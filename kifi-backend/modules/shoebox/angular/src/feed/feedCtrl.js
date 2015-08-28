@@ -5,7 +5,7 @@ angular.module('kifi')
 .controller('FeedCtrl', [
   '$rootScope', '$scope', 'feedService', 'Paginator', 'modalService',
   function($rootScope, $scope, feedService, Paginator, modalService) {
-    function keepSource(pageNumber, pageSize) {
+    function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[(pageNumber * pageSize) - 1] || $scope.feed[$scope.feed.length - 1];
 
       return feedService.getFeed(pageSize, lastKeep && lastKeep.id)
@@ -23,19 +23,19 @@ angular.module('kifi')
       }
     }
 
-    var keepLazyLoader = new Paginator(keepSource, 10);
+    var feedLazyLoader = new Paginator(feedSource, 10, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
     $scope.scrollDistance = '0';
     $scope.hasMoreKeeps = function () {
-      return keepLazyLoader.hasMore();
+      return feedLazyLoader.hasMore();
     };
     $scope.isLoading = function () {
-      return !keepLazyLoader.hasLoaded();
+      return !feedLazyLoader.hasLoaded();
     };
     $scope.fetchKeeps = function () {
-      keepLazyLoader
+      feedLazyLoader
       .fetch()
       .then(function (keeps) {
         var updatedKeeps = keeps.map(function(keep) {
