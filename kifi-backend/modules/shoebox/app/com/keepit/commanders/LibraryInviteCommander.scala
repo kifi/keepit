@@ -107,18 +107,18 @@ class LibraryInviteCommanderImpl @Inject() (
           }
         }
       if (invite.access == LibraryAccess.READ_WRITE) {
-        notificationEventSender.send(LibraryCollabInviteAccepted.build(
+        notificationEventSender.send(LibraryCollabInviteAccepted(
           Recipient(inviterId),
           currentDateTime,
-          invitee,
-          lib
+          invitee.id.get,
+          lib.id.get
         ))
       } else {
-        notificationEventSender.send(LibraryFollowInviteAccepted.build(
+        notificationEventSender.send(LibraryFollowInviteAccepted(
           Recipient(inviterId),
           currentDateTime,
-          invitee,
-          lib
+          invitee.id.get,
+          lib.id.get
         ))
       }
 
@@ -333,17 +333,12 @@ class LibraryInviteCommanderImpl @Inject() (
       ))
     )
 
-    val userLibOwner = db.readOnlyReplica { implicit session =>
-      userRepo.get(libOwner.externalId)
-    }
-
     collabInviteeSet.foreach { invitee =>
-      notificationEventSender.send(LibraryNewCollabInvite.build(
+      notificationEventSender.send(LibraryNewCollabInvite(
         Recipient(invitee),
         currentDateTime,
-        inviter,
-        lib,
-        userLibOwner
+        inviter.id.get,
+        lib.id.get
       ))
     }
 
@@ -364,12 +359,11 @@ class LibraryInviteCommanderImpl @Inject() (
     )
 
     followInviteeSet.foreach { invitee =>
-      notificationEventSender.send(LibraryNewFollowInvite.build(
+      notificationEventSender.send(LibraryNewFollowInvite(
         Recipient(invitee),
         currentDateTime,
-        inviter,
-        lib,
-        userLibOwner
+        inviter.id.get,
+        lib.id.get
       ))
     }
 
@@ -431,18 +425,14 @@ class LibraryInviteCommanderImpl @Inject() (
       Future.successful((): Unit)
     }
 
-    val collabInviteeUsers = db.readOnlyReplica { implicit session =>
-      userRepo.getUsers(collabInviteeSet.toSeq).values
-    }
-
-    if (collabInviteeUsers.nonEmpty) {
-      collabInviteeUsers.foreach { user =>
-        notificationEventSender.send(OwnedLibraryNewCollabInvite.build(
+    if (collabInviteeSet.nonEmpty) {
+      collabInviteeSet.foreach { userId =>
+        notificationEventSender.send(OwnedLibraryNewCollabInvite(
           Recipient(lib.ownerId),
           currentDateTime,
-          inviter,
-          user,
-          lib
+          inviter.id.get,
+          userId,
+          lib.id.get
         ))
       }
     }
@@ -466,18 +456,14 @@ class LibraryInviteCommanderImpl @Inject() (
       Future.successful((): Unit)
     }
 
-    val followInviteeUsers = db.readOnlyReplica { implicit session =>
-      userRepo.getUsers(followInviteeSet.toSeq).values
-    }
-
-    if (followInviteeUsers.nonEmpty) {
-      followInviteeUsers.foreach { user =>
-        notificationEventSender.send(OwnedLibraryNewFollowInvite.build(
+    if (followInviteeSet.nonEmpty) {
+      followInviteeSet.foreach { userId =>
+        notificationEventSender.send(OwnedLibraryNewFollowInvite(
           Recipient(lib.ownerId),
           currentDateTime,
-          inviter,
-          user,
-          lib
+          inviter.id.get,
+          userId,
+          lib.id.get
         ))
       }
     }

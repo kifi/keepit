@@ -68,7 +68,7 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
         linkText = "Visit organization",
         extraJson = Some(Json.obj(
           "member" -> accepter,
-          "organization" -> Json.toJson(acceptedOrgInfo)
+          "organization" -> Json.toJson(acceptedOrg)
         ))
       )
     }

@@ -76,7 +76,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
-  def sendNotificationEvent(event: NotificationEventSender.EventWithInfo): Unit
+  def sendNotificationEvent(event: NotificationEventSender.EventWithInfo): Future[Unit]
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -185,9 +185,9 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
   }
 
-  def sendNotificationEvent(event: NotificationEventSender.EventWithInfo): Unit = {
+  def sendNotificationEvent(event: NotificationEventSender.EventWithInfo): Future[Unit] = {
     val payload = Json.toJson(event)
-    call(Eliza.internal.sendNotificationEvent(), payload)
+    call(Eliza.internal.sendNotificationEvent(), payload).map(_ => ())
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {

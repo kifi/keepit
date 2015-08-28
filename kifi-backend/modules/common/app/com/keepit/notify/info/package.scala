@@ -9,8 +9,6 @@ package object info {
 
   type HasId[M] = { def id: Option[Id[M]] }
 
-  type ExDbViewModel = ExistingDbViewModel[M] forSome { type M <: HasId[M] }
-
   type ExDbViewKey = DbViewKey[M, R] forSome { type M <: HasId[M]; type R}
   type ExDbViewRequest = DbViewRequest[M, R] forSome { type M <: HasId[M]; type R}
 

@@ -184,12 +184,13 @@ class ActivityPusher @Inject() (
         val owner = db.readOnlyReplica { implicit session =>
           userRepo.get(libMessage.owner.externalId)
         }
-        notificationEventSender.send(NewKeepActivity.build(
+        notificationEventSender.send(NewKeepActivity(
           Recipient(activity.userId),
           currentDateTime,
-          owner,
-          libMessage.newKeep,
-          libMessage.lib))
+          owner.id.get,
+          libMessage.newKeep.id.get,
+          libMessage.lib.id.get
+        ))
         devices.flatten
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")

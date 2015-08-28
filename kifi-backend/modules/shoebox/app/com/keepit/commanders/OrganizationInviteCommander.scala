@@ -238,11 +238,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
     invitees.foreach { invitee =>
-      notificationEventSender.send(OrgNewInvite.build(
+      notificationEventSender.send(OrgNewInvite(
         Recipient(invitee),
         currentDateTime,
-        inviter,
-        org
+        inviter.id.get,
+        org.id.get
       ))
     }
 
@@ -337,11 +337,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
         ))
       )
-      notificationEventSender.send(OrgInviteAccepted.build(
+      notificationEventSender.send(OrgInviteAccepted(
         Recipient(inviterId),
         currentDateTime,
-        invitee,
-        org
+        invitee.id.get,
+        org.id.get
       ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {

@@ -42,7 +42,6 @@ class LibraryNewFollowersCommander @Inject() (
       (relevantFollowers, usersById)
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-    val owner = usersById(library.ownerId)
     newKeeps.foreach { newKeep =>
       val toBeNotified = relevantFollowers - newKeep.userId
       if (toBeNotified.nonEmpty) {
@@ -89,12 +88,12 @@ class LibraryNewFollowersCommander @Inject() (
             }
           }
         toBeNotified foreach { userId =>
-          notificationEventSender.send(LibraryNewKeep.build(
+          notificationEventSender.send(LibraryNewKeep(
             Recipient(userId),
             currentDateTime,
-            keeper,
-            newKeep,
-            library
+            keeper.id.get,
+            newKeep.id.get,
+            library.id.get
           ))
         }
       }

@@ -18,20 +18,10 @@ class ElizaDbViewRequestHandlerImpl @Inject() (
       }
     }.add(DbViewKey.library) { requests =>
       shoeboxServiceClient.getLibraries(requests.map(_.id))
-    }.add(DbViewKey.userImageUrl) { requests =>
-      shoeboxServiceClient.getUserImages(requests.map(_.id))
     }.add(DbViewKey.keep) { requests =>
       shoeboxServiceClient.getKeeps(requests.map(_.id))
-    }.add(DbViewKey.libraryUrl) { requests =>
-      shoeboxServiceClient.getLibraryUrls(requests.map(_.id))
-    }.add(DbViewKey.libraryInfo) { requests =>
-      shoeboxServiceClient.getLibraryInfos(requests.map(_.id))
-    }.add(DbViewKey.libraryOwner) { requests =>
-      shoeboxServiceClient.getLibraryOwners(requests.map(_.id))
     }.add(DbViewKey.organization) { requests =>
       shoeboxServiceClient.getOrganizations(requests.map(_.id))
-    }.add(DbViewKey.organizationInfo) { requests =>
-      shoeboxServiceClient.getOrganizationInfos(requests.map(_.id))
     }
 
 }

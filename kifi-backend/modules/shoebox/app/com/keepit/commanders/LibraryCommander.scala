@@ -1118,18 +1118,18 @@ class LibraryCommanderImpl @Inject() (
         }
       }
     if (access == LibraryAccess.READ_WRITE) {
-      notificationEventSender.send(OwnedLibraryNewCollaborator.build(
+      notificationEventSender.send(OwnedLibraryNewCollaborator(
         Recipient(lib.ownerId),
         currentDateTime,
-        follower,
-        lib
+        newFollowerId,
+        lib.id.get
       ))
     } else {
-      notificationEventSender.send(OwnedLibraryNewFollower.build(
+      notificationEventSender.send(OwnedLibraryNewFollower(
         Recipient(lib.ownerId),
         currentDateTime,
-        follower,
-        lib
+        newFollowerId,
+        lib.id.get
       ))
     }
   }

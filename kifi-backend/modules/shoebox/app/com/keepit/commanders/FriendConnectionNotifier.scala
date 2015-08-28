@@ -68,10 +68,10 @@ class FriendConnectionNotifier @Inject() (
         }
       }
 
-    notificationEventSender.send(NewSocialConnection.build(
+    notificationEventSender.send(NewSocialConnection(
       Recipient(friendUserId),
       currentDateTime,
-      respondingUser,
+      myUserId,
       networkTypeOpt
     ))
 

@@ -191,10 +191,10 @@ class UserConnectionsCommander @Inject() (
             category = UserPushNotificationCategory.UserConnectionAccepted)
         }
       }
-    notificationEventSender.send(ConnectionInviteAccepted.build(
+    notificationEventSender.send(ConnectionInviteAccepted(
       Recipient(friend),
       currentDateTime,
-      respondingUser
+      myUserId
     ))
 
     emailF flatMap (_ => notifF)
@@ -234,10 +234,10 @@ class UserConnectionsCommander @Inject() (
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
         }
       }
-    notificationEventSender.send(NewConnectionInvite.build(
+    notificationEventSender.send(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
-      requestingUser
+      myUser.id.get
     ))
     emailF flatMap (_ => friendReqF)
   }

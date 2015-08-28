@@ -369,10 +369,10 @@ class UserCommander @Inject() (
                 }
               }
             toNotify.foreach { userId =>
-              notificationEventSender.send(SocialContactJoined.build(
+              notificationEventSender.send(SocialContactJoined(
                 Recipient(userId),
                 currentDateTime,
-                newUser
+                newUserId
               ))
             }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
