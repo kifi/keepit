@@ -1,7 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.time.Clock
 import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
@@ -133,11 +132,8 @@ class ElizaController @Inject() (
   }
 
   def getTotalMessageCountForGroup = Action(parse.tolerantJson) { request =>
-    val start = clock.now()
-    log.info(s"[amplitudeTracking] getting total message count for group...")
     val userIds = request.body.as[Set[Id[User]]]
     val totalMessages = elizaStatsCommander.getTotalMessageCountForGroup(userIds)
-    log.info(s"[amplitudeTracking] total messages between ${userIds.size} users retrieved in ${clock.now()} - ${start} ms")
     Ok(Json.toJson(totalMessages))
   }
 
