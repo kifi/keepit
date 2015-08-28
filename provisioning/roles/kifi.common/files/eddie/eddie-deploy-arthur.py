@@ -133,6 +133,7 @@ def _upload_part(bucketname, multipart_id, part_num,
 
   def _upload(retries_left=amount_of_retries):
     try:
+
       conn = S3Connection(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
       bucket = conn.get_bucket(bucketname)
       for mp in bucket.get_all_multipart_uploads():
@@ -178,7 +179,7 @@ def multipart_upload(bucketname, source_path, keyname, acl='private', headers={}
       remaining_bytes = source_size - offset
       bytes = min([bytes_per_chunk, remaining_bytes])
       part_num = i + 1
-      pool.apply_async(_upload_part, [bucketname, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, mp.id,
+      pool.apply_async(_upload_part, [bucketname, mp.id,
         part_num, source_path, offset, bytes])
     pool.close()
     pool.join()
@@ -265,25 +266,28 @@ if __name__=="__main__":
       last_build = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/api/json').json()
       log("Uploading assets for build %s" % (last_build['fullDisplayName']))
 
-      asset_basenames = []
+      latest_asset = None
       for artifact in last_build['artifacts']:
         relative_path = artifact['relativePath']
-        asset_basenames.append(os.path.basename(relative_path))
-        source_path = 'deploy-tmp/%s' % relative_path
-        os.makedirs(os.path.dirname(source_path))
-        jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
-        with open(source_path, 'wb') as handle:
-          for chunk in jenkins_file.iter_content(1024):
-            handle.write(chunk)
-        multipart_upload('fortytwo-builds', source_path, source_path)
-        log('Uploaded build asset %s' % relative_path)
+        potential_key = Key(assets.bucket, os.path.basename(relative_path))
+        potential_asset = S3Asset(potential_key)
+        if potential_asset.serviceType == args.serviceType:
+          if potential_key.exists():
+            log('Build asset %s already exists, continuing with deploy' % relative_path)
+          else:
+            source_path = 'deploy-tmp/%s' % relative_path
+            os.makedirs(os.path.dirname(source_path))
+            jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
+            with open(source_path, 'wb') as handle:
+              for chunk in jenkins_file.iter_content(1024):
+                handle.write(chunk)
+            multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
+            log('Uploaded build asset %s' % relative_path)
+          latest_asset = potential_asset
 
-      shutil.rmtree('deploy-tmp/')
+      if os.path.exists('deploy-tmp/'):
+        shutil.rmtree('deploy-tmp/')
 
-      latest_asset = [
-        asset for asset in (S3Asset(Key("fortytwo-builds", name)) for name in asset_basenames)
-        if asset.serviceType == args.serviceType
-        ][0]
       version = latest_asset.hash
       full_version = latest_asset.name + " (latest)"
     else:
@@ -302,7 +306,7 @@ if __name__=="__main__":
       command.append("force")
     else:
       if (not args.nolock) and (not lock.lock()):
-        print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
+        log("There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business.")
         sys.exit(0)
 
     log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))

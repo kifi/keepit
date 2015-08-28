@@ -5,8 +5,10 @@ angular.module('kifi')
 .directive('kfKeepCard', [
   '$state', '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
   'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
+  '$injector',
   function ($state, $analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService, $rootScope, profileService) {
+      modalService, keepActionService, undoService, $rootScope, profileService,
+      $injector) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -155,9 +157,22 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
-          scope.onWidgetLibraryClicked(args.clickedLibrary);
-        });
+        scope.editKeepNote = function (event, keep) {
+          if (keep.id !== scope.keep.id || keep.user.id !== profileService.me.id) {
+            return;
+          }
+
+          var keepEl = angular.element(event.target).closest('.kf-keep');
+          var editor = keepEl.find('.kf-knf-editor');
+          if (!editor.length) {
+            var noteEl = keepEl.find('.kf-keep-note');
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.libraryId, keep.id, function update(noteText) {
+              keep.note = noteText;
+            });
+          } else {
+            editor.focus();
+          }
+        };
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
           if (scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
@@ -185,7 +200,7 @@ angular.module('kifi')
                   scope.keep.keepersTotal++;
 
                   libraryService.addToLibraryCount(clickedLibrary.id, 1);
-                  scope.$emit('keepAdded', [scope.keep], clickedLibrary);
+                  $rootScope.$broadcast('keepAdded', [scope.keep], clickedLibrary);
                 })['catch'](modalService.openGenericErrorModal);
               });
             })['catch'](modalService.openGenericErrorModal);
@@ -231,10 +246,6 @@ angular.module('kifi')
           }
         };
 
-        scope.editKeepNote = function (event, keep) {
-          $rootScope.$emit('editKeepNote', event, keep);
-        };
-
         scope.trackTweet = function () {
           $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
         };
@@ -259,6 +270,13 @@ angular.module('kifi')
           if (newVal) {
             scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
+        });
+        [
+          $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
+            scope.onWidgetLibraryClicked(args.clickedLibrary);
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
       }
     };
