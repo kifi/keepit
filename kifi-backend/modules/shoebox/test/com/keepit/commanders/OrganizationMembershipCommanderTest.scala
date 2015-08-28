@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
-import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OrganizationFactoryHelper._
@@ -77,9 +77,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
             (user.id.get != org.ownerId, user.firstName, user.lastName)
           }
 
-          println("org owner = " + org.ownerId)
           val canonical = memberships.toSeq.sortBy(metric)
-          println("canonical = " + canonical.map(_.userId))
           val extToIntMap = users.map(u => u.externalId -> u.id.get).toMap
           val members = inject[OrganizationMembershipCommander].getMembersAndUniqueInvitees(org.id.get, Offset(10), Limit(50), includeInvitees = false).map(_.member.left.get)
 
@@ -180,6 +178,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val memberDelNone = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](2))
         orgMembershipCommander.removeMembership(memberDelNone) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // there are futures running in the background that will blow up if the test ends and the db is dumped
+        inject[WatchableExecutionContext].drain()
+
+        1 === 1
       }
     }
     "let members leave the org" in {
@@ -197,6 +200,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val memberLeave = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, member.id.get)
         orgMembershipCommander.removeMembership(memberLeave) === Right(OrganizationMembershipRemoveResponse(memberLeave))
+
+        // there are futures running in the background that will blow up if the test ends and the db is dumped
+        inject[WatchableExecutionContext].drain()
+
+        1 === 1
       }
     }
 
