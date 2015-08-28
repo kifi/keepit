@@ -51,6 +51,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
+  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
@@ -159,7 +160,8 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
   keepImagesCache: KeepImagesCache,
-  primaryOrgForUserCache: PrimaryOrgForUserCache)
+  primaryOrgForUserCache: PrimaryOrgForUserCache,
+  basicKeepByIdCache: BasicKeepByIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -310,6 +312,17 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
+  }
+
+  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
+    cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
+      val payload = Json.toJson(missingKeys.map(_.id))
+      call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
+        implicit val tupleReads = TupleFormat.tuple2Reads[Id[Keep], BasicKeep]
+        val missing = res.json.as[Seq[(Id[Keep], BasicKeep)]].toMap
+        missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
+      }
+    }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
   }
 
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
