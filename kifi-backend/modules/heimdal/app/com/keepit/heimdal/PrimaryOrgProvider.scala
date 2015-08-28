@@ -43,7 +43,10 @@ class PrimaryOrgProviderImpl @Inject() (
   def getOrgContextData(orgId: Id[Organization]): Future[Map[String, ContextData]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
     val membersFut = shoebox.getOrganizationMembers(orgId)
-    val messageCountFut = membersFut.flatMap(eliza.getTotalMessageCountForGroup)
+    val messageCountFut = membersFut.flatMap { members =>
+      if (members.size > 1) eliza.getTotalMessageCountForGroup(members)
+      else Future.successful(0)
+    }
     val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
     for {
       shoeboxValues <- shoeboxValuesFut

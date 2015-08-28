@@ -159,7 +159,9 @@ class HelpRankCommander @Inject() (
   }
 
   def getUserWithMostClickedKeeps(userIds: Set[Id[User]]): Option[Id[User]] = {
-    db.readOnlyReplica { implicit session => keepDiscoveryRepo.getDiscoveryCountsByKeeper(userIds).maxByOpt(_._2).map(_._1) }
+    if (userIds.size > 1) db.readOnlyReplica { implicit session => keepDiscoveryRepo.getDiscoveryCountsByKeeper(userIds).maxByOpt(_._2).map(_._1) }
+    else if (userIds.size == 1) Some(userIds.head)
+    else None
   }
 
 }
