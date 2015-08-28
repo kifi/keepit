@@ -5,6 +5,8 @@ import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.notify.info.NotificationInfoRequest.{RequestOrganization, RequestKeep, RequestLibrary, RequestUser}
 
+import scala.concurrent.Future
+
 class BatchedNotificationInfos(
   private val users: Map[Id[User], UserNotificationInfo],
   private val libraries: Map[Id[Library], LibraryNotificationInfo],
