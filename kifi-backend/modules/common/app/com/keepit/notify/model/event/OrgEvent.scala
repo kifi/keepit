@@ -21,29 +21,17 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     (__ \ "orgId").format[Id[Organization]]
   )(OrgNewInvite.apply, unlift(OrgNewInvite.unapply))
 
-  def build(recipient: Recipient, time: DateTime, inviter: User, org: Organization): ExistingDbView[OrgNewInvite] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(inviter), organization.existing(org)
-    ))(OrgNewInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get,
-      orgId = org.id.get
-    ))
-  }
-
   override def info(event: OrgNewInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.inviterId), organization(event.orgId), userImageUrl(event.inviterId)
+      user(event.inviterId), organization(event.orgId)
     )) { subset =>
-      val inviter = user(event.inviterId).lookup(subset)
+      val inviterInfo = user(event.inviterId).lookup(subset)
+      val inviter = inviterInfo.user
       val invitedOrg = organization(event.orgId).lookup(subset)
-      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
       NotificationInfo(
-        url = Path(invitedOrg.handle.value).encode.absolute,
-        imageUrl = inviterImage,
+        url = invitedOrg.path.encode.absolute,
+        imageUrl = inviterInfo.imageUrl,
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
         linkText = "Visit organization"
@@ -64,35 +52,22 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     (__ \ "orgId").format[Id[Organization]]
   )(OrgInviteAccepted.apply, unlift(OrgInviteAccepted.unapply))
 
-  def build(recipient: Recipient, time: DateTime, accepter: User, org: Organization): ExistingDbView[OrgInviteAccepted] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(accepter), organization.existing(org)
-    ))(OrgInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get,
-      orgId = org.id.get
-    ))
-  }
-
   override def info(event: OrgInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.accepterId), organization(event.orgId), userImageUrl(event.accepterId), organizationInfo(event.orgId)
+      user(event.accepterId), organization(event.orgId)
     )) { subset =>
-      val accepter = user(event.accepterId).lookup(subset)
+      val accepterInfo = user(event.accepterId).lookup(subset)
+      val accepter = accepterInfo.user
       val acceptedOrg = organization(event.orgId).lookup(subset)
-      val accepterId = userImageUrl(event.accepterId).lookup(subset)
-      val acceptedOrgInfo = organizationInfo(event.orgId).lookup(subset)
       NotificationInfo(
-        url = Path(acceptedOrg.handle.value).encode.absolute,
-        imageUrl = accepterId,
+        url = acceptedOrg.path.encode.absolute,
+        imageUrl = accepterInfo.imageUrl,
         title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
         body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
         linkText = "Visit organization",
         extraJson = Some(Json.obj(
-          "member" -> BasicUser.fromUser(accepter),
+          "member" -> accepter,
           "organization" -> Json.toJson(acceptedOrgInfo)
         ))
       )

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
@@ -11,6 +12,7 @@ case class LibraryImageInfo(path: ImagePath, x: Int, y: Int)
 @json
 case class UserNotificationInfo(
   user: BasicUser,
+  path: Path,
   imageUrl: String)
 
 @json
@@ -20,12 +22,15 @@ case class LibraryNotificationInfo(
   slug: LibrarySlug,
   color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
+  path: Path,
   owner: BasicUser)
 
 @json
 case class OrganizationNotificationInfo(
   id: PublicId[Organization],
   name: String,
+  abbreviatedName: String,
   handle: Option[PrimaryOrganizationHandle],
   image: Option[ImagePath],
+  path: Path,
   owner: BasicUser)

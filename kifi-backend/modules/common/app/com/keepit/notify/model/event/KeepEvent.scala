@@ -21,38 +21,23 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     (__ \ "libraryId").format[Id[Library]]
   )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
-  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library): ExistingDbView[LibraryNewKeep] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept)
-    ))(LibraryNewKeep(
-      recipient = recipient,
-      time = time,
-      keeperId = keeper.id.get,
-      keepId = newKeep.id.get,
-      libraryId = libraryKept.id.get
-    ))
-  }
-
   override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.keeperId), userImageUrl(event.keeperId), library(event.libraryId), keep(event.keepId),
-      libraryInfo(event.libraryId)
+      user(event.keeperId), library(event.libraryId), keep(event.keepId)
     )) { subset =>
       val newKeep = keep(event.keepId).lookup(subset)
-      val keeper = user(event.keeperId).lookup(subset)
-      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
-      val libraryKept = library(event.libraryId).lookup(subset)
-      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
+      val keeperInfo = user(event.keeperId).lookup(subset)
+      val keeper = keeperInfo.user
+      val libraryKeptInfo = library(event.libraryId).lookup(subset)
       NotificationInfo(
         url = newKeep.url,
-        imageUrl = keeperImage,
-        title = s"New keep in ${libraryKept.name}",
+        imageUrl = keeperInfo.imageUrl,
+        title = s"New keep in ${libraryKeptInfo.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to page",
         extraJson = Some(Json.obj(
-          "keeper" -> BasicUser.fromUser(keeper),
+          "keeper" -> keeper,
           "library" -> Json.toJson(libraryKeptInfo),
           "keep" -> Json.obj(
             "id" -> newKeep.externalId,
@@ -76,40 +61,23 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     (__ \ "libraryId").format[Id[Library]]
   )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
 
-  def build(recipient: Recipient, time: DateTime, keeper: User, newKeep: Keep, libraryKept: Library): ExistingDbView[NewKeepActivity] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(keeper), keep.existing(newKeep), library.existing(libraryKept)
-    ))(NewKeepActivity(
-      recipient = recipient,
-      time = time,
-      keeperId = keeper.id.get,
-      keepId = newKeep.id.get,
-      libraryId = libraryKept.id.get
-    ))
-  }
-
   override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      library(event.libraryId), user(event.keeperId), keep(event.keepId), libraryUrl(event.libraryId),
-      userImageUrl(event.keeperId), libraryInfo(event.libraryId)
+      library(event.libraryId), user(event.keeperId), keep(event.keepId)
     )) { subset =>
-      val libraryKept = library(event.libraryId).lookup(subset)
-      val keeper = user(event.keeperId).lookup(subset)
-      val keeperBasic = BasicUser.fromUser(keeper)
+      val libraryKeptInfo = library(event.libraryId).lookup(subset)
+      val keeperInfo = user(event.keeperId).lookup(subset)
+      val keeper = keeperInfo.user
       val newKeep = keep(event.keepId).lookup(subset)
-      val libraryKeptUrl = libraryUrl(event.libraryId).lookup(subset)
-      val keeperImage = userImageUrl(event.keeperId).lookup(subset)
-      val libraryKeptInfo = libraryInfo(event.libraryId).lookup(subset)
       NotificationInfo(
-        url = libraryKeptUrl,
-        imageUrl = keeperImage,
-        title = s"New Keep in ${libraryKept.name}",
+        url = libraryKeptInfo.path.encode.absolute,
+        imageUrl = keeperInfo.imageUrl,
+        title = s"New Keep in ${libraryKeptInfo.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to library",
         extraJson = Some(Json.obj(
-          "keeper" -> keeperBasic,
+          "keeper" -> keeper,
           "library" -> Json.toJson(libraryKeptInfo),
           "keep" -> Json.obj(
             "id" -> newKeep.externalId,

@@ -21,33 +21,21 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     (__ \ "networkType").formatNullable[SocialNetworkType]
   )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
 
-  def build(recipient: Recipient, time: DateTime, friend: User, networkType: Option[SocialNetworkType]): ExistingDbView[NewSocialConnection] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(friend)
-    ))(NewSocialConnection(
-      recipient = recipient,
-      time = time,
-      friendId = friend.id.get,
-      networkType = networkType
-    ))
-  }
-
   override def info(event: NewSocialConnection): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.friendId), userImageUrl(event.friendId)
+      user(event.friendId)
     )) { subset =>
-      val friend = user(event.friendId).lookup(subset)
-      val friendImage = userImageUrl(event.friendId).lookup(subset)
+      val friendInfo = user(event.friendId).lookup(subset)
+      val friend = friendInfo.user
       NotificationInfo(
-        url = Path(friend.username.value).encode.absolute,
+        url = friendInfo.path.encode.absolute,
         title = s"You’re connected with ${friend.fullName} on Kifi!",
         body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
-        imageUrl = friendImage,
+        imageUrl = friendInfo.imageUrl,
         linkText = s"View ${friend.firstName}’s profile",
         extraJson = Some(Json.obj(
-          "friend" -> BasicUser.fromUser(friend)
+          "friend" -> friend
         ))
       )
     }
@@ -65,30 +53,19 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     (__ \ "joinerId").format[Id[User]]
   )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
 
-  def build(recipient: Recipient, time: DateTime, joiner: User): ExistingDbView[SocialContactJoined] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(joiner)
-    ))(SocialContactJoined(
-      recipient = recipient,
-      time = time,
-      joinerId = joiner.id.get
-    ))
-  }
-
   override def info(event: SocialContactJoined): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.joinerId), userImageUrl(event.joinerId)
+      user(event.joinerId)
     )) { subset =>
-      val joiner = user(event.joinerId).lookup(subset)
-      val joinerImage = userImageUrl(event.joinerId).lookup(subset)
+      val joinerInfo = user(event.joinerId).lookup(subset)
+      val joiner = joinerInfo.user
       NotificationInfo(
-        url = Path(joiner.username.value + "?intent=connect").encode.absolute,
+        url = joinerInfo.path.encode.absolute,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
         linkText = s"Invite ${joiner.firstName} to connect",
-        imageUrl = joinerImage
+        imageUrl = joinerInfo.imageUrl
       )
     }
   }

@@ -30,7 +30,7 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
       val inviterInfo = user(event.inviterId).lookup(subset)
       val inviter = inviterInfo.user
       NotificationInfo(
-        url = Path(inviter.username.value).encode.absolute,
+        url = inviterInfo.path.encode.absolute,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
         linkText = s"Respond to ${inviter.firstName}’s invitation",
@@ -54,32 +54,21 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     (__ \ "accepterId").format[Id[User]]
   )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
 
-  def build(recipient: Recipient, time: DateTime, accepter: User): ExistingDbView[ConnectionInviteAccepted] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(accepter)
-    ))(ConnectionInviteAccepted(
-      recipient = recipient,
-      time = time,
-      accepterId = accepter.id.get
-    ))
-  }
-
   override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.accepterId), userImageUrl(event.accepterId)
+      user(event.accepterId)
     )) { subset =>
-      val accepter = user(event.accepterId).lookup(subset)
-      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      val accepterInfo = user(event.accepterId).lookup(subset)
+      val accepter = accepterInfo.user
       NotificationInfo(
-        url = Path(accepter.username.value).encode.absolute,
+        url = accepterInfo.path.encode.absolute,
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
         body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
         linkText = s"Visit ${accepter.firstName}’s profile",
-        imageUrl = accepterImage,
+        imageUrl = accepterInfo.imageUrl,
         extraJson = Some(Json.obj(
-          "friend" -> BasicUser.fromUser(accepter)
+          "friend" -> accepter
         ))
       )
     }
