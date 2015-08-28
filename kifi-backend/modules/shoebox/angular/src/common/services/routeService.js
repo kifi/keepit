@@ -217,7 +217,6 @@ angular.module('kifi')
         return route('/users/' + userId + '/connections/mutual');
       },
 
-
       /////////////////////////////
       // User Personas           //
       /////////////////////////////
@@ -229,6 +228,13 @@ angular.module('kifi')
       },
       removePersona: function (personaName) {
         return route('/user/personas/' + personaName);
+      },
+
+      /////////////////////////////
+      // Static Pages            //
+      /////////////////////////////
+      featuredLibraries: function () {
+        return '/libraries/featured';
       }
     };
   }
