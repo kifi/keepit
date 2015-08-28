@@ -22,7 +22,7 @@ class AdminPaymentsController @Inject() (
     planCommander: PlanManagementCommander,
     db: Database) extends AdminUserActions {
 
-  val EXTRA_SPECIAL_ADMINS = Seq[Id[User]](Id[User](1), Id[User](243))
+  val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 243).map(Id[User](_))
 
   def backfillPaidAccounts = AdminUserAction { request =>
     def printStackTraceToChannel(t: Throwable, channel: Concurrent.Channel[String]) = {

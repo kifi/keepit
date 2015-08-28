@@ -302,11 +302,10 @@ orgStats: OrganizationStatistics
     };
 
     $("#extra-credit-submit").click(function () {
-        var amount = $("#extra-credit-amount").val()
-        var passphrase = $("#extra-credit-pass").val()
-        var memo = $("#extra-credit-memo").val()
-        var payload = { "amount": amount, "passphrase": passphrase, "memo": memo }
-        console.log("Wahoo:", payload)
+        var amount = $("#extra-credit-amount").val();
+        var passphrase = $("#extra-credit-pass").val();
+        var memo = $("#extra-credit-memo").val();
+        var payload = { "amount": amount, "passphrase": passphrase, "memo": memo };
         var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.grantExtraCredit(orgStats.orgId)", payload);
         deffered.done( function (data) {
             alert(data);
