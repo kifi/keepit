@@ -266,25 +266,23 @@ if __name__=="__main__":
       last_build = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/api/json').json()
       log("Uploading assets for build %s" % (last_build['fullDisplayName']))
 
-      asset_basenames = []
+      latest_asset = None
       for artifact in last_build['artifacts']:
         relative_path = artifact['relativePath']
-        asset_basenames.append(os.path.basename(relative_path))
-        source_path = 'deploy-tmp/%s' % relative_path
-        os.makedirs(os.path.dirname(source_path))
-        jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
-        with open(source_path, 'wb') as handle:
-          for chunk in jenkins_file.iter_content(1024):
-            handle.write(chunk)
-        multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
-        log('Uploaded build asset %s' % relative_path)
+        potential_asset = S3Asset(Key("fortytwo-builds", os.path.basename(relative_path)))
+        if potential_asset.serviceType == args.serviceType:
+          source_path = 'deploy-tmp/%s' % relative_path
+          os.makedirs(os.path.dirname(source_path))
+          jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
+          with open(source_path, 'wb') as handle:
+            for chunk in jenkins_file.iter_content(1024):
+              handle.write(chunk)
+          multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
+          log('Uploaded build asset %s' % relative_path)
+          latest_asset = potential_asset
 
       shutil.rmtree('deploy-tmp/')
 
-      latest_asset = [
-        asset for asset in (S3Asset(Key("fortytwo-builds", name)) for name in asset_basenames)
-        if asset.serviceType == args.serviceType
-        ][0]
       version = latest_asset.hash
       full_version = latest_asset.name + " (latest)"
     else:
