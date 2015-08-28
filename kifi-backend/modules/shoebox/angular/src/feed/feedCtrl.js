@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$rootScope', '$scope', 'feedService', 'Paginator', 'modalService',
-  function($rootScope, $scope, feedService, Paginator, modalService) {
+  '$rootScope', '$scope', 'feedService', 'Paginator', 'routeService', 'modalService',
+  function($rootScope, $scope, feedService, Paginator, routeService, modalService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[(pageNumber * pageSize) - 1] || $scope.feed[$scope.feed.length - 1];
 
@@ -88,6 +88,8 @@ angular.module('kifi')
       { title: 'Brain Development', query: '%22brain%20development%22' },
       { title: 'Apps', query: 'apps' }
     ];
+
+    $scope.featuredLibrariesRoute = routeService.featuredLibraries();
 
     // Initialize
     $scope.fetchKeeps();
