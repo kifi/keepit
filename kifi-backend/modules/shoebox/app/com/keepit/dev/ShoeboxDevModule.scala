@@ -10,7 +10,6 @@ import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
-import com.keepit.notify.ShoeboxNotifyModule
 import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox._
@@ -36,7 +35,6 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val normalizationQueueModule = DevNormalizationUpdateJobQueueModule()
   val activityEmailActorModule = DevActivityEmailQueueModule()
   val suggestedSearchTermsModule = DevLibrarySuggestedSearchQueueModule()
-  val notifyModule = ShoeboxNotifyModule()
 
   // Shoebox Functional Modules
   val analyticsModule = DevAnalyticsModule()

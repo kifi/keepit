@@ -5,9 +5,13 @@ import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 
-// todo could be more generic
 @json
 case class LibraryImageInfo(path: ImagePath, x: Int, y: Int)
+
+@json
+case class UserNotificationInfo(
+  user: BasicUser,
+  imageUrl: String)
 
 @json
 case class LibraryNotificationInfo(
@@ -23,4 +27,5 @@ case class OrganizationNotificationInfo(
   id: PublicId[Organization],
   name: String,
   handle: Option[PrimaryOrganizationHandle],
-  image: Option[ImagePath])
+  image: Option[ImagePath],
+  owner: BasicUser)
