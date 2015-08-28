@@ -3,8 +3,23 @@
 angular.module('kifi')
 
 .directive('kfUserTooltip', [
-  '$timeout', '$compile', '$templateCache', 'libraryService',
-  function ($timeout, $compile, $templateCache, libraryService) {
+  '$window', '$timeout', '$compile', '$templateCache', 'libraryService',
+  function ($window, $timeout, $compile, $templateCache, libraryService) {
+
+    function getAbsoluteBoundingRect(element) {
+      var documentRect = $window.document.documentElement.getBoundingClientRect();
+      var elementRect = (element[0] || element).getBoundingClientRect();
+
+      return {
+        top: elementRect.top - documentRect.top,
+        right: elementRect.right - documentRect.left,
+        bottom: elementRect.bottom - documentRect.top,
+        left: elementRect.left - documentRect.left,
+        width: elementRect.width,
+        height: elementRect.height
+      };
+    }
+
     return {
       restrict: 'A',
       scope: {
@@ -18,8 +33,20 @@ angular.module('kifi')
         var touchedAt;
 
         scope.tipping = false;
+        scope.below = false;
 
         element.on('mouseenter', function (e) {
+          // For some reason, there is no way to compute the tooltip height on the fly.
+          // This works because the tooltip heights never change.
+          var tooltipHeight = scope.library ? 280 : 100;
+
+          // These values are relative to the full page, so scrolling won't change behavior.
+          // Use the standard element.getBoundingClientRect() if you want to render the tooltip
+          // above or below depending on the scroll position.
+          var elementRect = getAbsoluteBoundingRect(element);
+
+          scope.below = (elementRect.top - tooltipHeight <= 0);
+
           if (Date.now() - touchedAt < 1000 || angular.element(e.target).is('.kf-utt,.kf-utt *')) {
             return;
           }
