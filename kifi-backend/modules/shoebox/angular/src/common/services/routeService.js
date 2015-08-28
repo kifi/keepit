@@ -234,7 +234,7 @@ angular.module('kifi')
       // Static Pages            //
       /////////////////////////////
       featuredLibraries: function () {
-        return 'https://www.kifi.com/libraries/featured';
+        return '/libraries/featured';
       }
     };
   }
