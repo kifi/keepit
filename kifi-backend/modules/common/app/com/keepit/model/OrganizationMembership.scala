@@ -122,7 +122,7 @@ object IngestableOrganizationMembership {
 }
 
 case class OrganizationMembersKey(id: Id[Organization]) extends Key[Set[Id[User]]] {
-  override val version = 4
+  override val version = 1
   val namespace = "user_ids_by_organization"
   def toKey(): String = id.id.toString
 }
