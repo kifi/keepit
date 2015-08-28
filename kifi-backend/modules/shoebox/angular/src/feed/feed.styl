@@ -7,14 +7,18 @@
   width: 100px
   margin: auto
 
+.kf-feed-tooltip-target
+  position: relative
+
+  > .kf-utt
+    left: calc(50% - 40px)
+
+  > .kf-ult
+    left: calc(50% - 105px)
+
 .kf-feed-title
   font-size: 1.6rem
   margin-bottom: 20px
-
-.kf-feed-sidebar
-
-  > div
-    margin-bottom: 20px
 
 .kf-feed-top
   position: relative
@@ -39,10 +43,7 @@
   .kf-feed-with-invite &
     padding-bottom: 10px
 
-  span
-    display: inline-block
-
-  a
+.kf-feed-heading > a
     color: accentGreen
 
 .kf-feed-get-more-container
@@ -105,9 +106,8 @@
   justify-content: space-around
   margin-top: 15px
 
-.kf-feed-empty-dummy-lib
-  a
-    display: block
+.kf-feed-empty-dummy-lib > a
+  display: block
 
 .kf-feed-empty-dummy-lib-image
   display: inline-block
