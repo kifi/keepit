@@ -9,3 +9,4 @@ case class ShoeboxNotifyModule() extends NotifyModule {
   }
 
 }
+

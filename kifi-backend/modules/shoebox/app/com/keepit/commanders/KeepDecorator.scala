@@ -35,7 +35,6 @@ class KeepDecoratorImpl @Inject() (
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     ktuRepo: KeepToUserRepo,
-    keepCommander: KeepCommander,
     orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],

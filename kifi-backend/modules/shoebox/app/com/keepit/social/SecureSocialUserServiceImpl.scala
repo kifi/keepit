@@ -26,7 +26,7 @@ import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
-import com.keepit.commanders.{ UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.mail.EmailAddress
@@ -42,6 +42,7 @@ class SecureSocialUserPluginImpl @Inject() (
   emailRepo: UserEmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCommander: UserCommander,
+  userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
   clock: Clock)
@@ -143,7 +144,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def createUser(identity: Identity): User = timing(s"create user ${identity.identityId}") {
-    val u = userCommander.createUser(
+    val u = userCreationCommander.createUser(
       identity.firstName,
       identity.lastName,
       state = UserStates.ACTIVE

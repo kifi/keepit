@@ -120,13 +120,6 @@ class UserConnectionsCommander @Inject() (
     }
   }
 
-  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Set[Id[User]] = {
-    val (user1FriendIds, user2FriendIds) = db.readOnlyReplica { implicit session =>
-      (userConnectionRepo.getConnectedUsers(user1Id), userConnectionRepo.getConnectedUsers(user2Id))
-    }
-    user1FriendIds intersect user2FriendIds
-  }
-
   def unfriend(userId: Id[User], friendExternalId: ExternalId[User]): Boolean = {
     val friendId = db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.get(friendExternalId).id.get }
     val success = db.readWrite(attempts = 2) { implicit s =>

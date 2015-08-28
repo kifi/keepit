@@ -15,7 +15,6 @@ import scala.concurrent.Future
 @Singleton
 class OthersFollowedYourLibraryComponent @Inject() (db: Database,
     libraryRepo: LibraryRepo,
-    recoCommander: RecommendationsCommander,
     val membershipRepo: LibraryMembershipRepo,
     val libraryCommander: LibraryCommander,
     val clock: Clock,

@@ -71,7 +71,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
             UserFactory.user().withName("first3", "last2").withUsername("test2").saved)
         }
 
-        val actual = inject[UserConnectionsCommander].getMutualFriends(user1.id.get, user2.id.get)
+        val actual = inject[UserMutualConnectionsCommander].getMutualFriends(user1.id.get, user2.id.get)
         actual === Set.empty
       }
     }
@@ -92,7 +92,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
           (thisUserId, thatUserId, users.drop(5).take(3).map(_.id.get))
         }
 
-        val actual = inject[UserConnectionsCommander].getMutualFriends(user1, user2)
+        val actual = inject[UserMutualConnectionsCommander].getMutualFriends(user1, user2)
         actual === commonUserIds.toSet
       }
     }

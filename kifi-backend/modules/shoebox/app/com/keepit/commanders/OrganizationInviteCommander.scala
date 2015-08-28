@@ -32,7 +32,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
@@ -100,13 +99,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           }
         }
     }
-  }
-
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    val hasOrgInvite = organizationInviteRepo.getByEmailAddress(emailAddress).map { invitation =>
-      organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
-      invitation.state
-    } contains OrganizationInviteStates.ACTIVE
   }
 
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {

@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ UserConnectionsCommander, UserCommander }
+import com.keepit.commanders.{ UserMutualConnectionsCommander, UserConnectionsCommander, UserCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -31,7 +31,7 @@ case class FriendReco(userId: Id[User], avatarUrl: String, mutualFriendsCount: I
 class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
     userCommander: UserCommander,
-    userConnectionsCommander: UserConnectionsCommander,
+    userMutualConnectionsCommander: UserMutualConnectionsCommander,
     implicit val executionContext: ExecutionContext,
     private val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -53,7 +53,7 @@ class FriendRecommendationsEmailTip @Inject() (
             /* kifi ghost images should be at the bottom of the list */
             (if (imageUrls(friendUserId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
           } take MAX_RECOS_TO_SHOW map { friendUserId =>
-            val mutualFriends = userConnectionsCommander.getMutualFriends(userId, friendUserId)
+            val mutualFriends = userMutualConnectionsCommander.getMutualFriends(userId, friendUserId)
             FriendReco(friendUserId, toHttpsUrl(imageUrls(friendUserId)), mutualFriends.size)
           }
         }
