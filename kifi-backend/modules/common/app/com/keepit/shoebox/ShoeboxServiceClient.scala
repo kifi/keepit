@@ -316,11 +316,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
     cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
-      val payload = Json.toJson(missingKeys.map(_.id))
-      call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
-        implicit val tupleReads = TupleFormat.tuple2Reads[Id[Keep], BasicKeep]
-        val missing = res.json.as[Seq[(Id[Keep], BasicKeep)]].toMap
-        missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
+      if (missingKeys.isEmpty) Future.successful(Map.empty)
+      else {
+        val payload = Json.toJson(missingKeys.map(_.id))
+        call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
+          implicit val tupleReads = TupleFormat.tuple2Reads[Id[Keep], BasicKeep]
+          val missing = res.json.as[Seq[(Id[Keep], BasicKeep)]].toMap
+          missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
+        }
       }
     }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
   }
