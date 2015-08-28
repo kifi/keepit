@@ -169,7 +169,7 @@ class OrganizationCommanderImpl @Inject() (
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(requesterId))
         if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        else if (!areAllValidModifications(modifications)) Some(OrganizationFail.BAD_PARAMETERS)
+        else if (!areAllValidModifications(modifications)) Some(OrganizationFail.INVALID_MODIFICATIONS)
         else None
 
       case OrganizationDeleteRequest(requesterId, orgId) =>
@@ -185,8 +185,10 @@ class OrganizationCommanderImpl @Inject() (
   private def areAllValidModifications(modifications: OrganizationModifications): Boolean = {
     val badName = modifications.name.exists(_.isEmpty)
     val badBasePermissions = modifications.basePermissions.exists { bps =>
-      // Are there any members that can't even see the organization?
-      OrganizationRole.all exists { role => !(bps.permissionsMap.contains(Some(role)) && bps.forRole(role).contains(VIEW_ORGANIZATION)) }
+      def allRolesAreDescribed = bps.permissionsMap.keySet == OrganizationRole.allOpts
+      def allRolesCanSeeOrg = OrganizationRole.all forall { role => bps.forRole(role).contains(VIEW_ORGANIZATION) }
+      def adminsCanDoEverything = bps.forRole(OrganizationRole.ADMIN) == OrganizationPermission.all
+      !allRolesAreDescribed || !allRolesCanSeeOrg || !adminsCanDoEverything
     }
     val normalizedSiteUrl = modifications.site.map { url =>
       if (url.startsWith("http://") || url.startsWith("https://")) url

@@ -155,7 +155,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           try1 === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // An owner can change the base permissions so that members CAN do this
-          val betterBasePermissions = org.basePermissions.modified(OrganizationRole.MEMBER, added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
+          val betterBasePermissions = org.basePermissions.modified(Some(OrganizationRole.MEMBER), added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
           val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
             modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
 

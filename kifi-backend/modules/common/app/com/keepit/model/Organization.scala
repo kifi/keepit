@@ -186,8 +186,8 @@ case class BasePermissions(permissionsMap: Map[Option[OrganizationRole], Set[Org
   def forNonmember: Set[OrganizationPermission] = permissionsMap(None)
 
   // Return a BasePermissions where "role" has added and removed permissions
-  def modified(role: OrganizationRole, added: Set[OrganizationPermission], removed: Set[OrganizationPermission]): BasePermissions =
-    BasePermissions(permissionsMap.updated(Some(role), forRole(role) ++ added -- removed))
+  def modified(roleOpt: Option[OrganizationRole], added: Set[OrganizationPermission], removed: Set[OrganizationPermission]): BasePermissions =
+    BasePermissions(permissionsMap.updated(roleOpt, permissionsMap(roleOpt) ++ added -- removed))
 }
 
 object BasePermissions {

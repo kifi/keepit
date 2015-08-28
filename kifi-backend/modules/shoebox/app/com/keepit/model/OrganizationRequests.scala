@@ -74,6 +74,7 @@ object OrganizationFail {
   case object NO_VALID_INVITATIONS extends OrganizationFail(BAD_REQUEST, "no_valid_invitations")
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
+  case object INVALID_MODIFICATIONS extends OrganizationFail(BAD_REQUEST, "invalid_modifications")
   case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
@@ -86,6 +87,7 @@ object OrganizationFail {
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
       case BAD_PARAMETERS.message => BAD_PARAMETERS
+      case INVALID_MODIFICATIONS.message => INVALID_MODIFICATIONS
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
       case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN
