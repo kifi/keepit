@@ -68,8 +68,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
-    notificationEventSender: NotificationEventSender
-    userCommander: Provider[UserCommander]
+    notificationEventSender: NotificationEventSender,
+    userCommander: Provider[UserCommander],
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
