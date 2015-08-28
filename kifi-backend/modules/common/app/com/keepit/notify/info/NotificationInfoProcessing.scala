@@ -19,9 +19,6 @@ class NotificationInfoProcessing @Inject() (
 
   def getView(requests: Seq[ExDbViewRequest]): Future[DbView] = {
     val grouped = requests.groupBy(_.key)
-    // We know that after the groupBy, the type of requests is the same because they have the same key.
-    // This cast also makes the compiler know
-    grouped.toList.asInstanceOf[List[(DbViewKey[M, R], Seq[DbViewRequest[M, R]]) forSome { type M <: HasId[M]; type R}]]
     grouped.foldLeft(Future.successful(DbView()))(genericFoldGrouped)
   }
 
