@@ -90,7 +90,6 @@ class OrganizationController @Inject() (
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    // TODO(cam): this handler is used by mobile and needs to be versioned in case required fields are added or removed
     Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 

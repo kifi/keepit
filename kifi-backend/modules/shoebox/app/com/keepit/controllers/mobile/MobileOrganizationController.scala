@@ -68,6 +68,10 @@ class MobileOrganizationController @Inject() (
     Ok(Json.toJson(organizationView))
   }
 
+  def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+  }
+
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
