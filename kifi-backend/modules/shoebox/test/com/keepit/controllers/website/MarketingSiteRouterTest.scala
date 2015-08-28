@@ -22,7 +22,7 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
         FakeRequest().withHeaders("X-Forwarded-For" -> "8.8.8.8")
         val request = FakeRequest().withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
-        landing === "index.9"
+        landing === "index.10"
       }
     }
     "landing page routing v1" in {
@@ -79,6 +79,14 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
         val request = FakeRequest("GET", "?v=9").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
         landing === "index.9"
+      }
+    }
+
+    "landing page routing v10" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val request = FakeRequest("GET", "?v=10").withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
+        val landing = MarketingSiteRouter.landing(request)
+        landing === "index.10"
       }
     }
 
