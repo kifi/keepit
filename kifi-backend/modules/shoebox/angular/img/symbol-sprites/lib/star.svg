@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512px" height="512px" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs></defs>
+  <g id="star" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+      <path d="M258.32996,348.050781 L165.727868,396.734582 L183.413293,293.620637 L108.496627,220.594935 L212.028914,205.550812 L258.32996,111.734646 L304.631006,205.550812 L408.163294,220.594935 L333.246626,293.620637 L350.932053,396.734582 L258.32996,348.050781 Z" id="Star-1" stroke="#71C885" stroke-width="11" stroke-linejoin="round"></path>
+  </g>
+</svg>
