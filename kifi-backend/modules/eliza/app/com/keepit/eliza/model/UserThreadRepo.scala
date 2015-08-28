@@ -504,7 +504,7 @@ class UserThreadRepoImpl @Inject() (
     if (users.isEmpty) Seq.empty[GroupThreadStats]
     else {
       val users_list = users.map(_.id).mkString("(", ",", ")")
-      val query = sql"""
+      sql"""
         select thread_id, created_at, count(*) as c from user_thread
           where user_id in #$users_list
           and replyable = 1
@@ -512,9 +512,7 @@ class UserThreadRepoImpl @Inject() (
           group by thread_id
           order by week(created_at)
           desc
-      """
-
-      query.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
+      """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
     }
   }
 
