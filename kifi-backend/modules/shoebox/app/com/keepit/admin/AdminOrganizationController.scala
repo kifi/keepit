@@ -9,10 +9,10 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import play.api.{ Mode, Play }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsString, Json }
 import play.twirl.api.{ HtmlFormat, Html }
 import play.api.mvc.{ Action, AnyContent, Result }
 import views.html
@@ -403,6 +403,33 @@ class AdminOrganizationController @Inject() (
       orgExperimentRepo.getByOrganizationIdAndExperimentType(orgId, OrganizationExperimentType(experiment)) foreach { orgExperimentRepo.deactivate }
     }
     Right(expType)
+  }
+
+  def addRolePermission(orgId: Id[Organization], roleStr: String, permissionStr: String) = AdminUserAction { request =>
+    implicit val context = HeimdalContext.empty
+    val roleOpt = if (roleStr == "none") None else Some(OrganizationRole(roleStr))
+    val permission = OrganizationPermission(permissionStr)
+    db.readWrite { implicit session =>
+      val org = orgRepo.get(orgId)
+      val newBps = org.basePermissions.modified(roleOpt, added = Set(permission), removed = Set.empty)
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+    } match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(response) => Ok(JsString(s"added $permission to $roleOpt"))
+    }
+  }
+  def removeRolePermission(orgId: Id[Organization], roleStr: String, permissionStr: String) = AdminUserAction { request =>
+    implicit val context = HeimdalContext.empty
+    val roleOpt = if (roleStr == "none") None else Some(OrganizationRole(roleStr))
+    val permission = OrganizationPermission(permissionStr)
+    db.readWrite { implicit session =>
+      val org = orgRepo.get(orgId)
+      val newBps = org.basePermissions.modified(roleOpt, added = Set.empty, removed = Set(permission))
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+    } match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(response) => Ok(JsString(s"removed $permission from $roleOpt"))
+    }
   }
 
   def addDomainOwnership(orgId: Id[Organization]) = AdminUserAction(parse.tolerantFormUrlEncoded) { implicit request =>

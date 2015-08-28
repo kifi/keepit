@@ -53,6 +53,37 @@ orgStats: OrganizationStatistics
     </td>
     </tr>
     <tr>
+        <th>Non-member permissions</th>
+        <td id="permissions-nonmember" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getNonmemberPermissions.contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>Member permissions</th>
+        <td id="permissions-member" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getRolePermissions(OrganizationRole.MEMBER).contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>Admin permissions</th>
+        <td id="permissions-admin" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getRolePermissions(OrganizationRole.ADMIN).contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+
+    <tr>
         <th>Active</th>
         <td>
             @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
@@ -258,6 +289,64 @@ orgStats: OrganizationStatistics
             $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
         }
     });
+
+    // Permissions garbage. I am so sorry for this code. -- Ryan
+    $("#permissions-nonmember").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-nonmember");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "none", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "none", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    $("#permissions-member").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-member");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "member", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "member", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    $("#permissions-admin").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-admin");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "admin", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "admin", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    // Again, I am so sorry.  :'(
+
     function addCandidate(orgId, candidateId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "user-id":  candidateId }).done(done);
     };
