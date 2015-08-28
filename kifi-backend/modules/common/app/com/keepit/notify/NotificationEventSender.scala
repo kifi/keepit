@@ -27,7 +27,7 @@ class NotificationEventSender @Inject() (
     }
   }
 
-  def send[N <: NotificationEvent](event: N): Unit = send(ExistingDbView()(event))
+  def send[N <: NotificationEvent](event: N): Unit = send(ExistingDbView(Existing())(event))
 
 
 }

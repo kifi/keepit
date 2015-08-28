@@ -104,7 +104,16 @@ case class DbViewRequest[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]) {
  * Represents a wrapper of a function that requests a whole bunch of items from a potential db view, then
  * constructs a value.
  */
-case class UsingDbView[A](requests: DbViewRequest[M, T] forSome { type M <: HasId[M]; type T }*)(val fn: DbView => A)
+case class UsingDbView[A](requests: Seq[ExDbViewRequest])(val fn: DbView => A)
+
+/**
+ * The compiler cannot infer that a Seq of specific db view requests should be existential using the Seq(...) method,
+ * so this hints it explicitly.
+ */
+object Requests {
+  def apply(requests: ExDbViewRequest*): Seq[ExDbViewRequest]
+    = requests
+}
 
 /**
  * Represents that a certain model already exists and can be used for DB view requests.
@@ -120,11 +129,19 @@ case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, M], model: M)
  * information needed to generate its resulting display information, [[NotificationInfo]]. By wrapping the parameters to
  * the event in this class, all potential additional requests for information can be reduced.
  */
-case class ExistingDbView[A](existing: ExDbViewModel*)(val result: A) {
+case class ExistingDbView[A](existing: Seq[ExDbViewModel])(val result: A) {
 
   def buildDbView: DbView =
     existing.foldLeft(DbView()) { (view, existingModel) =>
       view.update(existingModel)
     }
 
+}
+
+/**
+ * The compiler cannot infer that a Seq of specific existing db view models should be existential, using the Seq(..) method,
+ * so this hints it explicitly.
+ */
+object Existing {
+  def apply(existing: ExDbViewModel*): Seq[ExDbViewModel] = existing
 }

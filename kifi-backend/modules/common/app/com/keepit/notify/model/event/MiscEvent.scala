@@ -1,6 +1,6 @@
 package com.keepit.notify.model.event
 
-import com.keepit.notify.info.{ NotificationInfo, UsingDbView }
+import com.keepit.notify.info.{ Requests, NotificationInfo, UsingDbView }
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -36,7 +36,7 @@ trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] 
   override def info(events: Set[DepressedRobotGrumble]): UsingDbView[NotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
 
-    UsingDbView() { subset =>
+    UsingDbView(Requests()) { subset =>
       NotificationInfo(
         url = "http://goo.gl/PqN7Cs",
         imageUrl = "http://i.imgur.com/qs8QofA.png",

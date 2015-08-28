@@ -24,33 +24,33 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
 
   def build(recipient: Recipient, time: DateTime, inviter: User): ExistingDbView[NewConnectionInvite] = {
     import DbViewKey._
-    ExistingDbView(
+    ExistingDbView(Existing(
       user.existing(inviter)
-    )(NewConnectionInvite(
-        recipient = recipient,
-        time = time,
-        inviterId = inviter.id.get
-      ))
+    ))(NewConnectionInvite(
+      recipient = recipient,
+      time = time,
+      inviterId = inviter.id.get
+    ))
   }
 
   override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(
+    UsingDbView(Requests(
       user(event.inviterId), userImageUrl(event.inviterId)
-    ) { subset =>
-        val inviter = user(event.inviterId).lookup(subset)
-        val inviterImage = userImageUrl(event.inviterId).lookup(subset)
-        NotificationInfo(
-          url = Path(inviter.username.value).encode.absolute,
-          title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
-          body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
-          linkText = s"Respond to ${inviter.firstName}’s invitation",
-          imageUrl = inviterImage,
-          extraJson = Some(Json.obj(
-            "friend" -> BasicUser.fromUser(inviter)
-          ))
-        )
-      }
+    )) { subset =>
+      val inviter = user(event.inviterId).lookup(subset)
+      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      NotificationInfo(
+        url = Path(inviter.username.value).encode.absolute,
+        title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
+        body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
+        linkText = s"Respond to ${inviter.firstName}’s invitation",
+        imageUrl = inviterImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(inviter)
+        ))
+      )
+    }
   }
 
 }
@@ -67,33 +67,33 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
 
   def build(recipient: Recipient, time: DateTime, accepter: User): ExistingDbView[ConnectionInviteAccepted] = {
     import DbViewKey._
-    ExistingDbView(
+    ExistingDbView(Existing(
       user.existing(accepter)
-    )(ConnectionInviteAccepted(
-        recipient = recipient,
-        time = time,
-        accepterId = accepter.id.get
-      ))
+    ))(ConnectionInviteAccepted(
+      recipient = recipient,
+      time = time,
+      accepterId = accepter.id.get
+    ))
   }
 
   override def info(event: ConnectionInviteAccepted): UsingDbView[NotificationInfo] = {
     import DbViewKey._
-    UsingDbView(
+    UsingDbView(Requests(
       user(event.accepterId), userImageUrl(event.accepterId)
-    ) { subset =>
-        val accepter = user(event.accepterId).lookup(subset)
-        val accepterImage = userImageUrl(event.accepterId).lookup(subset)
-        NotificationInfo(
-          url = Path(accepter.username.value).encode.absolute,
-          title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
-          body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
-          linkText = s"Visit ${accepter.firstName}’s profile",
-          imageUrl = accepterImage,
-          extraJson = Some(Json.obj(
-            "friend" -> BasicUser.fromUser(accepter)
-          ))
-        )
-      }
+    )) { subset =>
+      val accepter = user(event.accepterId).lookup(subset)
+      val accepterImage = userImageUrl(event.accepterId).lookup(subset)
+      NotificationInfo(
+        url = Path(accepter.username.value).encode.absolute,
+        title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
+        body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
+        linkText = s"Visit ${accepter.firstName}’s profile",
+        imageUrl = accepterImage,
+        extraJson = Some(Json.obj(
+          "friend" -> BasicUser.fromUser(accepter)
+        ))
+      )
+    }
   }
 
 }
