@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.{ KeepSource, UserExperimentType, KifiInstallation, User }
+import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
 import play.api.Play
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
