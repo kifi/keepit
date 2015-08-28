@@ -22,8 +22,6 @@ class BatchedNotificationInfos(
 
 }
 
-
-
 sealed trait NotificationInfoRequest[M <: HasId[M], R] {
 
   val id: Id[M]

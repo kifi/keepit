@@ -18,7 +18,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.notify.info.{OrganizationNotificationInfo, LibraryNotificationInfo, UserNotificationInfo, NotificationInfo}
+import com.keepit.notify.info._
 import com.keepit.notify.model.NotificationId
 import com.keepit.rover.model.BasicImages
 import com.keepit.search._
@@ -675,7 +675,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]] = Future.successful(Map.empty)
 
-  def getKeepInfos(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]] = Future.successful(Map.empty)
+  def getKeepInfos(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], KeepNotificationInfo]] = Future.successful(Map.empty)
 
   def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]] = Future.successful(Map.empty)
 }

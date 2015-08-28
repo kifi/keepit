@@ -62,8 +62,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeCryptoModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
-    FakeActorSystemModule(),
-    FakeShoeboxNotifyModule()
+    FakeActorSystemModule()
   ))
 
 trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
@@ -101,8 +100,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeHttpClientModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
-    FakeSocialGraphModule(),
-    FakeShoeboxNotifyModule()
+    FakeSocialGraphModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]

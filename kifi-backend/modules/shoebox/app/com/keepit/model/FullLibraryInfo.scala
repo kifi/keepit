@@ -6,7 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
-import com.keepit.notify.info.{LibraryNotificationInfo, LibraryImageInfo}
+import com.keepit.notify.info.{ LibraryNotificationInfo, LibraryImageInfo }
 import com.keepit.social.{ BasicUser, BasicUserFields }
 import com.kifi.macros.json
 import org.joda.time.DateTime
