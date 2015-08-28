@@ -286,11 +286,20 @@ class PlanManagementCommanderImpl @Inject() (
   def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = db.readWrite { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.copy(credit = account.credit + amount))
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
+    accountEventRepo.save(AccountEvent(
+      stage = AccountEvent.ProcessingStage.COMPLETE,
+      eventGroup = EventGroup(),
+      eventTime = clock.now(),
       accountId = account.id.get,
-      attribution = ActionAttribution(user = None, admin = grantedByAdmin),
-      action = AccountEventAction.SpecialCredit()
+      billingRelated = false,
+      whoDunnit = None,
+      whoDunnitExtra = JsNull,
+      kifiAdminInvolved = grantedByAdmin,
+      action = AccountEventAction.SpecialCredit(),
+      creditChange = amount,
+      paymentMethod = None,
+      paymentCharge = None,
+      memo = memo
     ))
   }
 

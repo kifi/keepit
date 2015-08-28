@@ -42,6 +42,13 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
+    <tr><td>Credit</td><td>@orgStats.credit</td></tr>
+    <tr><td>Extra credit</td><td>
+        Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
+        Passphrase: <input id="extra-credit-pass" type="text"></input>
+        Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
+        <button id="extra-credit-submit" class="btn btn-default btn-xs">Do it!</button>
+    </td></tr>
     <tr>
     <th>Experiments</th>
     <td id="experiments" class="form-inline">
@@ -221,7 +228,7 @@ orgStats: OrganizationStatistics
 </table>
 
 <h3>Chat Engagement</h3>
- 
+
 
 <canvas id="org-engagement-chart" style="width: 100%; height: 400px;"></canvas>
 
@@ -382,6 +389,22 @@ orgStats: OrganizationStatistics
     function done() {
       location.reload();
     };
+
+    $("#extra-credit-submit").click(function () {
+        var amount = $("#extra-credit-amount").val();
+        var passphrase = $("#extra-credit-pass").val();
+        var memo = $("#extra-credit-memo").val();
+        var payload = { "amount": amount, "passphrase": passphrase, "memo": memo };
+        var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.grantExtraCredit(orgStats.orgId)", payload);
+        deffered.done( function (data) {
+            alert(data);
+            location.reload();
+        });
+        deffered.fail (function () {
+            console.log("FAIL:", arguments);
+            alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+        })
+    });
 
 
 </script>

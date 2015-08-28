@@ -13,6 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
+import com.keepit.payments.{ DollarAmount, PlanManagementCommander }
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -94,7 +95,8 @@ case class OrganizationStatistics(
   experiments: Set[OrganizationExperimentType],
   domains: Set[Domain],
   internalMemberChatStats: Seq[SummaryByYearWeek],
-  allMemberChatStats: Seq[SummaryByYearWeek])
+  allMemberChatStats: Seq[SummaryByYearWeek],
+  credit: DollarAmount)
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -125,7 +127,8 @@ class UserStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     domainRepo: DomainRepo,
     abook: ABookServiceClient,
-    airbrake: AirbrakeNotifier) {
+    airbrake: AirbrakeNotifier,
+    planManagementCommander: PlanManagementCommander) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -261,6 +264,8 @@ class UserStatisticsCommander @Inject() (
       }
     }
 
+    val credit = planManagementCommander.getCurrentCredit(orgId)
+
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
@@ -283,7 +288,8 @@ class UserStatisticsCommander @Inject() (
       experiments = experiments,
       domains = domains,
       internalMemberChatStats = internalMemberChatStats,
-      allMemberChatStats = allMemberChatStats
+      allMemberChatStats = allMemberChatStats,
+      credit = credit
     )
   }
 
