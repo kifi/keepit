@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.eliza.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -33,6 +34,7 @@ class ElizaStatsCommander @Inject() (
     }
   }
 
+  @StatsdTiming("ElizaStatsCommander.getTotalMessageCountForGroup")
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Int = {
     db.readOnlyReplica { implicit session =>
       val groupThreadStats = userThreadRepo.getSharedThreadsForGroupByWeek(users.toSeq)
