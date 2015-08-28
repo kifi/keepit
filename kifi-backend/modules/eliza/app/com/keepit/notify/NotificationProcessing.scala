@@ -59,7 +59,7 @@ class NotificationProcessing @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent, info: Option[NotificationInfo]): Notification = {
+  def processNewEvent(event: NotificationEvent): Notification = {
     val groupIdentifier = getGroupIdentifier(event)
     val notif = groupIdentifier match {
       case Some(identifier) =>

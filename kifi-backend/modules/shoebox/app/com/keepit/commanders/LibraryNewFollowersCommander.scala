@@ -10,7 +10,6 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.model._
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.LibraryNewKeep
 import com.keepit.social.BasicUser
@@ -24,7 +23,6 @@ class LibraryNewFollowersCommander @Inject() (
     userRepo: UserRepo,
     libraryImageCommander: LibraryImageCommander,
     elizaClient: ElizaServiceClient,
-    notificationEventSender: NotificationEventSender,
     airbrake: AirbrakeNotifier,
     s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
@@ -88,7 +86,7 @@ class LibraryNewFollowersCommander @Inject() (
             }
           }
         toBeNotified foreach { userId =>
-          notificationEventSender.send(LibraryNewKeep(
+          elizaClient.sendNotificationEvent(LibraryNewKeep(
             Recipient(userId),
             currentDateTime,
             keeper.id.get,

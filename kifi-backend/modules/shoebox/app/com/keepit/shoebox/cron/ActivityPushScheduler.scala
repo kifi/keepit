@@ -5,7 +5,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewKeepActivity
 import com.keepit.social.BasicUser
@@ -88,7 +87,6 @@ class ActivityPusher @Inject() (
     libraryImageCommander: LibraryImageCommander,
     libPathCommander: PathCommander,
     s3ImageStore: S3ImageStore,
-    notificationEventSender: NotificationEventSender,
     actor: ActorInstance[ActivityPushActor],
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
@@ -184,7 +182,7 @@ class ActivityPusher @Inject() (
         val owner = db.readOnlyReplica { implicit session =>
           userRepo.get(libMessage.owner.externalId)
         }
-        notificationEventSender.send(NewKeepActivity(
+        elizaServiceClient.sendNotificationEvent(NewKeepActivity(
           Recipient(activity.userId),
           currentDateTime,
           owner.id.get,

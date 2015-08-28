@@ -22,7 +22,6 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
@@ -68,7 +67,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
-    notificationEventSender: NotificationEventSender,
     userCommander: Provider[UserCommander],
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
@@ -238,7 +236,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       category = NotificationCategory.User.ORGANIZATION_INVITATION
     )
     invitees.foreach { invitee =>
-      notificationEventSender.send(OrgNewInvite(
+      elizaClient.sendNotificationEvent(OrgNewInvite(
         Recipient(invitee),
         currentDateTime,
         inviter.id.get,
@@ -337,7 +335,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
         ))
       )
-      notificationEventSender.send(OrgInviteAccepted(
+      elizaClient.sendNotificationEvent(OrgInviteAccepted(
         Recipient(inviterId),
         currentDateTime,
         invitee.id.get,

@@ -11,17 +11,6 @@ class ElizaDbViewRequestHandlerImpl @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     implicit val ec: ExecutionContext) extends DbViewRequestHandler {
 
-  val handlers = DbViewRequestHandlers()
-    .add(DbViewKey.user) { requests =>
-      shoeboxServiceClient.getUsers(requests.map(_.id)).map { users =>
-        users.map(user => (user.id.get, user)).toMap
-      }
-    }.add(DbViewKey.library) { requests =>
-      shoeboxServiceClient.getLibraries(requests.map(_.id))
-    }.add(DbViewKey.keep) { requests =>
-      shoeboxServiceClient.getKeeps(requests.map(_.id))
-    }.add(DbViewKey.organization) { requests =>
-      shoeboxServiceClient.getOrganizations(requests.map(_.id))
-    }
-
+  override def apply[M <: HasId[M], R](key: DbViewKey[M, R], requests: Seq[DbViewRequest[M, R]]): Future[Map[Id[M], R]] = ???
+  
 }

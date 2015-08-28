@@ -22,7 +22,6 @@ import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, P
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ LibraryNewKeep, OwnedLibraryNewCollaborator, OwnedLibraryNewFollower }
 import com.keepit.search.SearchServiceClient
@@ -146,7 +145,6 @@ class LibraryCommanderImpl @Inject() (
     systemValueRepo: SystemValueRepo,
     twitterSyncRepo: TwitterSyncStateRepo,
     kifiInstallationCommander: KifiInstallationCommander,
-    notificationEventSender: NotificationEventSender,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends LibraryCommander with Logging {
@@ -1118,14 +1116,14 @@ class LibraryCommanderImpl @Inject() (
         }
       }
     if (access == LibraryAccess.READ_WRITE) {
-      notificationEventSender.send(OwnedLibraryNewCollaborator(
+      elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
         Recipient(lib.ownerId),
         currentDateTime,
         newFollowerId,
         lib.id.get
       ))
     } else {
-      notificationEventSender.send(OwnedLibraryNewFollower(
+      elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
         Recipient(lib.ownerId),
         currentDateTime,
         newFollowerId,

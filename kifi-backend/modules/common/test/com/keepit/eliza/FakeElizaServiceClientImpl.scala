@@ -8,7 +8,6 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.notify.NotificationEventSender.EventWithInfo
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -97,5 +96,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   override def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = Future.successful(0)
 
-  override def sendNotificationEvent(event: EventWithInfo): Future[Unit] = Future.successful(())
+  override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = Future.successful(())
 }

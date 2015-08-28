@@ -14,7 +14,6 @@ import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperime
 import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ ConnectionInviteAccepted, NewConnectionInvite }
 import com.keepit.search.SearchServiceClient
@@ -44,7 +43,6 @@ class UserConnectionsCommander @Inject() (
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
     kifiInstallationCommander: KifiInstallationCommander,
-    notificationEventSender: NotificationEventSender,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
@@ -191,7 +189,7 @@ class UserConnectionsCommander @Inject() (
             category = UserPushNotificationCategory.UserConnectionAccepted)
         }
       }
-    notificationEventSender.send(ConnectionInviteAccepted(
+    elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
       Recipient(friend),
       currentDateTime,
       myUserId

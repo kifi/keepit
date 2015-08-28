@@ -17,7 +17,6 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
-import com.keepit.notify.NotificationEventSender
 import com.keepit.notify.model._
 import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
@@ -61,7 +60,6 @@ class LibraryInviteCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
-    notificationEventSender: NotificationEventSender,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
 
@@ -107,14 +105,14 @@ class LibraryInviteCommanderImpl @Inject() (
           }
         }
       if (invite.access == LibraryAccess.READ_WRITE) {
-        notificationEventSender.send(LibraryCollabInviteAccepted(
+        elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
           Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
         ))
       } else {
-        notificationEventSender.send(LibraryFollowInviteAccepted(
+        elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
           Recipient(inviterId),
           currentDateTime,
           invitee.id.get,
@@ -334,7 +332,7 @@ class LibraryInviteCommanderImpl @Inject() (
     )
 
     collabInviteeSet.foreach { invitee =>
-      notificationEventSender.send(LibraryNewCollabInvite(
+      elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
         Recipient(invitee),
         currentDateTime,
         inviter.id.get,
@@ -359,7 +357,7 @@ class LibraryInviteCommanderImpl @Inject() (
     )
 
     followInviteeSet.foreach { invitee =>
-      notificationEventSender.send(LibraryNewFollowInvite(
+      elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
         Recipient(invitee),
         currentDateTime,
         inviter.id.get,
@@ -427,7 +425,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     if (collabInviteeSet.nonEmpty) {
       collabInviteeSet.foreach { userId =>
-        notificationEventSender.send(OwnedLibraryNewCollabInvite(
+        elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
           Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
@@ -458,7 +456,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     if (followInviteeSet.nonEmpty) {
       followInviteeSet.foreach { userId =>
-        notificationEventSender.send(OwnedLibraryNewFollowInvite(
+        elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
           Recipient(lib.ownerId),
           currentDateTime,
           inviter.id.get,
