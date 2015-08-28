@@ -56,7 +56,7 @@ trait DbViewKeyList {
 
   val user = DbViewKey[User, UserNotificationInfo]
   val library = DbViewKey[Library, LibraryNotificationInfo]
-  val keep = DbViewKey[Keep, Keep]
+  val keep = DbViewKey[Keep, KeepNotificationInfo]
   val organization = DbViewKey[Organization, OrganizationNotificationInfo]
 
 }

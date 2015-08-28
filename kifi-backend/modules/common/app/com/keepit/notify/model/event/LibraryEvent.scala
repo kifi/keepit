@@ -104,7 +104,7 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
         url = invitedLibInfo.path.encode.absolute,
         imageUrl = inviterInfo.imageUrl,
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
-        body = s"Help ${invitedLibInfo.owner.firstName} by sharing your knowledge in the library ${invitedLibInfo.name}.", // todo doesn't _really_ make any sense
+        body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLibInfo.name}.",
         linkText = "Visit library",
         extraJson = Some(Json.obj(
           "inviter" -> inviter,

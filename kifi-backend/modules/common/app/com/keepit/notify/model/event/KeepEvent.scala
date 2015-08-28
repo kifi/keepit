@@ -24,10 +24,11 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
   override def info(event: LibraryNewKeep): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.keeperId), library(event.libraryId), keep(event.keepId)
+      library(event.libraryId), keep(event.keepId)
     )) { subset =>
-      val newKeep = keep(event.keepId).lookup(subset)
-      val keeperInfo = user(event.keeperId).lookup(subset)
+      val newKeepInfo = keep(event.keepId).lookup(subset)
+      val newKeep = newKeepInfo.keep
+      val keeperInfo = newKeepInfo.keeper
       val keeper = keeperInfo.user
       val libraryKeptInfo = library(event.libraryId).lookup(subset)
       NotificationInfo(
@@ -64,12 +65,13 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
   override def info(event: NewKeepActivity): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      library(event.libraryId), user(event.keeperId), keep(event.keepId)
+      library(event.libraryId), keep(event.keepId)
     )) { subset =>
       val libraryKeptInfo = library(event.libraryId).lookup(subset)
-      val keeperInfo = user(event.keeperId).lookup(subset)
+      val newKeepInfo = keep(event.keepId).lookup(subset)
+      val newKeep = newKeepInfo.keep
+      val keeperInfo = newKeepInfo.keeper
       val keeper = keeperInfo.user
-      val newKeep = keep(event.keepId).lookup(subset)
       NotificationInfo(
         url = libraryKeptInfo.path.encode.absolute,
         imageUrl = keeperInfo.imageUrl,

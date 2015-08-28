@@ -166,7 +166,7 @@ object Shoebox extends Service {
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
     def getUserInfos() = ServiceRoute(POST, "/internal/shoebox/database/getUserInfos")
-    def getKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getKeeps")
+    def getKeepInfos() = ServiceRoute(POST, "/internal/shoebox/database/getKeepInfos")
     def getLibraryInfos() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryInfos")
     def getOrganizationInfos() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationInfos")
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))

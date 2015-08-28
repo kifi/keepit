@@ -232,7 +232,7 @@ class UserConnectionsCommander @Inject() (
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
         }
       }
-    notificationEventSender.send(NewConnectionInvite(
+    elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
       myUser.id.get

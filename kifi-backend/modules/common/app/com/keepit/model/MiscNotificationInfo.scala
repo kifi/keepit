@@ -16,6 +16,11 @@ case class UserNotificationInfo(
   imageUrl: String)
 
 @json
+case class KeepNotificationInfo(
+  keeper: UserNotificationInfo,
+  keep: Keep)
+
+@json
 case class LibraryNotificationInfo(
   id: PublicId[Library],
   name: String,
@@ -23,7 +28,7 @@ case class LibraryNotificationInfo(
   color: Option[LibraryColor],
   image: Option[LibraryImageInfo],
   path: Path,
-  owner: BasicUser)
+  owner: UserNotificationInfo)
 
 @json
 case class OrganizationNotificationInfo(
@@ -33,4 +38,4 @@ case class OrganizationNotificationInfo(
   handle: Option[PrimaryOrganizationHandle],
   image: Option[ImagePath],
   path: Path,
-  owner: BasicUser)
+  owner: UserNotificationInfo)

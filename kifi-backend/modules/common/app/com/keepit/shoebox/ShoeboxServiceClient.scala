@@ -133,8 +133,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
-  def getUserInfos(userIds: Seq[Id[User]]): Future[Map[Id[Library], UserNotificationInfo]]
-  def getKeeps(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]]
+  def getUserInfos(userIds: Seq[Id[User]]): Future[Map[Id[User], UserNotificationInfo]]
+  def getKeepInfos(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], KeepNotificationInfo]]
   def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]]
   def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
@@ -814,14 +814,14 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getOrganizationsForUsers(), payload).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
   }
 
-  def getUserInfos(userIds: Seq[Id[User]]): Future[Map[Id[Library], UserNotificationInfo]] = {
+  def getUserInfos(userIds: Seq[Id[User]]): Future[Map[Id[User], UserNotificationInfo]] = {
     val payload = Json.toJson(userIds)
-    call(Shoebox.internal.getUserInfos(), payload).map { _.json.as[Map[Id[User], User]] }
+    call(Shoebox.internal.getUserInfos(), payload).map { _.json.as[Map[Id[User], UserNotificationInfo]] }
   }
 
-  def getKeeps(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], Keep]] = {
+  def getKeepInfos(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], KeepNotificationInfo]] = {
     val payload = Json.toJson(keepIds)
-    call(Shoebox.internal.getKeeps(), payload).map { _.json.as[Map[Id[Keep], Keep]] }
+    call(Shoebox.internal.getKeepInfos(), payload).map { _.json.as[Map[Id[Keep], KeepNotificationInfo]] }
   }
 
   def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]] = {

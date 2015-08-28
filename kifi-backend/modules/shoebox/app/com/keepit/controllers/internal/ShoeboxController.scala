@@ -533,7 +533,7 @@ class ShoeboxController @Inject() (
     ???
   }
 
-  def getKeeps() = Action(parse.tolerantJson) { request =>
+  def getKeepInfos() = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Seq[Id[Keep]]]
     val keeps = db.readOnlyReplica { implicit session =>
       keepRepo.getByIds(keepIds.toSet)
@@ -564,6 +564,10 @@ class ShoeboxController @Inject() (
         (id, OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
     }
     Ok(Json.toJson(orgInfos))
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
+    Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
   }
 
 }
