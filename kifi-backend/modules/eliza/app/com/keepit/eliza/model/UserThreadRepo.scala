@@ -108,6 +108,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 
+  def getAllSharedThreadsForGroup(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
+
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 }
 
@@ -474,6 +476,23 @@ class UserThreadRepoImpl @Inject() (
           having count(*) > 1
           order by week(created_at)
           desc
+      """
+      val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
+      query.list.map((GroupThreadStats.apply _).tupled)
+    }
+  }
+
+  def getAllSharedThreadsForGroup(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (users.isEmpty) Seq.empty[GroupThreadStats]
+    else {
+      val users_list = users.map(_.id).mkString(",")
+      val queryStr = """
+        select thread_id, created_at, count(*) as c from user_thread
+          where user_id in (""" + users_list + """)
+          and replyable = 1
+          group by thread_id
+          having count(*) > 1
       """
       val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
       query.list.map((GroupThreadStats.apply _).tupled)

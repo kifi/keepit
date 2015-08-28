@@ -126,8 +126,8 @@ case class MessageThread(
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
     val newNonUsers = nonUsers.map(_ -> when).toMap
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers, ps.nonUserParticipants ++ newNonUsers))
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+    val newParticipants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers, ps.nonUserParticipants ++ newNonUsers))
+    this.copy(participants = newParticipants, participantsHash = newParticipants.map(_.hash))
   }
 
   def withoutParticipant(userId: Id[User]) = {
