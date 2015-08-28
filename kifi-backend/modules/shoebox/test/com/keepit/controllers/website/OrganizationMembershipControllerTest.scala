@@ -3,6 +3,7 @@ package com.keepit.controllers.website
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.OrganizationMembershipCommander
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
@@ -274,6 +275,11 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === OK
+
+          // there are futures running in the background that will blow up if the test ends and the db is dumped
+          inject[WatchableExecutionContext].drain()
+
+          1 === 1
         }
       }
       "let a user leave the org" in {
@@ -289,6 +295,11 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
           status(result) === OK
+
+          // there are futures running in the background that will blow up if the test ends and the db is dumped
+          inject[WatchableExecutionContext].drain()
+
+          1 === 1
         }
       }
     }
