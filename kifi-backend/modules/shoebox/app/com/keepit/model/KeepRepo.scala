@@ -105,11 +105,11 @@ class KeepRepoImpl @Inject() (
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def librariesHash = column[Option[LibrariesHash]]("libraries_hash", O.Nullable)
-    def usersHash = column[Option[UsersHash]]("users_hash", O.Nullable)
+    def participantsHash = column[Option[ParticipantsHash]]("participants_hash", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId, librariesHash, usersHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+        note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -119,7 +119,7 @@ class KeepRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
   implicit val getLibrariesHashResult = getResultOptionFromMapper[LibrariesHash]
-  implicit val getUsersHashResult = getResultOptionFromMapper[UsersHash]
+  implicit val getParticipantsHashResult = getResultOptionFromMapper[ParticipantsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -144,7 +144,7 @@ class KeepRepoImpl @Inject() (
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
       librariesHash = r.<<[Option[LibrariesHash]],
-      usersHash = r.<<[Option[UsersHash]]
+      participantsHash = r.<<[Option[ParticipantsHash]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
