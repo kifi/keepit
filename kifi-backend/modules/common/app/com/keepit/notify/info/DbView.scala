@@ -18,11 +18,6 @@ class DbView(private val keyMap: Map[DbViewKey[_, _], Map[Id[_], Any]]) {
     new DbView(keyMap + (key -> assocObjMap))
   }
 
-  def update[M <: HasId[M]](existing: ExistingDbViewModel[M]): DbView = {
-    val model = existing.model
-    update(existing.key, model.id.get, model)
-  }
-
   def lookup[M <: HasId[M], R](key: DbViewKey[M, R], id: Id[M]): R =
     keyMap(key)(id).asInstanceOf[R]
 
@@ -48,13 +43,6 @@ object DbView {
 class DbViewKey[M <: HasId[M], R] {
 
   /**
-   * Indicates that the given model already has already been fetched in a potential DB view.
-   * The evidence indicates that it is required that the result of this key must have the same type as the model.
-   */
-  def existing(model: M)(implicit ev: DbViewKey[M, R] =:= DbViewKey[M, M]): ExistingDbViewModel[M] =
-    ExistingDbViewModel(ev(this), model)
-
-  /**
    * Builds a request using the given model.
    */
   def apply(id: Id[M]): DbViewRequest[M, R] = DbViewRequest(this, id)
@@ -66,15 +54,10 @@ class DbViewKey[M <: HasId[M], R] {
  */
 trait DbViewKeyList {
 
-  val user = DbViewKey[User, User]
-  val library = DbViewKey[Library, Library]
-  val userImageUrl = DbViewKey[User, String]
+  val user = DbViewKey[User, UserNotificationInfo]
+  val library = DbViewKey[Library, LibraryNotificationInfo]
   val keep = DbViewKey[Keep, Keep]
-  val libraryUrl = DbViewKey[Library, String]
-  val libraryInfo = DbViewKey[Library, LibraryNotificationInfo]
-  val libraryOwner = DbViewKey[Library, User]
-  val organization = DbViewKey[Organization, Organization]
-  val organizationInfo = DbViewKey[Organization, OrganizationNotificationInfo]
+  val organization = DbViewKey[Organization, OrganizationNotificationInfo]
 
 }
 
@@ -113,35 +96,4 @@ case class UsingDbView[A](requests: Seq[ExDbViewRequest])(val fn: DbView => A)
 object Requests {
   def apply(requests: ExDbViewRequest*): Seq[ExDbViewRequest]
     = requests
-}
-
-/**
- * Represents that a certain model already exists and can be used for DB view requests.
- */
-case class ExistingDbViewModel[M <: HasId[M]](key: DbViewKey[M, M], model: M)
-
-/**
- * Represents a whole bunch of items that have already been fetched and exist in a DB view, along with a value that
- * is constructed in the context of that view. The value can be used on its own, or additional properties may be derived
- * from the value with the help of a Db view.
- *
- * The prime example is a [[com.keepit.notify.model.event.NotificationEvent]], where constructing one gives most of the
- * information needed to generate its resulting display information, [[NotificationInfo]]. By wrapping the parameters to
- * the event in this class, all potential additional requests for information can be reduced.
- */
-case class ExistingDbView[A](existing: Seq[ExDbViewModel])(val result: A) {
-
-  def buildDbView: DbView =
-    existing.foldLeft(DbView()) { (view, existingModel) =>
-      view.update(existingModel)
-    }
-
-}
-
-/**
- * The compiler cannot infer that a Seq of specific existing db view models should be existential, using the Seq(..) method,
- * so this hints it explicitly.
- */
-object Existing {
-  def apply(existing: ExDbViewModel*): Seq[ExDbViewModel] = existing
 }

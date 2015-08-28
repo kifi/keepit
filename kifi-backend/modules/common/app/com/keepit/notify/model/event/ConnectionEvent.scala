@@ -22,32 +22,21 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
 
-  def build(recipient: Recipient, time: DateTime, inviter: User): ExistingDbView[NewConnectionInvite] = {
-    import DbViewKey._
-    ExistingDbView(Existing(
-      user.existing(inviter)
-    ))(NewConnectionInvite(
-      recipient = recipient,
-      time = time,
-      inviterId = inviter.id.get
-    ))
-  }
-
   override def info(event: NewConnectionInvite): UsingDbView[NotificationInfo] = {
     import DbViewKey._
     UsingDbView(Requests(
-      user(event.inviterId), userImageUrl(event.inviterId)
+      user(event.inviterId)
     )) { subset =>
-      val inviter = user(event.inviterId).lookup(subset)
-      val inviterImage = userImageUrl(event.inviterId).lookup(subset)
+      val inviterInfo = user(event.inviterId).lookup(subset)
+      val inviter = inviterInfo.user
       NotificationInfo(
         url = Path(inviter.username.value).encode.absolute,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
         linkText = s"Respond to ${inviter.firstName}’s invitation",
-        imageUrl = inviterImage,
+        imageUrl = inviterInfo.imageUrl,
         extraJson = Some(Json.obj(
-          "friend" -> BasicUser.fromUser(inviter)
+          "friend" -> inviter
         ))
       )
     }

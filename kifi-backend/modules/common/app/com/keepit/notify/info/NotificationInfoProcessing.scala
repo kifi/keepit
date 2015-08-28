@@ -10,23 +10,19 @@ class NotificationInfoProcessing @Inject() (
   implicit val ec: ExecutionContext
 ) {
 
-  def process[N <: NotificationEvent](usingView: UsingDbView[NotificationInfo], existing: Option[ExistingDbView[N]] = None): Future[NotificationInfo] = {
-    val info = getView(usingView.requests, existing)
+  def process[N <: NotificationEvent](usingView: UsingDbView[NotificationInfo]): Future[NotificationInfo] = {
+    val info = getView(usingView.requests)
     info.map { view =>
       usingView.fn(view)
     }
   }
 
-  def getView(requests: Seq[ExDbViewRequest], existing: Option[ExistingDbView[_]]): Future[DbView] = {
-    val existingView = existing.fold(DbView()) { existingModels =>
-      existingModels.buildDbView
-    }
-
+  def getView(requests: Seq[ExDbViewRequest]): Future[DbView] = {
     val grouped = requests.groupBy(_.key)
     // We know that after the groupBy, the type of requests is the same because they have the same key.
     // This cast also makes the compiler know
     grouped.toList.asInstanceOf[List[(DbViewKey[M, R], Seq[DbViewRequest[M, R]]) forSome { type M <: HasId[M]; type R}]]
-    grouped.foldLeft(Future.successful(existingView))(genericFoldGrouped)
+    grouped.foldLeft(Future.successful(DbView()))(genericFoldGrouped)
   }
 
   // Turns the type-parameterized fold into an existential fold. We know the relationship between the key and requests in

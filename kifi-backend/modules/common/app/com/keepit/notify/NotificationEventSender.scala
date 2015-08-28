@@ -19,16 +19,12 @@ class NotificationEventSender @Inject() (
   implicit val ec: ExecutionContext
 ) {
 
-  def send[N <: NotificationEvent](wrappedEvent: ExistingDbView[N]): Unit = {
-    val event = wrappedEvent.result
-    val infoFut = infoProcessing.process(event.kind.info(Set(event)), Some(wrappedEvent))
+  def send[N <: NotificationEvent](event: N): Unit = {
+    val infoFut = infoProcessing.process(event.kind.info(Set(event)))
     infoFut.map { info =>
       elizaServiceClient.sendNotificationEvent(EventWithInfo(event, Some(info)))
     }
   }
-
-  def send[N <: NotificationEvent](event: N): Unit = send(ExistingDbView(Existing())(event))
-
 
 }
 
