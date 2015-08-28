@@ -176,29 +176,63 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
         }
       }
 
+      "fail on empty name" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setupModify
+          inject[FakeUserActionsHelper].setUser(owner)
+          val publicId = Organization.publicId(org.id.get)
+
+          val json = """{ "name": "" }"""
+          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
+          val response = controller.modifyOrganization(publicId)(request)
+          response === OrganizationFail.INVALID_MODIFICATIONS
+        }
+      }
       "succeed for valid modifications" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
           inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """ {"none":["view_organization"],"admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"],"member":["view_organization","add_libraries"]} """
+          db.readOnlyMaster { implicit session =>
+            orgRepo.get(org.id.get).getNonmemberPermissions === Set(OrganizationPermission.VIEW_ORGANIZATION)
+          }
+
+          val json =
+            """{ "basePermissions":
+                {
+                  "none":[],
+                  "member":["view_organization","add_libraries"],
+                  "admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"]
+                }
+               } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           status(response) === OK
+
+          db.readOnlyMaster { implicit session =>
+            orgRepo.get(org.id.get).getNonmemberPermissions === Set.empty
+          }
         }
       }
 
-      "fail on invalid modifications" in {
+      "fail if you try and take away admin permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner) = setupModify
           inject[FakeUserActionsHelper].setUser(owner)
           val publicId = Organization.publicId(org.id.get)
 
-          val json = """{ "basePermissions": {"member":[]} }""" // all members must at least be able to view the organization
+          val json =
+            """{ "basePermissions":
+                {
+                  "none":[],
+                  "member":["view_organization","add_libraries"],
+                  "admin":["invite_members","view_organization","remove_libraries","modify_members","remove_members","add_libraries"]
+                }
+               } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.BAD_PARAMETERS
+          response === OrganizationFail.INVALID_MODIFICATIONS
         }
       }
 
@@ -211,7 +245,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val json = """{ "basePermissions": {"admin": [], "none": []} }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.BAD_PARAMETERS
+          response === OrganizationFail.INVALID_MODIFICATIONS
         }
       }
     }
