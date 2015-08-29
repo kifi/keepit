@@ -26,6 +26,13 @@
       </div>
     </div>
   </section>
+  <section class="kf-feed-item" ng-if="!isLoading() && feed.length < 10" >
+    <div class="kf-feed-top"><h3>Add a keep</h3></div>
+      <div class="kf-keep kf-feed-empty-add-keep">
+        <div kf-create-keep-widget></div>
+      </div>
+    </div>
+  </section>
   <section class="kf-feed-item" ng-repeat="feedItem in feed">
     <header class="kf-feed-top">
       <h4 class="kf-feed-heading">
@@ -79,13 +86,6 @@
     </header>
     <div class="kf-keep">
       <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
-    </div>
-  </section>
-  <section class="kf-feed-item" ng-if="!isLoading() && feed.length < 10" >
-    <div class="kf-feed-top"><h3>Add a keep</h3></div>
-      <div class="kf-keep kf-feed-empty-add-keep">
-        <div kf-create-keep-widget></div>
-      </div>
     </div>
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">

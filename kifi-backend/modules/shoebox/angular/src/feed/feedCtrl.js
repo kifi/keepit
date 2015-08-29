@@ -70,7 +70,7 @@ angular.module('kifi')
 
     [
       $rootScope.$on('keepAdded', function (e, keeps) {
-        $scope.feed.push(keeps[0]);
+        $scope.feed.unshift(keeps[0]);
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
