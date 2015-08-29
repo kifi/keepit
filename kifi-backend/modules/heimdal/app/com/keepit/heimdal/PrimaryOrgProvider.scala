@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commander.HelpRankCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.model.helprank.KeepDiscoveryRepo
@@ -13,6 +14,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[PrimaryOrgProviderImpl])
 trait PrimaryOrgProvider {
@@ -24,6 +26,7 @@ trait PrimaryOrgProvider {
 class PrimaryOrgProviderImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     orgTrackingValuesCache: OrgTrackingValuesCache,
+    orgMessageCountCache: OrganizationMessageCountCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
@@ -42,11 +45,14 @@ class PrimaryOrgProviderImpl @Inject() (
 
   def getOrgContextData(orgId: Id[Organization]): Future[Map[String, ContextData]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
+
     val membersFut = shoebox.getOrganizationMembers(orgId)
-    val messageCountFut = membersFut.flatMap { members =>
-      if (members.size > 1) eliza.getTotalMessageCountForGroup(members)
-      else Future.successful(0)
+    val messageCountFut = orgMessageCountCache.getOrElseFuture(OrganizationMessageCountKey(orgId)) {
+      membersFut.flatMap { memberIds =>
+        eliza.getTotalMessageCountForGroup(memberIds)
+      }
     }
+
     val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
     for {
       shoeboxValues <- shoeboxValuesFut
@@ -65,3 +71,12 @@ class PrimaryOrgProviderImpl @Inject() (
     }
   }
 }
+
+case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
+  override val version = 1
+  val namespace = "org_message_count"
+  def toKey(): String = id.id.toString
+}
+
+class OrganizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
