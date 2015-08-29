@@ -138,8 +138,17 @@ class KeepCommanderImpl @Inject() (
 
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     db.readOnlyReplica { implicit session =>
-      keepRepo.getByIds(ids).map {
-        case (id, keep) => id -> BasicKeep(keep.externalId, removable = false, keep.visibility, Library.publicId(keep.libraryId.get))
+      val keeps = keepRepo.getByIds(ids)
+      val users = userRepo.getAllUsers(keeps.collect {
+        case (id, keep) => keep.userId
+      }.toSeq)
+      keeps.map {
+        case (id, keep) => id -> BasicKeep(
+          keep.externalId,
+          keep.visibility,
+          Library.publicId(keep.libraryId.get),
+          users(keep.userId).externalId
+        )
       }
     }
   }
