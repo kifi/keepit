@@ -69,9 +69,9 @@ class WebsiteSearchController @Inject() (
 
       val (futureBasicKeeps, futureLibrariesWithWriteAccess) = {
         if (userId == SearchControllerUtil.nonUser) {
-          (Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty)), Future.successful(Set.empty[Id[Library]]))
+          (Future.successful(Map.empty[Id[NormalizedURI], Set[PersonalKeep]].withDefaultValue(Set.empty)), Future.successful(Set.empty[Id[Library]]))
         } else {
-          (shoeboxClient.getBasicKeeps(userId, uriIds.toSet), shoeboxClient.getLibrariesWithWriteAccess(userId))
+          (shoeboxClient.getPersonalKeeps(userId, uriIds.toSet), shoeboxClient.getLibrariesWithWriteAccess(userId))
         }
       }
 
@@ -132,7 +132,7 @@ class WebsiteSearchController @Inject() (
 
   private def writesAugmentationFields(
     librarySearcher: Searcher,
-    futureBasicKeeps: Future[Map[Id[NormalizedURI], Set[BasicKeep]]],
+    futureBasicKeeps: Future[Map[Id[NormalizedURI], Set[PersonalKeep]]],
     futureLibrariesWithWriteAccess: Future[Set[Id[Library]]],
     userId: Id[User],
     maxKeepersShown: Int,

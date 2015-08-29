@@ -73,7 +73,7 @@ object KeepData {
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
 
-  def apply(basicKeep: BasicKeep): KeepData = KeepData(basicKeep.id, basicKeep.mine, basicKeep.removable, basicKeep.visibility == LibraryVisibility.SECRET, basicKeep.libraryId)
+  def apply(basicKeep: PersonalKeep): KeepData = KeepData(basicKeep.id, basicKeep.mine, basicKeep.removable, basicKeep.visibility == LibraryVisibility.SECRET, basicKeep.libraryId)
 }
 
 // The extension uses this object to augment `KeepData` only when needed. It's useless by itself.

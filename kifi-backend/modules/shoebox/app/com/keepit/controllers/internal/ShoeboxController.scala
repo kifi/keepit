@@ -456,10 +456,10 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keeps))
   }
 
-  def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def getPersonalKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
-    val keepDataByUriId = keepDecorator.getBasicKeeps(userId, uriIds)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
+    val keepDataByUriId = keepDecorator.getPersonalKeeps(userId, uriIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[PersonalKeep]]
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)
   }
@@ -468,8 +468,7 @@ class ShoeboxController @Inject() (
     val keepIds = request.body.as[Set[Id[Keep]]]
     val keepDataById = keepCommander.getBasicKeeps(keepIds)
 
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Keep], BasicKeep]
-    Ok(Json.toJson(keepDataById.toSeq))
+    Ok(Json.toJson(keepDataById))
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>

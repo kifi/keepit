@@ -319,7 +319,6 @@ object KeepAndTags {
 
 case class BasicKeep(
   id: ExternalId[Keep],
-  mine: Boolean,
   removable: Boolean,
   visibility: LibraryVisibility,
   libraryId: PublicId[Library])
@@ -327,11 +326,27 @@ case class BasicKeep(
 object BasicKeep {
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
-    (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).format[PublicId[Library]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
+}
+
+case class PersonalKeep(
+  id: ExternalId[Keep],
+  mine: Boolean,
+  removable: Boolean,
+  visibility: LibraryVisibility,
+  libraryId: PublicId[Library])
+
+object PersonalKeep {
+  implicit val format: Format[PersonalKeep] = (
+    (__ \ 'id).format[ExternalId[Keep]] and
+    (__ \ 'mine).format[Boolean] and
+    (__ \ 'removable).format[Boolean] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'libraryId).format[PublicId[Library]]
+  )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {

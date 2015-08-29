@@ -116,7 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
@@ -320,8 +320,7 @@ class ShoeboxServiceClientImpl @Inject() (
       else {
         val payload = Json.toJson(missingKeys.map(_.id))
         call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
-          implicit val tupleReads = TupleFormat.tuple2Reads[Id[Keep], BasicKeep]
-          val missing = res.json.as[Seq[(Id[Keep], BasicKeep)]].toMap
+          val missing = res.json.as[Map[Id[Keep], BasicKeep]]
           missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
         }
       }
@@ -705,11 +704,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.newKeepsInLibraryForEmail(userId, max)).map(_.json.as[Seq[Keep]])
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
-    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {
-      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
-        r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[PersonalKeep]]) else {
+      call(Shoebox.internal.getPersonalKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[PersonalKeep]]
+        r.json.as[Seq[(Id[NormalizedURI], Set[PersonalKeep])]].toMap
       }
     }
   }
