@@ -190,4 +190,8 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def orgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrgTrackingValuesCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def basicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicKeepByIdCache(stats, accessLog, (outerRepo, 14 days))
 }

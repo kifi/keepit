@@ -333,3 +333,12 @@ object BasicKeep {
     (__ \ 'libraryId).format[PublicId[Library]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
+
+case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
+  override val version = 1
+  val namespace = "basic_keep_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

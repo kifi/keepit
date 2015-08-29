@@ -38,6 +38,7 @@ class ShoeboxController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -461,6 +462,14 @@ class ShoeboxController @Inject() (
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)
+  }
+
+  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    val keepDataById = keepCommander.getBasicKeeps(keepIds)
+
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Keep], BasicKeep]
+    Ok(Json.toJson(keepDataById.toSeq))
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
