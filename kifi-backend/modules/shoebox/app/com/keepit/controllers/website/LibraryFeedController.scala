@@ -16,7 +16,8 @@ import scala.concurrent.Future
 class LibraryFeedController @Inject() (
     db: Database,
     userCommander: UserCommander,
-    libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
+    libraryAccessCommander: LibraryAccessCommander,
     libPathCommander: PathCommander,
     experimentCommander: LocalUserExperimentCommander,
     feedCommander: FeedCommander,
@@ -52,13 +53,13 @@ class LibraryFeedController @Inject() (
           case Left(org) => org.id.get
           case Right(user) => user.id.get
         }
-        libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(librarySlug)) map {
+        libraryInfoCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || redirectStatusOpt.isDefined) { // library moved
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || redirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (libraryAccessCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               feedCommander.libraryFeed(library, count, offset) map { rss =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml; charset=utf-8")),
@@ -79,13 +80,13 @@ class LibraryFeedController @Inject() (
           case Left(org) => org.id.get
           case Right(user) => user.id.get
         }
-        libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(librarySlug)) map {
+        libraryInfoCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (libraryAccessCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               atomCommander.libraryFeed(library, count, offset) map { atom =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/atom+xml; charset=utf-8")),

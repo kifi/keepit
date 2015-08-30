@@ -39,7 +39,7 @@ class UserProfileCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     userConnectionRepo: UserConnectionRepo,
     userValueRepo: UserValueRepo,
-    libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     graphServiceClient: GraphServiceClient,
     organizationCommander: OrganizationCommander,
     implicit val defaultContext: ExecutionContext,
@@ -56,12 +56,12 @@ class UserProfileCommander @Inject() (
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = libraryCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
+      val libraryInfos = libraryInfoCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
       case (info, lib) =>
-        LibraryCardInfo( // why does this reconstruct the object? seems like libraryCommander.createLibraryCardInfo fills out everything
+        LibraryCardInfo( // why does this reconstruct the object? seems like libraryInfoCommander.createLibraryCardInfo fills out everything
           id = info.id,
           name = info.name,
           description = info.description,
@@ -97,7 +97,7 @@ class UserProfileCommander @Inject() (
       }
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
+      libraryInfoCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
@@ -119,7 +119,7 @@ class UserProfileCommander @Inject() (
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
+      libraryInfoCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
@@ -128,7 +128,7 @@ class UserProfileCommander @Inject() (
       db.readOnlyMaster { implicit session =>
         val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
         val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
-        libraryCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
+        libraryInfoCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
           case (card, invite) =>
             card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
         }

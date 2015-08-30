@@ -54,6 +54,8 @@ class LibraryController @Inject() (
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
   airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -101,7 +103,7 @@ class LibraryController @Inject() (
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            val libCardInfo = libraryCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
             Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
@@ -159,9 +161,9 @@ class LibraryController @Inject() (
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
+    libraryInfoCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
+      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
       val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
 
@@ -179,7 +181,7 @@ class LibraryController @Inject() (
     val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      val info = libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
     val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
@@ -188,7 +190,7 @@ class LibraryController @Inject() (
 
   def getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
+    libraryInfoCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
@@ -198,9 +200,9 @@ class LibraryController @Inject() (
             case _ => false
           }
           if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
             val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
               authTokenOpt.flatMap { authToken =>
@@ -234,7 +236,7 @@ class LibraryController @Inject() (
   def getLibrarySummariesByUser = UserAction.async { request =>
     val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
-      libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
+      libraryInfoCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
@@ -361,9 +363,9 @@ class LibraryController @Inject() (
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val numKeepsF = libraryCommander.getKeepsCount(libraryId)
+        val numKeepsF = libraryInfoCommander.getKeepsCount(libraryId)
         for {
-          keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
+          keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true)
           numKeeps <- numKeepsF
         } yield {
@@ -379,7 +381,7 @@ class LibraryController @Inject() (
       case Success(libraryId) =>
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
         val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
-        val maybeMembers = libraryCommander.getLibraryMembersAndInvitees(libraryId, offset, limit, fillInWithInvites = showInvites)
+        val maybeMembers = libraryInfoCommander.getLibraryMembersAndInvitees(libraryId, offset, limit, fillInWithInvites = showInvites)
         Ok(Json.obj("members" -> maybeMembers))
     }
   }
@@ -667,7 +669,7 @@ class LibraryController @Inject() (
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {
-    libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
+    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
   }
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>

@@ -49,6 +49,7 @@ class OrganizationCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryInfoCommander: LibraryInfoCommander,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
@@ -145,7 +146,7 @@ class OrganizationCommanderImpl @Inject() (
       val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
       val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
       val viewerOpt = userIdOpt.map(userRepo.get)
-      libraryCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 
@@ -162,7 +163,7 @@ class OrganizationCommanderImpl @Inject() (
 
   private def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
-      case OrganizationCreateRequest(createrId, initialValues) =>
+      case OrganizationCreateRequest(_, initialValues) =>
         if (!areAllValidModifications(initialValues.asOrganizationModifications)) Some(OrganizationFail.BAD_PARAMETERS)
         else None
 

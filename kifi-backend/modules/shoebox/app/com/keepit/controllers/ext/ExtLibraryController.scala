@@ -28,6 +28,8 @@ import com.keepit.common.json.TupleFormat
 class ExtLibraryController @Inject() (
   db: Database,
   val libraryCommander: LibraryCommander,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
   basicUserRepo: BasicUserRepo,
@@ -51,7 +53,7 @@ class ExtLibraryController @Inject() (
   val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
 
   def getLibraries = UserAction { request =>
-    val librariesWithMembershipAndCollaborators = libraryCommander.getLibrariesUserCanKeepTo(request.userId)
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
@@ -105,7 +107,7 @@ class ExtLibraryController @Inject() (
 
   def getLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
-      libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
+      libraryInfoCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
         case Left(fail) =>
           Status(fail.status)(Json.obj("error" -> fail.message))
         case Right((library, owner, followerCount, following, subscribedToUpdates)) =>
