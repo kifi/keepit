@@ -30,7 +30,7 @@ class ExtAuthController @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
   authCommander: AuthCommander,
-  libraryCommander: LibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   installationRepo: KifiInstallationRepo,
   orgCommander: OrganizationCommander,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -69,7 +69,7 @@ class ExtAuthController @Inject() (
         })
 
     val (libraries, organizations, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+      val libraries = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
       val orgIds = orgMembershipCommander.getAllOrganizationsForUser(userId)
       val orgCards = orgCommander.getOrganizationCards(orgIds, Some(userId)).values.toSeq
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>

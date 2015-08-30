@@ -3,7 +3,7 @@ package com.keepit.shoebox.controllers
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.{ Cache, CacheBuilder }
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryAccessCommander, LibraryInfoCommander, LibraryCommander }
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
@@ -19,7 +19,8 @@ trait LibraryAccessActions {
 
   val publicIdConfig: com.keepit.common.crypto.PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
-  val libraryCommander: LibraryCommander
+  val libraryInfoCommander: LibraryInfoCommander
+  val libraryAccessCommander: LibraryAccessCommander
 
   def LibraryViewAction(id: PublicId[Library]) = new ActionFilter[MaybeUserRequest] {
     def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewAccess(id, input))
@@ -38,7 +39,7 @@ trait LibraryAccessActions {
   private def lookupViewAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, userIdOpt, accessToken)) =>
-        val access = libraryCommander.canViewLibrary(userIdOpt, libraryId, accessToken)
+        val access = libraryAccessCommander.canViewLibrary(userIdOpt, libraryId, accessToken)
         if (access) {
           None
         } else {
@@ -52,7 +53,7 @@ trait LibraryAccessActions {
   private def lookupWriteAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, Some(userId), accessToken)) =>
-        libraryCommander.userAccess(userId, libraryId, None) match {
+        libraryAccessCommander.userAccess(userId, libraryId, None) match {
           case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) =>
             None
           case _ =>
@@ -66,7 +67,7 @@ trait LibraryAccessActions {
   private def lookupOwnerAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, Some(userId), accessToken)) =>
-        libraryCommander.userAccess(userId, libraryId, None) match {
+        libraryAccessCommander.userAccess(userId, libraryId, None) match {
           case Some(LibraryAccess.OWNER) =>
             None
           case _ =>

@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails.activity
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
@@ -20,7 +20,7 @@ class LibraryInviteCountComponent @Inject() (db: Database, libraryInviteRepo: Li
 class LibraryInviteComponent @Inject() (db: Database,
     libraryInviteRepo: LibraryInviteRepo,
     val clock: Clock,
-    val libraryCommander: LibraryCommander) extends ActivityEmailLibraryHelpers {
+    val libraryInfoCommander: LibraryInfoCommander) extends ActivityEmailLibraryHelpers {
 
   // max number of pending invited-to libraries to display
   val maxInvitedLibraries = 5

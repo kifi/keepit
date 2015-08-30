@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -16,7 +16,7 @@ import views.html
 class AdminLibraryRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     libRepo: LibraryRepo,
-    libCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     userRepo: UserRepo,
     db: Database,
     curator: CuratorServiceClient) extends AdminUserActions with Logging {
@@ -31,7 +31,7 @@ class AdminLibraryRecommendationsController @Inject() (
     val recosF = curator.topLibraryRecos(userId, Some(100), context = None) map { recoResults =>
       val libRecos = recoResults.recos
       val libIds = libRecos.map(_.libraryId)
-      val libInfos = (libIds zip libCommander.getLibrarySummaries(libIds)).toMap
+      val libInfos = (libIds zip libraryInfoCommander.getLibrarySummaries(libIds)).toMap
 
       libRecos map { libReco =>
         val prettyExplain = libReco.explain.split("-").toSeq.map { s =>

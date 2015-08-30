@@ -55,6 +55,8 @@ class MobileLibraryController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
   airbrake: AirbrakeNotifier,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   val libraryCommander: LibraryCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -184,12 +186,12 @@ class MobileLibraryController @Inject() (
   private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, v1: Boolean, viewerId: Option[Id[User]])(implicit context: HeimdalContext) = {
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
+    libraryInfoCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
 
-      val membershipOpt = libraryCommander.getViewerMembershipInfo(userIdOpt, libraryId)
+      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
       val accessStr = membershipOpt.map(_.access).getOrElse("none")
       val membershipJson = Json.toJson(membershipOpt)
@@ -208,17 +210,17 @@ class MobileLibraryController @Inject() (
 
   private def getLibraryByPath(request: MaybeUserRequest[AnyContent], handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
+    libraryInfoCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
 
-            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
             val accessStr = membershipOpt.map(_.access).getOrElse("none")
             val membershipJson = Json.toJson(membershipOpt)
@@ -247,7 +249,7 @@ class MobileLibraryController @Inject() (
       pageCommander.getUrlInfo(url, userId)
     }
 
-    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(userId)
+    val (librariesWithMemberships, _) = libraryInfoCommander.getLibrariesByUser(userId)
     val writeableLibraries = librariesWithMemberships.filter {
       case (membership, _) =>
         membership.canWrite
@@ -256,7 +258,7 @@ class MobileLibraryController @Inject() (
     val libraryCards = db.readOnlyReplica { implicit session =>
       val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
@@ -304,7 +306,7 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction { request =>
-    val (librariesWithMemberships, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
+    val (librariesWithMemberships, librariesWithInvites) = libraryInfoCommander.getLibrariesByUser(request.userId)
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
       val invites = lib._2.unzip._1
@@ -491,7 +493,7 @@ class MobileLibraryController @Inject() (
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
-          keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
+          keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
         } yield {
           val editedKeepInfos = keepInfos.map { kInfo =>
@@ -581,7 +583,7 @@ class MobileLibraryController @Inject() (
         val recordsToDrop = if (!v1 && offset != 0) offset - 1 else offset
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
         val showInvites = userIdOpt.contains(library.ownerId)
-        val maybeMembers = libraryCommander.getLibraryMembersAndInvitees(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
+        val maybeMembers = libraryInfoCommander.getLibraryMembersAndInvitees(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
         val membersList = if (v1 || offset != 0) {
           maybeMembers
         } else {
