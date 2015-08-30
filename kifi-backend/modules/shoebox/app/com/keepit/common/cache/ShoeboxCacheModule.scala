@@ -423,4 +423,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def organizationDomainOwnershipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationDomainOwnershipAllCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
 }

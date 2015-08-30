@@ -23,7 +23,7 @@ angular.module('kifi')
       }
     }
 
-    var feedLazyLoader = new Paginator(feedSource, 10, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var feedLazyLoader = new Paginator(feedSource, 15, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
