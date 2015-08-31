@@ -12,6 +12,7 @@ import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -40,6 +41,7 @@ class ExtLibraryController @Inject() (
   keepImageCommander: KeepImageCommander,
   organizationAvatarCommander: OrganizationAvatarCommander,
   val userActionsHelper: UserActionsHelper,
+  userRepo: UserRepo,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
@@ -82,26 +84,48 @@ class ExtLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val body = request.body.as[JsObject]
-    val name = (body \ "name").as[String]
-    val visibility = (body \ "visibility").as[LibraryVisibility]
-    val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryCreateRequest(name = name, visibility = visibility, slug = slug)
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-    libraryCommander.createLibrary(addRequest, request.userId) match {
-      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
-      case Right(lib) =>
-        val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
-        Ok(Json.toJson(LibraryData(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          color = lib.color,
-          visibility = lib.visibility,
-          path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = false,
-          subscribedToUpdates = false,
-          collaborators = Seq.empty,
-          orgAvatar = orgAvatar)))
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.reads)
+
+    externalCreateRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
+      case JsSuccess(externalCreateRequest, _) =>
+        val libCreateRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalCreateRequest.slug.getOrElse(LibrarySlug.generateFromName(externalCreateRequest.name))
+          val space = externalCreateRequest.space map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryCreateRequest(
+            name = externalCreateRequest.name,
+            slug = slug,
+            visibility = externalCreateRequest.visibility,
+            description = externalCreateRequest.description,
+            color = externalCreateRequest.color,
+            listed = externalCreateRequest.listed,
+            whoCanInvite = externalCreateRequest.whoCanInvite,
+            subscriptions = externalCreateRequest.subscriptions,
+            space = space
+          )
+        }
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+        libraryCommander.createLibrary(libCreateRequest, request.userId) match {
+          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(lib) =>
+            val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
+            Ok(Json.toJson(LibraryData(
+              id = Library.publicId(lib.id.get),
+              name = lib.name,
+              color = lib.color,
+              visibility = lib.visibility,
+              path = libPathCommander.getPathForLibrary(lib),
+              hasCollaborators = false,
+              subscribedToUpdates = false,
+              collaborators = Seq.empty,
+              orgAvatar = orgAvatar)))
+        }
     }
   }
 
