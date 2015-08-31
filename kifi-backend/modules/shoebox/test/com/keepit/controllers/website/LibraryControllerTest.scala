@@ -691,14 +691,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                "numFollowers":0,
                "whoCanInvite":"collaborator",
                "modifiedAt": ${lib1.updatedAt.getMillis},
+               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
+               "org": {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}"
+               },
                "membership":{
                 "access":"owner",
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null,
-               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
-               "org": {"id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user1.externalId}","handle":"${org1.handle.value}","name":"${org1.name}","numMembers":1,"numLibraries":1}
+               "invite": null
               },
              "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}

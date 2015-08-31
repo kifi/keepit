@@ -6,7 +6,7 @@ import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{ UserIpAddressCommander, AuthCommander, LibraryCommander, LocalUserExperimentCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
@@ -30,8 +30,10 @@ class ExtAuthController @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
   authCommander: AuthCommander,
-  libraryCommander: LibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   installationRepo: KifiInstallationRepo,
+  orgCommander: OrganizationCommander,
+  orgMembershipCommander: OrganizationMembershipCommander,
   urlPatternRepo: URLPatternRepo,
   experimentCommander: LocalUserExperimentCommander,
   kifiInstallationCookie: KifiInstallationCookie,
@@ -66,8 +68,10 @@ class ExtAuthController @Inject() (
           kiId
         })
 
-    val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+    val (libraries, organizations, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
+      val libraries = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
+      val orgIds = orgMembershipCommander.getAllOrganizationsForUser(userId)
+      val basicOrgs = orgCommander.getBasicOrganizations(orgIds.toSet).values.toSeq
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -80,7 +84,7 @@ class ExtAuthController @Inject() (
           (installationRepo.save(install), false, false)
       }
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (libraries, installation, urlPatterns, isInstall, isUpdate)
+      (libraries, basicOrgs, installation, urlPatterns, isInstall, isUpdate)
     }
 
     if (isUpdate || isInstall) {
@@ -114,6 +118,7 @@ class ExtAuthController @Inject() (
     Ok(Json.obj(
       "user" -> BasicUser.fromUser(request.user),
       "libraryIds" -> Seq(libraries._1.id.get, libraries._2.id.get).map(Library.publicId),
+      "orgs" -> organizations,
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11

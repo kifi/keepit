@@ -25,7 +25,7 @@ class FakeRecommendationsCommander @Inject() (
   nUriRepo: NormalizedURIRepo,
   libRepo: LibraryRepo,
   userRepo: UserRepo,
-  libCommander: LibraryCommander,
+  libCommander: LibraryInfoCommander,
   libPathCommander: PathCommander,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,

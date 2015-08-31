@@ -994,6 +994,7 @@ GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.c
 GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
 POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.controllers.internal.ShoeboxController.getOrganizationsForUsers()
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
+GET     /internal/shoebox/database/getBasicOrganizationsByIds            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizationsByIds()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
@@ -1016,7 +1017,8 @@ GET      /internal/shoebox/database/getSocialConnections                        
 
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/canViewLibrary             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
-POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
+POST     /internal/shoebox/database/getPersonalKeeps   @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
+POST     /internal/shoebox/database/getBasicKeepsByIds   @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
 POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()

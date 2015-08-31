@@ -37,7 +37,7 @@ class ElizaStatsCommander @Inject() (
   @StatsdTiming("ElizaStatsCommander.getTotalMessageCountForGroup")
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Int = {
     db.readOnlyReplica { implicit session =>
-      val groupThreadStats = userThreadRepo.getSharedThreadsForGroupByWeek(users.toSeq)
+      val groupThreadStats = userThreadRepo.getSharedThreadsForGroup(users.toSeq)
       val countByThread = messageRepo.getAllMessageCounts(groupThreadStats.map(stats => Id[MessageThread](stats.threadId)).toSet)
       countByThread.values.sum
     }

@@ -671,7 +671,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val user = db.readWrite { implicit session =>
           UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
           RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
@@ -721,7 +721,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
         }
 
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user.id.get)
 
         val keep1ToCollections = (Json.obj("title" -> "title 11", "url" -> "http://www.hi.com11", "isPrivate" -> false), Seq("tagA", "tagB", "tagC"))
         val keep2ToCollections = (Json.obj("title" -> "title 11", "url" -> "http://www.hi.com11", "isPrivate" -> false), Seq("tagA", "tagD", "tagE"))

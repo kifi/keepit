@@ -71,7 +71,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationCard])
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationInfo])
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -85,7 +85,7 @@ case class UserProfileStats(
   numTags: Int,
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None,
-  orgs: Seq[OrganizationCard])
+  orgs: Seq[OrganizationInfo])
 object UserProfileStats {
   implicit val writes: Writes[UserProfileStats] = (
     (__ \ 'numLibraries).write[Int] and
@@ -97,7 +97,7 @@ object UserProfileStats {
     (__ \ 'numTags).write[Int] and
     (__ \ 'numInvitedLibraries).writeNullable[Int] and
     (__ \ 'biography).writeNullable[String] and
-    (__ \ 'orgs).write[Seq[OrganizationCard]]
+    (__ \ 'orgs).write[Seq[OrganizationInfo]]
   )(unlift(UserProfileStats.unapply))
 }
 
@@ -114,7 +114,7 @@ class UserCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
-    organizationCardCommander: OrganizationCardCommander,
+    organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
@@ -273,7 +273,7 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgInfos) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
@@ -289,9 +289,9 @@ class UserCommander @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgCards = organizationCardCommander.getOrganizationCards(orgs, user.id).values.toSeq
+      val orgInfos = organizationCommander.getOrganizationInfos(orgs.toSet, user.id).values.toSeq
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgInfos)
     }
 
     val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
@@ -303,7 +303,7 @@ class UserCommander @Inject() (
           isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
         )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgInfos)
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {

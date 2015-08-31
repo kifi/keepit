@@ -88,7 +88,7 @@ angular.module('kifi')
         };
 
         scope.spaceIsOrg = function (space) {
-          return 'numMembers' in space;
+          return !('firstName' in space);
         };
 
         var ownerType = function(space) {

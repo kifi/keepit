@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -51,6 +51,7 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
@@ -200,7 +201,7 @@ class AdminLibraryController @Inject() (
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminUserPage { implicit request =>
-    val res = libraryCommander.internSystemGeneratedLibraries(userId)
+    val res = libraryInfoCommander.internSystemGeneratedLibraries(userId)
 
     Ok(res.toString)
   }
@@ -215,7 +216,7 @@ class AdminLibraryController @Inject() (
     }.flatten
 
     val result = confirmedIds.map { userId =>
-      userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
+      userId.id + " -> " + libraryInfoCommander.internSystemGeneratedLibraries(userId)
     }
 
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))

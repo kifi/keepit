@@ -23,7 +23,7 @@ case class OrganizationInfo(
   numMembers: Int,
   numLibraries: Int)
 object OrganizationInfo {
-  val defaultWrites: Writes[OrganizationInfo] = (
+  implicit val defaultFormat: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
     (__ \ 'handle).write[OrganizationHandle] and
@@ -69,32 +69,9 @@ case class OrganizationView(
 
 object OrganizationView {
   implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
+    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultFormat.writes(o.organizationInfo),
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
-}
-
-// OrganizationCard should ONLY contain public information. No internal ids.
-case class OrganizationCard(
-  orgId: PublicId[Organization],
-  ownerId: ExternalId[User],
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  avatarPath: Option[ImagePath],
-  numMembers: Int,
-  numLibraries: Int)
-object OrganizationCard {
-  implicit val defaultWrites: Writes[OrganizationCard] = (
-    (__ \ 'id).write[PublicId[Organization]] and
-    (__ \ 'ownerId).write[ExternalId[User]] and
-    (__ \ 'handle).write[OrganizationHandle] and
-    (__ \ 'name).write[String] and
-    (__ \ 'description).writeNullable[String] and
-    (__ \ 'avatarPath).writeNullable[ImagePath] and
-    (__ \ 'numMembers).write[Int] and
-    (__ \ 'numLibraries).write[Int]
-  )(unlift(OrganizationCard.unapply))
 }
 
 object OrganizationNotificationInfoBuilder {

@@ -26,20 +26,66 @@
       </div>
     </div>
   </section>
-  <section class="kf-feed-item" ng-repeat="feedItem in feed">
-    <header class="kf-feed-top">
-      <h4><a ng-href="{{ feedItem.user | slug }}" ng-bind="feedItem.user | name"></a> kept this into <a ng-href="{{ feedItem.library.path }}" ng-bind="feedItem.library.name"></a>
-      <span ng-if="feedItem.library.organization" ng-bind="'in ' + feedItem.library.organization"></span> &mdash; <span am-time-ago="feedItem.createdAt"></span></h4>
-    </header>
-    <div class="kf-keep">
-      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
-    </div>
-  </section>
   <section class="kf-feed-item" ng-if="!isLoading() && feed.length < 10" >
     <div class="kf-feed-top"><h3>Add a keep</h3></div>
       <div class="kf-keep kf-feed-empty-add-keep">
         <div kf-create-keep-widget></div>
       </div>
+    </div>
+  </section>
+  <section class="kf-feed-item" ng-repeat="feedItem in feed">
+    <header class="kf-feed-top">
+      <h4 class="kf-feed-heading">
+        <a
+          class="kf-feed-tooltip-target"
+          ng-href="{{ feedItem.user | slug }}"
+          kf-user-tooltip="::feedItem.user"
+          ng-bind="feedItem.user | name"
+        ></a>
+        <span>kept this into</span>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'secret'"
+          data-kf-tooltip="This library is only viewable to those you invite"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="lock"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A private library"
+          ></svg>
+        </div>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'discoverable'"
+          data-kf-tooltip="This library is viewable to others in search results"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="star"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A discoverable library"
+            ng-show="feedItem.library.visibility === 'discoverable'"
+          ></svg>
+        </div>
+        <span><!-- Separate the inline-block elements from each other --></span>
+        <a
+          class="kf-feed-tooltip-target"
+          ng-href="{{ feedItem.library.path }}"
+          kf-user-tooltip="::feedItem.user"
+          library="::feedItem.library"
+          ng-bind="feedItem.library.name"
+        ></a>
+        <span ng-if="feedItem.library.organization">in</span>
+        <a ng-if="feedItem.library.organization" ng-bind="feedItem.library.organization"></a> &mdash; <span am-time-ago="feedItem.createdAt"></span>
+      </h4>
+    </header>
+    <div class="kf-keep">
+      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
     </div>
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">
