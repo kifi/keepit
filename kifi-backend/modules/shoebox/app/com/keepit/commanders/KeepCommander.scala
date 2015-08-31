@@ -900,19 +900,14 @@ class KeepCommanderImpl @Inject() (
     )
 
     currentKeepOpt match {
-      case None =>
-        val persistedKeep = persistKeep(newKeep, Set(userId), Set(toLibrary.id.get))
-        combineTags(k.id.get, persistedKeep.id.get)
-        Right(persistedKeep)
-
-      case Some(existingKeep) if existingKeep.isInactive =>
-        val persistedKeep = persistKeep(newKeep.withId(existingKeep.id.get), Set(userId), Set(toLibrary.id.get))
-        combineTags(k.id.get, persistedKeep.id.get)
-        Right(persistedKeep)
-
-      case Some(existingKeep) =>
+      case Some(existingKeep) if existingKeep.isActive =>
         combineTags(k.id.get, existingKeep.id.get)
         Left(LibraryError.AlreadyExistsInDest)
+
+      case inactiveKeepOpt =>
+        val persistedKeep = persistKeep(newKeep.copy(id = inactiveKeepOpt.flatMap(_.id)), Set(userId), Set(toLibrary.id.get))
+        combineTags(k.id.get, persistedKeep.id.get)
+        Right(persistedKeep)
     }
   }
 
