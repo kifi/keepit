@@ -85,7 +85,7 @@
       </h4>
     </header>
     <div class="kf-keep">
-      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true"></div>
+      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep, event)"></div>
     </div>
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">

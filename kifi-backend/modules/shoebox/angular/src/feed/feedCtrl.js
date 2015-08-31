@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$rootScope', '$scope', 'feedService', 'Paginator', 'routeService', 'modalService',
-  function($rootScope, $scope, feedService, Paginator, routeService, modalService) {
+  '$rootScope', '$scope', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService',
+  function($rootScope, $scope, $analytics, feedService, Paginator, routeService, modalService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[(pageNumber * pageSize) - 1] || $scope.feed[$scope.feed.length - 1];
 
@@ -52,6 +52,10 @@ angular.module('kifi')
         template: 'keeps/addKeepModal.tpl.html',
         modalData: {}
       });
+    };
+
+    $scope.keepClick = function(keep, $event) {
+      $analytics.eventTrack('user_viewed_content', { source: 'feed', contentType: 'keep', contentId: keep.id });
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {

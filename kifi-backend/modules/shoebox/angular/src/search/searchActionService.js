@@ -163,6 +163,9 @@ angular.module('kifi')
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
+      if (profileService.userLoggedIn()) {
+        $analytics.eventTrack('user_viewed_content', { source: 'search', contentType: 'keep' });
+      }
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
