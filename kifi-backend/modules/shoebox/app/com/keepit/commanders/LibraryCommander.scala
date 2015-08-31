@@ -688,64 +688,6 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  // Return is Set of Keep -> error message
-  private def applyToKeeps(userId: Id[User],
-    dstLibraryId: Id[Library],
-    keeps: Seq[Keep],
-    excludeFromAccess: Set[LibraryAccess], // what membership access does user need?
-    saveKeep: (Keep, RWSession) => Either[LibraryError, Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
-
-    val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
-    val goodKeeps = collection.mutable.Set[Keep]()
-    val srcLibs = db.readWrite { implicit s =>
-      val groupedKeeps = keeps.groupBy(_.libraryId)
-      groupedKeeps.flatMap {
-        case (None, keeps) => keeps
-        case (Some(fromLibraryId), keeps) =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
-            case None if excludeFromAccess.nonEmpty =>
-              badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
-              Seq.empty[Keep]
-            case Some(memFrom) if excludeFromAccess.contains(memFrom.access) =>
-              badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
-              Seq.empty[Keep]
-            case _ =>
-              keeps
-          }
-      }.foreach { keep =>
-        saveKeep(keep, s) match {
-          case Left(error) => badKeeps += keep -> error
-          case Right(successKeep) => goodKeeps += successKeep
-        }
-      }
-      if (goodKeeps.nonEmpty) libraryRepo.updateLastKept(dstLibraryId)
-
-      groupedKeeps.keys.flatten
-    }
-    searchClient.updateKeepIndex()
-
-    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-    srcLibs.map { srcLibId =>
-      countByLibraryCache.remove(CountByLibraryKey(srcLibId))
-    }
-    countByLibraryCache.remove(CountByLibraryKey(dstLibraryId))
-
-    // fix keep count after we cleared cache
-    fixLibraryKeepCount(dstLibraryId :: srcLibs.toList)
-
-    (goodKeeps.toSeq, badKeeps.toSeq)
-  }
-
-  private def fixLibraryKeepCount(libIds: Seq[Id[Library]]) = {
-    db.readWrite { implicit s =>
-      val counts = keepRepo.getCountsByLibrary(libIds.toSet)
-      libIds.foreach { libId =>
-        val lib = libraryRepo.get(libId)
-        libraryRepo.save(lib.copy(keepCount = counts(lib.id.get)))
-      }
-    }
-  }
-
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
@@ -774,25 +716,6 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
-    val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
-      (library, memTo)
-    }
-    memTo match {
-      case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
-      case Some(_) =>
-        val sortedKeeps = keeps.sortBy(k => (k.keptAt, k.id.get))
-        val keepResults = applyToKeeps(userId, toLibraryId, sortedKeeps, Set(), (k, s) => keepCommander.copyKeep(k, toLibrary, userId, withSource)(s))
-        Future {
-          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
-        }
-        keepResults
-    }
-  }
-
   def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val keeps = db.readOnlyReplica { implicit session =>
       val keepIds = ktlRepo.getAllByLibraryId(fromLibraryId).map(_.keepId).toSet
@@ -800,21 +723,86 @@ class LibraryCommanderImpl @Inject() (
     }
     moveKeeps(userId, toLibraryId, keeps)
   }
+
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
-    val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
-      (library, memTo)
-    }
-    memTo match {
-      case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
-      case Some(_) =>
-        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY), (k, s) => keepCommander.moveKeep(k, toLibrary, userId)(s))
-        Future {
-          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
+        case Some(membership) if membership.canWrite => {
+          val toLibrary = libraryRepo.get(toLibraryId)
+          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).exists(_.canWrite)
+          }
+          val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
+          val successes = collection.mutable.ListBuffer[Keep]()
+
+          keeps.foreach {
+            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId)(s) match {
+              case Right(movedKeep) => successes += movedKeep
+              case Left(error) => failures += (keep -> error)
+            }
+            case forbiddenKeep => failures += (forbiddenKeep -> LibraryError.SourcePermissionDenied)
+          }
+
+          if (successes.nonEmpty) {
+            libraryRepo.updateLastKept(toLibraryId)
+            refreshKeepCounts(validSourceLibraryIds + toLibraryId)
+            s.onTransactionSuccess {
+              SafeFuture {
+                searchClient.updateKeepIndex()
+                libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+              }
+            }
+          }
+
+          (successes.toSeq, failures.toSeq)
         }
-        keepResults
+        case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
+      }
+    }
+  }
+
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
+        case Some(membership) if membership.canWrite => {
+          val toLibrary = libraryRepo.get(toLibraryId)
+          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).isDefined
+          }
+          val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
+          val successes = collection.mutable.ListBuffer[Keep]()
+
+          keeps.foreach {
+            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
+              case Right(movedKeep) => successes += movedKeep
+              case Left(error) => failures += (keep -> error)
+            }
+            case forbiddenKeep => failures += (forbiddenKeep -> LibraryError.SourcePermissionDenied)
+          }
+
+          if (successes.nonEmpty) {
+            libraryRepo.updateLastKept(toLibraryId)
+            refreshKeepCounts(Set(toLibraryId))
+            s.onTransactionSuccess {
+              SafeFuture {
+                searchClient.updateKeepIndex()
+                libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+              }
+            }
+          }
+          (successes.toSeq, failures.toSeq)
+        }
+        case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
+      }
+    }
+  }
+
+  private def refreshKeepCounts(libraryIds: Set[Id[Library]])(implicit session: RWSession): Unit = {
+    libraryIds.foreach(libraryId => countByLibraryCache.remove(CountByLibraryKey(libraryId)))
+    keepRepo.getCountsByLibrary(libraryIds).foreach {
+      case (libraryId, keepCount) =>
+        val library = libraryRepo.get(libraryId)
+        libraryRepo.save(library.copy(keepCount = keepCount))
     }
   }
 
