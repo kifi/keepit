@@ -23,9 +23,9 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
-  def getBasicOrganization(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
-  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Organization], OrganizationInfo]
-  def getOrganizationInfos(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
+  def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
+  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
+  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
@@ -64,13 +64,13 @@ class OrganizationCommanderImpl @Inject() (
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
-      val organizationInfo = getBasicOrganization(orgId, viewerIdOpt)
+      val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
       val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
     }
   }
 
-  def getOrganizationInfos(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
+  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
     db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
         missing.map(_.id).map { orgId => orgId -> getBasicOrganization(orgId) }.toMap.map {
@@ -100,11 +100,11 @@ class OrganizationCommanderImpl @Inject() (
       avatarPath = avatarPath)
   }
 
-  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Organization], OrganizationInfo] = {
-    orgIds.map(id => id -> getBasicOrganization(id, viewerIdOpt)).toMap
+  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = db.readOnlyReplica { implicit session =>
+    orgIds.map(id => id -> getOrganizationInfo(id, viewerIdOpt)).toMap
   }
 
-  def getBasicOrganization(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
+  def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }

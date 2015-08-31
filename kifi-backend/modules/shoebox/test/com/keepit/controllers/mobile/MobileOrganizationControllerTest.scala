@@ -82,7 +82,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
               // to avoid throwing a handle commander failure
               // (all the Justice Leagues try to have the same handle, justiceleague), add a char
               val char = ('a' to 'z')(i)
-              val org = OrganizationFactory.organization().withOwner(user).withName(s"Justice League$char}").saved
+              val org = OrganizationFactory.organization().withOwner(user).withName(s"Justice League$char").saved
               LibraryFactory.libraries(i).map(_.published().withOrganizationIdOpt(org.id)).saved
             }
             user

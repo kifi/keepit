@@ -603,7 +603,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerOpt.map { viewer =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
     } getOrElse Map.empty
-    val basicOrgs = organizationCommander.getOrganizationInfos(libs.flatMap(_.organizationId).toSet)
+    val basicOrgs = organizationCommander.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -641,7 +641,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val userIds = memberships.values.map(_.map(_.userId)).flatten.toSet
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
-    val orgInfoById = organizationCommander.getOrganizationInfos(libs.flatMap(_.organizationId).toSet, Some(viewerId))
+    val basicOrgById = organizationCommander.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -657,7 +657,7 @@ class LibraryInfoCommanderImpl @Inject() (
       } else {
         (0, 0, Seq.empty)
       }
-      val orgInfoOpt = lib.organizationId.map(orgInfoById.apply)
+      val orgInfoOpt = lib.organizationId.map(basicOrgById.apply)
       val owner = basicUserRepo.load(lib.ownerId)
       val path = LibraryPathHelper.formatLibraryPath(owner = owner, orgInfoOpt.map(_.handle), slug = lib.slug)
 

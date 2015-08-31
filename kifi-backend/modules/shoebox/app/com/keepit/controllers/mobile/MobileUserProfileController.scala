@@ -60,7 +60,7 @@ class MobileUserProfileController @Inject() (
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
           val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-          val orgCards = orgMemberships.map { orgMembership => organizationCommander.getBasicOrganization(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
+          val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
           (numConnections, userBio, orgCards)
         }
 
