@@ -994,7 +994,7 @@ GET     /internal/shoebox/database/getOrganizationInviteViews      @com.keepit.c
 GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.controllers.internal.ShoeboxController.hasOrganizationMembership(orgId: Id[Organization], userId: Id[User])
 POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.controllers.internal.ShoeboxController.getOrganizationsForUsers()
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
-GET     /internal/shoebox/database/getOrganizationCards            @com.keepit.controllers.internal.ShoeboxController.getOrganizationCards()
+GET     /internal/shoebox/database/getBasicOrganizations            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizations()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 

@@ -22,18 +22,18 @@ case class OrganizationInfo(
   numMembers: Int,
   numLibraries: Int)
 object OrganizationInfo {
-  val defaultWrites: Writes[OrganizationInfo] = (
-    (__ \ 'id).write[PublicId[Organization]] and
-    (__ \ 'ownerId).write[ExternalId[User]] and
-    (__ \ 'handle).write[OrganizationHandle] and
-    (__ \ 'name).write[String] and
-    (__ \ 'description).writeNullable[String] and
-    (__ \ 'site).writeNullable[String] and
-    (__ \ 'avatarPath).writeNullable[ImagePath] and
-    (__ \ 'members).write[Seq[BasicUser]] and
-    (__ \ 'numMembers).write[Int] and
-    (__ \ 'numLibraries).write[Int]
-  )(unlift(OrganizationInfo.unapply))
+  implicit val defaultFormat: Format[OrganizationInfo] = (
+    (__ \ 'id).format[PublicId[Organization]] and
+    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'handle).format[OrganizationHandle] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'site).formatNullable[String] and
+    (__ \ 'avatarPath).formatNullable[ImagePath] and
+    (__ \ 'members).format[Seq[BasicUser]] and
+    (__ \ 'numMembers).format[Int] and
+    (__ \ 'numLibraries).format[Int]
+  )(OrganizationInfo.apply, unlift(OrganizationInfo.unapply))
 }
 
 case class OrganizationMembershipInfo(
@@ -68,7 +68,7 @@ case class OrganizationView(
 
 object OrganizationView {
   implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
+    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultFormat.writes(o.organizationInfo),
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 }

@@ -182,6 +182,6 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
 
   @Provides @Singleton
-  def organizationCardCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationCardCache(stats, accessLog, (outerRepo, 7 days))
+  def basicOrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

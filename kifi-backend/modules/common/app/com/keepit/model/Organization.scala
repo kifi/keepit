@@ -4,9 +4,10 @@ import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ PublicId, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.kifi.macros.json
@@ -213,6 +214,26 @@ object BasePermissions {
   }
 }
 
+// BasicOrganization should ONLY contain public information. No internal ids.
+case class BasicOrganization(
+  orgId: PublicId[Organization],
+  ownerId: ExternalId[User],
+  handle: OrganizationHandle,
+  name: String,
+  description: Option[String],
+  avatarPath: Option[ImagePath])
+
+object BasicOrganization {
+  implicit val defaultFormat = (
+    (__ \ 'id).format[PublicId[Organization]] and
+    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'handle).format[OrganizationHandle] and
+    (__ \ 'name).format[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'avatarPath).formatNullable[ImagePath]
+  )(BasicOrganization.apply, unlift(BasicOrganization.unapply))
+}
+
 @json
 case class OrgTrackingValues(
   libraryCount: Int,
@@ -247,11 +268,11 @@ case class OrgTrackingValuesKey(id: Id[Organization]) extends Key[OrgTrackingVal
 class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class OrganizationCardKey(id: Id[Organization]) extends Key[OrganizationCard] {
+case class BasicOrganizationIdKey(id: Id[Organization]) extends Key[BasicOrganization] {
   override val version = 1
-  val namespace = "org_cards_by_id"
+  val namespace = "basic_org_by_id"
   def toKey(): String = id.id.toString
 }
 
-class OrganizationCardCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[OrganizationCardKey, OrganizationCard](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class BasicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BasicOrganizationIdKey, BasicOrganization](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

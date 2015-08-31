@@ -673,5 +673,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = Future.successful(Map.empty)
 
-  def getOrganizationCards(ids: Set[Id[Organization]]): Future[Map[Id[Organization], OrganizationCard]] = Future.successful(Map.empty)
+  def getBasicOrganizations(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
 }
