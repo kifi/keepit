@@ -40,15 +40,12 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWrites = Writes[BasicLibrary] { library =>
-      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
-    }
     implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     new Writes[KeepInfo] {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
         "id" -> o.id,
-        "name" -> o.title,
+        "title" -> o.title,
         "url" -> o.url,
         "isPrivate" -> o.isPrivate,
         "user" -> o.user,
