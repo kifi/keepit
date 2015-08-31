@@ -23,7 +23,7 @@ angular.module('kifi')
       }
     }
 
-    var feedLazyLoader = new Paginator(feedSource, 10, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var feedLazyLoader = new Paginator(feedSource, 15, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
@@ -70,7 +70,7 @@ angular.module('kifi')
 
     [
       $rootScope.$on('keepAdded', function (e, keeps) {
-        $scope.feed.push(keeps[0]);
+        $scope.feed.unshift(keeps[0]);
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);

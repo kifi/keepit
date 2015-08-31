@@ -118,6 +118,7 @@ class KeepCommanderImpl @Inject() (
     curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -769,7 +770,7 @@ class KeepCommanderImpl @Inject() (
   private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
   private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
     val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+      def call() = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
     })
     if (isPrivate) {
       secret

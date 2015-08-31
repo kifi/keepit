@@ -34,15 +34,18 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
 @Singleton
 class OrganizationMembershipRepoImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
+    orgMembersCache: OrganizationMembersCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
 
   override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
   }
 
   override def invalidateCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
   }
 
   import db.Driver.simple._

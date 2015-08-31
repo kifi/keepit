@@ -149,7 +149,7 @@ trait AmplitudeRequestBuilder {
       primaryOrgProvider.getPrimaryOrg(userId).flatMap {
         case Some(orgId) =>
           primaryOrgProvider.getOrgContextData(orgId).map { orgProps =>
-            (xformToSnakeCase(userProps ++ orgProps), xformToSnakeCase(eventProps ++ orgProps))
+            (xformToSnakeCase(userProps ++ orgProps), xformToSnakeCase(eventProps))
           }
         case None =>
           Future.successful(xformToSnakeCase(userProps), xformToSnakeCase(eventProps))

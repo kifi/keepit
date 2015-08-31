@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LibraryImageCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -26,7 +26,8 @@ class LibraryImageController @Inject() (
   libraryImageCommander: LibraryImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper,
-  val libraryCommander: LibraryCommander,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
@@ -91,7 +92,7 @@ class LibraryImageController @Inject() (
       val accessibleLibIds = db.readOnlyReplica { implicit session =>
         libraryRepo.getLibraries(libIds.toSet)
       } filter {
-        case (_, lib) => libraryCommander.canViewLibrary(request.userIdOpt, lib)
+        case (_, lib) => libraryAccessCommander.canViewLibrary(request.userIdOpt, lib)
       } keySet
       val size = idealSize.map(ImageSize(_)).getOrElse(ProcessedImageSize.Medium.idealSize)
       val imagesByPublicId = libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size) map {

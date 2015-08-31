@@ -161,7 +161,8 @@ case class ShoeboxCacheProvider @Inject() (
   userActivePersonaCache: UserActivePersonasCache,
   keepImagesCache: KeepImagesCache,
   primaryOrgForUserCache: PrimaryOrgForUserCache,
-  basicKeepByIdCache: BasicKeepByIdCache)
+  basicKeepByIdCache: BasicKeepByIdCache,
+  organizationMembersCache: OrganizationMembersCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -794,7 +795,9 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
-    call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
+    cacheProvider.organizationMembersCache.getOrElseFuture(OrganizationMembersKey(orgId)) {
+      call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
+    }
   }
 
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = {

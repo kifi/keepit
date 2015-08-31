@@ -57,6 +57,7 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
+  libraryAccessCommander: LibraryAccessCommander,
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
@@ -71,6 +72,7 @@ class ShoeboxController @Inject() (
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
@@ -446,7 +448,7 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val authorized = libraryCommander.canViewLibrary(userIdOpt, libraryId, authToken)
+    val authorized = libraryAccessCommander.canViewLibrary(userIdOpt, libraryId, authToken)
     Ok(JsBoolean(authorized))
   }
 
@@ -476,7 +478,7 @@ class ShoeboxController @Inject() (
     val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
+    val basicDetailsByLibraryId = libraryInfoCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
@@ -501,7 +503,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
-    val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
+    val libraryIds = libraryInfoCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
   }
 

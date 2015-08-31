@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails.activity
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander }
 import com.keepit.commanders.emails.LibraryInfoFollowersView
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -11,7 +11,8 @@ import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
-class UserLibrariesByRecentFollowersComponent @Inject() (val libraryCommander: LibraryCommander,
+class UserLibrariesByRecentFollowersComponent @Inject() (
+    val libraryInfoCommander: LibraryInfoCommander,
     val clock: Clock,
     val membershipRepo: LibraryMembershipRepo,
     db: Database,
@@ -27,7 +28,7 @@ class UserLibrariesByRecentFollowersComponent @Inject() (val libraryCommander: L
   private def librariesToMembers(toUserId: Id[User], since: DateTime) = db.readOnlyReplica { implicit session =>
     val mostMembersLibraries = membershipRepo.mostMembersSinceForUser(10, since, toUserId).toMap
     val libraries = libraryRepo.getLibraries(mostMembersLibraries.map(_._1).toSet)
-    val libToMembers = libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(mostMembersLibraries, since, (id: Id[Library]) => libraries(id).memberCount)
+    val libToMembers = libraryInfoCommander.sortAndSelectLibrariesWithTopGrowthSince(mostMembersLibraries, since, (id: Id[Library]) => libraries(id).memberCount)
     (libToMembers, libraries)
   }
 }
