@@ -60,7 +60,7 @@ class OrganizationCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander,
     planManagementCommander: PlanManagementCommander,
-    basicOrganizationCache: BasicOrganizationIdCache) extends OrganizationCommander with Logging {
+    basicOrganizationIdCache: BasicOrganizationIdCache) extends OrganizationCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
@@ -72,7 +72,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
     db.readOnlyReplica { implicit session =>
-      basicOrganizationCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
+      basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
         missing.map(_.id).map { orgId => orgId -> getBasicOrganization(orgId) }.toMap.map {
           case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
         }

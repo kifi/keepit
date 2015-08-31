@@ -184,6 +184,6 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
 
   @Provides @Singleton
-  def basicOrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

@@ -200,6 +200,6 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
-  def basicOrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

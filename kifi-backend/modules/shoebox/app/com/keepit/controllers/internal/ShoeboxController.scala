@@ -537,7 +537,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
   }
 
-  def getBasicOrganizations() = Action(parse.tolerantJson) { request =>
+  def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Set[Id[Organization]]]
     val basicOrgs = organizationCommander.getBasicOrganizations(orgIds)
     Ok(Json.toJson(basicOrgs))
