@@ -96,7 +96,7 @@ class OrganizationController @Inject() (
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalIds(Seq(extId)).values.head
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgCards = orgCommander.getBasicOrganizations(visibleOrgs.toSet).values.toSeq
+    val orgCards = orgCommander.getOrganizationInfos(visibleOrgs.toSet, request.userIdOpt).values.toSeq
 
     Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
   }

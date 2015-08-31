@@ -230,12 +230,12 @@ class LibraryInfoCommanderImpl @Inject() (
       db.readOnlyReplicaAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
-    val orgInfoByIdF = {
+    val basicOrgByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
         val orgMap = orgRepo.getByIds(allOrgsShown)
         orgMap.map {
-          case (id, _) => id -> organizationCommander.getOrganizationInfo(id, viewerUserIdOpt)
+          case (id, _) => id -> organizationCommander.getBasicOrganization(id)
         }
       }
     }
@@ -291,12 +291,12 @@ class LibraryInfoCommanderImpl @Inject() (
         keepInfos <- futureKeepInfosByLibraryId(libId)
         counts <- futureCountsByLibraryId(libId)
         usersById <- usersByIdF
-        orgInfoById <- orgInfoByIdF
+        basicOrgById <- basicOrgByIdF
         libImageOpt <- imagesF(libId)
       } yield {
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
-        val orgInfoOpt = lib.organizationId.map(orgInfoById.apply)
+        val basicOrgOpt = lib.organizationId.map(basicOrgById.apply)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
@@ -326,8 +326,8 @@ class LibraryInfoCommanderImpl @Inject() (
           attr = attr,
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
-          path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgInfoOpt.map(_.handle), slug = lib.slug),
-          org = orgInfoOpt
+          path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
+          org = basicOrgOpt
         )
       }
     }
@@ -603,7 +603,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerOpt.map { viewer =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
     } getOrElse Map.empty
-    val orgInfos = organizationCommander.getOrganizationInfos(libs.flatMap(_.organizationId).toSet, viewerOpt.flatMap(_.id))
+    val basicOrgs = organizationCommander.getOrganizationInfos(libs.flatMap(_.organizationId).toSet)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -622,7 +622,7 @@ class LibraryInfoCommanderImpl @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val orgInfoOpt = lib.organizationId.map(orgInfos.apply)
+      val orgInfoOpt = lib.organizationId.map(basicOrgs.apply)
       val path = LibraryPathHelper.formatLibraryPath(owner, orgInfoOpt.map(_.handle), lib.slug)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
@@ -692,7 +692,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, orgInfo: Option[OrganizationInfo]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership], path: String, basicOrg: Option[BasicOrganization]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -713,7 +713,7 @@ class LibraryInfoCommanderImpl @Inject() (
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,
-      org = orgInfo
+      org = basicOrg
     )
   }
 
