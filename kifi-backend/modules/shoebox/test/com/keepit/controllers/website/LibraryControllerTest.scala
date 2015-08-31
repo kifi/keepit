@@ -691,14 +691,29 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                "numFollowers":0,
                "whoCanInvite":"collaborator",
                "modifiedAt": ${lib1.updatedAt.getMillis},
+               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
+               "org": {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}",
+                  "members":[{
+                     "id":"${basicUser1.externalId}",
+                     "firstName":"${basicUser1.firstName}",
+                     "lastName":"${basicUser1.lastName}",
+                     "pictureName":"${basicUser1.pictureName}",
+                     "username":"${basicUser1.username.value}"
+                    }
+                  ],
+                  "numMembers":1,
+                  "numLibraries":1
+               },
                "membership":{
                 "access":"owner",
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null,
-               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
-               "org": {"id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user1.externalId}","handle":"${org1.handle.value}","name":"${org1.name}","numMembers":1,"numLibraries":1}
+               "invite": null
               },
              "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
