@@ -24,6 +24,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
+import org.joda.time.DateTime
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -892,6 +893,8 @@ class KeepCommanderImpl @Inject() (
       userId = userId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
+      organizationId = toLibrary.organizationId,
+      keptAt = currentDateTime,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId))
     )

@@ -1165,7 +1165,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val newKeeps = inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000)
             newKeeps.length === keeps.length
             newKeeps.map(_.title.get) === keeps.reverse.map(_.title.get)
-            newKeeps.map(_.keptAt) === keeps.reverse.map(_.keptAt)
+            newKeeps.map(_.uriId) === keeps.reverse.map(_.uriId)
             newKeeps.map(_.note) === keeps.reverse.map(_.note)
           }
         }
