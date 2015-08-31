@@ -73,7 +73,7 @@ class LibraryController @Inject() (
     externalCreateRequestValidated match {
       case JsError(errs) =>
         airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
-        BadRequest(Json.obj("error" -> "badly_formatted_request"))
+        BadRequest(Json.obj("error" -> "badly_formatted_request", "details" -> errs.toString))
       case JsSuccess(externalCreateRequest, _) =>
         val libCreateRequest = db.readOnlyReplica { implicit session =>
           val slug = externalCreateRequest.slug.getOrElse(LibrarySlug.generateFromName(externalCreateRequest.name))
