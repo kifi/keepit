@@ -18,7 +18,7 @@ case class OrganizationCard(
   numLibraries: Int)
 
 object OrganizationCard {
-  implicit val defaultFormat= (
+  implicit val defaultFormat = (
     (__ \ 'id).format[PublicId[Organization]] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'handle).format[OrganizationHandle] and

@@ -247,3 +247,11 @@ case class OrgTrackingValuesKey(id: Id[Organization]) extends Key[OrgTrackingVal
 class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class OrganizationCardKey(id: Id[Organization]) extends Key[OrganizationCard] {
+  override val version = 1
+  val namespace = "org_cards_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class OrganizationCardCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationCardKey, OrganizationCard](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

@@ -194,4 +194,8 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def organizationCardCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationCardCache(stats, accessLog, (outerRepo, 7 days))
 }

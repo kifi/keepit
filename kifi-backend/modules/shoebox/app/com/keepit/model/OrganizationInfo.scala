@@ -73,7 +73,6 @@ object OrganizationView {
   }
 }
 
-
 object OrganizationNotificationInfoBuilder {
   def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
     OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(_.imagePath))

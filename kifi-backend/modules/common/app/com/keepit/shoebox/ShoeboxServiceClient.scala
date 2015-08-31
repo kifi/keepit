@@ -163,7 +163,8 @@ case class ShoeboxCacheProvider @Inject() (
   keepImagesCache: KeepImagesCache,
   primaryOrgForUserCache: PrimaryOrgForUserCache,
   basicKeepByIdCache: BasicKeepByIdCache,
-  organizationMembersCache: OrganizationMembersCache)
+  organizationMembersCache: OrganizationMembersCache,
+  organizationCardCache: OrganizationCardCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,

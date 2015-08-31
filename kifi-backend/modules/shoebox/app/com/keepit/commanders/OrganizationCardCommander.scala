@@ -18,11 +18,13 @@ class OrganizationCardCommander @Inject() (
     organizationAvatarCommander: OrganizationAvatarCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
+    orgCardCache: OrganizationCardCache,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     implicit val publicIdConfiguration: PublicIdConfiguration) {
 
   def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {
+    orgCardCache.bulkGet(orgIds.map(OrganizationCardKey.apply).toSet)
     db.readOnlyReplica { implicit session =>
       orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId, viewerIdOpt) }.toMap
     }
