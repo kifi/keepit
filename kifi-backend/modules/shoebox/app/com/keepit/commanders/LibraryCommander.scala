@@ -774,25 +774,6 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
-    val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
-      (library, memTo)
-    }
-    memTo match {
-      case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
-      case Some(_) =>
-        val sortedKeeps = keeps.sortBy(k => (k.keptAt, k.id.get))
-        val keepResults = applyToKeeps(userId, toLibraryId, sortedKeeps, Set(), (k, s) => keepCommander.copyKeep(k, toLibrary, userId, withSource)(s))
-        Future {
-          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
-        }
-        keepResults
-    }
-  }
-
   def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val keeps = db.readOnlyReplica { implicit session =>
       val keepIds = ktlRepo.getAllByLibraryId(fromLibraryId).map(_.keepId).toSet
@@ -800,21 +781,86 @@ class LibraryCommanderImpl @Inject() (
     }
     moveKeeps(userId, toLibraryId, keeps)
   }
+
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
-    val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
-      (library, memTo)
-    }
-    memTo match {
-      case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
-      case Some(_) =>
-        val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY), (k, s) => keepCommander.moveKeep(k, toLibrary, userId)(s))
-        Future {
-          libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
+        case Some(membership) if membership.canWrite => {
+          val toLibrary = libraryRepo.get(toLibraryId)
+          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).exists(_.canWrite)
+          }
+          val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
+          val successes = collection.mutable.ListBuffer[Keep]()
+
+          keeps.foreach {
+            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId)(s) match {
+              case Right(movedKeep) => successes += movedKeep
+              case Left(error) => failures += (keep -> error)
+            }
+            case forbiddenKeep => failures += (forbiddenKeep -> LibraryError.SourcePermissionDenied)
+          }
+
+          if (successes.nonEmpty) {
+            libraryRepo.updateLastKept(toLibraryId)
+            refreshKeepCounts(validSourceLibraryIds + toLibraryId)
+            s.onTransactionSuccess {
+              SafeFuture {
+                searchClient.updateKeepIndex()
+                libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
+              }
+            }
+          }
+
+          (successes.toSeq, failures.toSeq)
         }
-        keepResults
+        case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
+      }
+    }
+  }
+
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
+        case Some(membership) if membership.canWrite => {
+          val toLibrary = libraryRepo.get(toLibraryId)
+          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).isDefined
+          }
+          val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
+          val successes = collection.mutable.ListBuffer[Keep]()
+
+          keeps.foreach {
+            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
+              case Right(movedKeep) => successes += movedKeep
+              case Left(error) => failures += (keep -> error)
+            }
+            case forbiddenKeep => failures += (forbiddenKeep -> LibraryError.SourcePermissionDenied)
+          }
+
+          if (successes.nonEmpty) {
+            libraryRepo.updateLastKept(toLibraryId)
+            refreshKeepCounts(Set(toLibraryId))
+            s.onTransactionSuccess {
+              SafeFuture {
+                searchClient.updateKeepIndex()
+                libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
+              }
+            }
+          }
+          (successes.toSeq, failures.toSeq)
+        }
+        case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
+      }
+    }
+  }
+
+  private def refreshKeepCounts(libraryIds: Set[Id[Library]])(implicit session: RWSession): Unit = {
+    libraryIds.foreach(libraryId => countByLibraryCache.remove(CountByLibraryKey(libraryId)))
+    keepRepo.getCountsByLibrary(libraryIds).foreach {
+      case (libraryId, keepCount) =>
+        val library = libraryRepo.get(libraryId)
+        libraryRepo.save(library.copy(keepCount = keepCount))
     }
   }
 
