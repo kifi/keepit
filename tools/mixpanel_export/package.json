@@ -1,0 +1,16 @@
+{
+  "name": "mixpanel_export",
+  "version": "0.1.0",
+  "description": "",
+  "main": "amplitude_import.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kifi",
+  "license": "",
+  "dependencies": {
+    "async": "^1.4.2",
+    "bluebird": "^2.9.34",
+    "lodash": "^3.10.1"
+  }
+}
