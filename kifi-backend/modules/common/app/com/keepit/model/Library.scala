@@ -344,8 +344,8 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
-  def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), library.slug)
+  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }
