@@ -129,15 +129,15 @@ class KeepChecker @Inject() (
   private def ensureStateIntegrity(keepId: Id[Keep]) = db.readWrite { implicit session =>
     val keep = keepRepo.getNoCache(keepId)
     if (keep.isInactive) {
-      val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.ACTIVE))
+      val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} is a zombie!")
+        airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!")
         ktuCommander.deactivate(ktu)
       }
 
-      val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.ACTIVE))
+      val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} is a zombie!")
+        airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!")
         ktlCommander.deactivate(ktl)
       }
     }
@@ -147,8 +147,9 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
     val libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
     val expectedHash = LibrariesHash(libraries)
-    if (keep.librariesHash != expectedHash) {
-      airbrake.notify(s"[KTL-HASH-MATCH] Keep $keepId's library hash (${keep.librariesHash}) != $libraries ($expectedHash)")
+    if (keep.librariesHash != Some(expectedHash)) {
+      // TODO(ryan): once we have backfilled and made the field not nullable, uncomment this line
+      // airbrake.notify(s"[KTL-HASH-MATCH] Keep $keepId's library hash (${keep.librariesHash}) != $libraries ($expectedHash)")
       keepCommander.refreshLibrariesHash(keep)
     }
   }
@@ -157,8 +158,9 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
     val expectedHash = ParticipantsHash(users)
-    if (keep.participantsHash != expectedHash) {
-      airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
+    if (keep.participantsHash != Some(expectedHash)) {
+      // TODO(ryan): once we have backfilled and made the field not nullable, uncomment this line
+      // airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
       keepCommander.refreshParticipantsHash(keep)
     }
   }
