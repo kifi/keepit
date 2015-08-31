@@ -59,6 +59,7 @@ object BulkKeepSelection {
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep]
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
@@ -135,6 +136,24 @@ class KeepCommanderImpl @Inject() (
     val idToKeepMap = keepRepo.getByIds(ids.toSet)
     ids.map(idToKeepMap)
   }
+
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
+    db.readOnlyReplica { implicit session =>
+      val keeps = keepRepo.getByIds(ids)
+      val users = userRepo.getAllUsers(keeps.collect {
+        case (id, keep) => keep.userId
+      }.toSeq)
+      keeps.map {
+        case (id, keep) => id -> BasicKeep(
+          keep.externalId,
+          keep.visibility,
+          Library.publicId(keep.libraryId.get),
+          users(keep.userId).externalId
+        )
+      }
+    }
+  }
+
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchClient.indexInfoList()).map { results =>

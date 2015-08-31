@@ -188,6 +188,10 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new PrimaryOrgForUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
 
   @Provides @Singleton
+  def basicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicKeepByIdCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
   def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
 }

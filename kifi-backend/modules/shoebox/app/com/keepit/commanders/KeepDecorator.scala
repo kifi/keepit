@@ -21,7 +21,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait KeepDecorator {
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]]
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[BasicKeep]]
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
 }
 
 @Singleton
@@ -107,7 +107,7 @@ class KeepDecoratorImpl @Inject() (
         }
       }
 
-      val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
+      val allMyKeeps = perspectiveUserIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
 
       val librariesWithWriteAccess = perspectiveUserIdOpt.map { userId =>
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
@@ -203,7 +203,7 @@ class KeepDecoratorImpl @Inject() (
     }
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[BasicKeep]] = {
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]] = {
     val allKeeps = db.readOnlyReplica { implicit session =>
       val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
       val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).toSet
@@ -225,7 +225,7 @@ class KeepDecoratorImpl @Inject() (
             val mine = userId == keep.userId
             val libraryId = keep.libraryId.get
             val removable = true // all keeps here are writeable
-            BasicKeep(
+            PersonalKeep(
               id = keep.externalId,
               mine = mine,
               removable = removable,
@@ -235,7 +235,7 @@ class KeepDecoratorImpl @Inject() (
           }
           uriId -> userKeeps
         case _ =>
-          uriId -> Set.empty[BasicKeep]
+          uriId -> Set.empty[PersonalKeep]
       }
     }.toMap
   }

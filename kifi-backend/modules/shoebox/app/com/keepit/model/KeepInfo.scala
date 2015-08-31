@@ -16,7 +16,7 @@ case class KeepInfo(
   isPrivate: Boolean, // deprecated
   user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
   createdAt: Option[DateTime] = None,
-  keeps: Option[Set[BasicKeep]] = None,
+  keeps: Option[Set[PersonalKeep]] = None,
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,

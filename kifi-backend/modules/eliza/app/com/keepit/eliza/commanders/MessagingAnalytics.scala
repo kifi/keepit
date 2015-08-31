@@ -192,7 +192,7 @@ class MessagingAnalytics @Inject() (
       sender match {
         case MessageSender.User(userId) => {
           val uriId = thread.uriId.get
-          shoebox.getBasicKeeps(userId, Set(uriId)).foreach { basicKeeps =>
+          shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
             thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
             val context = contextBuilder.build
