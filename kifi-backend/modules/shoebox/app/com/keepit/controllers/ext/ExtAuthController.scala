@@ -71,7 +71,7 @@ class ExtAuthController @Inject() (
     val (libraries, organizations, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
       val libraries = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
       val orgIds = orgMembershipCommander.getAllOrganizationsForUser(userId)
-      val orgCards = orgCommander.getOrganizationCards(orgIds, Some(userId)).values.toSeq
+      val basicOrgs = orgCommander.getBasicOrganizations(orgIds.toSet).values.toSeq
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -84,7 +84,7 @@ class ExtAuthController @Inject() (
           (installationRepo.save(install), false, false)
       }
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (libraries, orgCards, installation, urlPatterns, isInstall, isUpdate)
+      (libraries, basicOrgs, installation, urlPatterns, isInstall, isUpdate)
     }
 
     if (isUpdate || isInstall) {

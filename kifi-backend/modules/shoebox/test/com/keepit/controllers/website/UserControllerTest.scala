@@ -77,6 +77,15 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
                   "ownerId":"${user.externalId}",
                   "handle":"${org.handle.value}",
                   "name":"${org.name}",
+                  "members": [
+                    {
+                      "id":"${user.externalId}",
+                      "firstName":"Shanee",
+                      "lastName":"Smith",
+                      "pictureName":"0.jpg",
+                      "username":"test"
+                    }
+                  ],
                   "numMembers":1,
                   "numLibraries":0
               }]
