@@ -1112,7 +1112,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "hashtags":[],
                 "summary": {},
                 "siteName": "Amazon",
-                "libraryId": "l7jlKlnA36Su"
+                "libraryId": "l7jlKlnA36Su",
+                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
               },
               {
                 "id": "${keep1.externalId}",
@@ -1133,7 +1134,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "hashtags":[],
                 "summary": {},
                 "siteName": "Google",
-                "libraryId": "l7jlKlnA36Su"
+                "libraryId": "l7jlKlnA36Su",
+                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
               }
             ],
             "numKeeps": 2
