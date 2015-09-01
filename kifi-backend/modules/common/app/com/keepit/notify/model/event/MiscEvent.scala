@@ -36,7 +36,7 @@ trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] 
   override def info(events: Set[DepressedRobotGrumble]): RequestingNotificationInfos[NotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else plurals(phrase)
 
-    RequestingNotificationInfos(Requests()) { subset =>
+    RequestingNotificationInfos(Requests()) { batched =>
       NotificationInfo(
         url = "http://goo.gl/PqN7Cs",
         imageUrl = "http://i.imgur.com/qs8QofA.png",

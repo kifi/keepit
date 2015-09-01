@@ -26,15 +26,13 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId)
-    )) { subset =>
-      val inviterInfo = RequestUser(event.inviterId).lookup(subset)
-      val inviter = inviterInfo.user
-      NotificationInfo(
-        url = inviterInfo.path.encode.absolute,
+    )) { batched =>
+      val inviter = RequestUser(event.inviterId).lookup(batched)
+      NotificationInfo.toUser(
+        user = inviter,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
         linkText = s"Respond to ${inviter.firstName}’s invitation",
-        imageUrl = inviterInfo.imageUrl,
         extraJson = Some(Json.obj(
           "friend" -> inviter
         ))
@@ -58,15 +56,13 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId)
-    )) { subset =>
-      val accepterInfo = RequestUser(event.accepterId).lookup(subset)
-      val accepter = accepterInfo.user
-      NotificationInfo(
-        url = accepterInfo.path.encode.absolute,
+    )) { batched =>
+      val accepter = RequestUser(event.accepterId).lookup(batched)
+      NotificationInfo.toUser(
+        user = accepter,
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
         body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
         linkText = s"Visit ${accepter.firstName}’s profile",
-        imageUrl = accepterInfo.imageUrl,
         extraJson = Some(Json.obj(
           "friend" -> accepter
         ))

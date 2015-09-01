@@ -25,23 +25,21 @@ trait LibraryNewKeepImpl extends NonGroupingNotificationKind[LibraryNewKeep] {
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
-    )) { subset =>
-      val newKeepInfo = RequestKeep(event.keepId).lookup(subset)
-      val newKeep = newKeepInfo.keep
-      val keeperInfo = newKeepInfo.keeper
-      val keeper = keeperInfo.user
-      val libraryKeptInfo = RequestLibrary(event.libraryId).lookup(subset)
+    )) { batched =>
+      val newKeep = RequestKeep(event.keepId).lookup(batched)
+      val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
+      val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
       NotificationInfo(
         url = newKeep.url,
-        imageUrl = keeperInfo.imageUrl,
-        title = s"New keep in ${libraryKeptInfo.name}",
+        image = UserImage(keeper),
+        title = s"New keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to page",
         extraJson = Some(Json.obj(
           "keeper" -> keeper,
-          "library" -> Json.toJson(libraryKeptInfo),
+          "library" -> Json.toJson(libraryKept),
           "keep" -> Json.obj(
-            "id" -> newKeep.externalId,
+            "id" -> newKeep.id,
             "url" -> newKeep.url
           )
         ))
@@ -66,15 +64,13 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
-    )) { subset =>
-      val libraryKeptInfo = RequestLibrary(event.libraryId).lookup(subset)
-      val newKeepInfo = RequestKeep(event.keepId).lookup(subset)
-      val newKeep = newKeepInfo.keep
-      val keeperInfo = newKeepInfo.keeper
-      val keeper = keeperInfo.user
+    )) { batched =>
+      val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
+      val newKeep = RequestKeep(event.keepId).lookup(batched)
+      val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       NotificationInfo(
         url = libraryKeptInfo.path.encode.absolute,
-        imageUrl = keeperInfo.imageUrl,
+        image = UserImage(keeper),
         title = s"New Keep in ${libraryKeptInfo.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to library",

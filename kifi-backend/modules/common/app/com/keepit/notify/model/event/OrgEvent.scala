@@ -25,10 +25,10 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestOrganization(event.orgId)
-    )) { subset =>
-      val inviterInfo = RequestUser(event.inviterId).lookup(subset)
+    )) { batched =>
+      val inviterInfo = RequestUser(event.inviterId).lookup(batched)
       val inviter = inviterInfo.user
-      val invitedOrg = RequestOrganization(event.orgId).lookup(subset)
+      val invitedOrg = RequestOrganization(event.orgId).lookup(batched)
       NotificationInfo(
         url = invitedOrg.path.encode.absolute,
         imageUrl = inviterInfo.imageUrl,
@@ -56,10 +56,10 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestOrganization(event.orgId)
-    )) { subset =>
-      val accepterInfo = RequestUser(event.accepterId).lookup(subset)
+    )) { batched =>
+      val accepterInfo = RequestUser(event.accepterId).lookup(batched)
       val accepter = accepterInfo.user
-      val acceptedOrg = RequestOrganization(event.orgId).lookup(subset)
+      val acceptedOrg = RequestOrganization(event.orgId).lookup(batched)
       NotificationInfo(
         url = acceptedOrg.path.encode.absolute,
         imageUrl = accepterInfo.imageUrl,

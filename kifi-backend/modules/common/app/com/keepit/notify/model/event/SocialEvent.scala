@@ -25,8 +25,8 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.friendId)
-    )) { subset =>
-      val friendInfo = RequestUser(event.friendId).lookup(subset)
+    )) { batched =>
+      val friendInfo = RequestUser(event.friendId).lookup(batched)
       val friend = friendInfo.user
       NotificationInfo(
         url = friendInfo.path.encode.absolute,
@@ -57,8 +57,8 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     import NotificationInfoRequest._
     RequestingNotificationInfos(Requests(
       RequestUser(event.joinerId)
-    )) { subset =>
-      val joinerInfo = RequestUser(event.joinerId).lookup(subset)
+    )) { batched =>
+      val joinerInfo = RequestUser(event.joinerId).lookup(batched)
       val joiner = joinerInfo.user
       NotificationInfo(
         url = joinerInfo.path.encode.absolute,
