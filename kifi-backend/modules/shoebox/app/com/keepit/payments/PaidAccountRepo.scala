@@ -37,8 +37,8 @@ class PaidAccountRepoImpl @Inject() (
     def credit = column[DollarAmount]("credit", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
-    def lockedForProcessing = column[Boolean]("locked_for_processing", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
