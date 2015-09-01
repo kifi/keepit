@@ -10,6 +10,7 @@ import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
+import com.keepit.payments.{ PlanManagementCommander, PaidPlan, BillingCycle, DollarAmount }
 
 import scala.util.Random
 
@@ -157,6 +158,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
       withDb() { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
+        val planCommander = inject[PlanManagementCommander]
 
         val org = db.readWrite { implicit session =>
           val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
@@ -164,6 +166,8 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
           orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))
+          planCommander.createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+          planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, org.ownerId, session)
           org
         }
         val orgId = org.id.get

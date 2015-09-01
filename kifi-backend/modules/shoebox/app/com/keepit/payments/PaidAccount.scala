@@ -29,11 +29,13 @@ case class PaidAccount(
     credit: DollarAmount,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
-    lockedForProcessing: Boolean = false) extends ModelWithState[PaidAccount] {
+    lockedForProcessing: Boolean = false,
+    frozen: Boolean = false) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
+  def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 }
 
 object PaidAccountStates extends States[PaidAccount]
