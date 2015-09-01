@@ -9,6 +9,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json.KeyFormat
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import play.api.{ Mode, Play }
@@ -460,6 +461,21 @@ class AdminOrganizationController @Inject() (
     deleteResponse match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
+    }
+  }
+
+  def addPermissionToAllOrganizations() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    implicit val reads = KeyFormat.key2Reads[OrganizationPermission, String]("permission", "confirmation")
+    val (newPermission, confirmation) = request.body.as[(OrganizationPermission, String)]
+    assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
+    val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.filter(_.isActive).map(_.id.get) }
+    Future {
+      for (orgId <- orgIds) {
+        val oldBasePermissions = db.readOnlyReplica { implicit session => orgRepo.get(orgId).basePermissions }
+        val newBasePermissions = OrganizationRole.all.foldLeft(oldBasePermissions)((bs, role) => bs.modified(Some(role), added = Set(newPermission), removed = Set.empty))
+        orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(basePermissions = Some(newBasePermissions)))
+      }
+      Ok(Json.obj("added" -> newPermission, "modified" -> orgIds))
     }
   }
 
