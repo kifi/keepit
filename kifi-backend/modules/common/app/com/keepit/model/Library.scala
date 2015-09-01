@@ -8,6 +8,7 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -229,7 +230,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 7
+  override val version = 8
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -372,7 +373,7 @@ case class BasicLibraryDetails(
   keepCount: Int,
   membership: Option[LibraryMembership], // viewer
   ownerId: Id[User],
-  url: String)
+  url: Path)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {
