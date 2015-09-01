@@ -49,7 +49,7 @@ angular.module('kifi')
           {
             name: 'follow_libs',
             title: 'Follow 5 libraries',
-            subtitle: 'Browse libraries in your recommendations',
+            subtitle: 'Browse libraries from your connections',
             action: function () {
               modalService.open({
                 template: 'recos/userChecklistFollowModal.tpl.html',
