@@ -269,7 +269,7 @@ class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, inner
   extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class BasicOrganizationIdKey(id: Id[Organization]) extends Key[BasicOrganization] {
-  override val version = 1
+  override val version = 2
   val namespace = "basic_org_by_id"
   def toKey(): String = id.id.toString
 }
