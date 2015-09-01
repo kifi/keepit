@@ -24,6 +24,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
+import org.joda.time.DateTime
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -59,6 +60,7 @@ object BulkKeepSelection {
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep]
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
@@ -117,6 +119,7 @@ class KeepCommanderImpl @Inject() (
     curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -134,6 +137,24 @@ class KeepCommanderImpl @Inject() (
     val idToKeepMap = keepRepo.getByIds(ids.toSet)
     ids.map(idToKeepMap)
   }
+
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
+    db.readOnlyReplica { implicit session =>
+      val keeps = keepRepo.getByIds(ids)
+      val users = userRepo.getAllUsers(keeps.collect {
+        case (id, keep) => keep.userId
+      }.toSeq)
+      keeps.map {
+        case (id, keep) => id -> BasicKeep(
+          keep.externalId,
+          keep.visibility,
+          Library.publicId(keep.libraryId.get),
+          users(keep.userId).externalId
+        )
+      }
+    }
+  }
+
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchClient.indexInfoList()).map { results =>
@@ -750,7 +771,7 @@ class KeepCommanderImpl @Inject() (
   private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
   private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
     val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+      def call() = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
     })
     if (isPrivate) {
       secret
@@ -767,7 +788,7 @@ class KeepCommanderImpl @Inject() (
     val keep = keepRepo.save(k.withLibraries(libraryIds).withParticipants(userIds))
 
     userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
-    val libraries = libraryRepo.getByIds(libraryIds).values
+    val libraries = libraryRepo.getLibraries(libraryIds).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep
@@ -891,24 +912,21 @@ class KeepCommanderImpl @Inject() (
       userId = userId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
+      organizationId = toLibrary.organizationId,
+      keptAt = currentDateTime,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId))
     )
 
     currentKeepOpt match {
-      case None =>
-        val persistedKeep = persistKeep(newKeep, Set(userId), Set(toLibrary.id.get))
-        combineTags(k.id.get, persistedKeep.id.get)
-        Right(persistedKeep)
-
-      case Some(existingKeep) if existingKeep.isInactive =>
-        val persistedKeep = persistKeep(newKeep.withId(existingKeep.id.get), Set(userId), Set(toLibrary.id.get))
-        combineTags(k.id.get, persistedKeep.id.get)
-        Right(persistedKeep)
-
-      case Some(existingKeep) =>
+      case Some(existingKeep) if existingKeep.isActive =>
         combineTags(k.id.get, existingKeep.id.get)
         Left(LibraryError.AlreadyExistsInDest)
+
+      case inactiveKeepOpt =>
+        val persistedKeep = persistKeep(newKeep.copy(id = inactiveKeepOpt.flatMap(_.id)), Set(userId), Set(toLibrary.id.get))
+        combineTags(k.id.get, persistedKeep.id.get)
+        Right(persistedKeep)
     }
   }
 

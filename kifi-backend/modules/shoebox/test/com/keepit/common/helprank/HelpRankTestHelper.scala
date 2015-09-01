@@ -1,7 +1,7 @@
 package com.keepit.common.helprank
 
 import com.google.inject.Injector
-import com.keepit.commanders.{ LibraryCommander, RawBookmarkFactory, KeepInterner }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, RawBookmarkFactory, KeepInterner }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -15,7 +15,7 @@ import com.keepit.model.UserFactory
 
 trait HelpRankTestHelper { self: TestInjector =>
 
-  def helpRankSetup(heimdal: FakeHeimdalServiceClientImpl, db: Database)(implicit context: HeimdalContext, injector: Injector): (User, User, User, Seq[Keep], Seq[Keep], Seq[Keep]) = {
+  def helpRankSetup(heimdal: FakeHeimdalServiceClientImpl, db: Database)(implicit context: HeimdalContext, injector: Injector): (User, User, User, Seq[Keep], Seq[Keep], Seq[Keep], Library, Library) = {
     implicit val kdRepo = heimdal.keepDiscoveryRepo
     implicit val rkRepo = heimdal.rekeepRepo
 
@@ -38,10 +38,10 @@ trait HelpRankTestHelper { self: TestInjector =>
       (u1, u2, u3, u4)
     }
 
-    val (u1m, u1s) = inject[LibraryCommander].internSystemGeneratedLibraries(u1.id.get)
-    val (u2m, u2s) = inject[LibraryCommander].internSystemGeneratedLibraries(u2.id.get)
-    val (u3m, u3s) = inject[LibraryCommander].internSystemGeneratedLibraries(u3.id.get)
-    val (u4m, u4s) = inject[LibraryCommander].internSystemGeneratedLibraries(u4.id.get)
+    val (u1m, u1s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u1.id.get)
+    val (u2m, u2s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u2.id.get)
+    val (u3m, u3s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u3.id.get)
+    val (u4m, u4s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u4.id.get)
 
     val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
     val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
@@ -87,7 +87,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, u4m, KeepSource.default)
     val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
     heimdal.save(rk3)
-    (u1, u2, u3, keeps1, keeps2, keeps3a)
+    (u1, u2, u3, keeps1, keeps2, keeps3a, u1m, u3m)
   }
 
 }

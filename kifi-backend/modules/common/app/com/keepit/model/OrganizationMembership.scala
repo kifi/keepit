@@ -1,11 +1,15 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class OrganizationMembership(
     id: Option[Id[OrganizationMembership]] = None,
@@ -116,4 +120,13 @@ case class IngestableOrganizationMembership(
 object IngestableOrganizationMembership {
   implicit val format = Json.format[IngestableOrganizationMembership]
 }
+
+case class OrganizationMembersKey(id: Id[Organization]) extends Key[Set[Id[User]]] {
+  override val version = 1
+  val namespace = "member_ids_by_organization"
+  def toKey(): String = id.id.toString
+}
+
+class OrganizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationMembersKey, Set[Id[User]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

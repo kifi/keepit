@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.cache.TransactionalCache
 import com.keepit.common.db.{ Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.logging.Logging
@@ -32,6 +33,7 @@ class BasicUserRepo @Inject() (
   }
 
   def loadActive(userId: Id[User])(implicit session: RSession): Option[BasicUser] = {
+    implicit val objCache = TransactionalCache.getObjectCache(basicUserCache)
     basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId)) {
       Some(userRepo.get(userId)).filter(_.state == UserStates.ACTIVE).map(BasicUser.fromUser)
     }
