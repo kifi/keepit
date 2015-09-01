@@ -232,13 +232,13 @@ angular.module('kifi')
           return angular.element('.kf-keep-card').length > 0;
         };
 
-        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-reco');
+        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-keep');
 
         scope.followCardExists = function () {
           return angular.element('.kf-rcl-card').length > 0;
         };
 
-        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-reco');
+        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-keep');
 
         function allItemsComplete(items) {
           for (var i = 0; i < items.length; i++) {
