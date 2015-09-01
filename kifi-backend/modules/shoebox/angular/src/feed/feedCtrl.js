@@ -14,15 +14,6 @@ angular.module('kifi')
       });
     }
 
-    function libraryKeptTo (keep) {
-      if (keep.libraries.length) {
-        var libraryAndUser = keep.libraries.filter(function(libraryAndUser) {
-          return libraryAndUser[0].id === keep.libraryId;
-        })[0] || keep.libraries[0];
-        return libraryAndUser[0];
-      }
-    }
-
     var feedLazyLoader = new Paginator(feedSource, 15, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
@@ -38,11 +29,7 @@ angular.module('kifi')
       feedLazyLoader
       .fetch()
       .then(function (keeps) {
-        var updatedKeeps = keeps.map(function(keep) {
-          keep.library = libraryKeptTo(keep);
-          return keep;
-        });
-        $scope.feed = updatedKeeps;
+        $scope.feed = keeps;
       })
       ['catch'](modalService.openGenericErrorModal);
     };
