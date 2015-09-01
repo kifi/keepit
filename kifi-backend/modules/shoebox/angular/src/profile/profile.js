@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService', '$analytics',
-  function ($scope, $http, modalService, profileService, routeService, $window, socialService, $analytics) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
