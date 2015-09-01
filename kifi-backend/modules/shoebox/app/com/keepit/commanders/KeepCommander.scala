@@ -788,7 +788,7 @@ class KeepCommanderImpl @Inject() (
     val keep = keepRepo.save(k.withLibraries(libraryIds).withParticipants(userIds))
 
     userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
-    val libraries = libraryRepo.getByIds(libraryIds).values
+    val libraries = libraryRepo.getLibraries(libraryIds).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep

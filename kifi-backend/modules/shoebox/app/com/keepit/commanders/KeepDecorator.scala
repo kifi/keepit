@@ -64,7 +64,7 @@ class KeepDecoratorImpl @Inject() (
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
 

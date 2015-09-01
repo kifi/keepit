@@ -15,7 +15,7 @@ import com.keepit.model.UserFactory
 
 trait HelpRankTestHelper { self: TestInjector =>
 
-  def helpRankSetup(heimdal: FakeHeimdalServiceClientImpl, db: Database)(implicit context: HeimdalContext, injector: Injector): (User, User, User, Seq[Keep], Seq[Keep], Seq[Keep]) = {
+  def helpRankSetup(heimdal: FakeHeimdalServiceClientImpl, db: Database)(implicit context: HeimdalContext, injector: Injector): (User, User, User, Seq[Keep], Seq[Keep], Seq[Keep], Library, Library) = {
     implicit val kdRepo = heimdal.keepDiscoveryRepo
     implicit val rkRepo = heimdal.rekeepRepo
 
@@ -87,7 +87,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, u4m, KeepSource.default)
     val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
     heimdal.save(rk3)
-    (u1, u2, u3, keeps1, keeps2, keeps3a)
+    (u1, u2, u3, keeps1, keeps2, keeps3a, u1m, u3m)
   }
 
 }
