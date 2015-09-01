@@ -43,7 +43,8 @@ case class Library(
     lastKept: Option[DateTime] = None,
     keepCount: Int = 0,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
-    organizationId: Option[Id[Organization]] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    organizationId: Option[Id[Organization]] = None,
+    organizationMemberAccess: Option[LibraryAccess] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete: Library = this.copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -90,8 +91,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     lastKept: Option[DateTime],
     keepCount: Int,
     whoCanInvite: Option[LibraryInvitePermissions],
-    organizationId: Option[Id[Organization]] = None) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId)
+    organizationId: Option[Id[Organization]],
+    organizationMemberAccess: Option[LibraryAccess]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -113,7 +115,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.lastKept,
       lib.keepCount,
       lib.whoCanInvite,
-      lib.organizationId)
+      lib.organizationId,
+      lib.organizationMemberAccess)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -137,7 +140,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
-    (__ \ "orgId").formatNullable[Id[Organization]]
+    (__ \ "orgId").formatNullable[Id[Organization]] and
+    (__ \ "orgMemberAccess").formatNullable[LibraryAccess]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {

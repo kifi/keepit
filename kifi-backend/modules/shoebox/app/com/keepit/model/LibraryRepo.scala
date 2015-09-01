@@ -103,8 +103,9 @@ class LibraryRepoImpl @Inject() (
     def keepCount = column[Int]("keep_count", O.NotNull)
     def whoCanInvite = column[Option[LibraryInvitePermissions]]("invite_collab", O.Nullable)
     def orgId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
+    def orgMemberAccess = column[Option[LibraryAccess]]("organization_member_access", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId, orgMemberAccess) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   implicit val getLibraryResult: GetResult[Library] = GetResult { r: PositionedResult =>
@@ -126,7 +127,8 @@ class LibraryRepoImpl @Inject() (
       lastKept = r.<<[Option[DateTime]],
       keepCount = r.<<[Int],
       whoCanInvite = r.<<[Option[String]].map(LibraryInvitePermissions(_)),
-      organizationId = r.<<[Option[Id[Organization]]]
+      organizationId = r.<<[Option[Id[Organization]]],
+      organizationMemberAccess = r.<<[Option[LibraryAccess]]
     )
   }
 
