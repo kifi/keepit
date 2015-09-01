@@ -15,8 +15,10 @@ class BatchedNotificationInfos(
     private val keeps: Map[Id[Keep], BasicKeep],
     private val orgs: Map[Id[Organization], BasicOrganization]) {
 
-  def lookup[M, R](request: NotificationInfoRequest[M, R]): R =
-    // if intellij shows red underlines here, don't listen, it's lying
+  def lookup[M, R](request: NotificationInfoRequest[M, R]): R = {
+    // If intellij shows red underlines here, don't listen, it's lying.
+    // It cannot detect that the result type R varies based on the pattern match here,
+    // but the Scala compiler can.
     request match {
       case RequestUser(id) => users(id)
       case RequestUserExternal(id) => usersExternal(id)
@@ -24,6 +26,7 @@ class BatchedNotificationInfos(
       case RequestKeep(id) => keeps(id)
       case RequestOrganization(id) => orgs(id)
     }
+  }
 
 }
 
