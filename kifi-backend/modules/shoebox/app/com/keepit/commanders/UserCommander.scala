@@ -289,7 +289,8 @@ class UserCommander @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgInfos = organizationCommander.getOrganizationInfos(orgs.toSet, user.id).values.toSeq
+      val orgInfosMap = organizationCommander.getOrganizationInfos(orgs.toSet, user.id)
+      val orgInfos = orgs.map(org => orgInfosMap(org))
 
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgInfos)
     }
