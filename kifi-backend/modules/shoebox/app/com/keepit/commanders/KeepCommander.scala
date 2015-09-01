@@ -147,6 +147,8 @@ class KeepCommanderImpl @Inject() (
       keeps.map {
         case (id, keep) => id -> BasicKeep(
           keep.externalId,
+          keep.title,
+          keep.url,
           keep.visibility,
           Library.publicId(keep.libraryId.get),
           users(keep.userId).externalId
