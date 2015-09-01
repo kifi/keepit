@@ -28,7 +28,9 @@ case class KeepInfo(
   hashtags: Option[Set[Hashtag]] = None,
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
-  libraryId: Option[PublicId[Library]] = None,
+  libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
+  library: Option[BasicLibrary] = None,
+  organization: Option[BasicOrganization] = None,
   sourceAttribution: Option[KeepSourceAttribution] = None,
   note: Option[String] = None)
 
@@ -38,11 +40,35 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWrites = Writes[BasicLibrary] { library =>
-      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
-    }
     implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
-    Json.writes[KeepInfo]
+    new Writes[KeepInfo] {
+      import com.keepit.common.core._
+      def writes(o: KeepInfo) = Json.obj(
+        "id" -> o.id,
+        "title" -> o.title,
+        "url" -> o.url,
+        "isPrivate" -> o.isPrivate,
+        "user" -> o.user,
+        "createdAt" -> o.createdAt,
+        "keeps" -> o.keeps,
+        "keepers" -> o.keepers,
+        "keepersOmitted" -> o.keepersOmitted,
+        "keepersTotal" -> o.keepersTotal,
+        "libraries" -> o.libraries,
+        "librariesOmitted" -> o.librariesOmitted,
+        "librariesTotal" -> o.librariesTotal,
+        "collections" -> o.collections,
+        "tags" -> o.tags,
+        "hashtags" -> o.hashtags,
+        "summary" -> o.summary,
+        "siteName" -> o.siteName,
+        "libraryId" -> o.libraryId,
+        "library" -> o.library,
+        "organization" -> o.organization,
+        "sourceAttribution" -> o.sourceAttribution,
+        "note" -> o.note
+      ).nonNullFields
+    }
   }
 
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?

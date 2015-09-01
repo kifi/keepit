@@ -38,6 +38,7 @@ class KeepDecoratorImpl @Inject() (
     orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
+    organizationCommander: OrganizationCommander,
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
@@ -63,14 +64,19 @@ class KeepDecoratorImpl @Inject() (
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
 
-        val libIdToOrg = {
+        val libIdToBasicOrg = {
           val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
-          val orgId2org = db.readOnlyMaster { implicit s => orgRepo.getByIds(libId2orgId.values.toSet) }
-          libId2orgId.mapValues { orgId => orgId2org.get(orgId) }.collect { case (id, Some(org)) => id -> org }
+          val libId2OrgCard = db.readOnlyMaster { implicit s =>
+            libId2orgId.map {
+              case (libId, orgId) =>
+                libId -> organizationCommander.getBasicOrganization(orgId)
+            }
+          }
+          libId2OrgCard
         }
 
         val idToBasicUser = {
@@ -81,12 +87,12 @@ class KeepDecoratorImpl @Inject() (
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues { library =>
-          val orgOpt = libIdToOrg.get(library.id.get)
+          val orgOpt = libIdToBasicOrg.get(library.id.get)
           val user = idToBasicUser(library.ownerId)
-          BasicLibrary(library, user, orgOpt)
+          BasicLibrary(library, user, orgOpt.map(_.handle))
         }
 
-        (idToBasicUser, idToBasicLibrary)
+        (idToBasicUser, idToBasicLibrary, libIdToBasicOrg)
       }
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
@@ -116,7 +122,7 @@ class KeepDecoratorImpl @Inject() (
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
-        (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
+        (idToBasicUser, idToBasicLibrary, idToBasicOrg) <- basicInfosFuture
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
@@ -158,7 +164,9 @@ class KeepDecoratorImpl @Inject() (
               hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              libraryId = keep.libraryId.map(l => Library.publicId(l)),
+              libraryId = keep.libraryId.map(Library.publicId),
+              library = keep.libraryId.flatMap(idToBasicLibrary.get),
+              organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
               note = keep.note
             )

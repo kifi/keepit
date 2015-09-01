@@ -341,7 +341,7 @@ class AdminLibraryController @Inject() (
       (lib, keeps)
     }
     implicit val context = HeimdalContext.empty
-    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))._2 foreach {
+    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps.toSet, withSource = Some(KeepSource.systemCopied))._2 foreach {
       case (keep, libraryError) =>
         throw new Exception(s"can't copy keep $keep : $libraryError")
     }

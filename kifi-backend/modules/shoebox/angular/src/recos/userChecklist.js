@@ -49,7 +49,7 @@ angular.module('kifi')
           {
             name: 'follow_libs',
             title: 'Follow 5 libraries',
-            subtitle: 'Browse libraries in your recommendations',
+            subtitle: 'Browse libraries from your connections',
             action: function () {
               modalService.open({
                 template: 'recos/userChecklistFollowModal.tpl.html',
@@ -232,13 +232,13 @@ angular.module('kifi')
           return angular.element('.kf-keep-card').length > 0;
         };
 
-        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-reco');
+        scope.triggerHighlightKeepButton = triggerHighlightElement.bind(null, '.kf-keep-keep-btn','.kf-feed-item');
 
         scope.followCardExists = function () {
           return angular.element('.kf-rcl-card').length > 0;
         };
 
-        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-reco');
+        scope.triggerHighlightFollowButton = triggerHighlightElement.bind(null, '.kf-rcl-follow-btn', '.kf-feed-item');
 
         function allItemsComplete(items) {
           for (var i = 0; i < items.length; i++) {

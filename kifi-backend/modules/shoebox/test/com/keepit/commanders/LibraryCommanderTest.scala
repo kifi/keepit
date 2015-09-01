@@ -1157,7 +1157,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000).length === 0
             inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000) === keeps.reverse
           }
-          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, emptyLib.id.get, keeps, withSource = None)
+          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, emptyLib.id.get, keeps.toSet, withSource = None)
           (yay.length, nay.length) === (keeps.length, 0)
 
           db.readOnlyMaster { implicit session =>
@@ -1165,7 +1165,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val newKeeps = inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000)
             newKeeps.length === keeps.length
             newKeeps.map(_.title.get) === keeps.reverse.map(_.title.get)
-            newKeeps.map(_.keptAt) === keeps.reverse.map(_.keptAt)
+            newKeeps.map(_.uriId) === keeps.reverse.map(_.uriId)
             newKeeps.map(_.note) === keeps.reverse.map(_.note)
           }
         }
@@ -1190,7 +1190,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
             inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
           }
-          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, targetLib.id.get, keeps, withSource = None)
+          val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, targetLib.id.get, keeps.toSet, withSource = None)
           (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
 
           db.readOnlyMaster { implicit session =>
@@ -1444,7 +1444,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
-        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Seq(k2), None)
+        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Set(k2), None)
 
         val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res5.right.get._1.length === 2

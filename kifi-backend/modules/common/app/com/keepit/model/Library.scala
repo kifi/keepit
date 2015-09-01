@@ -8,6 +8,7 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -229,7 +230,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 7
+  override val version = 8
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -344,9 +345,12 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
-  def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), library.slug)
+  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
+  }
+  implicit val libraryWrites = Writes[BasicLibrary] { library =>
+    Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
   }
 }
 
@@ -367,8 +371,9 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership] // viewer
-  )
+  membership: Option[LibraryMembership], // viewer
+  ownerId: Id[User],
+  url: Path)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {

@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.cache.TransactionalCache
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -22,8 +23,10 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
-  def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard]
-  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard
+  def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
+  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
+  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
+  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
@@ -56,49 +59,52 @@ class OrganizationCommanderImpl @Inject() (
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander,
-    planManagementCommander: PlanManagementCommander) extends OrganizationCommander with Logging {
+    planManagementCommander: PlanManagementCommander,
+    basicOrganizationIdCache: BasicOrganizationIdCache) extends OrganizationCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
-      val organizationInfo = getOrganizationInfoHelper(orgId, viewerIdOpt)
+      val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
       val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
     }
   }
-  def getOrganizationCards(orgIds: Seq[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationCard] = {
+
+  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
     db.readOnlyReplica { implicit session =>
-      orgIds.map { orgId => orgId -> getOrganizationCardHelper(orgId, viewerIdOpt) }.toMap
+      basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
+        missing.map(_.id).map { orgId => orgId -> getBasicOrganization(orgId) }.toMap.map {
+          case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
+        }
+      }
+    }.map {
+      case (orgKey, org) => (orgKey.id, org)
     }
   }
 
-  def getOrganizationCardHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationCard = {
-    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
-      airbrake.notify(s"Tried to serve up an organization card for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
-    }
+  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization = {
     val org = orgRepo.get(orgId)
     val orgHandle = org.handle
     val orgName = org.name
     val description = org.description
 
     val ownerId = userRepo.get(org.ownerId).externalId
-
-    val numMembers = orgMembershipRepo.countByOrgId(orgId)
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
 
-    val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-
-    OrganizationCard(
+    BasicOrganization(
       orgId = Organization.publicId(orgId),
       ownerId = ownerId,
       handle = orgHandle,
       name = orgName,
       description = description,
-      avatarPath = avatarPath,
-      numMembers = numMembers,
-      numLibraries = numLibraries)
+      avatarPath = avatarPath)
   }
 
-  private def getOrganizationInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
+  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = db.readOnlyReplica { implicit session =>
+    orgIds.map(id => id -> getOrganizationInfo(id, viewerIdOpt)).toMap
+  }
+
+  def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
@@ -280,7 +286,7 @@ class OrganizationCommanderImpl @Inject() (
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
-          libraryRepo.getBySpace(org.id.get, excludeStates = Set.empty).foreach { lib =>
+          libraryRepo.getBySpace(org.id.get, excludeState = None).foreach { lib =>
             libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
           }
 
@@ -300,9 +306,11 @@ class OrganizationCommanderImpl @Inject() (
         case Some(orgFail) => Left(orgFail)
         case None =>
           val org = orgRepo.get(request.orgId)
-          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
-            case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN))
-            case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
+          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner, excludeState = None) match {
+            case Some(membership) if membership.isActive =>
+              orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
+            case inactiveMembershipOpt =>
+              orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
           organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)

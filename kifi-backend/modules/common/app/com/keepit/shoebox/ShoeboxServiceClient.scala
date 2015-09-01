@@ -135,6 +135,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
+  def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -162,7 +163,8 @@ case class ShoeboxCacheProvider @Inject() (
   keepImagesCache: KeepImagesCache,
   primaryOrgForUserCache: PrimaryOrgForUserCache,
   basicKeepByIdCache: BasicKeepByIdCache,
-  organizationMembersCache: OrganizationMembersCache)
+  organizationMembersCache: OrganizationMembersCache,
+  basicOrganizationIdCache: BasicOrganizationIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -831,4 +833,20 @@ class ShoeboxServiceClientImpl @Inject() (
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
     call(Shoebox.internal.getOrgTrackingValues(orgId)).map { _.json.as[OrgTrackingValues] }
   }
+
+  def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = {
+    cacheProvider.basicOrganizationIdCache.bulkGetOrElseFuture(ids.map(BasicOrganizationIdKey.apply _)) { missing =>
+      val playload = Json.toJson(missing.map(_.id))
+      call(Shoebox.internal.getBasicOrganizationsByIds()).map {
+        _.json.as[Map[Id[Organization], BasicOrganization]].map {
+          case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
+        }
+      }
+    }.map {
+      _.map {
+        case (orgKey, org) => (orgKey.id, org)
+      }
+    }
+  }
+
 }
