@@ -96,7 +96,7 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       NotificationInfo(
-        url = invitedLib.url,
+        url = invitedLib.url.encode.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
         body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
@@ -131,7 +131,7 @@ trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewF
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       NotificationInfo(
-        url = invitedLib.url,
+        url = invitedLib.url.encode.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
         body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same
