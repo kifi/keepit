@@ -370,8 +370,8 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership] // viewer
-  )
+  membership: Option[LibraryMembership], // viewer
+  ownerId: Id[User])
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {
