@@ -79,4 +79,4 @@ case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
 }
 
 class OrganizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends PrimitiveCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
