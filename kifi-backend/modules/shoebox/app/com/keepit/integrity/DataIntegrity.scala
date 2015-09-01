@@ -7,6 +7,7 @@ import com.keepit.common.actor.ActorInstance
 import scala.concurrent.duration._
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.payments.PaymentsIntegrityChecker
 
 trait DataIntegrityPlugin extends SchedulerPlugin
 
@@ -23,6 +24,7 @@ class DataIntegrityPluginImpl @Inject() (
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, Cron, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, SystemLibraryCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 10 minutes, 24 hours, actor.ref, PaymentsMembershipCheck, getClass.getSimpleName)
   }
 }
 
@@ -31,12 +33,14 @@ private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
 private[integrity] case object LibrariesCheck
 private[integrity] case object SystemLibraryCheck
+private[integrity] case object PaymentsMembershipCheck
 
 private[integrity] class DataIntegrityActor @Inject() (
   airbrake: AirbrakeNotifier,
   orphanCleaner: OrphanCleaner,
   elizaSequenceNumberChecker: ElizaSequenceNumberChecker,
-  libraryChecker: LibraryChecker)
+  libraryChecker: LibraryChecker,
+  paymentsChecker: PaymentsIntegrityChecker)
     extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -48,6 +52,8 @@ private[integrity] class DataIntegrityActor @Inject() (
       libraryChecker.check()
     case SystemLibraryCheck =>
       libraryChecker.checkSystemLibraries()
+    case PaymentsMembershipCheck =>
+      paymentsChecker.checkMemberships()
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck
