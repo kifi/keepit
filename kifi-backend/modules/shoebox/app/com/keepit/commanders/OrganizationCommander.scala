@@ -280,7 +280,7 @@ class OrganizationCommanderImpl @Inject() (
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
-          libraryRepo.getBySpace(org.id.get, excludeStates = Set.empty).foreach { lib =>
+          libraryRepo.getBySpace(org.id.get, excludeState = None).foreach { lib =>
             libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
           }
 

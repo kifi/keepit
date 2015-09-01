@@ -214,7 +214,7 @@ class LibraryCommanderImpl @Inject() (
             val newInviteToCollab = libCreateReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
-              libraryRepo.getBySpaceAndSlug(ownerId, validSlug, excludeStates = Set.empty) match {
+              libraryRepo.getBySpaceAndSlug(ownerId, validSlug, excludeState = None) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libCreateReq.name, description = libCreateReq.description,
                     visibility = libCreateReq.visibility, slug = validSlug, color = newColor, kind = newKind,

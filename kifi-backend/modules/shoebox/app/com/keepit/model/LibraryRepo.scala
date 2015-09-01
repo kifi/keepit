@@ -26,9 +26,9 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
-  def getBySpace(space: LibrarySpace, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
-  def getBySpaceAndName(space: LibrarySpace, name: String, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
-  def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
+  def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
@@ -178,42 +178,42 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  private def getByUserId(userId: Id[User], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
-    (for (b <- rows if b.ownerId === userId && b.orgId.isEmpty && !b.state.inSet(excludeStates)) yield b).list.toSet
+  private def getByUserId(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Set[Library] = {
+    (for (b <- rows if b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b).list.toSet
   }
-  private def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[Library]])(implicit session: RSession): Set[Library] = {
-    (for (b <- rows if b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).list.toSet
+  private def getByOrgId(orgId: Id[Organization], excludeState: Option[State[Library]])(implicit session: RSession): Set[Library] = {
+    (for (b <- rows if b.orgId === orgId && b.state =!= excludeState.orNull) yield b).list.toSet
   }
-  def getBySpace(space: LibrarySpace, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
+  def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
     space match {
-      case UserSpace(userId) => getByUserId(userId, excludeStates)
-      case OrganizationSpace(orgId) => getByOrgId(orgId, excludeStates)
+      case UserSpace(userId) => getByUserId(userId, excludeState)
+      case OrganizationSpace(orgId) => getByOrgId(orgId, excludeState)
     }
   }
 
-  private def getByUserIdAndName(userId: Id[User], name: String, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.name === name && b.ownerId === userId && !b.state.inSet(excludeStates)) yield b).firstOption
+  private def getByUserIdAndName(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b).firstOption
   }
-  private def getByOrgIdAndName(orgId: Id[Organization], name: String, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.name === name && b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).firstOption
+  private def getByOrgIdAndName(orgId: Id[Organization], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    (for (b <- rows if b.name === name && b.orgId === orgId && b.state =!= excludeState.orNull) yield b).firstOption
   }
-  def getBySpaceAndName(space: LibrarySpace, name: String, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
+  def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
     space match {
-      case UserSpace(userId) => getByUserIdAndName(userId, name, excludeStates)
-      case OrganizationSpace(orgId) => getByOrgIdAndName(orgId, name, excludeStates)
+      case UserSpace(userId) => getByUserIdAndName(userId, name, excludeState)
+      case OrganizationSpace(orgId) => getByOrgIdAndName(orgId, name, excludeState)
     }
   }
 
-  private def getByUserIdAndSlug(userId: Id[User], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.slug === slug && b.ownerId === userId && b.orgId.isEmpty && !b.state.inSet(excludeStates)) yield b).firstOption
+  private def getByUserIdAndSlug(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    (for (b <- rows if b.slug === slug && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b).firstOption
   }
-  private def getByOrgIdAndSlug(orgId: Id[Organization], slug: LibrarySlug, excludeStates: Set[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.slug === slug && b.orgId === orgId && !b.state.inSet(excludeStates)) yield b).firstOption
+  private def getByOrgIdAndSlug(orgId: Id[Organization], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    (for (b <- rows if b.slug === slug && b.orgId === orgId && b.state =!= excludeState.orNull) yield b).firstOption
   }
-  def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeStates: Set[State[Library]] = Set(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
+  def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
     space match {
-      case UserSpace(userId) => getByUserIdAndSlug(userId, slug, excludeStates)
-      case OrganizationSpace(orgId) => getByOrgIdAndSlug(orgId, slug, excludeStates)
+      case UserSpace(userId) => getByUserIdAndSlug(userId, slug, excludeState)
+      case OrganizationSpace(orgId) => getByOrgIdAndSlug(orgId, slug, excludeState)
     }
   }
 

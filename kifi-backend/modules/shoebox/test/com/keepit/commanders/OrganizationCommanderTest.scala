@@ -78,7 +78,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           randoVisibleLibraries.length === publicLibs.length
           nooneVisibleLibraries.length === publicLibs.length
           db.readOnlyMaster { implicit session =>
-            inject[LibraryRepo].getBySpace(org.id.get, excludeStates = Set.empty).size === publicLibs.length + orgLibs.length + deletedLibs.length
+            inject[LibraryRepo].getBySpace(org.id.get, excludeState = None).size === publicLibs.length + orgLibs.length + deletedLibs.length
           }
         }
       }
