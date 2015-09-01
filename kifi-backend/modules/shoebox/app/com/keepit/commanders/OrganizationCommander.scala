@@ -306,9 +306,11 @@ class OrganizationCommanderImpl @Inject() (
         case Some(orgFail) => Left(orgFail)
         case None =>
           val org = orgRepo.get(request.orgId)
-          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner) match {
-            case None => orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN))
-            case Some(membership) => orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
+          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner, excludeState = None) match {
+            case Some(membership) if membership.isActive =>
+              orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
+            case inactiveMembershipOpt =>
+              orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
           organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
