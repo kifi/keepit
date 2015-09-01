@@ -117,7 +117,7 @@ angular.module('kifi')
       $scope.search.text = '';
       $scope.search.suggesting = false;
       if ($state.is('search')) {
-        $state.go('home');
+        $state.go('home.feed');
       } else if ($state.is('library.search')) {
         $state.go('^.keeps');
       }
