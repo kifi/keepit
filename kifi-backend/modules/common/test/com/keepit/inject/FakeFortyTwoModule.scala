@@ -12,7 +12,7 @@ case class FakeFortyTwoModule() extends FortyTwoModule {
     install(FakeServiceModule())
     super.configure()
     //check out http://blog.javabien.net/2014/05/02/find-out-if-guice-creates-circular-proxies/
-    //binder().disableCircularProxies()
+    //    binder().disableCircularProxies()
   }
 
   @Provides
