@@ -8,6 +8,7 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -370,8 +371,9 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership] // viewer
-  )
+  membership: Option[LibraryMembership], // viewer
+  ownerId: Id[User],
+  url: Path)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {
