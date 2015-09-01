@@ -14,7 +14,6 @@ angular.module('kifi')
     $scope.initialCardClosed = false;
     $scope.noMoreRecos = false;
     $scope.showHints = false;
-    $scope.autoShowPersona = undefined;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -95,18 +94,6 @@ angular.module('kifi')
 
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
-    };
-
-    // click on 'update your interests'
-    $scope.showPersonaModal = function() {
-      $analytics.eventTrack('user_clicked_page', {type: 'yourKeeps', action: 'clickedUpdateInterests'});
-      modalService.open({
-        template: 'persona/managePersonaModal.tpl.html'
-      });
-    };
-
-    $scope.closeAutoShowPersonas = function() {
-      profileService.savePrefs({'auto_show_persona' : null});
     };
 
     function reloadRecos(invalidate, setRecosDelivered) {
@@ -215,23 +202,8 @@ angular.module('kifi')
     });
 
     $scope.setRecosDelivered = undefined;
-    var unregisterAutoShowPersona = $scope.$watch(function () {
-      return profileService.prefs.auto_show_persona;
-    }, function (newValue, oldValue) {
-      $scope.autoShowPersona = newValue;
 
-      // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
-      if (!newValue && oldValue) {
-        $scope.showHints = true;
-        $scope.setRecosDelivered = false;
-        unregisterAutoShowPersona();
-      }
-
-      // load recommendations only when autoShowPersona is set to non-true
-      if (newValue === null) {
-        initRecos();
-      }
-    });
+    initRecos();
   }
 ])
 
