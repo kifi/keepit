@@ -319,6 +319,8 @@ object KeepAndTags {
 
 case class BasicKeep(
   id: ExternalId[Keep],
+  title: Option[String],
+  url: String,
   visibility: LibraryVisibility,
   libraryId: PublicId[Library],
   ownerId: ExternalId[User])
@@ -326,6 +328,8 @@ case class BasicKeep(
 object BasicKeep {
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).format[PublicId[Library]] and
     (__ \ 'ownerId).format[ExternalId[User]]
