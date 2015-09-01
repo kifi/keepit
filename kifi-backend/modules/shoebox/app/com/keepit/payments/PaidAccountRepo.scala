@@ -16,6 +16,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
   def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount]
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
+  def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
+  def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -35,7 +37,8 @@ class PaidAccountRepoImpl @Inject() (
     def credit = column[DollarAmount]("credit", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -59,6 +62,14 @@ class PaidAccountRepoImpl @Inject() (
 
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount] = {
     (for (row <- rows if row.planId === planId && row.state === PaidAccountStates.ACTIVE) yield row).list
+  }
+
+  def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean = {
+    (for (row <- rows if row.orgId === orgId && row.lockedForProcessing =!= true) yield row.lockedForProcessing).update(true) > 0
+  }
+
+  def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean = {
+    (for (row <- rows if row.orgId === orgId && row.lockedForProcessing === true) yield row.lockedForProcessing).update(false) > 0
   }
 
 }
