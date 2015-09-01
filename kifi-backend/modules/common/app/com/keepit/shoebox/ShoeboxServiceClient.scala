@@ -134,10 +134,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
-  def getUserInfos(userIds: Seq[Id[User]]): Future[Map[Id[User], UserNotificationInfo]]
-  def getKeepInfos(keepIds: Seq[Id[Keep]]): Future[Map[Id[Keep], KeepNotificationInfo]]
-  def getLibraryInfos(libraryIds: Seq[Id[Library]]): Future[Map[Id[Library], LibraryNotificationInfo]]
-  def getOrganizationInfos(orgIds: Seq[Id[Organization]]): Future[Map[Id[Organization], OrganizationNotificationInfo]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]]
 }
