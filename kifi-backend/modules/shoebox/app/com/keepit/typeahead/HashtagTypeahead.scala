@@ -61,10 +61,6 @@ class HashtagTypeahead @Inject() (
 
   protected def extractName(hashtagWithKeepCount: (Hashtag, Int)) = hashtagWithKeepCount._1.tag
 
-  def delete(userId: Id[User]): Unit = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    cache.remove(UserHashtagTypeaheadUserIdKey(userId))
-  }
 }
 
 case class UserHashtagTypeaheadUserIdKey(id: Id[User]) extends Key[UserHashtagTypeahead] {

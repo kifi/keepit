@@ -1,7 +1,7 @@
 package com.keepit.common.helprank
 
 import com.google.inject.Injector
-import com.keepit.commanders.{ LibraryCommander, RawBookmarkFactory, KeepInterner }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, RawBookmarkFactory, KeepInterner }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -38,10 +38,10 @@ trait HelpRankTestHelper { self: TestInjector =>
       (u1, u2, u3, u4)
     }
 
-    val (u1m, u1s) = inject[LibraryCommander].internSystemGeneratedLibraries(u1.id.get)
-    val (u2m, u2s) = inject[LibraryCommander].internSystemGeneratedLibraries(u2.id.get)
-    val (u3m, u3s) = inject[LibraryCommander].internSystemGeneratedLibraries(u3.id.get)
-    val (u4m, u4s) = inject[LibraryCommander].internSystemGeneratedLibraries(u4.id.get)
+    val (u1m, u1s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u1.id.get)
+    val (u2m, u2s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u2.id.get)
+    val (u3m, u3s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u3.id.get)
+    val (u4m, u4s) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(u4.id.get)
 
     val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
     val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))

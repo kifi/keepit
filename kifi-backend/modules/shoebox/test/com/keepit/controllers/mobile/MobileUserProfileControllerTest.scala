@@ -117,7 +117,16 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "handle":"${org1.handle.value}",
                   "name":"${org1.name}",
                   "numMembers":1,
-                  "numLibraries":1
+                  "numLibraries":1,
+                  "members": [
+                    {
+                      "id":"${user1.externalId.id}",
+                      "firstName":"George",
+                      "lastName":"Washington",
+                      "pictureName":"pic1.jpg",
+                      "username": "GDubs"
+                    }
+                  ]
                 }
               ]
             }
@@ -151,7 +160,16 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "handle":"${org1.handle.value}",
                   "name":"${org1.name}",
                   "numMembers":1,
-                  "numLibraries":1
+                  "numLibraries":1,
+                  "members": [
+                    {
+                      "id":"${user1.externalId.id}",
+                      "firstName":"George",
+                      "lastName":"Washington",
+                      "pictureName":"pic1.jpg",
+                      "username": "GDubs"
+                    }
+                  ]
                 }
               ]
             }
@@ -185,7 +203,16 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "handle":"${org1.handle.value}",
                   "name":"${org1.name}",
                   "numMembers":1,
-                  "numLibraries":1
+                  "numLibraries":1,
+                  "members": [
+                    {
+                      "id":"${user1.externalId.id}",
+                      "firstName":"George",
+                      "lastName":"Washington",
+                      "pictureName":"pic1.jpg",
+                      "username": "GDubs"
+                    }
+                  ]
                 }
               ]
             }

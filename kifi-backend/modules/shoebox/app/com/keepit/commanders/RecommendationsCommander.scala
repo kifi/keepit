@@ -28,7 +28,7 @@ class RecommendationsCommander @Inject() (
     nUriRepo: NormalizedURIRepo,
     libRepo: LibraryRepo,
     userRepo: UserRepo,
-    libCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     libPathCommander: PathCommander,
     rover: RoverServiceClient,
     basicUserRepo: BasicUserRepo,
@@ -236,7 +236,7 @@ class RecommendationsCommander @Inject() (
   private def noopLibRecoExplainer(lib: Id[Library]): Option[String] = None
 
   private def createFullLibraryInfos(userId: Id[User], libraries: Seq[Library], explainer: Id[Library] => Option[String] = noopLibRecoExplainer): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
-    libCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
+    libraryInfoCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
       maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, libraries,
       ProcessedImageSize.Large.idealSize, withKeepTime = true).map { fullLibraryInfos =>
         fullLibraryInfos.map {

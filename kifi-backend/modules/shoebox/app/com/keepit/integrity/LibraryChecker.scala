@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -15,7 +15,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
     val db: Database,
     val keepRepo: KeepRepo,
-    val libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
     val organizationRepo: OrganizationRepo,
@@ -75,12 +75,12 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       val pageSize = userRepo.countIncluding(UserStates.ACTIVE) / numIntervals
       userRepo.pageIncluding(UserStates.ACTIVE)(index, pageSize)
     }.map { u =>
-      // libraryCommander.internSystemGeneratedLibraries does the following...
+      // libraryInfoCommander.internSystemGeneratedLibraries does the following...
       // takes the earliest MAIN & SECRET Library created for a user
       // makes sure user has active ownership of Library (if not, airbrake)
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
-      libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
+      libraryInfoCommander.internSystemGeneratedLibraries(u.id.get, false)
     }
     timer.stopAndReport(appLog = true)
   }

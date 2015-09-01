@@ -192,10 +192,18 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new OrgTrackingValuesCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 14 days))
 
   @Provides @Singleton
+  def basicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicKeepByIdCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
   def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
   def organizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationMessageCountCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 1 hour))
+
+  @Provides @Singleton
+  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

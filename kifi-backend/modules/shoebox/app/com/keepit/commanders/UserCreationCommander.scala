@@ -16,6 +16,7 @@ class UserCreationCommander @Inject() (
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
     libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     userExperimentRepo: UserExperimentRepo,
     implicit val executionContext: ExecutionContext) {
 
@@ -39,7 +40,7 @@ class UserCreationCommander @Inject() (
     }
 
     val userId = newUser.id.get
-    libraryCommander.internSystemGeneratedLibraries(userId)
+    libraryInfoCommander.internSystemGeneratedLibraries(userId)
     if (userId.id % 2 == 0) { //for half of the users
       libraryCommander.createReadItLaterLibrary(userId)
       db.readWrite { implicit session =>

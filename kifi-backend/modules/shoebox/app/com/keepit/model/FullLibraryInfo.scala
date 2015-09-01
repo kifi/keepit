@@ -193,7 +193,7 @@ case class LibraryCardInfo(
   kind: LibraryKind,
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
-  org: Option[OrganizationCard])
+  org: Option[BasicOrganization])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
@@ -269,7 +269,7 @@ case class FullLibraryInfo(
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
   path: String,
-  org: Option[OrganizationCard])
+  org: Option[BasicOrganization])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
