@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails.activity
 
 import com.keepit.commanders.emails.{ BaseLibraryInfoView, LibraryInfoFollowersView }
-import com.keepit.commanders.{ LibraryCommander, ProcessedImageSize }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, ProcessedImageSize }
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.{ ActivityEmail, Library, LibraryMembership, LibraryMembershipRepo, User }
@@ -23,10 +23,10 @@ trait ActivityEmailHelpers {
 }
 
 trait ActivityEmailLibraryHelpers extends ActivityEmailHelpers {
-  def libraryCommander: LibraryCommander
+  def libraryInfoCommander: LibraryInfoCommander
 
   protected def createFullLibraryInfos(toUserId: Id[User], libraries: Seq[Library]) = {
-    libraryCommander.createFullLibraryInfos(viewerUserIdOpt = Some(toUserId),
+    libraryInfoCommander.createFullLibraryInfos(viewerUserIdOpt = Some(toUserId),
       showPublishedLibraries = true, maxKeepsShown = 10,
       maxMembersShown = 0, idealKeepImageSize = ProcessedImageSize.Large.idealSize,
       idealLibraryImageSize = ProcessedImageSize.Large.idealSize,

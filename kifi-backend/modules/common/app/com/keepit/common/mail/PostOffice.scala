@@ -21,10 +21,10 @@ trait RemotePostOffice {
 
 object PostOffice {
   object Headers {
-    val ALL = Seq(REPLY_TO, LIST_UNSUBSCRIBE, PRECEDENCE)
     val REPLY_TO = "Reply-To"
     val LIST_UNSUBSCRIBE = "List-Unsubscribe"
     val PRECEDENCE = "Precedence"
+    val ALL = Seq(REPLY_TO, LIST_UNSUBSCRIBE, PRECEDENCE)
   }
 
   val BODY_MAX_SIZE = 1048576

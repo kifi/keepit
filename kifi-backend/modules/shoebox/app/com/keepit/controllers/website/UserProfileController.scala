@@ -62,7 +62,7 @@ class UserProfileController @Inject() (
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
         val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-        val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationCardHelper(orgMembership.organizationId, viewer.flatMap(_.id)) }
+        val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
         (numConnections, userBio, orgCards)
       }
 

@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.commanders.{ LibraryCommander, RawBookmarkRepresentation, KeepInterner }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, RawBookmarkRepresentation, KeepInterner }
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -47,7 +47,7 @@ class MailToKeepActor @Inject() (
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
-    libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends FortyTwoActor(airbrake) with Logging {
 
@@ -107,7 +107,7 @@ class MailToKeepActor @Inject() (
               case (Some(user), uris) =>
                 val library = {
                   val (main, secret) = db.readWrite { implicit session =>
-                    libraryCommander.getMainAndSecretLibrariesForUser(user.id.get)
+                    libraryInfoCommander.getMainAndSecretLibrariesForUser(user.id.get)
                   }
                   if (keepType == KeepType.Private) {
                     secret

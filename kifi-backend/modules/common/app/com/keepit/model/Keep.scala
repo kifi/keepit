@@ -319,17 +319,45 @@ object KeepAndTags {
 
 case class BasicKeep(
   id: ExternalId[Keep],
+  title: Option[String],
+  url: String,
+  visibility: LibraryVisibility,
+  libraryId: PublicId[Library],
+  ownerId: ExternalId[User])
+
+object BasicKeep {
+  implicit val format: Format[BasicKeep] = (
+    (__ \ 'id).format[ExternalId[Keep]] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'libraryId).format[PublicId[Library]] and
+    (__ \ 'ownerId).format[ExternalId[User]]
+  )(BasicKeep.apply, unlift(BasicKeep.unapply))
+}
+
+case class PersonalKeep(
+  id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
   visibility: LibraryVisibility,
   libraryId: PublicId[Library])
 
-object BasicKeep {
-  implicit val format: Format[BasicKeep] = (
+object PersonalKeep {
+  implicit val format: Format[PersonalKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).format[PublicId[Library]]
-  )(BasicKeep.apply, unlift(BasicKeep.unapply))
+  )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
+
+case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
+  override val version = 1
+  val namespace = "basic_keep_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

@@ -38,6 +38,7 @@ class ShoeboxController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -56,6 +57,7 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
+  libraryAccessCommander: LibraryAccessCommander,
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
@@ -70,6 +72,7 @@ class ShoeboxController @Inject() (
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
@@ -445,7 +448,7 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val authorized = libraryCommander.canViewLibrary(userIdOpt, libraryId, authToken)
+    val authorized = libraryAccessCommander.canViewLibrary(userIdOpt, libraryId, authToken)
     Ok(JsBoolean(authorized))
   }
 
@@ -455,12 +458,19 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keeps))
   }
 
-  def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def getPersonalKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
-    val keepDataByUriId = keepDecorator.getBasicKeeps(userId, uriIds)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
+    val keepDataByUriId = keepDecorator.getPersonalKeeps(userId, uriIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[PersonalKeep]]
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)
+  }
+
+  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    val keepDataById = keepCommander.getBasicKeeps(keepIds)
+
+    Ok(Json.toJson(keepDataById))
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
@@ -468,7 +478,7 @@ class ShoeboxController @Inject() (
     val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
+    val basicDetailsByLibraryId = libraryInfoCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
@@ -493,7 +503,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
-    val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
+    val libraryIds = libraryInfoCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
   }
 
@@ -525,5 +535,11 @@ class ShoeboxController @Inject() (
 
   def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
     Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
+  }
+
+  def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
+    val orgIds = request.body.as[Set[Id[Organization]]]
+    val basicOrgs = organizationCommander.getBasicOrganizations(orgIds)
+    Ok(Json.toJson(basicOrgs))
   }
 }

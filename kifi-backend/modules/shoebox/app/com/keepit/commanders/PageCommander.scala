@@ -179,7 +179,7 @@ class PageCommander @Inject() (
       maxTagsShown = 0,
       items = Seq(AugmentableItem(normUri.id.get)))
 
-    val keepDatas = keepDecorator.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+    val keepDatas = keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
 
     augmentFuture map {
       case Seq(info) =>
@@ -228,7 +228,7 @@ class PageCommander @Inject() (
           }
         }
         val keepData = nUriOpt.map { normUri =>
-          keepDecorator.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+          keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
         }.getOrElse(Seq.empty[KeepData])
         Right(keepData)
 

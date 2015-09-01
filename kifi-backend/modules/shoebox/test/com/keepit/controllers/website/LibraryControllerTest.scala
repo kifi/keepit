@@ -691,14 +691,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                "numFollowers":0,
                "whoCanInvite":"collaborator",
                "modifiedAt": ${lib1.updatedAt.getMillis},
+               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
+               "org": {
+                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
+                  "ownerId":"${user1.externalId}",
+                  "handle":"${org1.handle.value}",
+                  "name":"${org1.name}"
+               },
                "membership":{
                 "access":"owner",
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null,
-               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
-               "org": {"id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}","ownerId":"${user1.externalId}","handle":"${org1.handle.value}","name":"${org1.name}","numMembers":1,"numLibraries":1}
+               "invite": null
               },
              "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
@@ -1107,7 +1112,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "hashtags":[],
                 "summary": {},
                 "siteName": "Amazon",
-                "libraryId": "l7jlKlnA36Su"
+                "libraryId": "l7jlKlnA36Su",
+                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
               },
               {
                 "id": "${keep1.externalId}",
@@ -1128,7 +1134,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "hashtags":[],
                 "summary": {},
                 "siteName": "Google",
-                "libraryId": "l7jlKlnA36Su"
+                "libraryId": "l7jlKlnA36Su",
+                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
               }
             ],
             "numKeeps": 2

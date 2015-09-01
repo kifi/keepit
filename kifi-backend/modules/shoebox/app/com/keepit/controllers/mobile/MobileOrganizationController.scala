@@ -76,8 +76,10 @@ class MobileOrganizationController @Inject() (
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
+    val orgInfosMap = orgCommander.getOrganizationInfos(visibleOrgs.toSet, request.userIdOpt)
 
-    Ok(Json.obj("organizations" -> orgCards))
+    val orgInfos = visibleOrgs.map(org => orgInfosMap(org))
+
+    Ok(Json.obj("organizations" -> orgInfos))
   }
 }

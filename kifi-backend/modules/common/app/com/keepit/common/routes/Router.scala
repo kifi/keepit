@@ -148,7 +148,7 @@ object Shoebox extends Service {
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/database/canViewLibrary")
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
-    def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
+    def getPersonalKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getPersonalKeeps", Param("userId", userId))
     def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
     def getKeepCounts() = ServiceRoute(POST, "/internal/shoebox/database/getKeepCounts")
     def getKeepImages() = ServiceRoute(POST, "/internal/shoebox/database/getKeepImages")
@@ -166,6 +166,8 @@ object Shoebox extends Service {
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
+    def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
+    def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizations")
   }
 }
 

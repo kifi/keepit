@@ -11,6 +11,8 @@ case class FakeFortyTwoModule() extends FortyTwoModule {
   override def configure(): Unit = {
     install(FakeServiceModule())
     super.configure()
+    //check out http://blog.javabien.net/2014/05/02/find-out-if-guice-creates-circular-proxies/
+    //    binder().disableCircularProxies()
   }
 
   @Provides
