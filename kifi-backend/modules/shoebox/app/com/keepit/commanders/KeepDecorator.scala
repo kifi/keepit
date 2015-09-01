@@ -135,7 +135,7 @@ class KeepDecoratorImpl @Inject() (
                 lazy val publicId = Library.publicId(libraryId)
                 !librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId)
               }
-              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, _) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId), idToBasicOrg.get(libraryId)) }
+              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, _) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
             }
 
             val keptAt = if (withKeepTime) {
