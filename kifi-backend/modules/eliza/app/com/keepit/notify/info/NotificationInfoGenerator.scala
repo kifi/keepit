@@ -15,13 +15,21 @@ class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     implicit val ec: ExecutionContext) {
 
-  def generateInfo(notifs: Seq[(Notification, Set[NotificationItem])]): Future[Unit] = {
-    val infoRequests = notifs map {
+  private def genericKind(notif: Notification) = {
+    // the notification and items don't know that they have the same kind
+    notif.kind.asInstanceOf[NotificationKind[NotificationEvent]]
+  }
+
+  def generateInfo(notifs: Seq[(Notification, Set[NotificationItem])]): Future[Seq[(Notification, Set[NotificationItem], NotificationInfo)]] = {
+    val notifInfoRequests = notifs map {
       case (notif, items) =>
-        val kind = items.head.kind
-        // the notification and items don't know that they have the same kind
-        val infoRequest = kind.asInstanceOf[NotificationKind[NotificationEvent]].info(items.map(_.event))
-        infoRequest
+        val kind = genericKind(notif)
+        val infoRequest = kind.info(items.map(_.event))
+        (notif, items, infoRequest)
+    }
+
+    val infoRequests = notifInfoRequests map {
+      case (_, _, infoRequest) => infoRequest
     }
 
     val libRequests = infoRequests.flatMap { infoRequest =>
@@ -78,6 +86,17 @@ class NotificationInfoGenerator @Inject() (
         keeps,
         orgs
       )
+    }
+
+    for {
+      batchedInfos <- batchedInfosF
+    } yield {
+      notifInfoRequests map {
+        case (notif, items, request) =>
+          val kind = genericKind(notif)
+          val infoRequest = kind.info(items.map(_.event))
+          (notif, items, infoRequest.fn(batchedInfos))
+      }
     }
   }
 
