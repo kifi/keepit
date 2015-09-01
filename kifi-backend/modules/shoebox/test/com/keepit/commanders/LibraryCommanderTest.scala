@@ -307,7 +307,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val member = UserFactory.user().saved
 
             // This org is super crappy, members can't do anything
-            val crappyBPs = BasePermissions(Map(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION)))
+            val crappyBPs = Organization.defaultBasePermissions.withPermissions(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION))
 
             val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
             (org, owner, member)
