@@ -56,7 +56,7 @@ angular.module('kifi')
       filter = $stateParams.f || 'a';
 
       if (!query) {
-        $state.go(library ? 'library.keeps' : 'home');
+        $state.go(library ? 'library.keeps' : 'home.feed');
         return;
       }
 
