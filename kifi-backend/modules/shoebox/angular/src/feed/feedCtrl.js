@@ -3,27 +3,33 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$rootScope', '$scope', 'feedService', 'Paginator', 'routeService', 'modalService',
-  function($rootScope, $scope, feedService, Paginator, routeService, modalService) {
+  '$rootScope', '$scope', '$q', 'feedService', 'Paginator', 'routeService', 'modalService',
+  function($rootScope, $scope, $q, feedService, Paginator, routeService, modalService) {
     function feedSource(pageNumber, pageSize) {
-      var lastKeep = $scope.feed[(pageNumber * pageSize) - 1] || $scope.feed[$scope.feed.length - 1];
+      var lastKeep = $scope.feed[$scope.feed.length - 1];
 
-      return feedService.getFeed(pageSize, lastKeep && lastKeep.id)
-      .then(function(keepData) {
-        return keepData.keeps;
-      });
-    }
+      function tryGetFullPage(limit, streamEnd, deferred, results) {
+        deferred = deferred || $q.defer();
+        results = results || [];
 
-    function libraryKeptTo (keep) {
-      if (keep.libraries.length) {
-        var libraryAndUser = keep.libraries.filter(function(libraryAndUser) {
-          return libraryAndUser[0].id === keep.libraryId;
-        })[0] || keep.libraries[0];
-        return libraryAndUser[0];
+        feedService.getFeed(limit, streamEnd && streamEnd.id).then(function (keepData) {
+          results = results.concat(keepData.keeps);
+
+          if (keepData.keeps.length === 0 || results.length >= limit) {
+            deferred.resolve(results.slice(0, limit));
+          } else { // keepData.length !== 0 && results.length < pageSize
+            tryGetFullPage(limit, results[results.length - 1], deferred, results);
+          }
+        })
+        ['catch'](deferred.reject);
+
+        return deferred.promise;
       }
+
+      return tryGetFullPage(pageSize, lastKeep);
     }
 
-    var feedLazyLoader = new Paginator(feedSource, 15, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
+    var feedLazyLoader = new Paginator(feedSource, 10, Paginator.DONE_WHEN_RESPONSE_IS_EMPTY);
 
     $scope.feed = [];
 
@@ -38,11 +44,7 @@ angular.module('kifi')
       feedLazyLoader
       .fetch()
       .then(function (keeps) {
-        var updatedKeeps = keeps.map(function(keep) {
-          keep.library = libraryKeptTo(keep);
-          return keep;
-        });
-        $scope.feed = updatedKeeps;
+        $scope.feed = keeps;
       })
       ['catch'](modalService.openGenericErrorModal);
     };

@@ -443,7 +443,7 @@ class LibraryController @Inject() (
   def copyKeeps = UserAction(parse.tolerantJson) { request =>
     val json = request.body
     val toPubId = (json \ "to").as[PublicId[Library]]
-    val targetKeepsExt = (json \ "keeps").as[Seq[ExternalId[Keep]]]
+    val targetKeepsExt = (json \ "keeps").as[Set[ExternalId[Keep]]]
 
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
