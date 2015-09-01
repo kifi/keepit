@@ -20,7 +20,7 @@ case class KeepInfo(
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(BasicLibrary, BasicUser, Option[BasicOrganization])]] = None,
+  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
   librariesOmitted: Option[Int] = None,
   librariesTotal: Option[Int] = None,
   collections: Option[Set[String]] = None, // deprecated
@@ -40,7 +40,7 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWithContributorWrites = TupleFormat.tuple3Writes[BasicLibrary, BasicUser, Option[BasicOrganization]]
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     new Writes[KeepInfo] {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
