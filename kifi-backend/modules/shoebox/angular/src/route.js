@@ -26,6 +26,7 @@ angular.module('kifi')
     $stateProvider
       .state('home', {
         url: '/',
+        controller: 'HomeCtrl',
         templateUrl: 'home/home.tpl.html',
         'abstract': true
       })
