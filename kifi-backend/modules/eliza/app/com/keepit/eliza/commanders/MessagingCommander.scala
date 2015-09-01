@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import com.keepit.abook.ABookServiceClient
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.net.URI
 import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
@@ -649,8 +650,25 @@ class MessagingCommander @Inject() (
     case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
   })
   def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
-    val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
-    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
+    val (rawUsersAndOrgs, rawNonUsers) = rawRecipients.foldRight((Seq.empty[ExternalId[User]], Seq.empty[BasicContact], Seq.empty[PublicId[Organization]])) { (recipient, acc) =>
+      recipient.asOpt[JsString] match {
+          // heuristic to determine if it's a user or an org
+        case Some(JsString(id)) if id.startsWith(Organization("o")) =>
+
+        case Some(JsString(id)) if id.length == 36 =>
+          
+        case _ => // Starting in v XXX `kind` is always sent (9/2/2015). Above can be removed after a while.
+          recipient.asOpt[JsObject] match {
+            case Some(recip) if (recip \ "kind").asOpt[String].exists(_ == "user") =>
+            case Some(recip) if (recip \ "kind").asOpt[String].exists(_ == "user") =>
+            case Some(recip) if (recip \ "kind").asOpt[String].exists(_ == "user") =>
+            case _ =>
+              log.warn("[validateRecipients] Could not determine what ")
+          }
+      }
+    }
+
+    (validateUsers(rawUsersAndOrgs), validateEmailContacts(rawNonUsers))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {

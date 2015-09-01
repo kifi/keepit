@@ -50,10 +50,13 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
+    val (validUserRecipients, validEmailRecipients) = {
+      val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
+      val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
+      val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
 
-    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
-    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
+      (validUserRecipients, validEmailRecipients)
+    }
 
     val url = (o \ "url").as[String]
 
