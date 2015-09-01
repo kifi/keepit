@@ -42,7 +42,8 @@
           kf-user-tooltip="::feedItem.user"
           ng-bind="feedItem.user | name"
         ></a>
-        <span>kept this into</span>
+        <span>kept this</span>
+        <span ng-if="::feedItem.library">into</span>
         <div
           class="kf-privacy-container"
           ng-if="feedItem.library.visibility === 'secret'"
@@ -74,6 +75,7 @@
         </div>
         <span><!-- Separate the inline-block elements from each other --></span>
         <a
+          ng-if="::feedItem.library"
           class="kf-feed-tooltip-target"
           ng-href="{{ feedItem.library.path }}"
           kf-user-tooltip="::feedItem.user"
