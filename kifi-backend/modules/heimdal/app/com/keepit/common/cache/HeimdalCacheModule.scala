@@ -197,5 +197,5 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def organizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationMessageCountCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
+    new OrganizationMessageCountCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 1 hour))
 }
