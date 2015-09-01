@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.notify.info.NotificationInfoRequest._
@@ -9,14 +9,14 @@ import com.keepit.social.BasicUser
 import scala.concurrent.Future
 
 class BatchedNotificationInfos(
-  private val users: Map[Id[User], BasicUser],
-  private val usersExternal: Map[ExternalId[User], BasicUser],
-  private val libraries: Map[Id[Library], BasicLibraryDetails],
-  private val keeps: Map[Id[Keep], BasicKeep],
-  private val orgs: Map[Id[Organization], BasicOrganization]
-) {
+    private val users: Map[Id[User], BasicUser],
+    private val usersExternal: Map[ExternalId[User], BasicUser],
+    private val libraries: Map[Id[Library], BasicLibraryDetails],
+    private val keeps: Map[Id[Keep], BasicKeep],
+    private val orgs: Map[Id[Organization], BasicOrganization]) {
 
   def lookup[M, R](request: NotificationInfoRequest[M, R]): R =
+    // if intellij shows red underlines here, don't listen, it's lying
     request match {
       case RequestUser(id) => users(id)
       case RequestUserExternal(id) => usersExternal(id)
@@ -53,6 +53,5 @@ case class RequestingNotificationInfos[A](requests: Seq[NotificationInfoRequest[
  * so this hints it explicitly.
  */
 object Requests {
-  def apply(requests: NotificationInfoRequest[_, _]*): Seq[NotificationInfoRequest[_, _]]
-    = requests
+  def apply(requests: NotificationInfoRequest[_, _]*): Seq[NotificationInfoRequest[_, _]] = requests
 }

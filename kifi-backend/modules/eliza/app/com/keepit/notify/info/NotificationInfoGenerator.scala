@@ -9,7 +9,7 @@ import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.shoebox.ShoeboxServiceClient
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
