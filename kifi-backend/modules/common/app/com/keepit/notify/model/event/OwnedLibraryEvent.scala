@@ -41,12 +41,10 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     RequestingNotificationInfos(Requests(
       RequestUser(oneEvent.inviterId), RequestLibrary(oneEvent.libraryId)
     )) { batched =>
-      val inviterInfo = RequestUser(oneEvent.inviterId).lookup(batched)
-      val inviter = inviterInfo.user
+      val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo(
-        url = inviterInfo.path.encode.absolute,
-        imageUrl = inviterInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
@@ -91,12 +89,10 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     RequestingNotificationInfos(Requests(
       RequestUser(oneEvent.inviterId), RequestLibrary(oneEvent.libraryId)
     )) { batched =>
-      val inviterInfo = RequestUser(oneEvent.inviterId).lookup(batched)
-      val inviter = inviterInfo.user
+      val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo(
-        url = inviterInfo.path.encode.absolute,
-        imageUrl = inviterInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
@@ -126,12 +122,10 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     RequestingNotificationInfos(Requests(
       RequestUser(event.followerId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val followerInfo = RequestUser(event.followerId).lookup(batched)
-      val follower = followerInfo.user
+      val follower = RequestUser(event.followerId).lookup(batched)
       val libraryFollowed = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
-        url = followerInfo.path.encode.absolute,
-        imageUrl = followerInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = follower,
         title = "New library follower",
         body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
         linkText = s"See ${follower.firstName}’s profile",
@@ -161,12 +155,10 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     RequestingNotificationInfos(Requests(
       RequestUser(event.collaboratorId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val collaboratorInfo = RequestUser(event.collaboratorId).lookup(batched)
-      val collaborator = collaboratorInfo.user
+      val collaborator = RequestUser(event.collaboratorId).lookup(batched)
       val libraryCollaborating = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
-        url = collaboratorInfo.path.encode.absolute,
-        imageUrl = collaboratorInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = collaborator,
         title = "New library collaborator",
         body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
         linkText = s"See ${collaborator.firstName}’s profile",

@@ -69,16 +69,16 @@ trait NewKeepActivityImpl extends NonGroupingNotificationKind[NewKeepActivity] {
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       NotificationInfo(
-        url = libraryKeptInfo.path.encode.absolute,
+        url = libraryKept.url,
         image = UserImage(keeper),
-        title = s"New Keep in ${libraryKeptInfo.name}",
+        title = s"New Keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to library",
         extraJson = Some(Json.obj(
           "keeper" -> keeper,
-          "library" -> Json.toJson(libraryKeptInfo),
+          "library" -> Json.toJson(libraryKept),
           "keep" -> Json.obj(
-            "id" -> newKeep.externalId,
+            "id" -> newKeep.id,
             "url" -> newKeep.url
           )
         ))

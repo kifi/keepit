@@ -51,3 +51,5 @@ object NotificationInfo {
 sealed trait NotificationImage
 
 case class UserImage(basicUser: BasicUser) extends NotificationImage
+
+case class PublicImage(url: String) extends NotificationImage

@@ -1,6 +1,6 @@
 package com.keepit.notify.model.event
 
-import com.keepit.notify.info.{ Requests, NotificationInfo, RequestingNotificationInfos }
+import com.keepit.notify.info.{ PublicImage, Requests, NotificationInfo, RequestingNotificationInfos }
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -39,7 +39,7 @@ trait DepressedRobotGrumbleImpl extends NotificationKind[DepressedRobotGrumble] 
     RequestingNotificationInfos(Requests()) { batched =>
       NotificationInfo(
         url = "http://goo.gl/PqN7Cs",
-        imageUrl = "http://i.imgur.com/qs8QofA.png",
+        image = PublicImage("http://i.imgur.com/qs8QofA.png"),
         title = s"${plural("A robot")} just grumbled! ${plural("He")} must be depressed...",
         body = s"${englishJoin(events.toSeq.map(_.robotName))} just grumbled about ${englishJoin(events.toSeq.map(_.grumblingAbout))}",
         linkText = "Organize and share knowledge with Kifi!"

@@ -26,12 +26,11 @@ trait OrgNewInviteImpl extends NonGroupingNotificationKind[OrgNewInvite] {
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestOrganization(event.orgId)
     )) { batched =>
-      val inviterInfo = RequestUser(event.inviterId).lookup(batched)
-      val inviter = inviterInfo.user
+      val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedOrg = RequestOrganization(event.orgId).lookup(batched)
       NotificationInfo(
-        url = invitedOrg.path.encode.absolute,
-        imageUrl = inviterInfo.imageUrl,
+        url = Path(invitedOrg.handle.value).encode.absolute,
+        image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
         linkText = "Visit organization"
@@ -57,12 +56,11 @@ trait OrgInviteAcceptedImpl extends NonGroupingNotificationKind[OrgInviteAccepte
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestOrganization(event.orgId)
     )) { batched =>
-      val accepterInfo = RequestUser(event.accepterId).lookup(batched)
-      val accepter = accepterInfo.user
+      val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedOrg = RequestOrganization(event.orgId).lookup(batched)
       NotificationInfo(
-        url = acceptedOrg.path.encode.absolute,
-        imageUrl = accepterInfo.imageUrl,
+        url = Path(acceptedOrg.handle.value).encode.absolute,
+        image = UserImage(accepter),
         title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
         body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
         linkText = "Visit organization",

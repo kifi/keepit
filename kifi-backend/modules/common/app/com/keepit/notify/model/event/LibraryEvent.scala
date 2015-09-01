@@ -27,12 +27,10 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val accepterInfo = RequestUser(event.accepterId).lookup(batched)
-      val accepter = accepterInfo.user
+      val accepter = RequestUser(event.accepterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
-        url = accepterInfo.path.encode.absolute,
-        imageUrl = accepterInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = accepter,
         title = s"${accepter.firstName} is now collaborating on ${invitedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${invitedLib.name}",
         linkText = s"See ${accepter.firstName}’s profile",
@@ -62,12 +60,10 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val accepterInfo = RequestUser(event.accepterId).lookup(batched)
-      val accepter = accepterInfo.user
+      val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
-        url = Path(accepter.username.value).encode.absolute,
-        imageUrl = accepterInfo.imageUrl,
+      NotificationInfo.toUser(
+        user = accepter,
         title = s"${accepter.firstName} is now following ${acceptedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${acceptedLib.name}",
         linkText = s"See ${accepter.firstName}’s profile",
@@ -97,18 +93,17 @@ trait LibraryNewCollabInviteImpl extends NonGroupingNotificationKind[LibraryNewC
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val inviterInfo = RequestUser(event.inviterId).lookup(batched)
-      val inviter = inviterInfo.user
-      val invitedLibInfo = RequestLibrary(event.libraryId).lookup(batched)
+      val inviter = RequestUser(event.inviterId).lookup(batched)
+      val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       NotificationInfo(
-        url = invitedLibInfo.path.encode.absolute,
-        imageUrl = inviterInfo.imageUrl,
+        url = invitedLib.url,
+        image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
-        body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLibInfo.name}.",
+        body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
         linkText = "Visit library",
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(invitedLibInfo),
+          "library" -> Json.toJson(invitedLib),
           "access" -> LibraryAccess.READ_WRITE
         ))
       )
@@ -133,18 +128,17 @@ trait LibraryNewFollowInviteImpl extends NonGroupingNotificationKind[LibraryNewF
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestLibrary(event.libraryId)
     )) { batched =>
-      val inviterInfo = RequestUser(event.inviterId).lookup(batched)
-      val inviter = inviterInfo.user
-      val libraryIn = RequestLibrary(event.libraryId).lookup(batched)
+      val inviter = RequestUser(event.inviterId).lookup(batched)
+      val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       NotificationInfo(
-        url = libraryIn.path.encode.absolute,
-        imageUrl = inviterInfo.imageUrl,
+        url = invitedLib.url,
+        image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
-        body = s"Browse keeps in ${libraryIn.name} to find some interesting gems kept by ${libraryIn.name}.", //same
+        body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same
         linkText = "Visit library",
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
-          "library" -> Json.toJson(libraryIn),
+          "library" -> Json.toJson(invitedLib),
           "access" -> LibraryAccess.READ_ONLY
         ))
       )

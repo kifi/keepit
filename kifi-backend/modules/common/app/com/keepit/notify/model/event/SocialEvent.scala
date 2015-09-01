@@ -26,13 +26,11 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
     RequestingNotificationInfos(Requests(
       RequestUser(event.friendId)
     )) { batched =>
-      val friendInfo = RequestUser(event.friendId).lookup(batched)
-      val friend = friendInfo.user
-      NotificationInfo(
-        url = friendInfo.path.encode.absolute,
+      val friend = RequestUser(event.friendId).lookup(batched)
+      NotificationInfo.toUser(
+        user = friend,
         title = s"You’re connected with ${friend.fullName} on Kifi!",
         body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
-        imageUrl = friendInfo.imageUrl,
         linkText = s"View ${friend.firstName}’s profile",
         extraJson = Some(Json.obj(
           "friend" -> friend
@@ -58,14 +56,12 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
     RequestingNotificationInfos(Requests(
       RequestUser(event.joinerId)
     )) { batched =>
-      val joinerInfo = RequestUser(event.joinerId).lookup(batched)
-      val joiner = joinerInfo.user
-      NotificationInfo(
-        url = joinerInfo.path.encode.absolute,
+      val joiner = RequestUser(event.joinerId).lookup(batched)
+      NotificationInfo.toUser(
+        user = joiner,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
-        linkText = s"Invite ${joiner.firstName} to connect",
-        imageUrl = joinerInfo.imageUrl
+        linkText = s"Invite ${joiner.firstName} to connect"
       )
     }
   }
