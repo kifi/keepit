@@ -60,7 +60,7 @@ trait LibraryCommander {
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Set[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
@@ -698,7 +698,7 @@ class LibraryCommanderImpl @Inject() (
         val keeps = db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
         }
-        Right(copyKeeps(userId, libraryId, keeps, withSource = Some(KeepSource.tagImport)))
+        Right(copyKeeps(userId, libraryId, keeps.toSet, withSource = Some(KeepSource.tagImport)))
     }
   }
 
@@ -761,18 +761,19 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Set[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+    val sortedKeeps = keeps.toSeq.sortBy(keep => (keep.keptAt, keep.id.get))
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
         case Some(membership) if membership.canWrite => {
           val toLibrary = libraryRepo.get(toLibraryId)
-          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+          val validSourceLibraryIds = sortedKeeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).isDefined
           }
           val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
           val successes = collection.mutable.ListBuffer[Keep]()
 
-          keeps.foreach {
+          sortedKeeps.foreach {
             case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
               case Right(movedKeep) => successes += movedKeep
               case Left(error) => failures += (keep -> error)
@@ -792,7 +793,7 @@ class LibraryCommanderImpl @Inject() (
           }
           (successes.toSeq, failures.toSeq)
         }
-        case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
+        case _ => (Seq.empty[Keep], sortedKeeps.map(_ -> LibraryError.DestPermissionDenied))
       }
     }
   }
