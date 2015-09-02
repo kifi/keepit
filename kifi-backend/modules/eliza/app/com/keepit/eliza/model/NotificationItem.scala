@@ -4,7 +4,7 @@ import java.nio.ByteOrder
 import java.util.UUID
 
 import akka.util.ByteStringBuilder
-import com.keepit.common.db.{ModelWithExternalId, ExternalId, Model, Id}
+import com.keepit.common.db.{ ModelWithExternalId, ExternalId, Model, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.notify.model.event.NotificationEvent
@@ -46,23 +46,26 @@ object NotificationItem {
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],
     kind: String,
-    event: NotificationEvent): NotificationItem =
+    event: NotificationEvent,
+    externalId: ExternalId[NotificationItem]): NotificationItem =
     NotificationItem(
       id,
       createdAt,
       updatedAt,
       notificationId,
       NotificationKind.getByName(kind).get,
-      event
+      event,
+      externalId
     )
 
-  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent)] =
+  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent, ExternalId[NotificationItem])] =
     Some(
       item.id,
       item.createdAt,
       item.updatedAt,
       item.notificationId,
       item.kind.name,
-      item.event
+      item.event,
+      item.externalId
     )
 }

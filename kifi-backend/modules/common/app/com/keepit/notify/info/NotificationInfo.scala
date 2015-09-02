@@ -1,7 +1,7 @@
 package com.keepit.notify.info
 
 import com.keepit.common.db.Id
-import com.keepit.model.{User, NotificationCategory}
+import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.social.BasicUser
 import play.api.libs.json.JsObject
 import play.api.libs.json._
