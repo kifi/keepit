@@ -74,16 +74,14 @@ class KeepChecker @Inject() (
 
   private def ensureStateIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.get(keepId)
-    val allKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = None)
-    val allKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = None)
     if (keep.isInactive) {
-      val zombieKtus = allKtus.filter(_.isActive)
+      val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
         airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!")
         ktuCommander.deactivate(ktu)
       }
 
-      val zombieKtls = allKtls.filter(_.isActive)
+      val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
         airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!")
         ktlCommander.deactivate(ktl)
@@ -102,7 +100,7 @@ class KeepChecker @Inject() (
     }
   }
 
-  private def ensureParticipantsHashIntegrity(keepId: Id[Keep]) = db.readWrite { implicit session =>
+  private def ensureParticipantsHashIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
     val expectedHash = ParticipantsHash(users)

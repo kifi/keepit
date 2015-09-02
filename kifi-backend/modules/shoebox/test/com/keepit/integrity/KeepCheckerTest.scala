@@ -77,7 +77,6 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         // Make sure it actually is broken
         db.readOnlyMaster { implicit session =>
           ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStateOpt = None).get.state !== KeepToLibraryStates.INACTIVE
-          inject[SystemValueRepo].all.foreach(println)
         }
 
         // Let's see if the checker will fix it
