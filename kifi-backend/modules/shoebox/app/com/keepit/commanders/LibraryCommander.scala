@@ -20,6 +20,8 @@ import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
+import com.keepit.model
+import com.keepit.model.LibraryAccess.READ_ONLY
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
@@ -124,15 +126,15 @@ class LibraryCommanderImpl @Inject() (
 
     val invitedUsers = activeInvites.groupBy(_.userId).collect {
       case (Some(userId), invites) =>
-        val access = invites.map(_.access).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        val access = invites.map(_.access).max
+        val lastInvitedAt = invites.map(_.createdAt).max
         userId -> (access, lastInvitedAt)
     }
 
     val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
       case (Some(emailAddress), invites) =>
-        val access = invites.map(_.access).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        val access = invites.map(_.access).max
+        val lastInvitedAt = invites.map(_.createdAt).max
         emailAddress -> (access, lastInvitedAt)
     }
 
@@ -604,7 +606,12 @@ class LibraryCommanderImpl @Inject() (
       // private library & no library invites with matching authtoken
       Left(LibraryFail(FORBIDDEN, "cant_join_library_without_an_invite"))
     } else {
-      val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.max.access
+      val maxAccess: LibraryAccess = {
+        val orgMemberAccess: Option[LibraryAccess] = if (lib.isSecret) None else lib.organizationId.flatMap { orgId =>
+          lib.organizationMemberAccess.filter { _ => organizationMembershipCommander.getMembership(orgId, userId).isDefined }
+        }
+        (inviteList.map(_.access).toSet ++ orgMemberAccess).maxOpt.getOrElse(LibraryAccess.READ_ONLY)
+      }
       val (updatedLib, updatedMem) = db.readWrite(attempts = 3) { implicit s =>
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
