@@ -30,6 +30,7 @@ trait LibraryMembershipCommander {
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
   def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership]
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
 }
 
 case class ModifyLibraryMembershipRequest(userId: Id[User], libraryId: Id[Library],
@@ -50,8 +51,9 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryAccessCommander: LibraryAccessCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
-    libraryAnalytics: LibraryAnalytics,
+    typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
+    libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
     searchClient: SearchServiceClient,
     implicit val defaultContext: ExecutionContext,
@@ -336,6 +338,60 @@ class LibraryMembershipCommanderImpl @Inject() (
         newFollowerId,
         lib.id.get
       ))
+    }
+  }
+
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+    val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
+      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
+    }
+
+    val activeInvites = db.readOnlyMaster { implicit session =>
+      libraryInviteRepo.getByLibraryIdAndInviterId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
+    }
+
+    val invitedUsers = activeInvites.groupBy(_.userId).collect {
+      case (Some(userId), invites) =>
+        val access = invites.map(_.access).max
+        val lastInvitedAt = invites.map(_.createdAt).max
+        userId -> (access, lastInvitedAt)
+    }
+
+    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
+      case (Some(emailAddress), invites) =>
+        val access = invites.map(_.access).max
+        val lastInvitedAt = invites.map(_.createdAt).max
+        emailAddress -> (access, lastInvitedAt)
+    }
+
+    futureFriendsAndContacts.map {
+      case (users, contacts) =>
+        val existingMembers = {
+          val userIds = users.map(_._1).toSet
+          val memberships = db.readOnlyMaster { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserIds(libraryId, userIds) }
+          memberships.mapValues(_.access)
+        }
+        val suggestedUsers = users.map {
+          case (userId, basicUser) =>
+            val (access, lastInvitedAt) = existingMembers.get(userId) match {
+              case Some(access) => (Some(access), None)
+              case None => invitedUsers.get(userId) match {
+                case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
+                case None => (None, None)
+              }
+            }
+            MaybeLibraryMember(Left(basicUser), access, lastInvitedAt)
+        }
+
+        val suggestedEmailAddresses = contacts.map { contact =>
+          val (access, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
+            case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
+            case None => (None, None)
+          }
+          MaybeLibraryMember(Right(contact), access, lastInvitedAt)
+        }
+        suggestedUsers ++ suggestedEmailAddresses
     }
   }
 

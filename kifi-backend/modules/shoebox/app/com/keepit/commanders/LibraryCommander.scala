@@ -32,7 +32,6 @@ object MarketingSuggestedLibrarySystemValue {
 @ImplementedBy(classOf[LibraryCommanderImpl])
 trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
   def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
@@ -66,7 +65,6 @@ class LibraryCommanderImpl @Inject() (
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,
     countByLibraryCache: CountByLibraryCache,
-    typeaheadCommander: TypeaheadCommander,
     collectionRepo: CollectionRepo,
     airbrake: AirbrakeNotifier,
     searchClient: SearchServiceClient,
@@ -82,60 +80,6 @@ class LibraryCommanderImpl @Inject() (
           libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
         }
       }
-    }
-  }
-
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
-    val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
-      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
-    }
-
-    val activeInvites = db.readOnlyMaster { implicit session =>
-      libraryInviteRepo.getByLibraryIdAndInviterId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
-    }
-
-    val invitedUsers = activeInvites.groupBy(_.userId).collect {
-      case (Some(userId), invites) =>
-        val access = invites.map(_.access).max
-        val lastInvitedAt = invites.map(_.createdAt).max
-        userId -> (access, lastInvitedAt)
-    }
-
-    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
-      case (Some(emailAddress), invites) =>
-        val access = invites.map(_.access).max
-        val lastInvitedAt = invites.map(_.createdAt).max
-        emailAddress -> (access, lastInvitedAt)
-    }
-
-    futureFriendsAndContacts.map {
-      case (users, contacts) =>
-        val existingMembers = {
-          val userIds = users.map(_._1).toSet
-          val memberships = db.readOnlyMaster { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserIds(libraryId, userIds) }
-          memberships.mapValues(_.access)
-        }
-        val suggestedUsers = users.map {
-          case (userId, basicUser) =>
-            val (access, lastInvitedAt) = existingMembers.get(userId) match {
-              case Some(access) => (Some(access), None)
-              case None => invitedUsers.get(userId) match {
-                case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
-                case None => (None, None)
-              }
-            }
-            MaybeLibraryMember(Left(basicUser), access, lastInvitedAt)
-        }
-
-        val suggestedEmailAddresses = contacts.map { contact =>
-          val (access, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
-            case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
-            case None => (None, None)
-          }
-          MaybeLibraryMember(Right(contact), access, lastInvitedAt)
-        }
-        suggestedUsers ++ suggestedEmailAddresses
     }
   }
 

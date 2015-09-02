@@ -601,7 +601,7 @@ class MobileLibraryController @Inject() (
         if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
         else Library.decodePublicId(pubId) match {
           case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
-          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+          case Success(libraryId) => libraryMembershipCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
         }
       }
       case _ => Future.successful(Forbidden)
