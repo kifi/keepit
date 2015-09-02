@@ -4,8 +4,7 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.model.UserExperimentType
 import com.keepit.notify.model.{ EmailRecipient, Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.Mode
-import play.api.Play
+import play.api.{ Mode, Play }
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -20,8 +19,11 @@ class NotificationExperimentCheck @Inject() (
 
   def checkExperiment(recipient: Recipient): (Boolean, Recipient) = {
     // Don't want to have to keep switching experiments in dev mode
-    if (Play.maybeApplication.exists(_.mode == Mode.DEV)) {
-      (true, recipient)
+    if (Play.maybeApplication.exists(_.mode == Mode.Dev)) {
+      (true, recipient match {
+        case u: UserRecipient => u.copy(experimentEnabled = Some(true))
+        case other => other
+      })
     } else {
       recipient match {
         case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
