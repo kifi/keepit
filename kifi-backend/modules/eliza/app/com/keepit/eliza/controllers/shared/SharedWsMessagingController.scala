@@ -76,25 +76,23 @@ class SharedWsMessagingController @Inject() (
     },
     "add_participants_to_thread" -> {
       case JsString(threadId) +: (data: JsValue) +: _ =>
-        val (users, emailContacts, source) = data match {
+        val (users, emailContacts, orgs) = data match {
           case JsArray(whoDat) => {
-            val (users, emailContacts) = messagingCommander.validateRecipients(whoDat)
-            (users, emailContacts, None)
+            val (users, emailContacts, orgs) = messagingCommander.parseRecipients(whoDat)
+            (users, emailContacts, orgs)
           }
           case _ => {
-            val users = messagingCommander.validateUsers((data \ "users").asOpt[Seq[JsValue]] getOrElse Seq.empty)
-            val emailContacts = messagingCommander.validateEmailContacts((data \ "nonUsers").asOpt[Seq[JsValue]] getOrElse Seq.empty)
-            (users, emailContacts, (data \ "source").asOpt[MessageSource])
+            val (users, _, _) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            val (_, _, orgs) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            val (_, contacts, _) = messagingCommander.parseRecipients((data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            (users, contacts, orgs)
           }
         }
 
-        val validUsers = users.collect { case JsSuccess(validUser, _) => validUser }
-        val validContacts = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
-
-        if (validUsers.nonEmpty || validContacts.nonEmpty) {
+        if (users.nonEmpty || emailContacts.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
-        } // todo(Martin, Jared, Léo): return meaningful error about invalid participants
+          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, orgs)
+        }
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))

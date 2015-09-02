@@ -493,14 +493,14 @@ class LibraryRepoImpl @Inject() (
   }
 
   def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select organization_id, count(*) from library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'active' and experiment_type = 'fake') and kind = 'user_created' group by organization_id order by count(*) desc"""
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
 
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (owners.isEmpty) {
       Map()
     } else {

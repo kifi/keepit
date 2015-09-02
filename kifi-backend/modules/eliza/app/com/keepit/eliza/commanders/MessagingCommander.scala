@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import com.keepit.abook.ABookServiceClient
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.URI
 import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
@@ -19,6 +20,7 @@ import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
+import scala.util.Try
 
 import org.joda.time.DateTime
 
@@ -61,7 +63,8 @@ class MessagingCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
@@ -433,13 +436,22 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
+
+    val orgIds = orgs.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
+    val newOrgParticipantsFuture = Future.sequence(orgIds.map { oid =>
+      shoebox.hasOrganizationMembership(oid, adderUserId).flatMap {
+        case true => shoebox.getOrganizationMembers(oid)
+        case false => Future.successful(Set.empty[Id[User]])
+      }
+    }).map(_.flatten)
 
     val haveBeenAdded = for {
       newUserParticipants <- newUserParticipantsFuture
       newNonUserParticipants <- newNonUserParticipantsFuture
+      newOrgParticipants <- newOrgParticipantsFuture
     } yield {
 
       val resultInfoOpt = db.readWrite { implicit session =>
@@ -452,7 +464,7 @@ class MessagingCommander @Inject() (
           throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
         }
 
-        val actuallyNewUsers = newUserParticipants.filterNot(oldThread.containsUser)
+        val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
         val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
 
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
@@ -464,7 +476,7 @@ class MessagingCommander @Inject() (
             thread = thread.id.get,
             threadExtId = thread.externalId,
             messageText = "",
-            source = source,
+            source = None,
             auxData = Some(Json.arr("add_participants", adderUserId.id.toString,
               actuallyNewUsers.map(u => Json.toJson(u.id)) ++ actuallyNewNonUsers.map(Json.toJson(_))
             )),
@@ -615,6 +627,7 @@ class MessagingCommander @Inject() (
     source: Option[MessageSource],
     userExtRecipients: Seq[ExternalId[User]],
     nonUserRecipients: Seq[BasicContact],
+    validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
     context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
@@ -623,10 +636,19 @@ class MessagingCommander @Inject() (
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients)
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
+    val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
+    val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
+      shoebox.hasOrganizationMembership(oid, userId).flatMap {
+        case true => shoebox.getOrganizationMembers(oid)
+        case false => Future.successful(Set.empty[Id[User]])
+      }
+    }).map(_.flatten)
+
     val resFut = for {
       userRecipients <- userRecipientsFuture
       nonUserRecipients <- nonUserRecipientsFuture
-      (thread, message) <- sendNewMessage(userId, userRecipients, nonUserRecipients, url, title, text, source)(context)
+      orgParticipants <- orgParticipantsFuture
+      (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
       (messageThread, messagesWithBasicUser) <- basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
       threadInfos <- buildThreadInfos(userId, Seq(thread), Some(url))
     } yield {
@@ -648,9 +670,36 @@ class MessagingCommander @Inject() (
   def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]] = rawNonUsers.map(_.validate[JsObject].map {
     case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
   })
-  def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
-    val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
-    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
+
+  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]]) = {
+    val (rawUsers, rawNonUsers, rawOrgs) = rawRecipients.foldRight((Seq.empty[ExternalId[User]], Seq.empty[BasicContact], Seq.empty[PublicId[Organization]])) { (recipient, acc) =>
+      recipient.asOpt[JsString] match { // heuristic to determine if it's a user or an org
+        case Some(JsString(id)) if id.startsWith("o") =>
+          (acc._1, acc._2, acc._3 :+ PublicId(id))
+        case Some(JsString(id)) if id.length == 36 =>
+          (acc._1 ++ ExternalId.asOpt[User](id), acc._2, acc._3)
+        case _ => // Starting in v XXXX `kind` is always sent (9/2/2015). Above can be removed after a good while.
+          recipient.asOpt[JsObject].flatMap {
+            case recip if (recip \ "kind").asOpt[String].exists(_ == "user") =>
+              (recip \ "id").asOpt[ExternalId[User]].map { userExtId =>
+                (acc._1 :+ userExtId, acc._2, acc._3)
+              }
+            case recip if (recip \ "kind").asOpt[String].exists(_ == "org") =>
+              (recip \ "id").asOpt[PublicId[Organization]].map { orgPubId =>
+                (acc._1, acc._2, acc._3 :+ orgPubId)
+              }
+            case recip if (recip \ "kind").asOpt[String].exists(_ == "email") =>
+              (recip \ "email").asOpt[BasicContact].map { contact => // this is weird as heck
+                (acc._1, acc._2 :+ contact, acc._3)
+              }
+          }.getOrElse {
+            log.warn(s"[validateRecipients] Could not determine what ${recipient.toString} is supposed to be.")
+            (acc._1, acc._2, acc._3)
+          }
+      }
+    }
+
+    (rawUsers, rawNonUsers, rawOrgs)
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
