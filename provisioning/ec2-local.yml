@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  sudo: yes
+  tasks:
+    # remove old init.d script
+    - name: remove init.d/kifi-register-host service
+      file: state=absent path=/etc/init.d/kifi-register-host
+    - name: disable kifi-register-host service
+      command: "update-rc.d kifi-register-host remove"
+      changed_when: False
+
+    - name: install kifi-node-setup python dependencies
+      pip: name={{ item }}
+      with_items:
+        - boto3
+
+    # add kifi-node-setup as upstart
+    - name: add /opt/kifi-node-setup script
+      template:
+        src: templates/opt/kifi-node-setup.j2
+        dest: /opt/kifi-node-setup
+        owner: root
+        group: root
+        mode: 0750
+    - name: add /etc/init/kifi-node-setup.conf
+      template:
+        src: templates/etc/init/kifi-node-setup.conf.j2
+        dest: /etc/init/kifi-node-setup.conf
+        owner: root
+        group: root
+        mode: 0750
+    - command: /opt/kifi-node-setup
+      changed_when: False
+    - include_vars: /opt/kifi-vars.yml
+    - set_fact:
+        ansible_fqdn: "{{ kifi_hostname }}"
+    - name: add ec2 instances to our hosts lists
+      add_host:
+        name: localhost
+        groups: ec2,tag_Service_{{ ec2_tag_Service }}
+
+- include: ec2-service.yml

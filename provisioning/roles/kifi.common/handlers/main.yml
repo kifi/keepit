@@ -3,5 +3,3 @@
   sudo_user: fortytwo
   command: /usr/bin/python /home/fortytwo/eddie/eddie-self-deploy.py
   notify: Restart logentries
-- name: Restart logentries
-  service: name=logentries state=restarted
