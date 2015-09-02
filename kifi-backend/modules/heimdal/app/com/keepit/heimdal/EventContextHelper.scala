@@ -2,7 +2,7 @@ package com.keepit.heimdal
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commander.HelpRankCommander
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -19,6 +19,8 @@ trait EventContextHelper {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]]
+  def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]]
+  def getLibraryEventValues(libraryId: Id[Library], userId: Id[User]): Future[Seq[(String, ContextData)]]
 }
 
 class EventContextHelperImpl @Inject() (
@@ -28,6 +30,9 @@ class EventContextHelperImpl @Inject() (
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
     db: Database) extends EventContextHelper {
+
+  val FAKE_ORG_OWNER_ID = ExternalId[User]("4f738134-cc5a-4998-86ea-e5b5770731c9")
+
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = {
     primaryOrgForUserCache.getOrElseFutureOpt(PrimaryOrgForUserKey(userId)) {
       shoebox.getPrimaryOrg(userId)
@@ -62,6 +67,44 @@ class EventContextHelperImpl @Inject() (
         ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount)),
         ("orgMessageCount", ContextDoubleData(messageCount))
       ) ++ userWithMostClickedKeeps.map(userId => Seq(("overallKeepViews", ContextStringData(userId.toString)))).getOrElse(Seq.empty[(String, ContextData)])
+    }
+  }
+
+  def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]] = {
+
+    val basicOrgFut = shoebox.getBasicOrganizationsByIds(Set(orgId)).map { orgsById => orgsById.values.head } // cached
+    val orgUserRelationsFut = shoebox.getOrganizationUserRelationship(orgId, userId)
+
+    for {
+      basicOrg <- basicOrgFut
+      orgUserRelations <- orgUserRelationsFut
+    } yield {
+      val orgStatus = basicOrg.ownerId match {
+        case FAKE_ORG_OWNER_ID => ContextStringData("candidate")
+        case _ => ContextStringData("real")
+      }
+
+      val memberStatusOpt = orgUserRelations match {
+        case relations if relations.role.isDefined => Some(ContextStringData("fullMember"))
+        case relations if relations.isInvited => Some(ContextStringData("pendingMember"))
+        case relations if relations.isCandidate => Some(ContextStringData("candidateMember"))
+        case _ => None
+      }
+
+      Seq(("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)])
+    }
+  }
+
+  def getLibraryEventValues(libraryId: Id[Library], userId: Id[User]): Future[Seq[(String, ContextData)]] = {
+    shoebox.getLibraryMembershipView(libraryId, userId).map { membershipOpt =>
+      val libraryStatusOpt = membershipOpt.map { membership =>
+        membership.access match {
+          case LibraryAccess.READ_ONLY => ContextStringData("follower")
+          case LibraryAccess.READ_WRITE => ContextStringData("collaborator")
+          case LibraryAccess.OWNER => ContextStringData("owner")
+        }
+      }
+      libraryStatusOpt.map(libraryStatus => Seq(("libraryStatus", libraryStatus))).getOrElse(Seq.empty)
     }
   }
 }

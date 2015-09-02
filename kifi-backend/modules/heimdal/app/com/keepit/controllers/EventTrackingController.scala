@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commander.HelpRankEventTrackingCommander
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.HeimdalServiceController
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
@@ -33,6 +34,8 @@ class EventTrackingController @Inject() (
     mixpanelClient: MixpanelClient,
     amplitudeClient: AmplitudeClient,
     airbrake: AirbrakeNotifier,
+    eventContextHelper: EventContextHelper,
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
@@ -70,7 +73,9 @@ class EventTrackingController @Inject() (
       new ExtensionVersionAugmentor(shoeboxClient),
       new UserSegmentAugmentor(shoeboxClient),
       new UserValuesAugmentor(shoeboxClient),
-      new UserKifiCampaignIdAugmentor(shoeboxClient))
+      new UserKifiCampaignIdAugmentor(shoeboxClient),
+      new UserOrgValuesAugmentor(eventContextHelper),
+      new UserContentViewedAugmentor(eventContextHelper))
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
 
