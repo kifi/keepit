@@ -27,19 +27,22 @@ class ExtUserController @Inject() (
 
     val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
 
-    val orgsToInclude = if (request.userId.id == 3) {
+    val orgsToInclude = if (request.experiments.contains(UserExperimentType.ADMIN)) {
       val orgsUserIsIn = db.readOnlyReplica(implicit s => orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId))
       val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
-      val orgsToShow = query.getOrElse("").trim match {
+      val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs
-        case orgQ => basicOrgs.filter(_.name.contains(orgQ))
+        case orgQ =>
+          def sanitize(s: String) = s.trim.toLowerCase.split("\\P{L}+").toSet
+          val q = sanitize(orgQ)
+          basicOrgs.filter(o => q.subsetOf(sanitize(o.name)))
       }
       orgsToShow.map { org =>
         // This is a superset of a UserContact. I can't use that type because it forces ExternalId[User]
         Json.obj(
           "name" -> (org.name + " Members"),
           "id" -> org.orgId,
-          "pictureName" -> ("../../../.." + org.avatarPath.map(_.path).getOrElse("NONE"): String), // one weird trick
+          "pictureName" -> ("../../../../" + org.avatarPath.map(_.path).getOrElse("NONE"): String), // one weird trick
           "kind" -> "org",
           "avatarPath" -> (org.avatarPath.map(_.path).getOrElse("NONE"): String),
           "handle" -> org.handle
