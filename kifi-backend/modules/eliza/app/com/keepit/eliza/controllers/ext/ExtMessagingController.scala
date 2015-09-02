@@ -50,13 +50,7 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (validUserRecipients, validEmailRecipients) = {
-      val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
-      val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
-      val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
-
-      (validUserRecipients, validEmailRecipients)
-    }
+    val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
 
     val url = (o \ "url").as[String]
 
@@ -68,7 +62,7 @@ class ExtMessagingController @Inject() (
       contextBuilder += ("guided", true)
     }
 
-    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, url, request.userId, contextBuilder.build).map {
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfoOpt, messages) =>
         Ok(Json.obj(
           "id" -> message.externalId.id,
