@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'libraryService',
-  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state',
+  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS',
   function (
     $scope, $rootElement, $rootScope, $document, profileService, libraryService,
-    $location, util, KEY, modalService, $timeout, $state) {
+    $location, util, KEY, modalService, $timeout, $state, mobileOS) {
 
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
@@ -22,6 +22,8 @@ angular.module('kifi')
       profileService.prefs.site_notify_libraries_in_search = false;
       profileService.savePrefs({site_notify_libraries_in_search: false});
     };
+
+    $scope.showMobileInterstitial = (mobileOS === "iOS" || mobileOS === "Android");
 
     //
     // Watchers & Listeners
