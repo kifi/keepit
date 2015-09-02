@@ -3,7 +3,8 @@ package com.keepit.controllers.ext
 import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.model.{ UserExperimentType, Library }
+import com.keepit.common.db.slick.Database
+import com.keepit.model.{ OrganizationMembershipRepo, OrganizationRepo, UserExperimentType, Library }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -15,15 +16,42 @@ class ExtUserController @Inject() (
   typeAheadCommander: TypeaheadCommander,
   libPathCommander: PathCommander,
   userPersonaCommander: UserPersonaCommander,
+  orgMemberRepo: OrganizationMembershipRepo,
+  orgRepo: OrganizationRepo,
+  orgCommander: OrganizationCommander,
+  db: Database,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-    typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
+
+    val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
+
+    val orgsToInclude = if (request.userId.id == 3) {
+      val orgsUserIsIn = db.readOnlyReplica(implicit s => orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId))
+      val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+      val orgsToShow = query.getOrElse("").trim match {
+        case "" => basicOrgs
+        case orgQ => basicOrgs.filter(_.name.contains(orgQ))
+      }
+      orgsToShow.map { org =>
+        // This is a superset of a UserContact. I can't use that type because it forces ExternalId[User]
+        Json.obj(
+          "name" -> (org.name + " Members"),
+          "id" -> org.orgId,
+          "pictureName" -> ("../../../.." + org.avatarPath.map(_.path).getOrElse("NONE"): String), // one weird trick
+          "kind" -> "org",
+          "avatarPath" -> (org.avatarPath.map(_.path).getOrElse("NONE"): String),
+          "handle" -> org.handle
+        )
+      }.toList
+    } else List.empty
+
+    typeaheadF.map { res =>
       val res1 = res.collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-      }
+      } ++ orgsToInclude
       Ok(Json.toJson(res1))
     }
   }
