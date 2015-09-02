@@ -25,6 +25,7 @@ class DataIntegrityPluginImpl @Inject() (
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, SystemLibraryCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 10 minutes, 24 hours, actor.ref, PaymentsMembershipCheck, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, KeepsCheck, getClass.getSimpleName)
   }
 }
 
@@ -32,6 +33,7 @@ private[integrity] case object CleanOrphans
 private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
 private[integrity] case object LibrariesCheck
+private[integrity] case object KeepsCheck
 private[integrity] case object SystemLibraryCheck
 private[integrity] case object PaymentsMembershipCheck
 
@@ -40,7 +42,8 @@ private[integrity] class DataIntegrityActor @Inject() (
   orphanCleaner: OrphanCleaner,
   elizaSequenceNumberChecker: ElizaSequenceNumberChecker,
   libraryChecker: LibraryChecker,
-  paymentsChecker: PaymentsIntegrityChecker)
+  paymentsChecker: PaymentsIntegrityChecker,
+  keepChecker: KeepChecker)
     extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -50,6 +53,8 @@ private[integrity] class DataIntegrityActor @Inject() (
       elizaSequenceNumberChecker.check()
     case LibrariesCheck =>
       libraryChecker.check()
+    case KeepsCheck =>
+      keepChecker.check()
     case SystemLibraryCheck =>
       libraryChecker.checkSystemLibraries()
     case PaymentsMembershipCheck =>

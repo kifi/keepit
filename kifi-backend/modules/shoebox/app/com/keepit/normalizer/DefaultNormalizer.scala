@@ -7,9 +7,9 @@ import com.keepit.model.Normalization
 object DefaultNormalizer extends StaticNormalizer with Logging {
 
   val stopParams = Set(
-    "jsessionid", "phpsessid", "aspsessionid",
+    "jsessionid", "phpsessid", "aspsessionid", "ref",
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "trk", "goback", "icid", "ncid", "zenid", "rand")
+    "trk", "goback", "icid", "ncid", "zenid", "rand", "sid", "gclid", "utm_id")
 
   val validSchemes = Normalization.schemes.flatMap(_.scheme.split("://").headOption)
 

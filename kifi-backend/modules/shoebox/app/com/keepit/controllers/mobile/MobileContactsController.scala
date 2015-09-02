@@ -24,6 +24,8 @@ class MobileContactsController @Inject() (
   }
 
   def searchForAllContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
+    // XXXX
+
     typeaheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { contactSearchResult =>
       val response = contactSearchResult.collect {
         case u: UserContactResult => Json.toJson(u)

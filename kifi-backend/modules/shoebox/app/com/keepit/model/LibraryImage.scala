@@ -53,8 +53,17 @@ object LibraryImage {
   )(LibraryImage.apply, unlift(LibraryImage.unapply))
 }
 
-object LibraryImageInfoBuilder {
-  def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))
+@json
+case class LibraryImageInfo(path: ImagePath, x: Int, y: Int)
+
+object LibraryImageInfo {
+
+  def fromImage(image: LibraryImage): LibraryImageInfo = LibraryImageInfo(
+    path = image.imagePath,
+    x = image.positionX.getOrElse(50),
+    y = image.positionY.getOrElse(50)
+  )
+
 }
 
 case class LibraryImagePosition(x: Option[Int], y: Option[Int])

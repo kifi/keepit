@@ -27,7 +27,6 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
-  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]]
   def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]]
 }
 
@@ -96,10 +95,6 @@ class OrganizationMembershipRepoImpl @Inject() (
 
   override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
     super.save(model.copy(seq = deferredSeqNum()))
-  }
-
-  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]] = {
-    (for (row <- rows if row.userId === userId) yield row.organizationId).firstOption
   }
 
   private val getByOrgIdAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]]) =>
