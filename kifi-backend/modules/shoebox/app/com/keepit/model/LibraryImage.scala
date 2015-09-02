@@ -60,8 +60,8 @@ object LibraryImageInfo {
 
   def fromImage(image: LibraryImage): LibraryImageInfo = LibraryImageInfo(
     path = image.imagePath,
-    x = image.positionX.getOrElse(30),
-    y = image.positionY.getOrElse(30)
+    x = image.positionX.getOrElse(50),
+    y = image.positionY.getOrElse(50)
   )
 
 }
