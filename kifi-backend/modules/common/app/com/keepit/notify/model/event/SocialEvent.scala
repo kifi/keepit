@@ -27,7 +27,7 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
       RequestUser(event.friendId)
     )) { batched =>
       val friend = RequestUser(event.friendId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = friend,
         title = s"You’re connected with ${friend.fullName} on Kifi!",
         body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
@@ -57,7 +57,7 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
       RequestUser(event.joinerId)
     )) { batched =>
       val joiner = RequestUser(event.joinerId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = joiner,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",

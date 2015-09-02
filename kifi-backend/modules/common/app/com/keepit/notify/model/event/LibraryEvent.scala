@@ -29,7 +29,7 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} is now collaborating on ${invitedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${invitedLib.name}",
@@ -62,7 +62,7 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} is now following ${acceptedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${acceptedLib.name}",

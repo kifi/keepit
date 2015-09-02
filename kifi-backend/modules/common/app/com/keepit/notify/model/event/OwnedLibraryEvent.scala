@@ -43,7 +43,7 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
     )) { batched =>
       val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
@@ -91,7 +91,7 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
     )) { batched =>
       val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
@@ -124,7 +124,7 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
     )) { batched =>
       val follower = RequestUser(event.followerId).lookup(batched)
       val libraryFollowed = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = follower,
         title = "New library follower",
         body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
@@ -157,7 +157,7 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
     )) { batched =>
       val collaborator = RequestUser(event.collaboratorId).lookup(batched)
       val libraryCollaborating = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = collaborator,
         title = "New library collaborator",
         body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",

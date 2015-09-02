@@ -28,7 +28,7 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
       RequestUser(event.inviterId)
     )) { batched =>
       val inviter = RequestUser(event.inviterId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = inviter,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
@@ -58,7 +58,7 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
       RequestUser(event.accepterId)
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
-      NotificationInfo.toUser(
+      NotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
         body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",

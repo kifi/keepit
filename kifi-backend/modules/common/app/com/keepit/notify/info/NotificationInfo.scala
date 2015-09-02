@@ -28,13 +28,13 @@ case class NotificationInfo(
 
 object NotificationInfo {
 
-  def toUser(
+  def apply(
     user: BasicUser,
     title: String,
     body: String,
     linkText: String,
     category: Option[NotificationCategory] = None,
-    extraJson: Option[JsObject] = None) = {
+    extraJson: Option[JsObject] = None): NotificationInfo = {
     NotificationInfo(
       user.path.encode.absolute,
       UserImage(user),

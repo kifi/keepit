@@ -25,6 +25,7 @@ import com.keepit.eliza.model._
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
+import com.keepit.common.core._
 
 sealed case class LibraryPushNotificationCategory(name: String)
 sealed case class UserPushNotificationCategory(name: String)
@@ -186,7 +187,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
     val payload = Json.toJson(event)
-    call(Eliza.internal.sendNotificationEvent(), payload).map(_ => ())
+    call(Eliza.internal.sendNotificationEvent(), payload).imap(_ => ())
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
