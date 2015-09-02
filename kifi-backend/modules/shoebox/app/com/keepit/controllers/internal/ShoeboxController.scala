@@ -18,6 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.{ NotificationId, NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
@@ -558,7 +559,7 @@ class ShoeboxController @Inject() (
         case (id, library) =>
           val imageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
           val libOwner = basicUserRepo.load(library.ownerId)
-          (id, LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, imageOpt, libOwner))
+          (id, NotificationInfoModel.library(library, imageOpt, libOwner))
       }
     }
     Ok(Json.toJson(libraryInfos))
@@ -571,7 +572,7 @@ class ShoeboxController @Inject() (
     }.map {
       case (id, org) =>
         val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
-        (id, OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
+        (id, NotificationInfoModel.organization(org, orgImageOpt))
     }
     Ok(Json.toJson(orgInfos))
   }

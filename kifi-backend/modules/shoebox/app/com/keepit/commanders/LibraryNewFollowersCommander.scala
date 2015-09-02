@@ -10,6 +10,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.LibraryNewKeep
 import com.keepit.social.BasicUser
@@ -56,7 +57,7 @@ class LibraryNewFollowersCommander @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
+            "library" -> NotificationInfoModel.library(library, libImageOpt, basicKeeper),
             "keep" -> Json.obj(
               "id" -> newKeep.externalId,
               "url" -> newKeep.url

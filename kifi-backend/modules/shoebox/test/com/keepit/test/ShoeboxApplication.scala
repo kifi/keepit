@@ -27,7 +27,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.normalizer.FakeNormalizationServiceModule
-import com.keepit.notify.FakeShoeboxNotifyModule
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule

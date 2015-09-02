@@ -22,6 +22,7 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
@@ -332,8 +333,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         category = NotificationCategory.User.ORGANIZATION_JOINED,
         extra = Some(Json.obj(
           "member" -> BasicUser.fromUser(invitee),
-          "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
-        ))
+          "organization" -> NotificationInfoModel.organization(org, orgImageOpt))
+        )
       )
       elizaClient.sendNotificationEvent(OrgInviteAccepted(
         Recipient(inviterId),

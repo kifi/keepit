@@ -3,7 +3,6 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
-import com.keepit.notify.info.OrganizationNotificationInfo
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -71,12 +70,6 @@ object OrganizationView {
   implicit val writes: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultFormat.writes(o.organizationInfo),
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
-  }
-}
-
-object OrganizationNotificationInfoBuilder {
-  def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(_.imagePath))
   }
 }
 

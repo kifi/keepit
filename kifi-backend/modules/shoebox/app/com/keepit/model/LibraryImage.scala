@@ -5,7 +5,6 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
-import com.keepit.notify.info.LibraryImageInfo
 import org.joda.time.DateTime
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._
@@ -54,8 +53,17 @@ object LibraryImage {
   )(LibraryImage.apply, unlift(LibraryImage.unapply))
 }
 
-object LibraryImageInfoBuilder {
-  def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))
+@json
+case class LibraryImageInfo(path: ImagePath, x: Int, y: Int)
+
+object LibraryImageInfo {
+
+  def fromImage(image: LibraryImage): LibraryImageInfo = LibraryImageInfo(
+    path = image.imagePath,
+    x = image.positionX.getOrElse(30),
+    y = image.positionY.getOrElse(30)
+  )
+
 }
 
 case class LibraryImagePosition(x: Option[Int], y: Option[Int])
