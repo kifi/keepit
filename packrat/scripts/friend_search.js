@@ -42,6 +42,7 @@ var initFriendSearch = (function () {
   }
 
   function formatResult(res) {
+    // TODO (Adam): Need organization data from server
     if (res.pictureName) {
       var html = [
         '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', k.cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
@@ -101,6 +102,7 @@ var initFriendSearch = (function () {
         done();
       }
     } else if (els.length === 0) {  // hiding entire list
+      return;
       var height = $dropdown[0].clientHeight;
       if (height > 0) {
         $dropdown.css('height', height).layout();
