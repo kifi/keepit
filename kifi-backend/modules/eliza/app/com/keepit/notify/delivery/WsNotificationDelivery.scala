@@ -15,10 +15,6 @@ class WsNotificationDelivery @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     deliveryCommander: NotificationDeliveryCommander) extends NotificationDelivery {
 
-  //  def generateInfo(id: NotificationId, items: Set[NotificationItem]): Future[Map[NotificationId, NotificationInfo]] = {
-  //    shoeboxServiceClient.generateNotificationInfos(Map(id -> items.map(_.event)))
-  //  }
-
   override def deliver(recipient: Recipient, items: Set[NotificationItem])(implicit ec: ExecutionContext): Future[Unit] = {
     //    val id = NotificationItem.externalIdFromItems(items)
     //    for {

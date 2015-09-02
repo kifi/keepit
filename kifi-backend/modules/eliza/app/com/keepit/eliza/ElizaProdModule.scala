@@ -9,14 +9,12 @@ import com.keepit.inject.CommonProdModule
 import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
-import com.keepit.notify.ElizaNotifyModule
 
 case class ElizaProdModule() extends ElizaModule with CommonProdModule {
 
   val userActionsModule = ProdRemoteUserActionsHelperModule()
   val cacheModule = ElizaCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
   val storeModule = ElizaProdStoreModule()
-  val notifyModule = ElizaNotifyModule()
 
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()

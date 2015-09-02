@@ -183,12 +183,16 @@ case class PrimaryOrganizationHandle(original: OrganizationHandle, normalized: O
 
 // BasicOrganization should ONLY contain public information. No internal ids.
 case class BasicOrganization(
-  orgId: PublicId[Organization],
-  ownerId: ExternalId[User],
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  avatarPath: Option[ImagePath])
+    orgId: PublicId[Organization],
+    ownerId: ExternalId[User],
+    handle: OrganizationHandle,
+    name: String,
+    description: Option[String],
+    avatarPath: Option[ImagePath]) {
+
+  def abbreviatedName = this.name.abbreviate(33)
+
+}
 
 object BasicOrganization {
   implicit val defaultFormat = (
