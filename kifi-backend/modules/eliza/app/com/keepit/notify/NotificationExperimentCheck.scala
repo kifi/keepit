@@ -4,6 +4,8 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.model.UserExperimentType
 import com.keepit.notify.model.{ EmailRecipient, Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
+import play.Mode
+import play.api.Play
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -16,21 +18,22 @@ import scala.concurrent.duration._
 class NotificationExperimentCheck @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient) {
 
-  def checkExperiment(recipient: Recipient): (Boolean, Recipient) = recipient match {
-
-    case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
-
-      case None =>
-        val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
-        val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
-        (enabled, u.copy(experimentEnabled = Some(enabled)))
-
-      case Some(result) => (result, u)
-
+  def checkExperiment(recipient: Recipient): (Boolean, Recipient) = {
+    // Don't want to have to keep switching experiments in dev mode
+    if (Play.maybeApplication.exists(_.mode == Mode.DEV)) {
+      (true, recipient)
+    } else {
+      recipient match {
+        case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
+          case None =>
+            val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
+            val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
+            (enabled, u.copy(experimentEnabled = Some(enabled)))
+          case Some(result) => (result, u)
+        }
+        case _: EmailRecipient => (false, recipient)
+      }
     }
-
-    case _: EmailRecipient => (false, recipient)
-
   }
 
   def ifExperiment(recipient: Recipient)(f: (Recipient) => Unit): Recipient = {
