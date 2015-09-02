@@ -17,10 +17,10 @@ import scala.concurrent.duration._
 class NotificationExperimentCheck @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient) {
 
-  def checkExperiment(recipient: Recipient): (Boolean, Recipient) = {
+  def checkExperiment(recipient: Recipient): NotificationExperimentCheck.Result = {
     // Don't want to have to keep switching experiments in dev mode
     if (Play.maybeApplication.exists(_.mode == Mode.Dev)) {
-      (true, recipient match {
+      NotificationExperimentCheck.Result(true, recipient match {
         case u: UserRecipient => u.copy(experimentEnabled = Some(true))
         case other => other
       })
@@ -30,30 +30,36 @@ class NotificationExperimentCheck @Inject() (
           case None =>
             val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
             val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
-            (enabled, u.copy(experimentEnabled = Some(enabled)))
-          case Some(result) => (result, u)
+            NotificationExperimentCheck.Result(enabled, u.copy(experimentEnabled = Some(enabled)))
+          case Some(result) => NotificationExperimentCheck.Result(result, u)
         }
-        case _: EmailRecipient => (false, recipient)
+        case _: EmailRecipient => NotificationExperimentCheck.Result(false, recipient)
       }
     }
   }
 
   def ifExperiment(recipient: Recipient)(f: (Recipient) => Unit): Recipient = {
-    val (experiment, newRecipient) = checkExperiment(recipient)
-    if (experiment) {
-      f(newRecipient)
+    val check = checkExperiment(recipient)
+    if (check.experimentEnabled) {
+      f(check.recipient)
     }
-    newRecipient
+    check.recipient
   }
 
   def ifElseExperiment(recipient: Recipient)(f: (Recipient) => Unit)(elseF: (Recipient) => Unit): Recipient = {
-    val (experiment, newRecipient) = checkExperiment(recipient)
-    if (experiment) {
-      f(newRecipient)
+    val check = checkExperiment(recipient)
+    if (check.experimentEnabled) {
+      f(check.recipient)
     } else {
-      elseF(newRecipient)
+      elseF(check.recipient)
     }
-    newRecipient
+    check.recipient
   }
+
+}
+
+object NotificationExperimentCheck {
+
+  case class Result(experimentEnabled: Boolean, recipient: Recipient)
 
 }

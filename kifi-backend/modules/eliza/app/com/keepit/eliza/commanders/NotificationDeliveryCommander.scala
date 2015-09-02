@@ -15,6 +15,8 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.notify.NotificationExperimentCheck
+import com.keepit.notify.model.UserRecipient
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
@@ -37,6 +39,7 @@ class NotificationDeliveryCommander @Inject() (
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
+    notificationExperimentCheck: NotificationExperimentCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
@@ -180,78 +183,87 @@ class NotificationDeliveryCommander @Inject() (
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]) = {
-    val (message, thread) = db.readWrite { implicit session =>
-      val mtps = MessageThreadParticipants(userIds)
-      val thread = threadRepo.save(MessageThread(
-        uriId = None,
-        url = None,
-        nUrl = None,
-        pageTitle = None,
-        participants = Some(mtps),
-        participantsHash = Some(mtps.hash),
-        replyable = false
-      ))
+    val experiments = userIds.map(id => notificationExperimentCheck.checkExperiment(UserRecipient(id)))
+    val experimentsMap = experiments.map {
+      case NotificationExperimentCheck.Result(experimentEnabled, UserRecipient(id, _)) => id -> experimentEnabled
+    }.toMap
+    if (!experiments.forall(_.experimentEnabled)) {
+      val (message, thread) = db.readWrite { implicit session =>
+        val mtps = MessageThreadParticipants(userIds)
+        val thread = threadRepo.save(MessageThread(
+          uriId = None,
+          url = None,
+          nUrl = None,
+          pageTitle = None,
+          participants = Some(mtps),
+          participantsHash = Some(mtps.hash),
+          replyable = false
+        ))
 
-      val message = messageRepo.save(Message(
-        from = MessageSender.System,
-        thread = thread.id.get,
-        threadExtId = thread.externalId,
-        messageText = s"$title (on $linkText): $body",
-        source = Some(MessageSource.SERVER),
-        sentOnUrl = Some(linkUrl),
-        sentOnUriId = None
-      ))
+        val message = messageRepo.save(Message(
+          from = MessageSender.System,
+          thread = thread.id.get,
+          threadExtId = thread.externalId,
+          messageText = s"$title (on $linkText): $body",
+          source = Some(MessageSource.SERVER),
+          sentOnUrl = Some(linkUrl),
+          sentOnUriId = None
+        ))
 
-      (message, thread)
-    }
-    SafeFuture {
-      val notificationAttempts = userIds.map { userId =>
-        //Stop gap to avoid overwhelming shoebox via heimal
-        Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
-        Try {
-          val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
-          val notifJson = Json.obj(
-            "id" -> message.externalId.id,
-            "time" -> message.createdAt,
-            "thread" -> message.threadExtId.id,
-            "unread" -> unread,
-            "category" -> categoryString,
-            "fullCategory" -> category.category,
-            "title" -> title,
-            "bodyHtml" -> body,
-            "linkText" -> linkText,
-            "url" -> linkUrl,
-            "isSticky" -> sticky,
-            "image" -> imageUrl,
-            "extra" -> extra
-          )
-          notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
-
-          db.readWrite { implicit session =>
-            userThreadRepo.save(UserThread(
-              id = None,
-              user = userId,
-              threadId = thread.id.get,
-              uriId = None,
-              lastSeen = None,
-              unread = unread,
-              lastMsgFromOther = Some(message.id.get),
-              lastNotification = notifJson,
-              notificationUpdatedAt = message.createdAt,
-              replyable = false
-            ))
-          }
-          userId
-        }
+        (message, thread)
       }
+      SafeFuture {
+        val notificationAttempts = userIds.filter(experimentsMap.apply).map { userId =>
+          //Stop gap to avoid overwhelming shoebox via heimal
+          Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
+          Try {
+            val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
+            val notifJson = Json.obj(
+              "id" -> message.externalId.id,
+              "time" -> message.createdAt,
+              "thread" -> message.threadExtId.id,
+              "unread" -> unread,
+              "category" -> categoryString,
+              "fullCategory" -> category.category,
+              "title" -> title,
+              "bodyHtml" -> body,
+              "linkText" -> linkText,
+              "url" -> linkUrl,
+              "isSticky" -> sticky,
+              "image" -> imageUrl,
+              "extra" -> extra
+            )
+            notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
 
-      val notified = notificationAttempts collect { case Success(userId) => userId }
-      messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
+            db.readWrite { implicit session =>
+              userThreadRepo.save(UserThread(
+                id = None,
+                user = userId,
+                threadId = thread.id.get,
+                uriId = None,
+                lastSeen = None,
+                unread = unread,
+                lastMsgFromOther = Some(message.id.get),
+                lastNotification = notifJson,
+                notificationUpdatedAt = message.createdAt,
+                replyable = false
+              ))
+            }
+            userId
+          }
+        }
 
-      val errors = notificationAttempts collect { case Failure(ex) => ex }
-      if (errors.size > 0) throw scala.collection.parallel.CompositeThrowable(errors)
+        val notified = notificationAttempts collect { case Success(userId) => userId }
+        messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
+
+        val errors = notificationAttempts collect { case Failure(ex) => ex }
+        if (errors.size > 0) throw scala.collection.parallel.CompositeThrowable(errors)
+      }
+      message.id.get
+    } else {
+      // todo this is okay for now before removing old system, nobody actually uses the returned message ID
+      Id(0)
     }
-    message.id.get
   }
 
   private def buildMessageNotificationJson(
