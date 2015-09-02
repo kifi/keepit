@@ -163,7 +163,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           orgModifyResponse must beRight
           orgModifyResponse.right.get.request === orgModifyRequest
           orgModifyResponse.right.get.modifiedOrg.basePermissions === org.basePermissions.applyPermissionsDiff(permissionsDiff)
-          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
+          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
 
           // Now the member should be able to invite others
           val try2 = orgMembershipCommander.addMembership(memberInviteMember)
