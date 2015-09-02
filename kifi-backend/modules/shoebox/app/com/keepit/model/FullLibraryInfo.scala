@@ -47,7 +47,8 @@ case class ExternalLibraryCreateRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[ExternalLibrarySpace] = None)
+  space: Option[ExternalLibrarySpace] = None,
+  organizationMemberAccess: Option[LibraryAccess] = None)
 
 object ExternalLibraryCreateRequest {
   val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
@@ -60,7 +61,8 @@ object ExternalLibraryCreateRequest {
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace]
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
   )(ExternalLibraryCreateRequest.apply _)
   val reads = readsMobileV1
 }
@@ -75,7 +77,8 @@ case class LibraryCreateRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None)
+  space: Option[LibrarySpace] = None,
+  organizationMemberAccess: Option[LibraryAccess] = None)
 
 case class ExternalLibraryModifyRequest(
   name: Option[String] = None,
@@ -86,7 +89,8 @@ case class ExternalLibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  externalSpace: Option[ExternalLibrarySpace] = None)
+  externalSpace: Option[ExternalLibrarySpace] = None,
+  organizationMemberAccess: Option[LibraryAccess] = None)
 
 object ExternalLibraryModifyRequest {
   val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
@@ -98,7 +102,8 @@ object ExternalLibraryModifyRequest {
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace]
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
   )(ExternalLibraryModifyRequest.apply _)
 
   val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
@@ -113,7 +118,8 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None)
+  space: Option[LibrarySpace] = None,
+  organizationMemberAccess: Option[LibraryAccess] = None)
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,
@@ -269,7 +275,8 @@ case class FullLibraryInfo(
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
   path: String,
-  org: Option[BasicOrganization])
+  org: Option[BasicOrganization],
+  orgMemberAccess: Option[LibraryAccess])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -297,7 +304,8 @@ object FullLibraryInfo {
       "whoCanInvite" -> o.whoCanInvite,
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
-      "org" -> o.org
+      "org" -> o.org,
+      "orgMemberAccess" -> o.orgMemberAccess
     ).nonNullFields
   }
 }

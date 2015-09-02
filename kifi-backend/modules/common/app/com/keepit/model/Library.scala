@@ -10,7 +10,6 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
-import com.keepit.model.view.LibraryMembershipView
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 

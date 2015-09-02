@@ -327,7 +327,8 @@ class LibraryInfoCommanderImpl @Inject() (
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
-          org = basicOrgOpt
+          org = basicOrgOpt,
+          orgMemberAccess = lib.organizationMemberAccess
         )
       }
     }

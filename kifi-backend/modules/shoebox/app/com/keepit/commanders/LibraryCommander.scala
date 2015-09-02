@@ -190,6 +190,7 @@ class LibraryCommanderImpl @Inject() (
           case OrganizationSpace(orgId) => Some(orgId)
           case _ => None
         }
+
         db.readOnlyReplica { implicit s =>
           val userHasPermissionToCreateInSpace = targetSpace match {
             case OrganizationSpace(orgId) =>
@@ -212,13 +213,15 @@ class LibraryCommanderImpl @Inject() (
             val newListed = libCreateReq.listed.getOrElse(true)
             val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)
             val newInviteToCollab = libCreateReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
+            val newOrgMemberAccessOpt = orgIdOpt.flatMap(_ => libCreateReq.organizationMemberAccess)
+
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
               libraryRepo.getBySpaceAndSlug(ownerId, validSlug, excludeState = None) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libCreateReq.name, description = libCreateReq.description,
                     visibility = libCreateReq.visibility, slug = validSlug, color = newColor, kind = newKind,
-                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt))
+                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   libCreateReq.subscriptions match {
                     case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
@@ -364,6 +367,7 @@ class LibraryCommanderImpl @Inject() (
     val newDescription = modifyReq.description.orElse(library.description)
     val newColor = modifyReq.color.orElse(library.color)
     val newInviteToCollab = modifyReq.whoCanInvite.orElse(library.whoCanInvite)
+    val newOrgMemberAccessOpt = modifyReq.organizationMemberAccess orElse library.organizationMemberAccess
 
     // New library subscriptions
     newSubKeysOpt match {
@@ -384,7 +388,7 @@ class LibraryCommanderImpl @Inject() (
         case UserSpace(_) => None
       }
 
-      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId))
+      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId, organizationMemberAccess = newOrgMemberAccessOpt))
     }
 
     // Update visibility of keeps
