@@ -1016,6 +1016,7 @@ GET      /internal/shoebox/database/getInvitations                              
 GET      /internal/shoebox/database/getSocialConnections                        @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
+POST     /internal/shoebox/image/getUserImageUrlsByExternalIds     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrlsByExternalIds(id: Id[User], width: Int)
 POST     /internal/shoebox/database/canViewLibrary             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 POST     /internal/shoebox/database/getPersonalKeeps   @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicKeepsByIds   @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
