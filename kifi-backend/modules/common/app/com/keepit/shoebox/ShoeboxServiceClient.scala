@@ -100,7 +100,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
-  def getUserImageUrlsByExternalIds(ids: Set[ExternalId[User]], width: Int): Future[Map[ExternalId[User], String]]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
@@ -626,12 +625,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
     call(Shoebox.internal.getUserImageUrl(userId, width)).map { r =>
       r.json.as[String]
-    }
-  }
-
-  def getUserImageUrlsByExternalIds(ids: Set[ExternalId[User]], width: Int): Future[Map[ExternalId[User], String]] = {
-    call(Shoebox.internal.getUserImageUrlsByExternalIds(), body = Json.toJson(ids)).map { r =>
-      r.json.as[Map[ExternalId[User], String]]
     }
   }
 

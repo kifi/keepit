@@ -405,18 +405,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getUserImageUrlsByExternalIds(ids: Set[ExternalId[User]], width: Int) = Action.async { request =>
-    val byExternalIds = userCommander.getByExternalIds(ids.toSeq)
-    Future.sequence(byExternalIds.map {
-      case (externalId, user) => userCommander.getUserImageUrl(user.id.get, width).map { url =>
-        (externalId, url)
-      }
-    }).map { urlsSeq =>
-      Ok(Json.toJson(urlsSeq.toMap))
-    }
-  }
-
-
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
     val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
