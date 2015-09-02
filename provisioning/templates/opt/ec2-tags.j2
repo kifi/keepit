@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+# {{ ansible_managed }}
+#
+# Returns the value of an EC2 tag for this instance
+#
+# Usage examples:
+#   ec2-tags Name
+#   ec2-tags Service
+#
+
+import sys
+import boto.ec2
+import requests
+
+def ec2_tags():
+  ec2 = boto.ec2.connect_to_region("{{ ec2.defaults.region }}",
+    aws_access_key_id="{{ aws_access_key_id }}",
+    aws_secret_access_key="{{ aws_secret_access_key }}")
+  myID = requests.get("http://169.254.169.254/latest/meta-data/instance-id", timeout=1.0).text
+  return ec2.get_only_instances([myID])[0].tags
+
+if __name__ == "__main__":
+  tag = sys.argv[1]
+  print ec2_tags()[tag]
