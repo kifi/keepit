@@ -48,7 +48,6 @@ trait S3ImageStore extends S3ExternalIdImageStore {
   // Returns Some(urlOfUserPicture) or None
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String]
 
-
 }
 
 @Singleton
