@@ -8,7 +8,7 @@ import com.keepit.store.ElizaS3ExternalIdImageStore
 import play.api.libs.json.{ Json, JsValue }
 import com.keepit.common.time._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class ElizaNotificationInfo @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
