@@ -464,19 +464,16 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def addPermissionToAllOrganizations() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+  def addPermissionToAllOrganizations() = AdminUserAction(parse.tolerantJson) { implicit request =>
     implicit val reads = KeyFormat.key2Reads[OrganizationPermission, String]("permission", "confirmation")
     val (newPermission, confirmation) = request.body.as[(OrganizationPermission, String)]
     assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
     val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.filter(_.isActive).map(_.id.get) }
-    Future {
-      for (orgId <- orgIds) {
-        val oldBasePermissions = db.readOnlyReplica { implicit session => orgRepo.get(orgId).basePermissions }
-        val newBasePermissions = OrganizationRole.all.foldLeft(oldBasePermissions)((bs, role) => bs.modified(Some(role), added = Set(newPermission), removed = Set.empty))
-        orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(basePermissions = Some(newBasePermissions)))
-      }
-      Ok(Json.obj("added" -> newPermission, "modified" -> orgIds))
+    for (orgId <- orgIds) {
+      val pdiff = PermissionsDiff(added = PermissionsMap(OrganizationRole.all.map(Option(_) -> Set(newPermission)).toMap))
+      orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
+    Ok(Json.obj("added" -> newPermission, "modified" -> orgIds))
   }
 
 }

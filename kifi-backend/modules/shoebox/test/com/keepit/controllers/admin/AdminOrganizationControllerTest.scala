@@ -8,7 +8,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, VIEW_ORGANIZATION }
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.{ OrganizationFactory, OrganizationRole, UserExperimentType, UserFactory }
+import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsValue, Json }
@@ -35,6 +35,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
         }
 
         db.readOnlyMaster { implicit session =>
+          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) }
           orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER) === Set(VIEW_ORGANIZATION, ADD_LIBRARIES) }
         }
 
@@ -47,6 +48,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
         inject[WatchableExecutionContext].drain()
 
         db.readOnlyMaster { implicit session =>
+          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) }
           orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER) === Set(VIEW_ORGANIZATION, ADD_LIBRARIES, REMOVE_LIBRARIES) }
         }
         1 === 1
