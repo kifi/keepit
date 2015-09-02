@@ -52,7 +52,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
 
         // Let's see if the checker will fix it
         inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
-        keepChecker.syncOnUriChange()
+        keepChecker.check()
 
         db.readOnlyMaster { implicit session =>
           ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get).get.uriId === keep.uriId
@@ -82,7 +82,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
 
         // Let's see if the checker will fix it
         inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
-        keepChecker.syncOnDeactivate()
+        keepChecker.check()
 
         // Make sure it got fixed
         db.readOnlyMaster { implicit session =>
@@ -108,7 +108,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
 
         // Let's see if the checker will fix it
         inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
-        keepChecker.syncOnLibraryChange()
+        keepChecker.check()
 
         db.readOnlyMaster { implicit session =>
           keepRepo.get(keep.id.get).librariesHash === Some(LibrariesHash(Set(library.id.get)))
@@ -133,7 +133,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
 
         // Let's see if the checker will fix it
         inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
-        keepChecker.syncOnParticipantChange()
+        keepChecker.check()
 
         db.readOnlyMaster { implicit session =>
           keepRepo.get(keep.id.get).participantsHash === Some(ParticipantsHash(Set(user.id.get)))
