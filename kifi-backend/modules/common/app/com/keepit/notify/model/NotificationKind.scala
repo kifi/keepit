@@ -39,12 +39,6 @@ trait NotificationKind[N <: NotificationEvent] {
    * @return True if the events should be grouped together, false otherwise
    */
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
-
-  /**
-   * Generates notification info for a set of events. This essentially returns a function wrapped in
-   * [[RequestingNotificationInfos]] in order to batch potential calls from Eliza to shoebox.
-   */
-  def info(events: Set[N]): RequestingNotificationInfos[NotificationInfo]
 }
 
 /**
@@ -55,17 +49,6 @@ trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKi
   override final def groupIdentifier(event: N): Option[String] = None
 
   override final def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean = false
-
-  override final def info(events: Set[N]): RequestingNotificationInfos[NotificationInfo] = {
-    require(events.size == 1,
-      "Subtypes of NonGroupingNotificationKind are supposed to guarantee that no events ever group, yet a group of events was received.")
-    info(events.head)
-  }
-
-  /**
-   * Because it is guaranteed that notifications aren't ever grouped, info can be written taking only one event.
-   */
-  def info(event: N): RequestingNotificationInfos[NotificationInfo]
 
 }
 

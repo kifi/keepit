@@ -13,18 +13,13 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
+    notificationKindInfoRequests: NotificationKindInfoRequests,
     implicit val ec: ExecutionContext) {
-
-  private def genericKind(notif: Notification): NotificationKind[NotificationEvent] = {
-    // the notification and items don't know that they have the same kind
-    notif.kind.asInstanceOf[NotificationKind[NotificationEvent]]
-  }
 
   def generateInfo(notifs: Map[Notification, Set[NotificationItem]]): Future[Map[Notification, (Set[NotificationItem], NotificationInfo)]] = {
     val notifInfoRequests = notifs map {
       case (notif, items) =>
-        val kind = genericKind(notif)
-        val infoRequest = kind.info(items.map(_.event))
+        val infoRequest = notificationKindInfoRequests.requestsFor(notif, items)
         (notif, infoRequest)
     }
 
