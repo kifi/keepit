@@ -29,10 +29,10 @@ class NotificationRepoImpl @Inject() (
   class NotificationTable(tag: Tag) extends RepoTable[Notification](db, tag, "notification") with ExternalIdColumn[Notification] {
 
     def recipient = column[Recipient]("recipient", O.NotNull)
-    def lastChecked = column[DateTime]("last_checked", O.NotNull)
+    def lastChecked = column[Option[Id[NotificationItem]]]("last_checked", O.Nullable)
     def kind = column[String]("kind", O.NotNull)
     def groupIdentifier = column[Option[String]]("group_identifier", O.Nullable)
-    def lastEvent = column[DateTime]("last_event", O.NotNull)
+    def lastEvent = column[Option[Id[NotificationItem]]]("last_event", O.Nullable)
     def disabled = column[Boolean]("disabled", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)

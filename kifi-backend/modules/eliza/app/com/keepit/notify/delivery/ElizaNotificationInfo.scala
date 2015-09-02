@@ -1,6 +1,7 @@
 package com.keepit.notify.delivery
 
 import com.google.inject.Inject
+import com.keepit.eliza.commanders.NotificationCommander
 import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.notify.info.{ PublicImage, UserImage, NotificationImage, NotificationInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -11,6 +12,7 @@ import com.keepit.common.time._
 import scala.concurrent.{ ExecutionContext, Future }
 
 class ElizaNotificationInfo @Inject() (
+    notificationCommander: NotificationCommander,
     shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     implicit val executionContext: ExecutionContext) {
@@ -18,13 +20,14 @@ class ElizaNotificationInfo @Inject() (
   import Ordering.Implicits._
 
   def mkJson(notif: Notification, items: Set[NotificationItem], info: NotificationInfo): JsValue = {
+    val unread = !notif.disabled && notificationCommander.isNotificationUnread(notif.id.get)
     val maxByTime = items.maxBy(_.event.time)
     val maxTime = maxByTime.event.time
     Json.obj(
       "id" -> maxByTime.externalId,
       "time" -> maxTime,
       "thread" -> notif.externalId,
-      "unread" -> Json.toJson(!notif.disabled && notif.lastEvent > notif.lastChecked),
+      "unread" -> unread,
       "category" -> "triggered",
       "fullCategory" -> "replace me",
       "title" -> info.title,

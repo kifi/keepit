@@ -30,10 +30,11 @@ case class Notification(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     recipient: Recipient,
-    lastChecked: DateTime = START_OF_TIME,
+    lastChecked: Option[Id[NotificationItem]],
     kind: NKind,
     groupIdentifier: Option[String] = None,
-    lastEvent: DateTime = currentDateTime,
+    lastEvent: Option[Id[NotificationItem]], // this is optional, but only because we need to create a notification with
+    // lastEvent set to an item and that item at the same time. calling lastEvent.get should be safe
     disabled: Boolean = false,
     externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
 
@@ -48,11 +49,11 @@ object Notification {
     (__ \ "id").formatNullable[Id[Notification]] and
     (__ \ "createdAt").format[DateTime] and
     (__ \ "updatedAt").format[DateTime] and
-    (__ \ "lastChecked").format[DateTime] and
+    (__ \ "lastChecked").format[Option[Id[NotificationItem]]] and
     (__ \ "kind").format[String] and
     (__ \ "groupIdentifier").formatNullable[String] and
     (__ \ "recipient").format[Recipient] and
-    (__ \ "lastEvent").format[DateTime] and
+    (__ \ "lastEvent").format[Option[Id[NotificationItem]]] and
     (__ \ "disabled").format[Boolean] and
     (__ \ "externalId").format[ExternalId[Notification]]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
@@ -61,11 +62,11 @@ object Notification {
     id: Option[Id[Notification]],
     createdAt: DateTime,
     updatedAt: DateTime,
-    lastChecked: DateTime,
+    lastChecked: Option[Id[NotificationItem]],
     kind: String,
     groupIdentifier: Option[String],
     recipient: Recipient,
-    lastEvent: DateTime,
+    lastEvent: Option[Id[NotificationItem]],
     disabled: Boolean,
     externalId: ExternalId[Notification]): Notification = Notification(
     id,
@@ -80,7 +81,7 @@ object Notification {
     externalId
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, DateTime, String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification])] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Option[Id[NotificationItem]], String, Option[String], Recipient, Option[Id[NotificationItem]], Boolean, ExternalId[Notification])] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,

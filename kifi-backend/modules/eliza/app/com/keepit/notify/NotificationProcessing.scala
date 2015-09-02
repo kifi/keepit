@@ -33,13 +33,13 @@ class NotificationProcessing @Inject() (
 
   private def saveToExistingNotification(notifId: Id[Notification], event: NotificationEvent): Notification = {
     db.readWrite { implicit session =>
-      notificationItemRepo.save(NotificationItem(
+      val item = notificationItemRepo.save(NotificationItem(
         notificationId = notifId,
         kind = event.kind,
         event = event
       ))
       val notif = notificationRepo.get(notifId)
-      notificationRepo.save(notif.copy(lastEvent = event.time))
+      notificationRepo.save(notif.copy(lastEvent = Some(item.id.get)))
     }
   }
 
@@ -48,14 +48,15 @@ class NotificationProcessing @Inject() (
       val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
         kind = event.kind,
-        lastEvent = event.time
+        lastEvent = None,
+        lastChecked = None
       ))
-      notificationItemRepo.save(NotificationItem(
+      val item = notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
         event = event
       ))
-      notif
+      notificationRepo.save(notif.copy(lastEvent = Some(item.id.get)))
     }
   }
 
