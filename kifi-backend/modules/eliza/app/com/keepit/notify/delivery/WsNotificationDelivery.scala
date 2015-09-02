@@ -6,7 +6,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.model.NotificationCategory
 import com.keepit.notify.NotificationExperimentCheck
-import com.keepit.notify.info.{ NotificationInfoProcessing, NotificationInfo }
+import com.keepit.notify.info.{NotificationInfoGenerator,  NotificationInfo}
 import com.keepit.notify.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -20,11 +20,10 @@ class WsNotificationDelivery @Inject() (
     deliveryCommander: NotificationDeliveryCommander,
     notificationRouter: WebSocketRouter,
     notifExperimentCheck: NotificationExperimentCheck,
-    notificationInfoProcessing: NotificationInfoProcessing,
+    notificationInfoGenerator: NotificationInfoGenerator,
     implicit val executionContext: ExecutionContext) {
 
   def deliver(recipient: Recipient, notif: Notification, items: Set[NotificationItem], infoOpt: Option[NotificationInfo]): Future[Unit] = {
-    val id = NotificationItem.externalIdFromItems(items)
     val events = items.map(_.event)
     val kind = events.head.kind.asInstanceOf[NotificationKind[NotificationEvent]]
     infoOpt.fold(notificationInfoProcessing.process(kind.info(events), None)) { info =>
