@@ -58,7 +58,8 @@ angular.module('kifi')
 
     $scope.keepClick = function(keep) {
       var eventType = profileService.userLoggedIn() ? 'user_viewed_content' : 'visitor_viewed_content';
-      $analytics.eventTrack(eventType, { source: 'feed', contentType: 'keep', contentId: keep.id });
+      $analytics.eventTrack(eventType, { source: 'feed', contentType: 'keep', keep: keep.id,
+        libraryId: keep.library && keep.library.id, orgId: keep.organization && keep.organization.id });
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {

@@ -149,7 +149,8 @@ angular.module('kifi')
       var eventAction = event.currentTarget.getAttribute('click-action');
       $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction, keepView: $scope.galleryView ? 'gallery' : 'list' });
       var eventType = profileService.userLoggedIn() ? 'user_viewed_content' : 'visitor_viewed_content';
-      $analytics.eventTrack(eventType, { source: 'library', contentType: 'keep', contentId: keep.id });
+      $analytics.eventTrack(eventType, { source: 'library', contentType: 'keep', keepId: keep.id, libraryId: library.id,
+        orgId: library.org && library.org.id });
     };
 
     $scope.callAddKeep = function () {
