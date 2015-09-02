@@ -416,6 +416,7 @@ class ShoeboxController @Inject() (
     }
   }
 
+
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
     val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {

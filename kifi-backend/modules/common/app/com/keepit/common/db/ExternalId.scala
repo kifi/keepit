@@ -46,27 +46,6 @@ object ExternalId {
     }
   }
 
-  implicit def mapOfIdToObjectFormat[S, T](implicit t: Format[T]): Format[Map[ExternalId[S], T]] = new Format[Map[ExternalId[S], T]] {
-    def reads(json: JsValue): JsResult[Map[ExternalId[S], T]] = {
-      val jsObj = json.as[JsObject]
-      JsSuccess {
-        jsObj.keys.map { idStr =>
-          val userId = ExternalId[S](idStr)
-          val jsResult = Json.fromJson[T](jsObj \ idStr)
-          (userId, jsResult.get)
-        }.toMap
-      }
-    }
-
-    def writes(idToObjectMap: Map[ExternalId[S], T]): JsValue =
-      JsObject {
-        idToObjectMap.map { pair =>
-          val (modelId, model) = pair
-          (modelId.id, Json.toJson[T](model))
-        }.toSeq
-      }
-  }
-
   implicit def pathBinder[T] = new PathBindable[ExternalId[T]] {
     override def bind(key: String, value: String): Either[String, ExternalId[T]] = {
       ExternalId.asOpt[T](value) match {
