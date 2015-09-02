@@ -411,8 +411,8 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val newBps = org.basePermissions.modified(roleOpt, added = Set(permission), removed = Set.empty)
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+      val pdiff = PermissionsDiff(added = PermissionsMap(roleOpt -> Set(permission)))
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
     } match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Ok(JsString(s"added $permission to $roleOpt"))
@@ -424,8 +424,8 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val newBps = org.basePermissions.modified(roleOpt, added = Set.empty, removed = Set(permission))
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+      val pdiff = PermissionsDiff(removed = PermissionsMap(roleOpt -> Set(permission)))
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
     } match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Ok(JsString(s"removed $permission from $roleOpt"))
