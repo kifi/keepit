@@ -371,7 +371,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           db.readOnlyMaster { implicit session =>
             orgRepo.get(org.id.get).getNonmemberPermissions === Set.empty
-            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
+            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
           }
         }
       }

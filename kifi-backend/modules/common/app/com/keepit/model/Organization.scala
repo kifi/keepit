@@ -3,20 +3,20 @@ package com.keepit.model
 import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ PublicId, ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import com.keepit.model.OrganizationPermission.VIEW_ORGANIZATION
+import com.keepit.model.OrganizationPermission._
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{ QueryStringBindable, PathBindable }
+import play.api.mvc.PathBindable
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -88,11 +88,20 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 
   val defaultBasePermissions: BasePermissions =
     BasePermissions(
-      None -> Set(OrganizationPermission.VIEW_ORGANIZATION),
-      Some(OrganizationRole.ADMIN) -> OrganizationPermission.all,
+      None -> Set(VIEW_ORGANIZATION),
+      Some(OrganizationRole.ADMIN) -> Set(
+        VIEW_ORGANIZATION,
+        EDIT_ORGANIZATION,
+        INVITE_MEMBERS,
+        MODIFY_MEMBERS,
+        REMOVE_MEMBERS,
+        ADD_LIBRARIES,
+        REMOVE_LIBRARIES
+      ),
       Some(OrganizationRole.MEMBER) -> Set(
-        OrganizationPermission.VIEW_ORGANIZATION,
-        OrganizationPermission.ADD_LIBRARIES
+        VIEW_ORGANIZATION,
+        ADD_LIBRARIES,
+        REMOVE_LIBRARIES
       )
     )
   val totallyInvisiblePermissions: BasePermissions =
