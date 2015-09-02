@@ -441,9 +441,12 @@ class MessagingCommander @Inject() (
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
     val orgIds = orgs.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
-    val newOrgParticipantsFuture = Future.sequence(orgIds.map(orgId => shoebox.getOrganizationMembers(orgId))).map { seqset =>
-      seqset.flatten
-    }
+    val newOrgParticipantsFuture = Future.sequence(orgIds.map { oid =>
+      shoebox.hasOrganizationMembership(oid, adderUserId).flatMap {
+        case true => shoebox.getOrganizationMembers(oid)
+        case false => Future.successful(Set.empty[Id[User]])
+      }
+    }).map(_.flatten)
 
     val haveBeenAdded = for {
       newUserParticipants <- newUserParticipantsFuture
@@ -634,9 +637,12 @@ class MessagingCommander @Inject() (
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
-    val orgParticipantsFuture = Future.sequence(orgIds.map(orgId => shoebox.getOrganizationMembers(orgId))).map { seqset =>
-      seqset.flatten
-    }
+    val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
+      shoebox.hasOrganizationMembership(oid, userId).flatMap {
+        case true => shoebox.getOrganizationMembers(oid)
+        case false => Future.successful(Set.empty[Id[User]])
+      }
+    }).map(_.flatten)
 
     val resFut = for {
       userRecipients <- userRecipientsFuture
