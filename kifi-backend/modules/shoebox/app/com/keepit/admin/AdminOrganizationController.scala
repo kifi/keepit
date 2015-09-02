@@ -9,6 +9,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json.KeyFormat
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import play.api.{ Mode, Play }
@@ -411,8 +412,8 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val newBps = org.basePermissions.modified(roleOpt, added = Set(permission), removed = Set.empty)
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+      val pdiff = PermissionsDiff(added = PermissionsMap(roleOpt -> Set(permission)))
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
     } match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Ok(JsString(s"added $permission to $roleOpt"))
@@ -424,8 +425,8 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val newBps = org.basePermissions.modified(roleOpt, added = Set.empty, removed = Set(permission))
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(basePermissions = Some(newBps))))
+      val pdiff = PermissionsDiff(removed = PermissionsMap(roleOpt -> Set(permission)))
+      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
     } match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Ok(JsString(s"removed $permission from $roleOpt"))
@@ -461,6 +462,18 @@ class AdminOrganizationController @Inject() (
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
     }
+  }
+
+  def addPermissionToAllOrganizations() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    implicit val reads = KeyFormat.key2Reads[OrganizationPermission, String]("permission", "confirmation")
+    val (newPermission, confirmation) = request.body.as[(OrganizationPermission, String)]
+    assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
+    val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.filter(_.isActive).map(_.id.get) }
+    for (orgId <- orgIds) {
+      val pdiff = PermissionsDiff(added = PermissionsMap(OrganizationRole.all.map(Option(_) -> Set(newPermission)).toMap))
+      orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(permissionsDiff = Some(pdiff)))
+    }
+    Ok(Json.obj("added" -> newPermission, "modified" -> orgIds))
   }
 
 }

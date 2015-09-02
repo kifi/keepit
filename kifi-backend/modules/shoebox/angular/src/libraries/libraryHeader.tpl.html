@@ -18,6 +18,12 @@
           icon="globe"
         ></svg> 
       </div>
+      <div class="kf-lh-org-private" ng-if="library.visibility === 'organization'">
+        <svg
+          kf-symbol-sprite
+          icon="org"
+        ></svg> 
+      </div>
 
       <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isOwner() && !library.isSystem"></button>
 

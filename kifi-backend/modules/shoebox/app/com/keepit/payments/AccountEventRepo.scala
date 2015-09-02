@@ -26,6 +26,8 @@ trait AccountEventRepo extends Repo[AccountEvent] {
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 
+  def getMemebershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
+
 }
 
 @Singleton
@@ -98,6 +100,10 @@ class AccountEventRepoImpl @Inject() (
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
     (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
+  }
+
+  def getMemebershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
+    (for (row <- rows if row.accountId === accountId && (row.eventType == "user_added" || row.eventType == "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
 
 }

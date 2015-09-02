@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+start on started networking
+task
+script
+  exec /opt/kifi-register-host
+end script

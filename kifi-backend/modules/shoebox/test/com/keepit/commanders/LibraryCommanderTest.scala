@@ -59,7 +59,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   }
   // Fill the system with a bunch of garbage
   def fillWithGarbage()(implicit injector: Injector, session: RWSession): Unit = {
-    val n = 5
+    val n = 2
     for (i <- 1 to n) {
       val orgOwner = UserFactory.user().saved
       val libOwners = UserFactory.users(n).saved
@@ -307,7 +307,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val member = UserFactory.user().saved
 
             // This org is super crappy, members can't do anything
-            val crappyBPs = BasePermissions(Map(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION)))
+            val crappyBPs = Organization.defaultBasePermissions.withPermissions(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION))
 
             val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
             (org, owner, member)
@@ -1500,7 +1500,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libraryCommander = inject[LibraryCommander]
           val (lib, memberships, users) = db.readWrite { implicit s =>
             fillWithGarbage()
-            val users = Random.shuffle(UserFactory.users(100).saved)
+            val users = Random.shuffle(UserFactory.users(50)).saved
             val (owner, rest) = (users.head, users.tail)
             val (collaborators, followers) = rest.splitAt(20)
             val lib = LibraryFactory.library().published().withOwner(owner).withCollaborators(collaborators).withFollowers(followers).saved
@@ -1517,9 +1517,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val canonical = memberships.sortBy(metric).tail // always drop the owner
           val extToIntMap = users.map(u => u.externalId -> u.id.get).toMap
-          val members = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 50, false).map(_.member.left.get)
+          val members = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 30, false).map(_.member.left.get)
 
-          val expected = canonical.drop(10).take(50)
+          val expected = canonical.drop(10).take(30)
           members.map(bu => extToIntMap(bu.externalId)) === expected.map(_.userId)
         }
       }
@@ -1529,7 +1529,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (lib, invites, emails) = db.readWrite { implicit s =>
             fillWithGarbage()
             val owner = UserFactory.user().saved
-            val emails = randomEmails(100)
+            val emails = randomEmails(50)
             val lib = LibraryFactory.library().withOwner(owner).withInvitedEmails(emails).saved
             val invites = inject[LibraryInviteRepo].getByLibraryIdAndInviterId(lib.id.get, owner.id.get)
             (lib, invites, emails)
@@ -1541,8 +1541,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           val canonical = invites.sortBy(metric)
-          val libraryInvites = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 50, fillInWithInvites = true).map(_.member.right.get)
-          val expected = canonical.drop(10).take(50)
+          val libraryInvites = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 30, fillInWithInvites = true).map(_.member.right.get)
+          val expected = canonical.drop(10).take(30)
           libraryInvites.map(bc => bc.email) === expected.map(_.emailAddress.get)
         }
       }

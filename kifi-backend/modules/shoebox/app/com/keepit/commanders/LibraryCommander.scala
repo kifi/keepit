@@ -249,18 +249,21 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
-    db.readOnlyReplica { implicit s => libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) } exists { membership => //not cached!
-      membership.canWrite
+    db.readOnlyReplica { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val libMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      def canDirectlyEditLibrary = libMembershipOpt.exists(_.canWrite)
+      def canIndirectlyEditLibrary = libMembershipOpt.isDefined && lib.organizationId.exists { orgId =>
+        organizationMembershipCommander.getPermissionsHelper(orgId, Some(userId)).contains(OrganizationPermission.EDIT_LIBRARIES)
+      }
+      canDirectlyEditLibrary || canIndirectlyEditLibrary
     }
   }
 
   def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifyRequest): Option[LibraryFail] = {
     def validateUserWritePermission: Option[LibraryFail] = {
-      val membershipOpt = db.readOnlyMaster { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId) }
-      membershipOpt match {
-        case Some(membership) if membership.canWrite => None
-        case _ => Some(LibraryFail(FORBIDDEN, "permission_denied"))
-      }
+      if (canModifyLibrary(library.id.get, userId)) None
+      else Some(LibraryFail(FORBIDDEN, "permission_denied"))
     }
 
     def validateSpace(newSpaceOpt: Option[LibrarySpace]): Option[LibraryFail] = {

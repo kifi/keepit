@@ -376,6 +376,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-private
 .kf-lh-public
+.kf-lh-org-private
   display: inline-block
   vertical-align: middle
   margin-right: 1em
@@ -400,6 +401,10 @@ followerPicDiam = 2.2em
   svg
     fill: white
     margin-right: 5px
+
+.kf-lh-org-private
+  &::after
+    content: 'Organization Private'
 
 .kf-lh-public
   padding: 0

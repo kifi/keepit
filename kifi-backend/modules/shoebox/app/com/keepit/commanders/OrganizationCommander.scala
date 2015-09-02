@@ -191,24 +191,23 @@ class OrganizationCommanderImpl @Inject() (
 
   private def areAllValidModifications(modifications: OrganizationModifications): Boolean = {
     val badName = modifications.name.exists(_.isEmpty)
-    val badBasePermissions = modifications.basePermissions.exists { bps =>
-      def allRolesAreDescribed = bps.permissionsMap.keySet == OrganizationRole.allOpts
-      def allRolesCanSeeOrg = OrganizationRole.all forall { role => bps.forRole(role).contains(VIEW_ORGANIZATION) }
-      def adminsCanDoEverything = bps.forRole(OrganizationRole.ADMIN) == OrganizationPermission.all
-      !allRolesAreDescribed || !allRolesCanSeeOrg || !adminsCanDoEverything
+    val badPermissionsChange = modifications.permissionsDiff.exists { pdiff =>
+      def roleCannotSeeOrg = OrganizationRole.all.exists { role => pdiff.removed(Some(role)).contains(VIEW_ORGANIZATION) }
+      def messedWithAdmins = pdiff.added(Some(OrganizationRole.ADMIN)).nonEmpty || pdiff.removed(Some(OrganizationRole.ADMIN)).nonEmpty
+      roleCannotSeeOrg || messedWithAdmins
     }
     val normalizedSiteUrl = modifications.site.map { url =>
       if (url.startsWith("http://") || url.startsWith("https://")) url
       else "https://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    !badName && !badBasePermissions && !badSiteUrl
+    !badName && !badPermissionsChange && !badSiteUrl
   }
 
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
-      .withBasePermissions(modifications.basePermissions.getOrElse(org.basePermissions))
+      .applyPermissionsDiff(modifications.permissionsDiff.getOrElse(PermissionsDiff.empty))
       .withSite(modifications.site.orElse(org.site))
   }
 
@@ -245,7 +244,7 @@ class OrganizationCommanderImpl @Inject() (
           val org = orgRepo.get(request.orgId)
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
-          if (request.modifications.basePermissions.nonEmpty) {
+          if (request.modifications.permissionsDiff.isDefined) {
             val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
             applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
           }
@@ -327,7 +326,7 @@ class OrganizationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
-      if (modifications.basePermissions.nonEmpty) {
+      if (modifications.permissionsDiff.isDefined) {
         val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
         applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
       }

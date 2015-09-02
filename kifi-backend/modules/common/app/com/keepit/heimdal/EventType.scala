@@ -53,6 +53,9 @@ object UserEventTypes {
 
   // Organizations
   val CREATED_ORGANIZATION = EventType("created_organization")
+
+  // Content (keeps or discussions)
+  val VIEWED_CONTENT = EventType("viewed_content")
 }
 
 object SystemEventTypes {
@@ -72,4 +75,5 @@ object NonUserEventTypes {
 
 object VisitorEventTypes {
   val VIEWED_LIBRARY = EventType("viewed_library")
+  val VIEWED_CONTENT = EventType("viewed_content")
 }

@@ -56,11 +56,11 @@ class PrimaryOrgProviderImpl @Inject() (
     } yield {
       Map(
         "orgId" -> ContextStringData(orgId.toString),
-        "libraryCount" -> ContextDoubleData(shoeboxValues.libraryCount),
-        "keepCount" -> ContextDoubleData(shoeboxValues.keepCount),
-        "inviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
-        "collabLibCount" -> ContextDoubleData(shoeboxValues.collabLibCount),
-        "messageCount" -> ContextDoubleData(messageCount)
+        "orgLibrariesCreated" -> ContextDoubleData(shoeboxValues.libraryCount),
+        "orgKeepCount" -> ContextDoubleData(shoeboxValues.keepCount),
+        "orgInviteCount" -> ContextDoubleData(shoeboxValues.inviteCount),
+        "orgLibrariesCollaborating" -> ContextDoubleData(shoeboxValues.collabLibCount),
+        "orgMessageCount" -> ContextDoubleData(messageCount)
       ) ++ userWithMostClickedKeeps.map(userId => Map("overallKeepViews" -> ContextStringData(userId.toString))).getOrElse(Map.empty)
     }
   }
