@@ -259,11 +259,6 @@ class MobileMessagingController @Inject() (
   }
 
   def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
-    val source = UserAgent(request) match {
-      case agent if agent.isAndroid => MessageSource.ANDROID
-      case agent if agent.isIphone => MessageSource.IPHONE
-      case agent => throw new IllegalArgumentException(s"user agent not supported: $agent")
-    }
     if (users.nonEmpty || emailContacts.nonEmpty) {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       contextBuilder += ("source", "mobile")
