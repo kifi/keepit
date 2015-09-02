@@ -93,8 +93,7 @@ class NotificationInfoGenerator @Inject() (
     } yield {
       notifs map {
         case (notif, items) =>
-          val kind = genericKind(notif)
-          val infoRequest = kind.info(items.map(_.event))
+          val infoRequest = notifInfoRequests(notif)
           (notif, (items, infoRequest.fn(batchedInfos)))
       }
     }
