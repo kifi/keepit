@@ -8,7 +8,6 @@ import com.keepit.eliza.model.{ Notification, NotificationItem, NotificationItem
 import com.keepit.model.NotificationCategory
 import com.keepit.notify.model.NotificationKind
 import play.api.libs.json.{ JsObject, Json }
-import com.keepit.common.time._
 
 @Singleton
 class NotificationCommander @Inject() (
@@ -16,17 +15,6 @@ class NotificationCommander @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     notificationDeliveryCommander: NotificationDeliveryCommander) extends Logging {
-
-  def isNotificationUnread(notifId: Id[Notification]): Boolean = {
-    db.readOnlyMaster { implicit session =>
-      val notif = notificationRepo.get(notifId)
-      val lastItem = notificationItemRepo.get(notif.lastEvent.get)
-      val lastChecked = notif.lastChecked.map(id => notificationItemRepo.get(id))
-      lastChecked.fold(true) { checked =>
-        lastItem.event.time > checked.event.time
-      }
-    }
-  }
 
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {
     db.readOnlyMaster { implicit session =>
