@@ -218,7 +218,11 @@ class SharedWsMessagingController @Inject() (
 
     "set_message_unread" -> {
       case JsString(messageId) +: _ =>
-        messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+        notificationMessagingCommander.ifExists(messageId) { notif =>
+          notificationMessagingCommander.setNotificationUnread(notif)
+        } {
+          messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+        }
     },
     "set_message_read" -> {
       case JsString(messageId) +: _ =>
@@ -227,8 +231,12 @@ class SharedWsMessagingController @Inject() (
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
         implicit val context = contextBuilder.build
-        messagingCommander.setRead(socket.userId, msgExtId)
-        messagingCommander.setLastSeen(socket.userId, msgExtId)
+        notificationMessagingCommander.ifExists(messageId) { notif =>
+          notificationMessagingCommander.setNotificationRead(notif)
+        } {
+          messagingCommander.setRead(socket.userId, msgExtId)
+          messagingCommander.setLastSeen(socket.userId, msgExtId)
+        }
     },
     "mute_thread" -> {
       case JsString(jsThreadId) +: _ =>

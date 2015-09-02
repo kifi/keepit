@@ -24,6 +24,14 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
+  private def messageThreadIdForNotif(notif: Notification): ExternalId[MessageThread] = db.readOnlyMaster { implicit session =>
+    val userThread = userThreadRepo.getByNotificationId(notif.id.get)
+    // messaging analytics expects a message thread id, for now
+    userThread.fold(notif.externalId.asInstanceOf[ExternalId[MessageThread]]) { userThread =>
+      messageThreadRepo.get(userThread.threadId).externalId
+    }
+  }
+
   /**
    * Temporary before replacing completely with new system
    */
@@ -33,18 +41,19 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def changeNotificationStatus(userId: Id[User], notif: Notification, disabled: Boolean)(implicit context: HeimdalContext) = {
-    val updated = notificationCommander.updateNotificationStatus(notif, disabled)
+    val updated = notificationCommander.updateNotificationStatus(notif.id.get, disabled)
     if (updated) {
       webSocketRouter.sendToUser(userId, Json.arr("thread_muted", notif.externalId, disabled))
-      val messageThreadId = db.readOnlyMaster { implicit session =>
-        val userThread = userThreadRepo.getByNotificationId(notif.id.get)
-        // messaging analytics expects a message thread id, for now
-        userThread.fold(notif.externalId.asInstanceOf[ExternalId[MessageThread]]) { userThread =>
-          messageThreadRepo.get(userThread.threadId).externalId
-        }
-      }
-      messagingAnalytics.changedMute(userId, messageThreadId, disabled, context)
+      messagingAnalytics.changedMute(userId, messageThreadIdForNotif(notif), disabled, context)
     }
+  }
+
+  def setNotificationRead(notif: Notification)(implicit context: HeimdalContext): Unit = {
+    notificationCommander.setNotificationRead(notif.id.get)
+  }
+
+  def setNotificationUnread(notif: Notification): Unit = {
+    notificationCommander.setNotificationUnread(notif.id.get)
   }
 
 }

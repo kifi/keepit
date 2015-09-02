@@ -34,7 +34,10 @@ class NotificationCommander @Inject() (
     }.toSet
   }
 
-  def updateNotificationStatus(notif: Notification, disabled: Boolean): Boolean = {
+  def updateNotificationStatus(notifId: Id[Notification], disabled: Boolean): Boolean = {
+    val notif = db.readOnlyMaster { implicit session =>
+      notificationRepo.get(notifId)
+    }
     if (notif.disabled == disabled) {
       false
     } else {
@@ -42,6 +45,20 @@ class NotificationCommander @Inject() (
         notificationRepo.save(notif.copy(disabled = disabled))
       }
       true
+    }
+  }
+
+  def setNotificationRead(notifId: Id[Notification]): Notification = {
+    db.readWrite { implicit session =>
+      val notif = notificationRepo.get(notifId)
+      notificationRepo.save(notif.copy(lastChecked = notif.lastEvent))
+    }
+  }
+
+  def setNotificationUnread(notifId: Id[Notification]): Notification = {
+    db.readWrite { implicit session =>
+      val notif = notificationRepo.get(notifId)
+      notificationRepo.save(notif.copy(lastChecked = None))
     }
   }
 
