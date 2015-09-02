@@ -320,20 +320,19 @@ angular.module('kifi')
           scope.library.visibility = 'organization';
         }
 
+        scope.unsetOrg = function() {
+          scope.libraryProps.selectedOrgId = undefined;
+          scope.space.destination = scope.me;
+          onChangeSpace();
+        };
+
         scope.setOrg = function(id) { 
-          if (scope.libraryProps.inOrg) {
-            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-            var orgId = id || (scope.library.org || scope.me.orgs[0]).id;
-            scope.libraryProps.selectedOrgId = orgId;
-            scope.space.destination = scope.me.orgs.filter(function(org) {
-              return org.id === orgId;
-            })[0];
-          }
-          else {
-            // If user unclicks "organization" their destination should be
-            // their current profile.
-            scope.space.destination = scope.me;
-          }
+          // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+          var orgId = id || (scope.library.org || scope.me.orgs[0]).id;
+          scope.libraryProps.selectedOrgId = orgId;
+          scope.space.destination = scope.me.orgs.filter(function(org) {
+            return org.id === orgId;
+          })[0];
           onChangeSpace();
         };
 
