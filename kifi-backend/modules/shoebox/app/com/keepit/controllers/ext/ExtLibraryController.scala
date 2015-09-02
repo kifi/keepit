@@ -31,6 +31,7 @@ class ExtLibraryController @Inject() (
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
+  libraryMembershipCommander: LibraryMembershipCommander,
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
   basicUserRepo: BasicUserRepo,
@@ -164,7 +165,7 @@ class ExtLibraryController @Inject() (
   def joinLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      libraryCommander.joinLibrary(request.userId, libraryId) match {
+      libraryMembershipCommander.joinLibrary(request.userId, libraryId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(lib) => NoContent
       }
@@ -174,7 +175,7 @@ class ExtLibraryController @Inject() (
   def leaveLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      libraryCommander.leaveLibrary(libraryId, request.userId) match {
+      libraryMembershipCommander.leaveLibrary(libraryId, request.userId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(_) => NoContent
       }

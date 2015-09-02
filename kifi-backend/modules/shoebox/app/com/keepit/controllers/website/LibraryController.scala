@@ -55,6 +55,7 @@ class LibraryController @Inject() (
   airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
+  val libraryMembershipCommander: LibraryMembershipCommander,
   val libraryAccessCommander: LibraryAccessCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -323,7 +324,7 @@ class LibraryController @Inject() (
         }
 
         println("Joining with subscribed = " + subscribedOpt)
-        libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
+        libraryMembershipCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
@@ -351,7 +352,7 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryCommander.leaveLibrary(id, request.userId) match {
+        libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
         }
@@ -695,11 +696,11 @@ class LibraryController @Inject() (
         val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
           case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
           case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }
