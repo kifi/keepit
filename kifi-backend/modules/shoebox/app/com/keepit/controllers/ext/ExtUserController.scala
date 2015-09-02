@@ -34,8 +34,11 @@ class ExtUserController @Inject() (
         case "" => basicOrgs
         case orgQ =>
           def sanitize(s: String) = s.trim.toLowerCase.split("\\P{L}+").toSet
-          val q = sanitize(orgQ)
-          basicOrgs.filter(o => q.subsetOf(sanitize(o.name)))
+          val query = sanitize(orgQ)
+          basicOrgs.filter { o =>
+            val lowerOrg = o.name.toLowerCase
+            query.forall(qterm => lowerOrg.contains(qterm))
+          }
       }
       orgsToShow.map { org =>
         // This is a superset of a UserContact. I can't use that type because it forces ExternalId[User]
