@@ -34,7 +34,8 @@ trait NewSocialConnectionImpl extends NonGroupingNotificationKind[NewSocialConne
         linkText = s"View ${friend.firstName}’s profile",
         extraJson = Some(Json.obj(
           "friend" -> friend
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -61,7 +62,9 @@ trait SocialContactJoinedImpl extends NonGroupingNotificationKind[SocialContactJ
         user = joiner,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
-        linkText = s"Invite ${joiner.firstName} to connect"
+        linkText = s"Invite ${joiner.firstName} to connect",
+        extraJson = None,
+        category = None
       )
     }
   }

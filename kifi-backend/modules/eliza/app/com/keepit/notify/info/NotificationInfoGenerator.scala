@@ -15,21 +15,21 @@ class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     implicit val ec: ExecutionContext) {
 
-  private def genericKind(notif: Notification) = {
+  private def genericKind(notif: Notification): NotificationKind[NotificationEvent] = {
     // the notification and items don't know that they have the same kind
     notif.kind.asInstanceOf[NotificationKind[NotificationEvent]]
   }
 
-  def generateInfo(notifs: Seq[(Notification, Set[NotificationItem])]): Future[Seq[(Notification, Set[NotificationItem], NotificationInfo)]] = {
+  def generateInfo(notifs: Map[Notification, Set[NotificationItem]]): Future[Map[Notification, (Set[NotificationItem], NotificationInfo)]] = {
     val notifInfoRequests = notifs map {
       case (notif, items) =>
         val kind = genericKind(notif)
         val infoRequest = kind.info(items.map(_.event))
-        (notif, items, infoRequest)
+        (notif, infoRequest)
     }
 
     val infoRequests = notifInfoRequests map {
-      case (_, _, infoRequest) => infoRequest
+      case (notif, infoRequest) => infoRequest
     }
 
     val libRequests = infoRequests.flatMap { infoRequest =>
@@ -57,13 +57,13 @@ class NotificationInfoGenerator @Inject() (
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
 
-    val externalIdsF = for {
+    val externalUserIdsF = for {
       orgs <- orgsF
       keeps <- keepsF
     } yield (orgs.values.map(_.ownerId) ++ keeps.values.map(_.ownerId)).toSeq.distinct
 
-    val fromExternalIdsF = for {
-      externalIds <- externalIdsF
+    val userIdsFromExternalF = for {
+      externalIds <- externalUserIdsF
       userIds <- shoeboxServiceClient.getUserIdsByExternalIds(externalIds)
     } yield userIds
 
@@ -71,8 +71,8 @@ class NotificationInfoGenerator @Inject() (
       libs <- libsF
       orgs <- orgsF
       keeps <- keepsF
-      externalIds <- externalIdsF
-      fromExternalIds <- fromExternalIdsF
+      externalIds <- externalUserIdsF
+      fromExternalIds <- userIdsFromExternalF
       userIds = (userRequests ++ libs.values.map(_.ownerId) ++ fromExternalIds).toSeq.distinct
       users <- shoeboxServiceClient.getBasicUsers(userIds)
       usersExternal = externalIds.zip(fromExternalIds).map {
@@ -91,11 +91,11 @@ class NotificationInfoGenerator @Inject() (
     for {
       batchedInfos <- batchedInfosF
     } yield {
-      notifInfoRequests map {
-        case (notif, items, request) =>
+      notifs map {
+        case (notif, items) =>
           val kind = genericKind(notif)
           val infoRequest = kind.info(items.map(_.event))
-          (notif, items, infoRequest.fn(batchedInfos))
+          (notif, (items, infoRequest.fn(batchedInfos)))
       }
     }
   }

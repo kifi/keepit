@@ -51,7 +51,8 @@ trait OwnedLibraryNewCollabInviteImpl extends NotificationKind[OwnedLibraryNewCo
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -99,7 +100,8 @@ trait OwnedLibraryNewFollowInviteImpl extends NotificationKind[OwnedLibraryNewFo
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -132,7 +134,8 @@ trait OwnedLibraryNewFollowerImpl extends NonGroupingNotificationKind[OwnedLibra
         extraJson = Some(Json.obj(
           "follower" -> follower,
           "library" -> Json.toJson(libraryFollowed)
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -165,7 +168,8 @@ trait OwnedLibraryNewCollaboratorImpl extends NonGroupingNotificationKind[OwnedL
         extraJson = Some(Json.obj(
           "follower" -> collaborator, // the mobile clients read it like this
           "library" -> Json.toJson(libraryCollaborating)
-        ))
+        )),
+        category = None
       )
     }
   }

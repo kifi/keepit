@@ -35,7 +35,8 @@ trait NewConnectionInviteImpl extends NonGroupingNotificationKind[NewConnectionI
         linkText = s"Respond to ${inviter.firstName}’s invitation",
         extraJson = Some(Json.obj(
           "friend" -> inviter
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -65,7 +66,8 @@ trait ConnectionInviteAcceptedImpl extends NonGroupingNotificationKind[Connectio
         linkText = s"Visit ${accepter.firstName}’s profile",
         extraJson = Some(Json.obj(
           "friend" -> accepter
-        ))
+        )),
+        category = None
       )
     }
   }

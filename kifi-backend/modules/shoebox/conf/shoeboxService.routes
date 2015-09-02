@@ -1024,10 +1024,6 @@ POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.inte
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
-POST      /internal/shoebox/database/getUserInfos   @com.keepit.controllers.internal.ShoeboxController.getUserInfos()
-POST      /internal/shoebox/database/getKeepInfos   @com.keepit.controllers.internal.ShoeboxController.getKeepInfos()
-POST      /internal/shoebox/database/getLibraryInfos   @com.keepit.controllers.internal.ShoeboxController.getLibraryInfos()
-POST      /internal/shoebox/database/getOrganizationInfos   @com.keepit.controllers.internal.ShoeboxController.getOrganizationInfos()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 

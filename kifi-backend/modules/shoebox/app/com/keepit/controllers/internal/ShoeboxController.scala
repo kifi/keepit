@@ -540,43 +540,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(orgIdsByUserId))
   }
 
-  def getUserInfos() = Action(parse.tolerantJson) { request =>
-    ???
-  }
-
-  def getKeepInfos() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Seq[Id[Keep]]]
-    val keeps = db.readOnlyReplica { implicit session =>
-      keepRepo.getByIds(keepIds.toSet)
-    }
-    Ok(Json.toJson(keeps))
-  }
-
-  def getLibraryInfos() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Seq[Id[Library]]]
-    val libraryInfos = db.readOnlyReplica { implicit session =>
-      libraryRepo.getLibraries(libraryIds.toSet).map {
-        case (id, library) =>
-          val imageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-          val libOwner = basicUserRepo.load(library.ownerId)
-          (id, NotificationInfoModel.library(library, imageOpt, libOwner))
-      }
-    }
-    Ok(Json.toJson(libraryInfos))
-  }
-
-  def getOrganizationInfos() = Action(parse.tolerantJson) { request =>
-    val orgIds = request.body.as[Seq[Id[Organization]]]
-    val orgInfos = db.readOnlyReplica { implicit session =>
-      orgRepo.getByIds(orgIds.toSet)
-    }.map {
-      case (id, org) =>
-        val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
-        (id, NotificationInfoModel.organization(org, orgImageOpt))
-    }
-    Ok(Json.toJson(orgInfos))
-  }
-
   def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
     Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
   }

@@ -37,7 +37,8 @@ trait LibraryCollabInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
         extraJson = Some(Json.obj(
           "follower" -> accepter,
           "library" -> Json.toJson(invitedLib)
-        ))
+        )),
+        category = None
       )
     }
   }
@@ -70,7 +71,8 @@ trait LibraryFollowInviteAcceptedImpl extends NonGroupingNotificationKind[Librar
         extraJson = Some(Json.obj(
           "follower" -> accepter,
           "library" -> Json.toJson(acceptedLib)
-        ))
+        )),
+        category = None
       )
     }
   }

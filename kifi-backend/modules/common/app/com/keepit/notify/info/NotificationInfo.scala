@@ -33,8 +33,8 @@ object NotificationInfo {
     title: String,
     body: String,
     linkText: String,
-    category: Option[NotificationCategory] = None,
-    extraJson: Option[JsObject] = None): NotificationInfo = {
+    category: Option[NotificationCategory],
+    extraJson: Option[JsObject]): NotificationInfo = {
     NotificationInfo(
       user.path.encode.absolute,
       UserImage(user),
