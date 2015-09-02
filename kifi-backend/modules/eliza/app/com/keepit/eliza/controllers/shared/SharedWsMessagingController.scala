@@ -234,7 +234,7 @@ class SharedWsMessagingController @Inject() (
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         notificationMessagingCommander.ifExists(jsThreadId) { notif =>
-          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif.externalId, disabled = true)
+          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = true)
         } {
           messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
         }
@@ -244,7 +244,7 @@ class SharedWsMessagingController @Inject() (
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         val notifExternalId = ExternalId[Notification](jsThreadId)
         notificationMessagingCommander.ifExists(jsThreadId) { notif =>
-          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif.externalId, disabled = false)
+          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = false)
         } {
           messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
         }

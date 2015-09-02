@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.model.{ NotificationRepo, Notification }
+import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
 import play.api.libs.json.Json
@@ -14,7 +14,9 @@ class NotificationMessagingCommander @Inject() (
     notificationRepo: NotificationRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
-    messagingAnalytics: MessagingAnalytics) {
+    messagingAnalytics: MessagingAnalytics,
+    userThreadRepo: UserThreadRepo,
+    messageThreadRepo: MessageThreadRepo) {
 
   def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
     db.readOnlyMaster { implicit session =>
@@ -30,11 +32,18 @@ class NotificationMessagingCommander @Inject() (
     notifOpt.fold(doElse) { notif => doIfExists(notif) }
   }
 
-  def changeNotificationStatus(userId: Id[User], notifId: ExternalId[Notification], disabled: Boolean)(implicit context: HeimdalContext) = {
-    val updated = notificationCommander.updateNotificationStatus(notifId, disabled)
+  def changeNotificationStatus(userId: Id[User], notif: Notification, disabled: Boolean)(implicit context: HeimdalContext) = {
+    val updated = notificationCommander.updateNotificationStatus(notif, disabled)
     if (updated) {
-      webSocketRouter.sendToUser(userId, Json.arr("thread_muted", notifId.id, disabled))
-      messagingAnalytics.changedMute(userId, notifId, disabled, context)
+      webSocketRouter.sendToUser(userId, Json.arr("thread_muted", notif.externalId, disabled))
+      val messageThreadId = db.readOnlyMaster { implicit session =>
+        val userThread = userThreadRepo.getByNotificationId(notif.id.get)
+        // messaging analytics expects a message thread id, for now
+        userThread.fold(notif.externalId.asInstanceOf[ExternalId[MessageThread]]) { userThread =>
+          messageThreadRepo.get(userThread.threadId).externalId
+        }
+      }
+      messagingAnalytics.changedMute(userId, messageThreadId, disabled, context)
     }
   }
 

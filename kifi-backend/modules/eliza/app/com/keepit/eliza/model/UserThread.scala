@@ -33,7 +33,8 @@ case class UserThread(
   replyable: Boolean = true,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
   started: Boolean = false, //Whether or not this thread was started by this user
-  accessToken: ThreadAccessToken = ThreadAccessToken())
+  accessToken: ThreadAccessToken = ThreadAccessToken(),
+  notificationId: Option[Id[Notification]] = None)
     extends Model[UserThread] with ParticipantThread {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))

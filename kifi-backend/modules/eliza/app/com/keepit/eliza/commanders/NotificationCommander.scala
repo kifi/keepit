@@ -22,16 +22,14 @@ class NotificationCommander @Inject() (
     }.toSet
   }
 
-  def updateNotificationStatus(id: ExternalId[Notification], mute: Boolean): Boolean = {
-    db.readWrite { implicit session =>
-      notificationRepo.getOpt(id).exists { notif =>
-        if (notif.disabled == mute) {
-          false
-        } else {
-          notificationRepo.save(notif.copy(disabled = mute))
-          true
-        }
+  def updateNotificationStatus(notif: Notification, disabled: Boolean): Boolean = {
+    if (notif.disabled == disabled) {
+      false
+    } else {
+      db.readWrite { implicit session =>
+        notificationRepo.save(notif.copy(disabled = disabled))
       }
+      true
     }
   }
 
