@@ -39,7 +39,7 @@ class NotificationCommander @Inject() (
   def setNotificationRead(notifId: Id[Notification]): Notification = {
     db.readWrite { implicit session =>
       val notif = notificationRepo.get(notifId)
-      notificationRepo.save(notif.copy(lastChecked = notif.lastEvent))
+      notificationRepo.save(notif.copy(lastChecked = Some(notif.lastEvent)))
     }
   }
 

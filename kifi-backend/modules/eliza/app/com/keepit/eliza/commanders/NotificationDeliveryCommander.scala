@@ -262,6 +262,7 @@ class NotificationDeliveryCommander @Inject() (
       message.id.get
     } else {
       // todo this is okay for now before removing old system, nobody actually uses the returned message ID
+      // todo wow people actually use it, so... yeah
       Id(0)
     }
   }

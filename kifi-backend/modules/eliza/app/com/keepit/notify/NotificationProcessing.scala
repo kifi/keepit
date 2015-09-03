@@ -36,7 +36,8 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notifId,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
       val notif = notificationRepo.get(notifId)
       notificationRepo.save(notif.copy(lastEvent = event.time))
@@ -53,7 +54,8 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
       notif
     }

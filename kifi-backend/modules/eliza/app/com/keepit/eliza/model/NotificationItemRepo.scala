@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.notify.model.event.NotificationEvent
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[NotificationItemRepoImpl])
 trait NotificationItemRepo extends Repo[NotificationItem] with ExternalIdColumnFunction[NotificationItem] {
@@ -28,8 +29,9 @@ class NotificationItemRepoImpl @Inject() (
     // Use a string here because a type like NotificationKind[_ <: NotificationEvent] just doesn't work
     def kind = column[String]("kind", O.NotNull)
     def event = column[NotificationEvent]("event", O.NotNull)
+    def eventTime = column[DateTime]("event_time", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, notificationId, kind, event, externalId) <> ((NotificationItem.applyFromDbRow _).tupled, NotificationItem.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, notificationId, kind, event, externalId, eventTime) <> ((NotificationItem.applyFromDbRow _).tupled, NotificationItem.unapplyToDbRow)
 
   }
 

@@ -20,7 +20,8 @@ case class NotificationItem(
     notificationId: Id[Notification],
     kind: NKind,
     event: NotificationEvent,
-    externalId: ExternalId[NotificationItem] = ExternalId()) extends ModelWithExternalId[NotificationItem] {
+    externalId: ExternalId[NotificationItem] = ExternalId(),
+    eventTime: DateTime) extends ModelWithExternalId[NotificationItem] {
 
   override def withId(id: Id[NotificationItem]): NotificationItem = copy(id = Some(id))
 
@@ -37,7 +38,8 @@ object NotificationItem {
     (__ \ "notificationIdId").format[Id[Notification]] and
     (__ \ "kind").format[String] and
     (__ \ "event").format[NotificationEvent] and
-    (__ \ "externalId").format[ExternalId[NotificationItem]]
+    (__ \ "externalId").format[ExternalId[NotificationItem]] and
+    (__ \ "eventTime").format[DateTime]
   )(NotificationItem.applyFromDbRow, unlift(NotificationItem.unapplyToDbRow))
 
   def applyFromDbRow(
@@ -47,7 +49,8 @@ object NotificationItem {
     notificationId: Id[Notification],
     kind: String,
     event: NotificationEvent,
-    externalId: ExternalId[NotificationItem]): NotificationItem =
+    externalId: ExternalId[NotificationItem],
+    eventTime: DateTime): NotificationItem =
     NotificationItem(
       id,
       createdAt,
@@ -55,10 +58,11 @@ object NotificationItem {
       notificationId,
       NotificationKind.getByName(kind).get,
       event,
-      externalId
+      externalId,
+      eventTime
     )
 
-  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent, ExternalId[NotificationItem])] =
+  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent, ExternalId[NotificationItem], DateTime)] =
     Some(
       item.id,
       item.createdAt,
@@ -66,6 +70,7 @@ object NotificationItem {
       item.notificationId,
       item.kind.name,
       item.event,
-      item.externalId
+      item.externalId,
+      item.eventTime
     )
 }

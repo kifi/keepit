@@ -15,16 +15,17 @@ class ElizaNotificationInfo @Inject() (
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     implicit val executionContext: ExecutionContext) {
 
-  import Ordering.Implicits._
-
   def mkJson(notif: Notification, items: Set[NotificationItem], info: NotificationInfo): JsValue = {
     val maxByTime = items.maxBy(_.event.time)
     val maxTime = maxByTime.event.time
+    val lastEventMoreRecentThanChecked = notif.lastChecked.fold(true) { checked =>
+      notif.lastEvent > checked
+    }
     Json.obj(
       "id" -> maxByTime.externalId,
       "time" -> maxTime,
       "thread" -> notif.externalId,
-      "unread" -> Json.toJson(!notif.disabled && notif.lastEvent > notif.lastChecked),
+      "unread" -> Json.toJson(!notif.disabled && lastEventMoreRecentThanChecked),
       "category" -> "triggered",
       "fullCategory" -> "replace me",
       "title" -> info.title,

@@ -12,6 +12,7 @@ import play.api.libs.json.Json
 class NotificationMessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
     notificationRepo: NotificationRepo,
+    notificationItemRepo: NotificationItemRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
     messagingAnalytics: MessagingAnalytics,
@@ -21,6 +22,12 @@ class NotificationMessagingCommander @Inject() (
   def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
     db.readOnlyMaster { implicit session =>
       notificationRepo.getOpt(notifId)
+    }
+  }
+
+  def notificationItemByExternalId(notifItemId: ExternalId[NotificationItem]): Option[NotificationItem] = {
+    db.readOnlyMaster { implicit session =>
+      notificationItemRepo.getOpt(notifItemId)
     }
   }
 
@@ -38,6 +45,19 @@ class NotificationMessagingCommander @Inject() (
   def ifExists(potentialNotifId: String)(doIfExists: Notification => Unit)(doElse: => Unit): Unit = {
     val notifOpt = ExternalId.asOpt[Notification](potentialNotifId).flatMap { id => notificationByExternalId(id) }
     notifOpt.fold(doElse) { notif => doIfExists(notif) }
+  }
+
+  def ifItemExists(potentialItemId: String)(doIfExists: (Notification, NotificationItem) => Unit)(doElse: => Unit): Unit = {
+    val notifItemOpt = ExternalId.asOpt[NotificationItem](potentialItemId).flatMap { id =>
+      notificationItemByExternalId(id)
+    }.map { item =>
+      (db.readOnlyMaster { implicit session =>
+        notificationRepo.get(item.notificationId)
+      }, item)
+    }
+    notifItemOpt.fold(doElse) {
+      case (notif, item) => doIfExists(notif, item)
+    }
   }
 
   def changeNotificationStatus(userId: Id[User], notif: Notification, disabled: Boolean)(implicit context: HeimdalContext) = {
