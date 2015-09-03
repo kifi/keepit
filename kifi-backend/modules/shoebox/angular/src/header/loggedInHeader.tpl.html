@@ -63,16 +63,5 @@
   </div>
   <span style="position: fixed; top: 10px; left: 5px; font-size:20px; color:white;"> {{orgName}} </span>
 
-  <div class="kf-lih-mobile-interstitial kf-container" ng-if="showMobileInterstitial">
-    <header class="kf-container-header">
-      <h1>Download Kifi Mobile</h1>
-    </header>
-    <main class="kf-container-main">
-      <p>Our mobile version of Kifi isn't quite ready for prime time but we do have an excellent app for your phone.</p>
-      <button class="kf-button kf-button-large">Download</button>
-      <p class="kf-lih-mobile-interstitial-secondary-action">
-        <a href="#">No thank you, I understand the road ahead might be bumpy</a>
-      </p>
-    </main>
-  </div>
+  <div kf-mobile-interstitial show="showMobileInterstitial"></div>
 </div>

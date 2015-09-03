@@ -23,7 +23,7 @@ angular.module('kifi')
       profileService.savePrefs({site_notify_libraries_in_search: false});
     };
 
-    $scope.showMobileInterstitial = (mobileOS === "iOS" || mobileOS === "Android");
+    $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');
 
     //
     // Watchers & Listeners
