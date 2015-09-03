@@ -39,7 +39,7 @@ class NotificationMessagingCommander @Inject() (
   private def messageThreadIdForNotif(notif: Notification): ExternalId[MessageThread] = db.readOnlyMaster { implicit session =>
     val userThread = userThreadRepo.getByNotificationId(notif.id.get)
     // messaging analytics expects a message thread id, for now
-    userThread.fold(notif.externalId.asInstanceOf[ExternalId[MessageThread]]) { userThread =>
+    userThread.fold(ExternalId[MessageThread](notif.externalId.id)) { userThread =>
       messageThreadRepo.get(userThread.threadId).externalId
     }
   }
@@ -121,7 +121,7 @@ class NotificationMessagingCommander @Inject() (
     recipient match {
       case UserRecipient(user, _) =>
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-        val pushNotif = MessageThreadPushNotification(notif.externalId.asInstanceOf[ExternalId[MessageThread]], unreadMessages + unreadNotifications, None, None)
+        val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
         notificationDeliveryCommander.sendPushNotification(user, pushNotif)
         webSocketRouter.sendToUser(user, Json.arr("all_notifications_visited", item.externalId, item.eventTime))
       case _ =>
