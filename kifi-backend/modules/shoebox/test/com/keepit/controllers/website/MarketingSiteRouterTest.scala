@@ -14,7 +14,7 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
       running(new ShoeboxApplication(modules: _*)) {
         val request = FakeRequest().withHeaders("user-agent" -> "googlebot")
         val landing = MarketingSiteRouter.landing(request)
-        landing === "index.7"
+        landing === "index.10"
       }
     }
     "landing page routing" in {
