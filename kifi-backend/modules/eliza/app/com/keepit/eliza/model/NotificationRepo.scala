@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.notify.model.{ Recipient, NKind }
 import org.joda.time.DateTime
@@ -15,6 +15,12 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification]
 
   def getByKindAndGroupIdentifier(kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
+
+  def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
+
+  def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
+
+  def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
 
 }
 
@@ -56,6 +62,36 @@ class NotificationRepoImpl @Inject() (
     val kindStr = kind.name
     val q = for (row <- rows if row.groupIdentifier === identifier && row.kind === kindStr) yield row
     q.firstOption
+  }
+
+  def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
+    val unread = for (
+      row <- rows if row.recipient === recipient &&
+        !row.disabled &&
+        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+    ) yield row
+    val unreadCount = unread.length
+    unreadCount.run
+  }
+
+  def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
+    val unread = for (
+      row <- rows if row.recipient === recipient && row.kind == kind &&
+        !row.disabled &&
+        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+    ) yield row
+    val unreadCount = unread.length
+    unreadCount.run
+  }
+
+  def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
+    val unread = for (
+      row <- rows if row.recipient === recipient && row.kind != kind &&
+        !row.disabled &&
+        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+    ) yield row
+    val unreadCount = unread.length
+    unreadCount.run
   }
 
 }

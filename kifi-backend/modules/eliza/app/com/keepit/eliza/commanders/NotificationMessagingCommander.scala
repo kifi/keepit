@@ -7,6 +7,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
+import com.keepit.notify.model.Recipient
 import play.api.libs.json.Json
 
 class NotificationMessagingCommander @Inject() (
@@ -74,6 +75,24 @@ class NotificationMessagingCommander @Inject() (
 
   def setNotificationUnread(notif: Notification): Unit = {
     notificationCommander.setNotificationUnread(notif.id.get)
+  }
+
+  def getUnreadNotificationsCount(recipient: Recipient): Int = {
+    db.readOnlyMaster { implicit session =>
+      notificationRepo.getUnreadNotificationsCount(recipient)
+    }
+  }
+
+  def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String): Int = {
+    db.readOnlyMaster { implicit session =>
+      notificationRepo.getUnreadNotificationsCountForKind(recipient, kind)
+    }
+  }
+
+  def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String): Int = {
+    db.readOnlyMaster { implicit session =>
+      notificationRepo.getUnreadNotificationsCountExceptKind(recipient)
+    }
   }
 
 }

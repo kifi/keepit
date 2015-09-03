@@ -6,6 +6,8 @@ import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewMessage
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -208,10 +210,17 @@ class SharedWsMessagingController @Inject() (
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
         val messageId = ExternalId[Message](notifId)
-        val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-        val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-        val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
-        socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+        notificationMessagingCommander.ifItemExists(notifId) {
+          case (notif, items) =>
+            val recipient = Recipient(socket.userId)
+            val numUnreadMessages = notificationMessagingCommander.getUnreadNotificationsCountForKind(recipient, NewMessage.name)
+            val numUnreadNotifs = notificationMessagingCommander.getUnreadNotificationsCountExceptKind(recipient, NewMessage.name)
+        } {
+          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+          val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+          val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
+          socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+        }
     },
 
     // end of inbox notification/thread handlers
