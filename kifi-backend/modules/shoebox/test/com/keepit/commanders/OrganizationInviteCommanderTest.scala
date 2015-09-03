@@ -24,7 +24,7 @@ import scala.concurrent.duration.FiniteDuration
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
 
-  def setup(implicit injector: Injector) = {
+  def setup(implicit injector: Injector): (Organization, User, OrganizationMembership) = {
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
       userEmailAddressCommander.intern(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")).get
@@ -119,7 +119,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       }
     }
 
-    "convert email invitations to userId" in {
+    "convert email invitations to userId after user verifies email" in {
       withDb(modules: _*) { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
         db.readWrite { implicit session =>
