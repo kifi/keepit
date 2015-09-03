@@ -34,6 +34,12 @@ var initFriendSearch = (function () {
     var html = ['<li>'];
     if (item.email) {
       html.push('<span class="kifi-ti-email-token-icon"></span>', Mustache.escape(item.email));
+    } else if (item.kind === 'org') {
+      var pic = k.cdnBase + '/' + item.avatarPath;
+      html.push('<span class="kifi-ti-org-token-icon" style="background-image:url(' + pic + ')"></span>', Mustache.escape(item.name));
+    } else if (item.pictureName || item.kind === 'user') {
+      var pic = k.cdnBase + '/users/' + item.id + '/pics/100/' + item.pictureName;
+      html.push('<span class="kifi-ti-user-token-icon" style="background-image:url(' + pic + ')"></span>', Mustache.escape(item.name));
     } else {
       html.push(Mustache.escape(item.name));
     }
@@ -42,15 +48,28 @@ var initFriendSearch = (function () {
   }
 
   function formatResult(res) {
-    if (res.pictureName) {
+    if (res.kind === 'org') {
+      var pic = k.cdnBase + '/' + res.avatarPath;
       var html = [
-        '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', k.cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
+        '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-org" style="background-image:url(', pic, ')">',
         '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, res.nameParts);
       html.push(
         '</div>',
         '<div class="kifi-ti-dropdown-line-2">',
-        res.id === 'aa345838-70fe-45f2-914c-f27c865bdb91' ? 'Kifi team' : 'Kifi user',
+        'Send to everyone in this team',
+        '</div></li>');
+      return html.join('');
+    } else if (res.pictureName || res.kind === 'user') {
+      var pic = k.cdnBase + '/users/' + res.id + '/pics/100/' + res.pictureName;
+      var html = [
+        '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-user" style="background-image:url(', pic, ')">',
+        '<div class="kifi-ti-dropdown-line-1">'];
+      appendParts(html, res.nameParts);
+      html.push(
+        '</div>',
+        '<div class="kifi-ti-dropdown-line-2">',
+        'Kifi user',
         '</div></li>');
       return html.join('');
     } else if (res.q) {
