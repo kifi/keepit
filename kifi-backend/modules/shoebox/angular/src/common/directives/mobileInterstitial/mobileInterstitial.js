@@ -9,13 +9,18 @@ angular.module('kifi')
       templateUrl: 'common/directives/mobileInterstitial/mobileInterstitial.tpl.html',
       scope: { },
       link: function($scope) {
-        $scope.show = !document.cookie.replace(/(?:(?:^|.*;\s*)kfHideMobileInterstitial\s*\=\s*([^;]*).*$)|^.*$/, "$1") && (mobileOS === "iOS" || mobileOS === "Android")
+        var cookieRegEx = new RegExp(/(?:(?:^|.*;\s*)kfHideMobileInterstitial\s*\=\s*([^;]*).*$)|^.*$/);
+        $scope.show = 
+          !document.cookie.replace(cookieRegEx, '$1') && (mobileOS === 'iOS' || mobileOS === 'Android');
 
-        $scope.app_link = (mobileOS === 'iOS' ? 'https://itunes.apple.com/us/app/kifi-new-way-to-build-your/id740232575?mt=8' : 'https://play.google.com/store/apps/details?id=com.kifi');
+        var appleLink = 'https://itunes.apple.com/us/app/kifi-new-way-to-build-your/id740232575?mt=8';
+        var androidLink = 'https://play.google.com/store/apps/details?id=com.kifi';
+        $scope.app_link =
+          (mobileOS === 'iOS' ? appleLink : androidLink);
 
         $scope.permanentlyHide = function() {
           $scope.show = false;
-          document.cookie="kfHideMobileInterstitial=true";
+          document.cookie='kfHideMobileInterstitial=true';
         };
       }
     };
