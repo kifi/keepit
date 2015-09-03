@@ -1,7 +1,7 @@
 package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
-import com.keepit.model.{Organization, Library, Keep, User}
+import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
@@ -508,3 +508,28 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
 }
 
+case class LegacyNotification(
+  recipient: Recipient,
+  time: DateTime,
+  json: JsValue,
+  uriId: Option[Id[NormalizedURI]]
+) extends NotificationEvent {
+
+  type N = LegacyNotification
+  val kind = LegacyNotification
+
+}
+
+
+object LegacyNotification extends NonGroupingNotificationKind[LegacyNotification] {
+
+  override val name: String = "legacy"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "json").format[JsValue] and
+    (__ \ "uriId").formatNullable[Id[NormalizedURI]]
+  )(LegacyNotification.apply, unlift(LegacyNotification.unapply))
+
+}

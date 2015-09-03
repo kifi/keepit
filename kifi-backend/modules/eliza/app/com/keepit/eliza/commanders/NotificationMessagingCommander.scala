@@ -52,6 +52,9 @@ class NotificationMessagingCommander @Inject() (
     notifOpt.fold(doElse) { notif => doIfExists(notif) }
   }
 
+  /**
+   * Also temporary
+   */
   def ifItemExists(potentialItemId: String)(doIfExists: (Notification, NotificationItem) => Unit)(doElse: => Unit): Unit = {
     val notifItemOpt = ExternalId.asOpt[NotificationItem](potentialItemId).flatMap { id =>
       notificationItemByExternalId(id)

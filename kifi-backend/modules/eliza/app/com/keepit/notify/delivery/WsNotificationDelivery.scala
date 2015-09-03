@@ -6,7 +6,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.model.NotificationCategory
 import com.keepit.notify.NotificationExperimentCheck
-import com.keepit.notify.info.{ NotificationInfoGenerator, NotificationInfo }
+import com.keepit.notify.info.{ NotificationInfoGenerator, StandardNotificationInfo }
 import com.keepit.notify.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -27,12 +27,13 @@ class WsNotificationDelivery @Inject() (
   def deliver(recipient: Recipient, notif: Notification, items: Set[NotificationItem]): Future[Unit] = {
     val events = items.map(_.event)
     val kind = events.head.kind.asInstanceOf[NotificationKind[NotificationEvent]]
-    notificationInfoGenerator.generateInfo(Map(notif -> items)).map { infos =>
+    notificationInfoGenerator.generateInfo(Map(notif -> items)).flatMap { infos =>
       val (items, info) = infos(notif)
-      val notifJson = elizaNotificationInfo.mkJson(notif, items, info)
-      notifExperimentCheck.ifExperiment(recipient) {
-        case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson))
-        case _ =>
+      elizaNotificationInfo.mkJson(notif, items, info).map { notifJson =>
+        notifExperimentCheck.ifExperiment(recipient) {
+          case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson))
+          case _ =>
+        }
       }
     }
   }

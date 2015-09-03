@@ -13,7 +13,7 @@ import NotificationInfoRequest._
 class NotificationKindInfoRequests @Inject() () {
 
   private def genericInfoFn[N <: NotificationEvent](
-    fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
+    fn: Set[N] => RequestingNotificationInfos[StandardNotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
     // the function does not know that the items it has have the same kind
     fn match {
@@ -51,13 +51,13 @@ class NotificationKindInfoRequests @Inject() () {
     infoFn(items.map(_.event))
   }
 
-  def infoForNewConnectionInvite(events: Set[NewConnectionInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForNewConnectionInvite(events: Set[NewConnectionInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId)
     )) { batched =>
       val inviter = RequestUser(event.inviterId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = inviter,
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
@@ -70,13 +70,13 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForConnectionInviteAccepted(events: Set[ConnectionInviteAccepted]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForConnectionInviteAccepted(events: Set[ConnectionInviteAccepted]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId)
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
         body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
@@ -89,7 +89,7 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForLibraryNewKeep(events: Set[LibraryNewKeep]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForLibraryNewKeep(events: Set[LibraryNewKeep]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
@@ -97,7 +97,7 @@ class NotificationKindInfoRequests @Inject() () {
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = newKeep.url,
         image = UserImage(keeper),
         title = s"New keep in ${libraryKept.name}",
@@ -115,7 +115,7 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForNewKeepActivity(events: Set[NewKeepActivity]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForNewKeepActivity(events: Set[NewKeepActivity]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
@@ -123,7 +123,7 @@ class NotificationKindInfoRequests @Inject() () {
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = libraryKept.url.encode.absolute,
         image = UserImage(keeper),
         title = s"New Keep in ${libraryKept.name}",
@@ -141,14 +141,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForLibraryCollabInviteAccepted(events: Set[LibraryCollabInviteAccepted]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForLibraryCollabInviteAccepted(events: Set[LibraryCollabInviteAccepted]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestLibrary(event.libraryId)
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} is now collaborating on ${invitedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${invitedLib.name}",
@@ -162,14 +162,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForLibraryFollowInviteAccepted(events: Set[LibraryFollowInviteAccepted]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForLibraryFollowInviteAccepted(events: Set[LibraryFollowInviteAccepted]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestLibrary(event.libraryId)
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = accepter,
         title = s"${accepter.firstName} is now following ${acceptedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${acceptedLib.name}",
@@ -183,14 +183,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForLibraryNewCollabInvite(events: Set[LibraryNewCollabInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForLibraryNewCollabInvite(events: Set[LibraryNewCollabInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestLibrary(event.libraryId)
     )) { batched =>
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = invitedLib.url.encode.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
@@ -205,14 +205,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForLibraryNewFollowInvite(events: Set[LibraryNewFollowInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForLibraryNewFollowInvite(events: Set[LibraryNewFollowInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestLibrary(event.libraryId)
     )) { batched =>
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = invitedLib.url.encode.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
@@ -227,11 +227,11 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForDepressedRobotGrumble(events: Set[DepressedRobotGrumble]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForDepressedRobotGrumble(events: Set[DepressedRobotGrumble]): RequestingNotificationInfos[StandardNotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else NotificationEnglish.plurals(phrase)
 
     RequestingNotificationInfos(Requests()) { batched =>
-      NotificationInfo(
+      StandardNotificationInfo(
         url = "http://goo.gl/PqN7Cs",
         image = PublicImage("http://i.imgur.com/qs8QofA.png"),
         title = s"${plural("A robot")} just grumbled! ${plural("He")} must be depressed...",
@@ -241,14 +241,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOrgNewInvite(events: Set[OrgNewInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOrgNewInvite(events: Set[OrgNewInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.inviterId), RequestOrganization(event.orgId)
     )) { batched =>
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedOrg = RequestOrganization(event.orgId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = Path(invitedOrg.handle.value).encode.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
@@ -258,14 +258,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOrgInviteAccepted(events: Set[OrgInviteAccepted]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOrgInviteAccepted(events: Set[OrgInviteAccepted]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.accepterId), RequestOrganization(event.orgId)
     )) { batched =>
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedOrg = RequestOrganization(event.orgId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         url = Path(acceptedOrg.handle.value).encode.absolute,
         image = UserImage(accepter),
         title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
@@ -279,7 +279,7 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOwnedLibraryNewCollabInvite(events: Set[OwnedLibraryNewCollabInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOwnedLibraryNewCollabInvite(events: Set[OwnedLibraryNewCollabInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else NotificationEnglish.plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
@@ -288,7 +288,7 @@ class NotificationKindInfoRequests @Inject() () {
     )) { batched =>
       val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to conribute to your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
@@ -302,7 +302,7 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOwnedLibraryNewFollowInvite(events: Set[OwnedLibraryNewFollowInvite]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOwnedLibraryNewFollowInvite(events: Set[OwnedLibraryNewFollowInvite]): RequestingNotificationInfos[StandardNotificationInfo] = {
     def plural(phrase: String) = if (events.size == 1) phrase else NotificationEnglish.plurals(phrase)
     // only need info for a random event, they should all have the same inviter and library
     val oneEvent = events.head
@@ -311,7 +311,7 @@ class NotificationKindInfoRequests @Inject() () {
     )) { batched =>
       val inviter = RequestUser(oneEvent.inviterId).lookup(batched)
       val libraryInvited = RequestLibrary(oneEvent.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
@@ -325,14 +325,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOwnedLibraryNewFollower(events: Set[OwnedLibraryNewFollower]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOwnedLibraryNewFollower(events: Set[OwnedLibraryNewFollower]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.followerId), RequestLibrary(event.libraryId)
     )) { batched =>
       val follower = RequestUser(event.followerId).lookup(batched)
       val libraryFollowed = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = follower,
         title = "New library follower",
         body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
@@ -346,14 +346,14 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForOwnedLibraryNewCollaborator(events: Set[OwnedLibraryNewCollaborator]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForOwnedLibraryNewCollaborator(events: Set[OwnedLibraryNewCollaborator]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.collaboratorId), RequestLibrary(event.libraryId)
     )) { batched =>
       val collaborator = RequestUser(event.collaboratorId).lookup(batched)
       val libraryCollaborating = RequestLibrary(event.libraryId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = collaborator,
         title = "New library collaborator",
         body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
@@ -367,13 +367,13 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForNewSocialConection(events: Set[NewSocialConnection]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForNewSocialConection(events: Set[NewSocialConnection]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.friendId)
     )) { batched =>
       val friend = RequestUser(event.friendId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = friend,
         title = s"You’re connected with ${friend.fullName} on Kifi!",
         body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
@@ -386,19 +386,28 @@ class NotificationKindInfoRequests @Inject() () {
     }
   }
 
-  def infoForSocialContactJoined(events: Set[SocialContactJoined]): RequestingNotificationInfos[NotificationInfo] = {
+  def infoForSocialContactJoined(events: Set[SocialContactJoined]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
       RequestUser(event.joinerId)
     )) { batched =>
       val joiner = RequestUser(event.joinerId).lookup(batched)
-      NotificationInfo(
+      StandardNotificationInfo(
         user = joiner,
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
         linkText = s"Invite ${joiner.firstName} to connect",
         extraJson = None,
         category = None
+      )
+    }
+  }
+
+  def infoForLegacyNotification(events: Set[LegacyNotification]): RequestingNotificationInfos[LegacyNotificationInfo] = {
+    val event = requireOne(events)
+    RequestingNotificationInfos(Requests()) { batched =>
+      LegacyNotificationInfo(
+        json = event.json
       )
     }
   }

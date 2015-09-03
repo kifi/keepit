@@ -18,7 +18,7 @@ case class NotificationJson(obj: JsObject) extends AnyVal
 
 /** Makes `NotificationJson` from `RawNotification` */
 @Singleton
-private[commanders] class NotificationJsonMaker @Inject() (
+class NotificationJsonMaker @Inject() (
     shoebox: ShoeboxServiceClient,
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
@@ -35,10 +35,10 @@ private[commanders] class NotificationJsonMaker @Inject() (
       if (includeUriSummary) rover.getUriSummaryByUris(rawNotifications.flatMap(_._3).toSet) // todo(???): if title and description are not used, switch to getImagesByUris
       else Future.successful(Map.empty)
     }
-    Future.sequence(rawNotifications.map { n =>
+    Future.sequence(rawNotifications.flatMap { n =>
       val futureUriSummary = n._3.map(uriId => futureSummariesByUriId.map(_.get(uriId))) getOrElse Future.successful(None)
       makeOpt(n, futureUriSummary)
-    }.flatten)
+    })
   }
 
   // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)

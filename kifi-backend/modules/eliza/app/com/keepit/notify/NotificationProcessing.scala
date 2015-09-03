@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
 import com.keepit.notify.delivery.WsNotificationDelivery
-import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.info.StandardNotificationInfo
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 

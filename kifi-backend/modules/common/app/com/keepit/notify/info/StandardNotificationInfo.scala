@@ -7,6 +7,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
+sealed trait NotificationInfo
+
 /**
  * Represents what is ultimately displayed to the user in the form of an actionable notification.
  *
@@ -18,16 +20,16 @@ import play.api.libs.functional.syntax._
  * @param category Provisional 'category' of the notification for use in clients
  * @param extraJson Assorted data that is read by clients, per-notification
  */
-case class NotificationInfo(
+case class StandardNotificationInfo(
   url: String,
   image: NotificationImage,
   title: String,
   body: String,
   linkText: String,
   category: Option[NotificationCategory] = None,
-  extraJson: Option[JsObject] = None)
+  extraJson: Option[JsObject] = None) extends NotificationInfo
 
-object NotificationInfo {
+object StandardNotificationInfo {
 
   def apply(
     user: BasicUser,
@@ -35,8 +37,8 @@ object NotificationInfo {
     body: String,
     linkText: String,
     category: Option[NotificationCategory],
-    extraJson: Option[JsObject]): NotificationInfo = {
-    NotificationInfo(
+    extraJson: Option[JsObject]): StandardNotificationInfo = {
+    StandardNotificationInfo(
       user.path.encode.absolute,
       UserImage(user),
       title,
@@ -48,6 +50,8 @@ object NotificationInfo {
   }
 
 }
+
+case class LegacyNotificationInfo(json: JsValue) extends NotificationInfo
 
 sealed trait NotificationImage
 
