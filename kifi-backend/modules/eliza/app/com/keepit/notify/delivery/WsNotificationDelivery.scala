@@ -26,7 +26,6 @@ class WsNotificationDelivery @Inject() (
 
   def deliver(recipient: Recipient, notif: Notification, items: Set[NotificationItem]): Future[Unit] = {
     val events = items.map(_.event)
-    val kind = events.head.kind.asInstanceOf[NotificationKind[NotificationEvent]]
     notificationInfoGenerator.generateInfo(Map(notif -> items)).flatMap { infos =>
       val (items, info) = infos(notif)
       elizaNotificationInfo.mkJson(notif, items, info).map { notifJson =>
