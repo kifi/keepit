@@ -45,7 +45,7 @@ k.compose = k.compose || (function() {
   }
 
   function justFieldsToSave(o) {
-    return {id: o.id, name: o.name, email: o.email};
+    return {id: o.id, name: o.name, email: o.email, pictureName: o.pictureName, kind: o.kind, avatarPath: o.avatarPath};
   }
 
   function getSelRange() {

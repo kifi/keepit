@@ -54,10 +54,13 @@ class ExtUserController @Inject() (
     } else List.empty
 
     typeaheadF.map { res =>
-      val res1 = res.collect {
+      val orgCount = orgsToInclude.length
+      val contactsToShow = limit.getOrElse(res.length + orgCount) - orgCount
+
+      val res1 = orgsToInclude ++ res.take(contactsToShow).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-      } ++ orgsToInclude
+      }
       Ok(Json.toJson(res1))
     }
   }
