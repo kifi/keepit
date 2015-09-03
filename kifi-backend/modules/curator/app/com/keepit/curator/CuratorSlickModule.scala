@@ -12,16 +12,8 @@ import play.api.db.DB
 
 case class CuratorDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-
-  override def slaveDatabase = Try(SlickDatabase.forDataSource(DB.getDataSource("shoeboxslave")(Play.current))) match {
-    case Success(db) =>
-      println("loaded slave db")
-      Some(db)
-    case Failure(e) =>
-      println(s"could not load slave db for: $e")
-      None
-  }
-
+  // can't probe for existing (or not) db, must try and possibly fail.
+  override def slaveDatabase = None
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 
