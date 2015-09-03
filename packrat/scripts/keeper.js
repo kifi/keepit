@@ -391,7 +391,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     api.require('scripts/keep_box.js', function () {
       deferreds[1].resolve();
     });
-    api.port.emit('keeps_and_libraries', function (data) {
+    api.port.emit('keeps_and_libraries_and_organizations_and_me', function (data) {
       deferreds[2].resolve(data);
     });
     Q.all(deferreds.map(getPromise)).done(function (vals) {

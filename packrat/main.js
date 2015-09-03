@@ -678,7 +678,7 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
-  keeps_and_libraries: function (_, respond, tab) {
+  keeps_and_libraries_and_organizations_and_me: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     loadLibraries(function (libraries) {
       var recentLibIds = loadRecentLibs();
@@ -691,7 +691,15 @@ api.port.on({
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(recentLibIds)).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: libraries, posting: experiments.indexOf('explicit_social_posting') >= 0});
+
+      respond({
+        keeps: keeps,
+        libraries: libraries,
+        organizations: organizations,
+        me: me,
+        posting: experiments.indexOf('explicit_social_posting') >= 0
+      });
+
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
@@ -2365,7 +2373,7 @@ function loadLibraries(done, fail) {
 
 function ajaxLoadLibraries(done, fail) {
   var loadedAt = Date.now();
-  ajax('GET', '/ext/libraries', function (o) {
+  ajax('GET', '/ext/libraries?includeOrgLibraries=true', function (o) {
     storeLibraries(o.libraries, loadedAt);
     done(o.libraries);
   }, fail);
@@ -2627,7 +2635,7 @@ function sameOrLikelyRedirected(url1, url2) {
 
 // ===== Session management
 
-var me, mySysLibIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
+var me, mySysLibIds, organizations, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   var origInstId = stored('installation_id');
@@ -2645,6 +2653,7 @@ function authenticate(callback, retryMs) {
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user);
     mySysLibIds = data.libraryIds;
+    organizations = data.orgs;
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(

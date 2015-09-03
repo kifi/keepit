@@ -46,7 +46,7 @@ k.keepBox = k.keepBox || (function () {
         }
         setExtraInfo(lib);
       });
-      show($parent, trigger, guided, data.libraries, data.posting);
+      show($parent, trigger, guided, data.libraries, data.organizations, data.me, data.posting);
     },
     hide: function (trigger) {
       if ($box) {
@@ -69,10 +69,41 @@ k.keepBox = k.keepBox || (function () {
     }
   };
 
-  function show($parent, trigger, guided, libraries, posting) {
+  function decorateLocationRecentLibraryCount(libraries, me, organizations) {
+    // Add a 'recentLibCount' property to each Location with the
+    // number of recently kept libraries belonging to that space.
+    me.recentLibCount = 0;
+    organizations.forEach(function (o) {
+      o.recentLibCount = 0;
+    });
+    libraries
+    .filter(propertyIs('recent', true))
+    .forEach(function (library) {
+      var location;
+      if (library.orgAvatar) {
+        location = organizations.filter(propertyIs('avatarPath', library.orgAvatar))[0]; // TODO(carlos): it's probably a bad idea to key on the avatar
+      } else {
+        location = me;
+      }
+
+      if (location) {
+        location.recentLibCount = location.recentLibCount +  1;
+      }
+    });
+
+    // Sort descending to put the most recently kept org on top
+    organizations.sort(function byRecentLibCountDescending(a, b) {
+      return b.recentLibCount - a.recentLibCount;
+    });
+  }
+
+  function show($parent, trigger, guided, libraries, organizations, me, posting) {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
     var params = partitionLibs(libraries);
     params.socialPosting = posting;
+
+    decorateLocationRecentLibraryCount(libraries, me, organizations);
+
     $box = $(k.render('html/keeper/keep_box', params, {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib',
@@ -96,7 +127,10 @@ k.keepBox = k.keepBox || (function () {
       }
     })
     .appendTo($parent)
-    .data('libraries', libraries);
+    .data('libraries', libraries)
+    .data('organizations', organizations)
+    .data('me', me);
+
     addLibrariesBindings($box.find('.kifi-keep-box-view-libs'));
 
     $(document).data('esc').add(hide);
@@ -202,16 +236,23 @@ k.keepBox = k.keepBox || (function () {
       data.libraries = data.libraries.filter(idIsNot(lib.id));
       delete data.libraryCreated;
       api.port.emit('delete_library', lib.id);
-      $view = $(k.render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
+      $view = $(k.render('html/keeper/keep_box_new_lib', {
+        name: name,
+        organizations: $box.data('organizations'),
+        me: $box.data('me'),
+        visibility: 'published'
+      }));
       addCreateLibraryBindings($view);
+      swipeTo($view, true);
+      selectDefaultLocationAndPrivacy($view);
     } else {
       $view = $(k.render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
         keep_box_lib: 'keep_box_lib',
         keep_box_libs_list: 'keep_box_libs_list'
       }));
       addLibrariesBindings($view);
+      swipeTo($view, true);
     }
-    swipeTo($view, true);
 
     api.port.emit('track_pane_click', {
       type: $oldView.hasClass('kifi-keep-box-view-keep') ? 'keepDetails' : 'createLibrary',
@@ -286,7 +327,7 @@ k.keepBox = k.keepBox || (function () {
           if (numItems) {
             var $item = $items.filter('.kifi-highlighted');
             var index = $item.length ? ($items.index($item) + (up ? numItems - 1 : 1)) % numItems : (up ? numItems - 1 : 0);
-            highlightLibrary($items[index]);
+            highlightItem($items[index], '.kifi-keep-box-view-libs');
           }
           return false;
         case 13: // enter
@@ -300,13 +341,13 @@ k.keepBox = k.keepBox || (function () {
     })
     .on('mouseover', '.kifi-keep-box-lib', function () {
       if ($view.data('mouseMoved')) {  // FF immediately triggers mouseover on element inserted under mouse cursor
-        highlightLibrary(this);
+        highlightItem(this, '.kifi-keep-box-view-libs');
       }
     })
     .on('mousemove', '.kifi-keep-box-lib', $.proxy(function (data) {
       if (!data.mouseMoved) {
         data.mouseMoved = true;
-        highlightLibrary(this);
+        highlightItem(this, '.kifi-keep-box-view-libs');
       }
     }, null, $view.data()))
     .on('mousedown', '.kifi-keep-box-lib', function (e) {
@@ -397,8 +438,25 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
+  function selectDefaultLocationAndPrivacy($view) {
+    var me = $box.data('me');
+    var organizations = $box.data('organizations');
+    var showOrgAsDefault = (organizations.length > 0 && organizations[0].recentLibCount >= me.recentLibCount);
+
+    if (showOrgAsDefault) {
+       // select the first (most recently kept-to) org
+      $view.find('li:nth-child(2) [name="kifi-location"]').click();
+      $view.find('[name="kifi-visibility"][value="organization"]').click();
+    } else {
+      // select the personal location
+      $view.find('li:first-child [name="kifi-location"]').click();
+      $view.find('[name="kifi-visibility"][value="published"]').click();
+    }
+
+  }
+
   function addCreateLibraryBindings($view) {
-    var $name = $view
+    $view
     .on('keydown', function (e) {
       if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) { // enter, numpad enter
         createLibrary($view, $submit, 'enter', e.originalEvent.guided);
@@ -407,17 +465,23 @@ k.keepBox = k.keepBox || (function () {
         navBack('key', e.originalEvent.guided);
         e.preventDefault();
       }
-    });
-    $view
+    })
     .on('blur', '.kifi-keep-box-new-lib-name', function (e) {
       this.value = this.value.trim();
     })
-    .on('mousedown', '.kifi-keep-box-new-lib-secret', toggleVisibility)
-    .on('keydown', '.kifi-keep-box-new-lib-secret', function (e) {
+    .on('change', '[name="kifi-location"]', setLocation)
+    .on('keydown', '[name="kifi-location"]', function (e) {
       if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
-        toggleVisibility.call(this, e);
+        setLocation.call(this, e);
+      }
+    })
+    .on('change', '[name="kifi-visibility"]', setVisibility)
+    .on('keydown', '[name="kifi-visibility"]', function (e) {
+      if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
+        setVisibility.call(this, e);
       }
     });
+
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
     .on('click', function (e) {
       if (e.which === 1 && this.href) {
@@ -426,20 +490,54 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
-  function toggleVisibility(e) {
+  function setLocation(e) {
     e.preventDefault();
-    $(this).on('transitionend', function end() {
-      $(this).off('transitionend', end).removeClass('kifi-transition');
-    }).addClass('kifi-transition');
-    var secret = this.parentNode.classList.toggle('kifi-secret');
-    $box.find('.kifi-keep-box-nw').toggleClass('kifi-hidden', secret);
-    if (!secret) {
+    var newLocation = e.target.value;
+    var organizations = $box.data('organizations');
+    var matches = organizations.filter(idIs(newLocation));
+    var isOrganization = (matches.length !== 0);
+
+    var el = $(this).closest('.kifi-keep-box-new-lib-location-item')[0];
+    selectItem(el, '.kifi-keep-box-new-lib-locations');
+
+    if (isOrganization) {
+      $box.find('.kifi-organization-name').html(matches[0].name);
+    } else {
+      $box.find('[name="kifi-visibility"][value="published"]').focus().click();
+    }
+    $box.find('[name="kifi-visibility"][value="organization"]').prop('disabled', !isOrganization);
+
+    api.port.emit('track_pane_click', {
+      type: 'createLibrary',
+      action: 'changedLocation',
+      subaction: newLocation,
+      guided: e.originalEvent.guided
+    });
+  }
+
+  function setVisibility(e) {
+    e.preventDefault();
+    var newVisibility = e.target.value;
+
+    // Show the selected description and hide the rest
+    $box.find('.kifi-keep-box-new-lib-visibility-description').css('display', function () {
+      var $this = $(this);
+      if (!$this.hasClass('kifi-' + newVisibility)) {
+        return 'none';
+      } else {
+        return 'block';
+      }
+    });
+
+    $box.find('.kifi-keep-box-nw').toggleClass('kifi-hidden', newVisibility === 'published');
+    if (newVisibility === 'published') {
       $box.find('.kifi-keep-box-nw-checkbox').prop('checked', false);
     }
+
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
       action: 'changedVisibility',
-      subaction: secret ? 'private' : 'public',
+      subaction: newVisibility,
       guided: e.originalEvent.guided
     });
   }
@@ -466,9 +564,14 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
-  function highlightLibrary(el) {
-    $(el).closest('.kifi-keep-box-view-libs').find('.kifi-highlighted').removeClass('kifi-highlighted');
+  function highlightItem(el, container) {
+    $(el).closest(container).find('.kifi-highlighted').removeClass('kifi-highlighted');
     el.classList.add('kifi-highlighted');
+  }
+
+  function selectItem(el, container) {
+    $(el).closest(container).find('.kifi-selected').removeClass('kifi-selected');
+    el.classList.add('kifi-selected');
   }
 
   function chooseLibrary(el, trigger, guided) {
@@ -494,9 +597,14 @@ k.keepBox = k.keepBox || (function () {
       }
     } else {
       var name = $(el).find('.kifi-keep-box-lib-1').text();
-      var $view = $(k.render('html/keeper/keep_box_new_lib', {name: name}));
+      var $view = $(k.render('html/keeper/keep_box_new_lib', {
+        name: name,
+        organizations: $box.data('organizations'),
+        me: $box.data('me')
+      }));
       addCreateLibraryBindings($view);
       swipeTo($view);
+      selectDefaultLocationAndPrivacy($view);
       api.port.emit('track_pane_click', {type: 'libraryChooser', action: 'choseCreateLibrary', guided: guided});
       api.port.emit('track_pane_view', {type: 'createLibrary', subsource: trigger === 'enter' ? 'key' : undefined, guided: guided});
     }
@@ -1022,9 +1130,18 @@ k.keepBox = k.keepBox || (function () {
       $name.prop('disabled', true);
       $btn.removeAttr('href');
       var deferred = Q.defer();
+
+      var space = {};
+      var selectedLocationId = $view.find('[type="radio"][name="kifi-location"]:checked').val();
+      var organizations = $box.data('organizations');
+      var matches = organizations.filter(idIs(selectedLocationId));
+      var isOrganization = (matches.length !== 0);
+      space[isOrganization ? 'org' : 'user'] = selectedLocationId;
+
       api.port.emit('create_library', {
         name: name,
-        visibility: $vis.hasClass('kifi-secret') ? 'secret' : 'published'
+        visibility: $view.find('[type="radio"][name="kifi-visibility"]:checked').val(),
+        space: space
       }, function (library) {
         if (library) {
           $box.data('libraryCreated', library);
@@ -1091,6 +1208,10 @@ k.keepBox = k.keepBox || (function () {
 
   function libraryIdIs(id) {
     return function (o) {return o.libraryId === id};
+  }
+
+  function propertyIs(prop, value) {
+    return function (o) {return o[prop] === value};
   }
 
   function removeThis() {
