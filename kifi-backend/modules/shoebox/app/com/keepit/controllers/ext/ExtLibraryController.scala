@@ -31,6 +31,7 @@ class ExtLibraryController @Inject() (
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
+  libraryMembershipCommander: LibraryMembershipCommander,
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
   basicUserRepo: BasicUserRepo,
@@ -54,8 +55,8 @@ class ExtLibraryController @Inject() (
 
   val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
 
-  def getLibraries = UserAction { request =>
-    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId)
+  def getLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
@@ -75,9 +76,10 @@ class ExtLibraryController @Inject() (
           visibility = lib.visibility,
           path = libPathCommander.getPathForLibrary(lib),
           hasCollaborators = collabs.nonEmpty,
-          subscribedToUpdates = membership.subscribedToUpdates,
+          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
-          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath))
+          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
+          membership = membership.map(LibraryMembershipInfo.fromMembership)
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -114,17 +116,23 @@ class ExtLibraryController @Inject() (
         libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
-            val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
-            Ok(Json.toJson(LibraryData(
-              id = Library.publicId(lib.id.get),
-              name = lib.name,
-              color = lib.color,
-              visibility = lib.visibility,
-              path = libPathCommander.getPathForLibrary(lib),
-              hasCollaborators = false,
-              subscribedToUpdates = false,
-              collaborators = Seq.empty,
-              orgAvatar = orgAvatar)))
+            val data = db.readOnlyMaster { implicit session =>
+              val orgAvatar = lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath))
+              val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
+              LibraryData(
+                id = Library.publicId(lib.id.get),
+                name = lib.name,
+                color = lib.color,
+                visibility = lib.visibility,
+                path = libPathCommander.getPathForLibrary(lib),
+                hasCollaborators = false,
+                subscribedToUpdates = membership.exists(_.subscribedToUpdates),
+                collaborators = Seq.empty,
+                orgAvatar = orgAvatar,
+                membership = membership.map(LibraryMembershipInfo.fromMembership)
+              )
+            }
+            Ok(Json.toJson(data))
         }
     }
   }
@@ -164,7 +172,7 @@ class ExtLibraryController @Inject() (
   def joinLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      libraryCommander.joinLibrary(request.userId, libraryId) match {
+      libraryMembershipCommander.joinLibrary(request.userId, libraryId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(lib) => NoContent
       }
@@ -174,7 +182,7 @@ class ExtLibraryController @Inject() (
   def leaveLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      libraryCommander.leaveLibrary(libraryId, request.userId) match {
+      libraryMembershipCommander.leaveLibrary(libraryId, request.userId) match {
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(_) => NoContent
       }

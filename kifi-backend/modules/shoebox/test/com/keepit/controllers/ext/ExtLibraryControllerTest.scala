@@ -11,12 +11,11 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
-import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
@@ -47,27 +46,29 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   "ExtLibraryController" should {
     "get libraries" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
+        val (user1, user2, lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
           val user1 = UserFactory.user().withName("Morgan", "Freeman").withUsername("morgan").saved
-          val lib1 = libraryRepo.save(Library(name = "Million Dollar Baby", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("baby"), color = Some(LibraryColor.RED), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+          val lib1 = LibraryFactory.library().withName("Million Dollar Baby").withOwner(user1).withVisibility(LibraryVisibility.PUBLISHED).withSlug("baby").withColor(LibraryColor.RED).saved
 
           val user2 = UserFactory.user().withName("Michael", "Caine").withUsername("michael").saved
           // Give READ_INSERT access to Freeman
-          val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("darkknight"), color = Some(LibraryColor.BLUE), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_WRITE))
+          val lib2 = LibraryFactory.library().withName("Dark Knight").withOwner(user2).withVisibility(LibraryVisibility.PUBLISHED).withSlug("darkknight").withColor(LibraryColor.BLUE).saved
+          LibraryMembershipFactory.membership().withLibraryCollaborator(lib2, user1).saved
 
           // Give READ_ONLY access to Freeman
-          val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("magic"), color = Some(LibraryColor.GREEN), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          val lib3 = LibraryFactory.library().withName("Now You See Me").withOwner(user2).withVisibility(LibraryVisibility.SECRET).withSlug("magic").withColor(LibraryColor.GREEN).saved
+          LibraryMembershipFactory.membership().withLibraryFollower(lib3, user1).saved
 
-          (user1, user2, lib1, lib2, lib3)
+          // Caine and Freeman belong to an organization with a library open to organization members
+          val org = OrganizationFactory.organization().withName("Braff").withHandle(OrganizationHandle("braff")).withOwner(user2).withMembers(Seq(user1)).saved
+          val lib4 = LibraryFactory.library().withName("Going In Style").withOwner(user2).withOrganization(org).withVisibility(LibraryVisibility.ORGANIZATION).withOrgMemberCollaborativePermission().withSlug("robbers").withColor(LibraryColor.SKY_BLUE).saved
+
+          (user1, user2, lib1, lib2, lib3, lib4)
         }
         implicit val config = inject[PublicIdConfiguration]
         val pubId1 = Library.publicId(lib1.id.get).id
         val pubId2 = Library.publicId(lib2.id.get).id
+        val pubId4 = Library.publicId(lib4.id.get).id
 
         val basicUserRepo = inject[BasicUserRepo]
         val result = getLibraries(user1)
@@ -85,7 +86,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "path" -> "/morgan/baby",
                 "hasCollaborators" -> false,
                 "subscribedToUpdates" -> false,
-                "collaborators" -> Seq.empty[BasicUser]),
+                "collaborators" -> Seq.empty[BasicUser],
+                "membership" -> Json.obj(
+                  "access" -> LibraryAccess.OWNER,
+                  "listed" -> true,
+                  "subscribed" -> false
+                )
+              ),
               Json.obj(
                 "id" -> pubId2,
                 "name" -> "Dark Knight",
@@ -94,7 +101,25 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "path" -> "/michael/darkknight",
                 "hasCollaborators" -> true,
                 "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)))))
+                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
+                "membership" -> Json.obj(
+                  "access" -> LibraryAccess.READ_WRITE,
+                  "listed" -> true,
+                  "subscribed" -> false
+                )
+              ),
+              Json.obj(
+                "id" -> pubId4,
+                "name" -> "Going In Style",
+                "color" -> LibraryColor.SKY_BLUE,
+                "visibility" -> "organization",
+                "path" -> "/braff/robbers",
+                "hasCollaborators" -> true,
+                "subscribedToUpdates" -> false,
+                "collaborators" -> Seq(basicUserRepo.load(user2.id.get))
+              )
+            )
+          )
         }
       }
     }
@@ -633,7 +658,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibraries()(request(routes.ExtLibraryController.getLibraries()))
+    controller.getLibraries(includeOrgLibraries = true)(request(routes.ExtLibraryController.getLibraries(includeOrgLibraries = true)))
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
