@@ -23,7 +23,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
   @volatile private[this] var counter: Int = 0
   @volatile private[this] var maxExecutionCount: Int = 0
 
-  override def toString(): String = lock.synchronized { s"WatchableExecutionContext with counter = $counter and maxExecutionCount = $maxExecutionCount" }
+  override def toString: String = lock.synchronized { s"WatchableExecutionContext with counter = $counter and maxExecutionCount = $maxExecutionCount" }
 
   def execute(runnable: Runnable): Unit = lock.synchronized {
     if (closed) {

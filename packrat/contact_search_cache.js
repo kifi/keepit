@@ -13,7 +13,7 @@ ContactSearchCache.prototype = {
   },
   get: function (key) {
     var minPutAt = Date.now() - this.lifeSec;
-    if (this.putAt[key] < minPutAt) {
+    if (this.putAt[key] && this.putAt[key] < minPutAt) {
       delete this.cache[key];
       delete this.putAt[key];
     }
