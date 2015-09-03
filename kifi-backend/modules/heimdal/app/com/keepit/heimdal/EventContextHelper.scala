@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commander.HelpRankCommander
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.model.helprank.KeepDiscoveryRepo
@@ -13,6 +14,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[EventContextHelperImpl])
 trait EventContextHelper {
@@ -26,6 +28,7 @@ trait EventContextHelper {
 class EventContextHelperImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     orgTrackingValuesCache: OrgTrackingValuesCache,
+    orgMessageCountCache: OrganizationMessageCountCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
@@ -108,3 +111,12 @@ class EventContextHelperImpl @Inject() (
     }
   }
 }
+
+case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
+  override val version = 1
+  val namespace = "org_message_count"
+  def toKey(): String = id.id.toString
+}
+
+class OrganizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
