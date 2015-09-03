@@ -102,7 +102,7 @@ sealed abstract class LibraryPermission(val value: String)
 object LibraryPermission {
   case object VIEW_LIBRARY extends LibraryPermission("view_library")
   case object EDIT_LIBRARY extends LibraryPermission("edit_library")
-  case object INVITE_FOLLOWERS extends LibraryPermission("invite_members")
+  case object INVITE_FOLLOWERS extends LibraryPermission("invite_followers")
   case object INVITE_COLLABORATORS extends LibraryPermission("invite_collaborators")
   case object REMOVE_MEMBERS extends LibraryPermission("remove_members")
   case object ADD_KEEPS extends LibraryPermission("add_keeps")
