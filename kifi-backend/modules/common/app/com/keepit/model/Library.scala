@@ -60,6 +60,36 @@ case class Library(
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+
+  def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
+    case LibraryAccess.READ_ONLY => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.INVITE_FOLLOWERS
+    )
+
+    case LibraryAccess.READ_WRITE => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.INVITE_FOLLOWERS,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    ) ++ whoCanInvite.collect { case LibraryInvitePermissions.COLLABORATOR => LibraryPermission.INVITE_COLLABORATORS }
+
+    case LibraryAccess.OWNER => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.EDIT_LIBRARY,
+      LibraryPermission.INVITE_FOLLOWERS,
+      LibraryPermission.INVITE_COLLABORATORS,
+      LibraryPermission.REMOVE_MEMBERS,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.REMOVE_ANY_KEEPS
+    )
+  }
+  def getMembershipInfo(mem: LibraryMembership): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access))
+  }
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -374,7 +404,8 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership], // viewer
+  membership: Option[LibraryMembershipInfo], // viewer
+  ownerId: Id[User],
   url: Path)
 
 sealed abstract class LibraryColor(val hex: String)

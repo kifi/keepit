@@ -448,7 +448,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
                 "following":true,
-                "membership":{"access":"owner","listed":true,"subscribed":false},
+                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":["invite_collaborators","invite_followers","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
                 "modifiedAt":${lib1Updated.updatedAt.getMillis},
                 "path": "/firstuser/lib1",
                 "subscriptions": []
@@ -485,7 +485,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "collaborators":[],
                 "lastKept":${lib3.lastKept.get.getMillis},
                 "following": true,
-                "membership": {"access":"read_only","listed":true,"subscribed":false},
+                "membership": {"access":"read_only","listed":true,"subscribed":false, "permissions":["view_library", "invite_followers"]},
                 "modifiedAt":${lib3.updatedAt.getMillis},
                 "path": "/seconduser/lib3",
                 "kind":"user_created"

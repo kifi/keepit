@@ -202,7 +202,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                 "membership":{
                   "access" : "owner",
                   "listed" : true,
-                  "subscribed" : false
+                  "subscribed" : false,
+                  "permissions":["invite_collaborators","invite_followers","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
                 },
                 "invite": null
               },
@@ -260,7 +261,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  "membership":{
                    "access" : "owner",
                    "listed" : true,
-                   "subscribed" : false
+                   "subscribed" : false,
+                  "permissions":["invite_collaborators","invite_followers","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
                  },
                  "invite" : null,
                  "path": "/spongebob/krabby-patty"

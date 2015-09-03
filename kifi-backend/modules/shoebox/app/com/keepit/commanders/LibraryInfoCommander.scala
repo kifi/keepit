@@ -140,9 +140,9 @@ class LibraryInfoCommanderImpl @Inject() (
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
-        val membership = membershipsByLibraryId.get(libId).flatten
+        val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership, path)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(lib.getMembershipInfo), lib.ownerId, path)
       }.toMap
     }
   }
@@ -338,9 +338,12 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
     userIdOpt.flatMap { userId =>
-      db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      } map LibraryMembershipInfo.fromMembership
+      val (lib, membershipOpt) = db.readOnlyMaster { implicit s =>
+        val lib = libraryRepo.get(libraryId)
+        val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+        (lib, membershipOpt)
+      }
+      membershipOpt.map(lib.getMembershipInfo)
     }
   }
 
@@ -718,7 +721,7 @@ class LibraryInfoCommanderImpl @Inject() (
       collaborators = LibraryCardInfo.chooseCollaborators(collaborators),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
-      membership = membershipOpt.map(LibraryMembershipInfo.fromMembership),
+      membership = membershipOpt.map(lib.getMembershipInfo),
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,

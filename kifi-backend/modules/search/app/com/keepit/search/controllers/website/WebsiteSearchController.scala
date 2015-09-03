@@ -351,7 +351,6 @@ class WebsiteSearchController @Inject() (
                 val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
                 val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
                 val description = library.description.getOrElse("")
-                val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)
 
                 // todo(Léo): in a perfect world, this converges towards LibraryCardInfo
                 Json.obj(
@@ -370,7 +369,7 @@ class WebsiteSearchController @Inject() (
                   "numFollowers" -> details.numFollowers,
                   "numCollaborators" -> details.numCollaborators,
                   "numKeeps" -> details.keepCount,
-                  "membership" -> membershipInfo,
+                  "membership" -> details.membership,
                   "memberCount" -> (details.numFollowers + details.numCollaborators), // deprecated
                   "keepCount" -> details.keepCount // deprecated,
                 )

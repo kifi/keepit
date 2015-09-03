@@ -79,7 +79,7 @@ class ExtLibraryController @Inject() (
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
-          membership = membership.map(LibraryMembershipInfo.fromMembership)
+          membership = membership.map(lib.getMembershipInfo)
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -129,7 +129,7 @@ class ExtLibraryController @Inject() (
                 subscribedToUpdates = membership.exists(_.subscribedToUpdates),
                 collaborators = Seq.empty,
                 orgAvatar = orgAvatar,
-                membership = membership.map(LibraryMembershipInfo.fromMembership)
+                membership = membership.map(lib.getMembershipInfo)
               )
             }
             Ok(Json.toJson(data))
