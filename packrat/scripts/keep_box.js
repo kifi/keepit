@@ -441,15 +441,18 @@ k.keepBox = k.keepBox || (function () {
   function selectDefaultLocationAndPrivacy($view) {
     var me = $box.data('me');
     var organizations = $box.data('organizations');
+    var showOrgAsDefault = (organizations.length > 0 && organizations[0].recentLibCount >= me.recentLibCount);
 
-    if (organizations.length > 0 && organizations[0].recentLibCount >= me.recentLibCount) {
+    if (showOrgAsDefault) {
        // select the first (most recently kept-to) org
       $view.find('li:nth-child(2) [name="kifi-location"]').click();
+      $view.find('[name="kifi-visibility"][value="organization"]').click();
     } else {
       // select the personal location
       $view.find('li:first-child [name="kifi-location"]').click();
+      $view.find('[name="kifi-visibility"][value="published"]').click();
     }
-    $view.find('[name="kifi-visibility"][value="published"]').click();
+
   }
 
   function addCreateLibraryBindings($view) {
