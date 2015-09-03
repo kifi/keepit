@@ -2,13 +2,6 @@
 - hosts: localhost
   sudo: yes
   tasks:
-    # remove old init.d script
-    - name: remove init.d/kifi-register-host service
-      file: state=absent path=/etc/init.d/kifi-register-host
-    - name: disable kifi-register-host service
-      command: "update-rc.d kifi-register-host remove"
-      changed_when: False
-
     - name: install kifi-node-setup python dependencies
       pip: name={{ item }}
       with_items:
@@ -38,5 +31,23 @@
       add_host:
         name: localhost
         groups: ec2,tag_Service_{{ ec2_tag_Service }}
+    - name: notify slack started
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local started: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"
 
 - include: ec2-service.yml
+
+- hosts: localhost
+  sudo: yes
+  tasks:
+    - name: notify slack completed
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local completed: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"
