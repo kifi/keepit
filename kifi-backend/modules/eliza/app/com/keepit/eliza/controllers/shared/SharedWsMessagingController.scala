@@ -213,8 +213,8 @@ class SharedWsMessagingController @Inject() (
         notificationMessagingCommander.ifItemExists(notifId) {
           case (notif, item) =>
             val recipient = Recipient(socket.userId)
-            val numUnreadMessages = notificationMessagingCommander.getUnreadNotificationsCountForKind(recipient, NewMessage.name)
-            val numUnreadNotifs = notificationMessagingCommander.getUnreadNotificationsCountExceptKind(recipient, NewMessage.name)
+            val numUnreadMessages = notificationMessagingCommander.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
+            val numUnreadNotifs = notificationMessagingCommander.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
           val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
