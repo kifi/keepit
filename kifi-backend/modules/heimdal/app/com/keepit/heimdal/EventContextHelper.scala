@@ -94,7 +94,10 @@ class EventContextHelperImpl @Inject() (
         case _ => None
       }
 
-      Seq(("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)])
+      val orgRoleOpt = orgUserRelations.role.map(role => ContextStringData(role.value))
+
+      Seq(("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)]) ++
+        orgRoleOpt.map(role => Seq(("orgRole", role))).getOrElse(Seq.empty[(String, ContextStringData)])
     }
   }
 
