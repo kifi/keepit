@@ -2,7 +2,7 @@ package com.keepit.eliza.model
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.model.User
@@ -21,6 +21,8 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
 
   def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
+
+  def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit
 
 }
 
@@ -92,6 +94,14 @@ class NotificationRepoImpl @Inject() (
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
+  }
+
+  def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
+    val q = for (
+      row <- rows if row.recipient == recipient && !row.disabled &&
+      row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent && row.lastEvent < time
+    ) yield row.lastChecked
+    q.update(clock.now())
   }
 
 }

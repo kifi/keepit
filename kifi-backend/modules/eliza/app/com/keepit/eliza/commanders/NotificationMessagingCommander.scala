@@ -7,11 +7,15 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
-import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.{UserRecipient, Recipient}
+import com.keepit.notify.model.event.NewMessage
+import com.keepit.realtime.MessageThreadPushNotification
+import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 class NotificationMessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
+    notificationDeliveryCommander: NotificationDeliveryCommander,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
@@ -91,8 +95,31 @@ class NotificationMessagingCommander @Inject() (
 
   def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String): Int = {
     db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadNotificationsCountExceptKind(recipient)
+      notificationRepo.getUnreadNotificationsCountExceptKind(recipient, kind)
     }
+  }
+
+  def sendUnreadNotifications(recipient: Recipient) = {
+    val unreadMessages = getUnreadNotificationsCountForKind(recipient, NewMessage.name)
+    val unreadNotifications = getUnreadNotificationsCountExceptKind(recipient, NewMessage.name)
+    recipient match {
+      case UserRecipient(user) =>
+        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
+    }
+  }
+
+  def setNotificationsUnreadBefore(notif: Notification, recipient: Recipient, item: NotificationItem): Unit = {
+    notificationRepo.setAllReadBefore(recipient, item.eventTime)
+    val unreadMessages = getUnreadNotificationsCountForKind(recipient, NewMessage.name)
+    val unreadNotifications = getUnreadNotificationsCountExceptKind(recipient, NewMessage.name)
+    recipient match {
+      case UserRecipient(user) =>
+        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
+        val pushNotif = MessageThreadPushNotification(notif.externalId.asInstanceOf[ExternalId[MessageThread]], unreadMessages + unreadNotifications, None, None)
+        notificationDeliveryCommander.sendPushNotification(user, pushNotif)
+        webSocketRouter.sendToUser(user, Json.arr("all_notifications_visited", item.externalId, item.eventTime))
+    }
+
   }
 
 }
