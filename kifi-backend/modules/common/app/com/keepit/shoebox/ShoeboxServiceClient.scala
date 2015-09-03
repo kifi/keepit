@@ -403,7 +403,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
     val payload = Json.obj("url" -> url, "contentWanted" -> contentWanted)
-    call(Shoebox.internal.internNormalizedURI, payload).map(r => r.json.as[NormalizedURI])
+    call(Shoebox.internal.internNormalizedURI, payload).map(r =>
+      r.json.as[NormalizedURI]
+    )
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit = {

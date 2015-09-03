@@ -4,7 +4,7 @@ import java.nio.ByteOrder
 import java.util.UUID
 
 import akka.util.ByteStringBuilder
-import com.keepit.common.db.{ ExternalId, Model, Id }
+import com.keepit.common.db.{ ModelWithExternalId, ExternalId, Model, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.notify.model.event.NotificationEvent
@@ -19,7 +19,9 @@ case class NotificationItem(
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],
     kind: NKind,
-    event: NotificationEvent) extends Model[NotificationItem] {
+    event: NotificationEvent,
+    externalId: ExternalId[NotificationItem] = ExternalId(),
+    eventTime: DateTime) extends ModelWithExternalId[NotificationItem] {
 
   override def withId(id: Id[NotificationItem]): NotificationItem = copy(id = Some(id))
 
@@ -35,7 +37,9 @@ object NotificationItem {
     (__ \ "updatedAt").format[DateTime] and
     (__ \ "notificationIdId").format[Id[Notification]] and
     (__ \ "kind").format[String] and
-    (__ \ "event").format[NotificationEvent]
+    (__ \ "event").format[NotificationEvent] and
+    (__ \ "externalId").format[ExternalId[NotificationItem]] and
+    (__ \ "eventTime").format[DateTime]
   )(NotificationItem.applyFromDbRow, unlift(NotificationItem.unapplyToDbRow))
 
   def applyFromDbRow(
@@ -44,53 +48,29 @@ object NotificationItem {
     updatedAt: DateTime = currentDateTime,
     notificationId: Id[Notification],
     kind: String,
-    event: NotificationEvent): NotificationItem =
+    event: NotificationEvent,
+    externalId: ExternalId[NotificationItem],
+    eventTime: DateTime): NotificationItem =
     NotificationItem(
       id,
       createdAt,
       updatedAt,
       notificationId,
       NotificationKind.getByName(kind).get,
-      event
+      event,
+      externalId,
+      eventTime
     )
 
-  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent)] =
+  def unapplyToDbRow(item: NotificationItem): Option[(Option[Id[NotificationItem]], DateTime, DateTime, Id[Notification], String, NotificationEvent, ExternalId[NotificationItem], DateTime)] =
     Some(
       item.id,
       item.createdAt,
       item.updatedAt,
       item.notificationId,
       item.kind.name,
-      item.event
+      item.event,
+      item.externalId,
+      item.eventTime
     )
-
-  /**
-   * Conceptually an action consists of an unordered set of items.
-   * However, to keep generating the same external id for a set of items, order matters.
-   * This method imposes an ordering based on the id of the items, a fact that is supposed to never change.
-   */
-  private def ensureSame(items: Set[NotificationItem]): Seq[NotificationItem] = {
-    items.toSeq.sortBy(_.id.get.id)
-  }
-
-  /**
-   * Kifi clients detect new notifications based on the external id of what they are receiving.
-   * This method is essentially a one-way function from a set of items to an external ID, to ensure that the
-   * detection goes smoothly.
-   */
-  def externalIdFromItems(items: Set[NotificationItem]): NotificationId = {
-    val sorted = ensureSame(items)
-    val longList = sorted.map(_.id.get.id)
-
-    implicit val byteOrder = ByteOrder.BIG_ENDIAN
-    val builder = new ByteStringBuilder()
-    for (longValue <- longList) {
-      builder.putLong(longValue)
-    }
-
-    val byteArray = builder.result().toArray
-    val uuid = UUID.nameUUIDFromBytes(byteArray)
-    ExternalId(uuid.toString)
-  }
-
 }
