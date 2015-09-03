@@ -34,7 +34,7 @@
   var uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 
   var locations = {
-    yourKeeps: /^\/$/,  // TODO: this is now recommendations!
+    homeFeed: /^\/$/,  // TODO: this is now recommendations!
     yourFriends: /^\/connections$/,
     searchResults: /^\/find\b/,
     addFriends: /^\/invite$/
