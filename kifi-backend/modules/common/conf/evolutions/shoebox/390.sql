@@ -6,7 +6,7 @@ ALTER TABLE notification ADD COLUMN external_id varchar(36) DEFAULT NULL;
 
 ALTER TABLE notification_item ADD COLUMN external_id varchar(36) DEFAULT NULL;
 
-ALTER TABLE notification MODIFY COLUMN last_checked datetime NULL DEFAULT NULL;
+ALTER TABLE notification MODIFY COLUMN last_checked datetime DEFAULT NULL;
 
 ALTER TABLE notification_item ADD COLUMN event_time datetime NOT NULL;
 
