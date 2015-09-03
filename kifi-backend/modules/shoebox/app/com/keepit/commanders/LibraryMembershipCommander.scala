@@ -395,5 +395,4 @@ class LibraryMembershipCommanderImpl @Inject() (
         suggestedUsers ++ suggestedEmailAddresses
     }
   }
-
 }

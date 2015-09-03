@@ -319,16 +319,13 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
-        }
 
         println("Joining with subscribed = " + subscribedOpt)
         libraryMembershipCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right((_, mem)) =>
-            Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
+          case Right((lib, mem)) =>
+            Ok(Json.obj("membership" -> lib.getMembershipInfo(mem)))
         }
     }
   }
