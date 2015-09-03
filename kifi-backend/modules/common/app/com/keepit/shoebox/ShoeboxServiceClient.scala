@@ -838,8 +838,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = {
     cacheProvider.basicOrganizationIdCache.bulkGetOrElseFuture(ids.map(BasicOrganizationIdKey.apply _)) { missing =>
-      val playload = Json.toJson(missing.map(_.id))
-      call(Shoebox.internal.getBasicOrganizationsByIds()).map {
+      val payload = Json.toJson(missing.map(_.id))
+      call(Shoebox.internal.getBasicOrganizationsByIds(), payload).map {
         _.json.as[Map[Id[Organization], BasicOrganization]].map {
           case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
         }
