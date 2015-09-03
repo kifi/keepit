@@ -2373,7 +2373,7 @@ function loadLibraries(done, fail) {
 
 function ajaxLoadLibraries(done, fail) {
   var loadedAt = Date.now();
-  ajax('GET', '/ext/libraries', function (o) {
+  ajax('GET', '/ext/libraries?includeOrgLibraries=true', function (o) {
     storeLibraries(o.libraries, loadedAt);
     done(o.libraries);
   }, fail);
