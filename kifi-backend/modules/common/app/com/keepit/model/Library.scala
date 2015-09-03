@@ -375,7 +375,6 @@ case class BasicLibraryDetails(
   numCollaborators: Int,
   keepCount: Int,
   membership: Option[LibraryMembership], // viewer
-  ownerId: Id[User],
   url: Path)
 
 sealed abstract class LibraryColor(val hex: String)
