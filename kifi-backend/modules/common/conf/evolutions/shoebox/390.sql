@@ -10,7 +10,7 @@ ALTER TABLE notification MODIFY COLUMN last_checked datetime DEFAULT NULL;
 
 ALTER TABLE notification_item ADD COLUMN event_time datetime NOT NULL;
 
-ALTER TABLE user_thread ADD COLUMN notification_id INT DEFAULT NULL;
+ALTER TABLE user_thread ADD COLUMN notification_id bigint(20) DEFAULT NULL;
 ALTER TABLE user_thread ADD CONSTRAINT user_thread_notification_id FOREIGN KEY (notification_id) REFERENCES notification(id);
 
 insert into evolutions (name, description) values(
