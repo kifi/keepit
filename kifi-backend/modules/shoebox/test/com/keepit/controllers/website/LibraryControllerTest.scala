@@ -22,6 +22,7 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.OrganizationPermission.FORCE_EDIT_LIBRARIES
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
@@ -295,50 +296,79 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "move a library from space to space" in {
-      withDb(modules: _*) { implicit injector =>
-        val libraryController = inject[LibraryController]
+    "handle move requests" in {
+      "move a library from space to space" in {
+        withDb(modules: _*) { implicit injector =>
+          val libraryController = inject[LibraryController]
 
-        val (user, lib, org) = db.readWrite { implicit s =>
-          val user = UserFactory.user().saved
-          val lib = LibraryFactory.library().withSlug("libfoo").withOwner(user).saved
-          val org = OrganizationFactory.organization().withOwner(user).saved
-          (user, lib, org)
+          val (user, lib, org) = db.readWrite { implicit s =>
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().withSlug("libfoo").withOwner(user).saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            (user, lib, org)
+          }
+
+          val libPubId = Library.publicId(lib.id.get)
+          val orgPubId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(user)
+
+          // At first, lib is in the user space
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+            libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+          }
+
+          val testPath = route.modifyLibrary(libPubId).url
+          val inputJson1 = Json.obj("space" -> Json.obj("org" -> orgPubId))
+          val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
+          val result1 = controller.modifyLibrary(libPubId)(request1)
+          status(result1) === OK
+
+          // Now it's in the org space
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+            libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+          }
+
+          val inputJson2 = Json.obj("space" -> Json.obj("user" -> user.externalId))
+          val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
+          val result2 = controller.modifyLibrary(libPubId)(request2)
+          status(result2) === OK
+
+          // Back in user space
+          db.readOnlyMaster { implicit session =>
+            libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
+            libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
+          }
+        }
+      }
+      "let org admins move libraries they don't own, if they have permission" in {
+        withDb(modules: _*) { implicit injector =>
+          val (orgOwner, libOwner, lib, org) = db.readWrite { implicit session =>
+            val orgOwner = UserFactory.user().saved
+            val libOwner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner)).saved
+            val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).withOrganization(org).saved
+
+            val ownerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, orgOwner.id.get).get
+            orgMembershipRepo.save(ownerMembership.withPermissions(ownerMembership.permissions + FORCE_EDIT_LIBRARIES))
+
+            (orgOwner, libOwner, lib, org)
+          }
+
+          val libPubId = Library.publicId(lib.id.get)
+
+          inject[FakeUserActionsHelper].setUser(orgOwner)
+          val testPath = route.modifyLibrary(libPubId).url
+
+          val inputJson = Json.obj("space" -> Json.obj("user" -> libOwner.externalId))
+          val request = FakeRequest("POST", testPath).withBody(inputJson)
+          val result = controller.modifyLibrary(libPubId)(request)
+
+          status(result) === OK
         }
 
-        val libPubId = Library.publicId(lib.id.get)
-        val orgPubId = Organization.publicId(org.id.get)
-
-        inject[FakeUserActionsHelper].setUser(user)
-
-        // At first, lib is in the user space
-        db.readOnlyMaster { implicit session =>
-          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
-          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
-        }
-
-        val testPath = route.modifyLibrary(libPubId).url
-        val inputJson1 = Json.obj("space" -> Json.obj("org" -> orgPubId))
-        val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
-        val result1 = controller.modifyLibrary(libPubId)(request1)
-        status(result1) === OK
-
-        // Now it's in the org space
-        db.readOnlyMaster { implicit session =>
-          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === false
-          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === true
-        }
-
-        val inputJson2 = Json.obj("space" -> Json.obj("user" -> user.externalId))
-        val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
-        val result2 = controller.modifyLibrary(libPubId)(request2)
-        status(result2) === OK
-
-        // Back in user space
-        db.readOnlyMaster { implicit session =>
-          libraryRepo.getBySpaceAndSlug(space = user.id.get, slug = LibrarySlug("libfoo")).isDefined === true
-          libraryRepo.getBySpaceAndSlug(space = org.id.get, slug = LibrarySlug("libfoo")).isDefined === false
-        }
       }
     }
 

@@ -423,10 +423,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           users.filter(id => !members.exists(_.userId == id) && !fakes.contains(id))
         }
 
-        val uniqueEmailsWithName = {
-          val distinctContacts = contacts.groupBy(_.email.address.toLowerCase).map { case (address, contacts) => (address, contacts.find(_.name.isDefined).getOrElse(contacts.head)) }
-          contacts.map(contact => distinctContacts(contact.email.address))
-        }
+        val uniqueEmailsWithName = contacts.groupBy(_.email.address.toLowerCase).map {
+          case (address, groupedContacts) => (address, groupedContacts.find(_.name.isDefined).getOrElse(groupedContacts.head))
+        }.values.toSeq
 
         val basicUserById = db.readOnlyReplica { implicit session => basicUserRepo.loadAllActive(nonMembers.toSet) }
 

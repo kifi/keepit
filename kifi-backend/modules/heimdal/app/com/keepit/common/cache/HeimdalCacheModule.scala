@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.heimdal.SearchHitReportCache
+import com.keepit.heimdal.{ OrganizationMessageCountCache, SearchHitReportCache }
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
@@ -198,6 +198,10 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationMembersCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def organizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationMessageCountCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 1 hour))
 
   @Provides @Singleton
   def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =

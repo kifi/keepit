@@ -413,11 +413,9 @@ class AdminOrganizationController @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val pdiff = PermissionsDiff(added = PermissionsMap(roleOpt -> Set(permission)))
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
-    } match {
-      case Left(fail) => fail.asErrorResponse
-      case Right(response) => Ok(JsString(s"added $permission to $roleOpt"))
+      orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
+    Ok(JsString(s"added $permission to $roleOpt"))
   }
   def removeRolePermission(orgId: Id[Organization], roleStr: String, permissionStr: String) = AdminUserAction { request =>
     implicit val context = HeimdalContext.empty
@@ -426,11 +424,9 @@ class AdminOrganizationController @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val pdiff = PermissionsDiff(removed = PermissionsMap(roleOpt -> Set(permission)))
-      orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff))))
-    } match {
-      case Left(fail) => fail.asErrorResponse
-      case Right(response) => Ok(JsString(s"removed $permission from $roleOpt"))
+      orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
+    Ok(JsString(s"removed $permission from $roleOpt"))
   }
 
   def addDomainOwnership(orgId: Id[Organization]) = AdminUserAction(parse.tolerantFormUrlEncoded) { implicit request =>
