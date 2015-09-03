@@ -23,6 +23,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
+  def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
@@ -226,6 +227,12 @@ class LibraryRepoImpl @Inject() (
       lib <- rows if lib.state =!= excludeState.orNull
       lm <- libMemRows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= readOnly && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lib, lm)
+    q.list
+  }
+
+  def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library] = {
+    val collaborativePermissions = LibraryAccess.collaborativePermissions
+    val q = for { r <- rows if r.orgId === organizationId && r.state =!= excludeState.orNull && r.orgMemberAccess.inSet(collaborativePermissions) } yield r
     q.list
   }
 

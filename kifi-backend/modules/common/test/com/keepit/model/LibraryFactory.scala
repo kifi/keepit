@@ -45,6 +45,7 @@ object LibraryFactory {
     def withLastKept() = this.copy(library = library.copy(lastKept = Some(currentDateTime)))
     def withOrganizationIdOpt(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
     def withOrganization(org: Organization) = this.copy(library = library.copy(organizationId = Some(org.id.get), visibility = LibraryVisibility.ORGANIZATION))
+    def withOrgMemberCollaborativePermission() = this.copy(library = library.copy(organizationMemberAccess = Some(LibraryAccess.READ_WRITE)))
 
     def withFollowers(users: Seq[User]) = this.copy(followers = users)
     def withCollaborators(users: Seq[User]) = this.copy(collaborators = users)

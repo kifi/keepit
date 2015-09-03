@@ -111,9 +111,10 @@ case class LibraryData(
   visibility: LibraryVisibility,
   path: String,
   hasCollaborators: Boolean,
-  subscribedToUpdates: Boolean,
+  subscribedToUpdates: Boolean, // deprecated, use membership.subscribed instead
   collaborators: Seq[BasicUser],
-  orgAvatar: Option[ImagePath])
+  orgAvatar: Option[ImagePath],
+  membership: Option[LibraryMembershipInfo])
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and
@@ -124,6 +125,7 @@ object LibraryData {
     (__ \ 'hasCollaborators).write[Boolean] and
     (__ \ 'subscribedToUpdates).write[Boolean] and
     (__ \ 'collaborators).write[Seq[BasicUser]] and
-    (__ \ 'orgAvatar).writeNullable[ImagePath]
+    (__ \ 'orgAvatar).writeNullable[ImagePath] and
+    (__ \ 'membership).writeNullable[LibraryMembershipInfo]
   )(unlift(LibraryData.unapply))
 }

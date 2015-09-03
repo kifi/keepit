@@ -55,8 +55,8 @@ class ExtLibraryController @Inject() (
 
   val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
 
-  def getLibraries = UserAction { request =>
-    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId)
+  def getLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
@@ -76,9 +76,10 @@ class ExtLibraryController @Inject() (
           visibility = lib.visibility,
           path = libPathCommander.getPathForLibrary(lib),
           hasCollaborators = collabs.nonEmpty,
-          subscribedToUpdates = membership.subscribedToUpdates,
+          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
-          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath))
+          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
+          membership = membership.map(LibraryMembershipInfo.fromMembership)
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -115,17 +116,23 @@ class ExtLibraryController @Inject() (
         libraryCommander.createLibrary(libCreateRequest, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
-            val orgAvatar = db.readOnlyReplica { implicit session => lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath)) }
-            Ok(Json.toJson(LibraryData(
-              id = Library.publicId(lib.id.get),
-              name = lib.name,
-              color = lib.color,
-              visibility = lib.visibility,
-              path = libPathCommander.getPathForLibrary(lib),
-              hasCollaborators = false,
-              subscribedToUpdates = false,
-              collaborators = Seq.empty,
-              orgAvatar = orgAvatar)))
+            val data = db.readOnlyMaster { implicit session =>
+              val orgAvatar = lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath))
+              val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
+              LibraryData(
+                id = Library.publicId(lib.id.get),
+                name = lib.name,
+                color = lib.color,
+                visibility = lib.visibility,
+                path = libPathCommander.getPathForLibrary(lib),
+                hasCollaborators = false,
+                subscribedToUpdates = membership.exists(_.subscribedToUpdates),
+                collaborators = Seq.empty,
+                orgAvatar = orgAvatar,
+                membership = membership.map(LibraryMembershipInfo.fromMembership)
+              )
+            }
+            Ok(Json.toJson(data))
         }
     }
   }
