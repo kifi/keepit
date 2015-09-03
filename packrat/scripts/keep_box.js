@@ -78,14 +78,17 @@ k.keepBox = k.keepBox || (function () {
     });
     libraries
     .filter(propertyIs('recent', true))
-    .forEach(function (l) {
-      var org;
-      if (l.orgAvatar) {
-        org = organizations.filter(propertyIs('avatarPath', l.orgAvatar))[0]; // TODO(carlos): it's probably a bad idea to key on the avatar
+    .forEach(function (library) {
+      var location;
+      if (library.orgAvatar) {
+        location = organizations.filter(propertyIs('avatarPath', library.orgAvatar))[0]; // TODO(carlos): it's probably a bad idea to key on the avatar
       } else {
-        org = me;
+        location = me;
       }
-      org.recentLibCount = org.recentLibCount +  1;
+
+      if (location) {
+        location.recentLibCount = location.recentLibCount +  1;
+      }
     });
 
     // Sort descending to put the most recently kept org on top
