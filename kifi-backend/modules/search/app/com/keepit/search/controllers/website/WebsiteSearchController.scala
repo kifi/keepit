@@ -325,8 +325,14 @@ class WebsiteSearchController @Inject() (
           shoeboxClient.getBasicUsers(userIds.toSeq)
         }
 
+        val futureOrganizations = {
+          val orgIds = libraryRecordsAndVisibilityById.values.flatMap(_._1.orgId).toSet
+          shoeboxClient.getBasicOrganizationsByIds(orgIds)
+        }
+
         for {
           usersById <- futureUsers
+          organizationsById <- futureOrganizations
           libraryDetailsById <- futureLibraryDetails
           libraryMembersById <- futureMembersShownByLibraryId
         } yield {
@@ -338,11 +344,12 @@ class WebsiteSearchController @Inject() (
             libraryRecordsAndVisibilityById.get(hit.id).map {
               case (library, visibility, kind) =>
                 val owner = usersById(library.ownerId)
+                val organization = library.orgId.map(organizationsById(_))
+                val details = libraryDetailsById(library.id)
+                val path = LibraryPathHelper.formatLibraryPath(owner, organization.map(_.handle), details.slug)
                 val (collaboratorIds, followerIds) = libraryMembersById(hit.id)
                 val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
                 val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
-                val path = LibraryPathHelper.formatLibraryPath(owner, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
-                val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
                 val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)
 
@@ -357,6 +364,7 @@ class WebsiteSearchController @Inject() (
                   "visibility" -> visibility,
                   "kind" -> kind,
                   "owner" -> owner,
+                  "org" -> organization,
                   "collaborators" -> collaborators,
                   "followers" -> followers,
                   "numFollowers" -> details.numFollowers,
