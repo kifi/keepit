@@ -613,6 +613,8 @@
 }
 
 .kifi-keep-box-new-lib-visibility-label {
+  transition: color .3s ease-out;
+
   :checked ~ & {
     font-weight: bold;
   }
@@ -676,6 +678,7 @@
   }
 }
 .kifi-keep-box-lock-icon {
+  @vis-color: #d81615;
   @lock-url: %(@svgLibCardLockDataUrl, #000);
   @lock-selected-url: %(@svgLibCardLockDataUrl, #d81615);
   width: 15px;
@@ -683,24 +686,38 @@
 
   :checked ~ & {
     background: url(@lock-selected-url) center no-repeat;
+
+    & + span {
+      color: darken(@vis-color, 10%);
+    }
   }
 }
 .kifi-keep-box-org-icon {
+  @vis-color: #daa520;
   @org-url: %(@svgLibCardOrgPrivateDataUrl, #000);
   @org-selected-url: %(@svgLibCardOrgPrivateDataUrl, #daa520);
   background: url(@org-url) center no-repeat;
 
   :checked ~ & {
     background: url(@org-selected-url) center no-repeat;
+
+    & + span {
+      color: darken(@vis-color, 10%);
+    }
   }
 }
 .kifi-keep-box-globe-icon {
+  @vis-color: #56b263;
   @globe-url: %(@svgLibCardGlobeDataUrl, #000);
   @globe-selected-url: %(@svgLibCardGlobeDataUrl, #56b263);
   background: url(@globe-url) center no-repeat;
 
   :checked ~ & {
     background: url(@globe-selected-url) center no-repeat;
+
+    & + span {
+      color: darken(@vis-color, 10%);
+    }
   }
 }
 
