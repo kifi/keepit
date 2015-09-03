@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$rootScope', '$scope', '$q', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService', 'profileService',
-  function($rootScope, $scope, $q, $analytics, feedService, Paginator, routeService, modalService, profileService) {
+  '$rootScope', '$scope', '$q', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService',
+  function($rootScope, $scope, $q, $analytics, feedService, Paginator, routeService, modalService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[$scope.feed.length - 1];
 

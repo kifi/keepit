@@ -58,7 +58,7 @@
         <div class="kf-keep-actions" ng-if="$root.userLoggedIn">
           <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
             kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)"
-            kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20">
+            kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20" ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedKeep">
             <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
             <span>{{howKept ? 'Kept' : 'Keep'}}</span>
           </button>

@@ -41,7 +41,7 @@
           ng-href="{{ feedItem.user | slug }}"
           kf-user-tooltip="::feedItem.user"
           ng-bind="feedItem.user | name"
-          ng-click="clickCallback($event)"
+          ng-click="keepClick(null, $event)"
           click-action="clickedProfile"
         ></a>
         <span>kept this</span>
