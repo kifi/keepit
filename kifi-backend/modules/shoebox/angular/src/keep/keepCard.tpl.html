@@ -69,7 +69,7 @@
         </div>
         <div class="kf-keep-who" ng-if="keep.keepersTotal > 1 || keep.keepers.length">
           <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper" library="::keeper.library" desc="Your Kifi connection">
-            <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" ng-href="{{::keeper.library.path || '/' + keeper.username}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
+            <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" ng-href="{{::keeper.library.path || '/' + keeper.username}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy" ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
           </span>
           <span class="kf-keep-who-num" ng-if="keep.keepersTotal - 1 > (keep.keepers.length || 0)">
             {{keep.keepersTotal - (keep.keepers.length || 0) | num}}

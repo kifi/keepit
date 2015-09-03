@@ -41,6 +41,8 @@
           ng-href="{{ feedItem.user | slug }}"
           kf-user-tooltip="::feedItem.user"
           ng-bind="feedItem.user | name"
+          ng-click="clickCallback($event)"
+          click-action="clickedProfile"
         ></a>
         <span>kept this</span>
         <span ng-if="::feedItem.library">into</span>
@@ -81,6 +83,8 @@
           kf-user-tooltip="::feedItem.user"
           library="::feedItem.library"
           ng-bind="feedItem.library.name"
+          ng-click="keepClick(null, $event)"
+          click-action="clickedLibrary"
         ></a>
         <span ng-if="feedItem.organization">in</span>
         <a
@@ -89,11 +93,13 @@
           ng-href="{{feedItem.organization.handle}}"
           kf-user-tooltip="::feedItem.organization"
           ng-bind="feedItem.organization.name"
+          ng-click="keepClick(null, $event)"
+          click-action="clickedOrganization"
         ></a> &mdash; <span am-time-ago="feedItem.createdAt"></span>
       </h4>
     </header>
     <div class="kf-keep">
-      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep)"></div>
+      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep, event)"></div>
     </div>
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">

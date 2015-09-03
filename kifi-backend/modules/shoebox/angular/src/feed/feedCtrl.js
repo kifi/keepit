@@ -56,10 +56,14 @@ angular.module('kifi')
       });
     };
 
-    $scope.keepClick = function(keep) {
-      var eventType = profileService.userLoggedIn() ? 'user_viewed_content' : 'visitor_viewed_content';
-      $analytics.eventTrack(eventType, { source: 'feed', contentType: 'keep', keep: keep.id,
-        libraryId: keep.library && keep.library.id, orgId: keep.organization && keep.organization.id });
+    $scope.keepClick = function(keep, event) {
+      var eventAction = event.currentTarget.getAttribute('click-action');
+      $analytics.eventTrack('user_clicked_page', { type: 'userFeed', action: eventAction });
+
+      if (eventAction === 'clickedArticleTitle' || eventAction === 'clickedArticleImage'){
+        $analytics.eventTrack('user_viewed_content', { source: 'feed', contentType: 'keep', keep: keep.id,
+          libraryId: keep.library && keep.library.id, orgId: keep.organization && keep.organization.id });
+      }
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {
