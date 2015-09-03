@@ -68,7 +68,7 @@ class NotificationInfoGenerator @Inject() (
       keeps <- keepsF
       externalIds <- externalUserIdsF
       fromExternalIds <- userIdsFromExternalF
-      userIds = (userRequests ++ libs.values.map(_.ownerId) ++ fromExternalIds).toSeq.distinct
+      userIds = (userRequests ++ fromExternalIds).toSeq.distinct
       users <- shoeboxServiceClient.getBasicUsers(userIds)
       usersExternal = externalIds.zip(fromExternalIds).map {
         case (externalId, id) => externalId -> users(id)
