@@ -213,7 +213,7 @@ class NotificationDeliveryCommander @Inject() (
         (message, thread)
       }
       SafeFuture {
-        val notificationAttempts = userIds.filter(experimentsMap.apply).map { userId =>
+        val notificationAttempts = userIds.filterNot(experimentsMap.apply).map { userId =>
           //Stop gap to avoid overwhelming shoebox via heimal
           Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
           Try {

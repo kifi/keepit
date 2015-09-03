@@ -19,22 +19,17 @@ class NotificationExperimentCheck @Inject() (
 
   def checkExperiment(recipient: Recipient): NotificationExperimentCheck.Result = {
     // Don't want to have to keep switching experiments in dev mode
-    if (Play.maybeApplication.exists(_.mode == Mode.Dev)) {
-      NotificationExperimentCheck.Result(true, recipient match {
-        case u: UserRecipient => u.copy(experimentEnabled = Some(true))
-        case other => other
-      })
-    } else {
-      recipient match {
-        case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
-          case None =>
-            val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
-            val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
-            NotificationExperimentCheck.Result(enabled, u.copy(experimentEnabled = Some(enabled)))
-          case Some(result) => NotificationExperimentCheck.Result(result, u)
-        }
-        case _: EmailRecipient => NotificationExperimentCheck.Result(false, recipient)
+    val flipResults = Play.maybeApplication.exists(_.mode == Mode.Dev)
+    recipient match {
+      case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
+        case None =>
+          val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
+          val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
+          val enabledFlipped = if (flipResults) !enabled else enabled
+          NotificationExperimentCheck.Result(enabledFlipped, u.copy(experimentEnabled = Some(enabledFlipped)))
+        case Some(result) => NotificationExperimentCheck.Result(result, u)
       }
+      case _: EmailRecipient => NotificationExperimentCheck.Result(false, recipient)
     }
   }
 
