@@ -396,6 +396,46 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
+    "join an org library as a collaborator if a user is in that org and the lib has that permission set" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (libOwner, member, collabLib, followerLibs) = db.readWrite { implicit s =>
+          val orgOwner = UserFactory.user().saved
+          val libOwner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner, member)).saved
+
+          val collabLib = LibraryFactory.library().withOwner(libOwner).withOrganization(org).withOrgMemberCollaborativePermission().orgVisible().saved
+
+          val followerLib1 = LibraryFactory.library().withOwner(libOwner).withOrganization(org).published().saved
+          val followerLib2 = LibraryFactory.library().withOwner(libOwner).withOrgMemberCollaborativePermission().published().saved
+          val followerLib3 = LibraryFactory.library().withOwner(libOwner).published().saved
+          (libOwner, member, collabLib, Seq(followerLib1, followerLib2, followerLib3))
+        }
+
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
+        inject[FakeUserActionsHelper].setUser(member)
+
+        val collabLibId = Library.publicId(collabLib.id.get)
+        val collabRequest = request(routes.ExtLibraryController.joinLibrary(collabLibId))
+        val collabResponse = controller.joinLibrary(collabLibId)(collabRequest)
+        status(collabResponse) === NO_CONTENT
+        db.readOnlyMaster { implicit session =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(collabLib.id.get, member.id.get).exists(_.isCollaborator) === true
+        }
+
+        for (followerLib <- followerLibs) {
+          val followerLibId = Library.publicId(followerLib.id.get)
+          val followerRequest = request(routes.ExtLibraryController.joinLibrary(followerLibId))
+          val followerResponse = controller.joinLibrary(followerLibId)(followerRequest)
+          status(followerResponse) === NO_CONTENT
+          db.readOnlyMaster { implicit session =>
+            libraryMembershipRepo.getWithLibraryIdAndUserId(followerLib.id.get, member.id.get).exists(_.isCollaborator) === false
+          }
+        }
+        1 === 1
+      }
+    }
+
     "get keep in library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
@@ -468,7 +508,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             uriId = uri3.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(3)))
           (user1, user2, lib1, lib2, keep1, keep2, keep3)
         }
-        implicit val config = inject[PublicIdConfiguration]
         val pubId1 = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
 
@@ -739,6 +778,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     keep
   }
 
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[ExtLibraryController]
   private def request(route: Call) = FakeRequest(route.method, route.url)
 }

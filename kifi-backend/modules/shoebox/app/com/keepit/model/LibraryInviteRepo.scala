@@ -60,7 +60,7 @@ class LibraryInviteRepoImpl @Inject() (
       inviterId = r.<<[Id[User]],
       userId = r.<<[Option[Id[User]]],
       emailAddress = r.<<[Option[String]].map(EmailAddress(_)),
-      access = LibraryAccess(r.<<[String]),
+      access = r.<<[LibraryAccess],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
       state = r.<<[State[LibraryInvite]],
