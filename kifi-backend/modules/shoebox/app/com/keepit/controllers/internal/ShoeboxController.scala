@@ -74,6 +74,7 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
   libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   libraryInfoCommander: LibraryInfoCommander,
@@ -84,6 +85,7 @@ class ShoeboxController @Inject() (
   pathCommander: PathCommander,
   organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
+  orgCandidateRepo: OrganizationMembershipCandidateRepo,
   rover: RoverServiceClient,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -548,5 +550,18 @@ class ShoeboxController @Inject() (
     val orgIds = request.body.as[Set[Id[Organization]]]
     val basicOrgs = organizationCommander.getBasicOrganizations(orgIds)
     Ok(Json.toJson(basicOrgs))
+  }
+
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Action { request =>
+    val membershipOpt = db.readOnlyReplica { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map(_.toLibraryMembershipView) }
+    Ok(Json.toJson(membershipOpt))
+  }
+
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Action { request =>
+    val (membershipOpt, candidateOpt) = db.readOnlyReplica { implicit session =>
+      (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId), orgCandidateRepo.getByUserAndOrg(userId, orgId))
+    }
+    val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
+    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
   }
 }

@@ -40,7 +40,7 @@ trait LibraryInfoCommander {
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, useMultilibLogic: Boolean = false): Future[Seq[(Id[Library], FullLibraryInfo)]]
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
+  def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
@@ -328,7 +328,8 @@ class LibraryInfoCommanderImpl @Inject() (
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
-          org = basicOrgOpt
+          org = basicOrgOpt,
+          orgMemberAccess = lib.organizationMemberAccess
         )
       }
     }
@@ -376,15 +377,22 @@ class LibraryInfoCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])] = {
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
-      val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
+      val libsWithMembershipIds = libsWithMembership.map(_._1.id.get).toSet
+
+      val libsFromOrganizations: Seq[Library] = if (includeOrgLibraries) {
+        for {
+          organizationId <- organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+          library <- libraryRepo.getLibrariesWithOpenWriteAccess(organizationId) if !libsWithMembershipIds.contains(library.id.get)
+        } yield library
+      } else Seq.empty
+
+      val libIds = libsWithMembershipIds ++ libsFromOrganizations.map(_.id.get)
       val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
-      libsWithMembership.map {
-        case (lib, membership) =>
-          (lib, membership, collaborators(lib.id.get))
-      }
+      libsWithMembership.map { case (lib, membership) => (lib, Some(membership), collaborators(lib.id.get)) } ++
+        libsFromOrganizations.map { lib => (lib, None, collaborators(lib.id.get)) }
     }
   }
 

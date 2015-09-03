@@ -31,7 +31,7 @@ object OrganizationFactory {
     def withMembers(newMembers: Seq[User]) = this.copy(members = newMembers)
     def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = newInvitedUsers)
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
-    def withHandle(newHandle: OrganizationHandle) = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
+    def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
     def withBasePermissions(newBasePermissions: BasePermissions) = this.copy(org = org.copy(basePermissions = newBasePermissions))
     def secret() = this.copy(org = org.hiddenFromNonmembers)
   }

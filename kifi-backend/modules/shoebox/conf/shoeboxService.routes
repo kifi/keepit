@@ -112,7 +112,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 
-GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries(includeOrgLibraries: Boolean ?= false)
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
 GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
 DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
@@ -996,6 +996,7 @@ GET     /internal/shoebox/database/hasOrganizationMembership       @com.keepit.c
 POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.controllers.internal.ShoeboxController.getOrganizationsForUsers()
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
 GET     /internal/shoebox/database/getBasicOrganizationsByIds            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizationsByIds()
+GET     /internal/shoebox/database/getOrganizationUserRelationship       @com.keepit.controllers.internal.ShoeboxController.getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User])
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
@@ -1025,6 +1026,7 @@ POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.inte
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
+GET      /internal/shoebox/database/getLibraryMembershipView    @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 

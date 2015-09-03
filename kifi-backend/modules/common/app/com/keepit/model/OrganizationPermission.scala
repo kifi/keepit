@@ -13,7 +13,7 @@ object OrganizationPermission {
   case object REMOVE_MEMBERS extends OrganizationPermission("remove_members")
   case object ADD_LIBRARIES extends OrganizationPermission("add_libraries")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
-  case object EDIT_LIBRARIES extends OrganizationPermission("edit_libraries")
+  case object FORCE_EDIT_LIBRARIES extends OrganizationPermission("force_edit_libraries")
 
   def all: Set[OrganizationPermission] = Set(
     VIEW_ORGANIZATION,
@@ -23,7 +23,7 @@ object OrganizationPermission {
     REMOVE_MEMBERS,
     ADD_LIBRARIES,
     REMOVE_LIBRARIES,
-    EDIT_LIBRARIES
+    FORCE_EDIT_LIBRARIES
   )
 
   implicit val format: Format[OrganizationPermission] =
@@ -40,7 +40,8 @@ object OrganizationPermission {
       case REMOVE_MEMBERS.value => REMOVE_MEMBERS
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
-      case EDIT_LIBRARIES.value => EDIT_LIBRARIES
+      case "edit_libraries" => FORCE_EDIT_LIBRARIES // for temp backwards compatibility
+      case FORCE_EDIT_LIBRARIES.value => FORCE_EDIT_LIBRARIES
     }
   }
 
