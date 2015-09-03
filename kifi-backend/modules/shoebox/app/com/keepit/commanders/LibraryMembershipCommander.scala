@@ -12,6 +12,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator }
 import com.keepit.search.SearchServiceClient
@@ -305,7 +306,7 @@ class LibraryMembershipCommanderImpl @Inject() (
       unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfoBuilder.fromLibraryAndOwner(lib, libImageOpt, owner))
+        "library" -> NotificationInfoModel.library(lib, libImageOpt, owner)
       ))
     ) map { _ =>
         if (!lotsOfFollowers) {

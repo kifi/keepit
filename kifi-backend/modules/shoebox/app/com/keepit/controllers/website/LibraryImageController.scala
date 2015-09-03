@@ -50,7 +50,7 @@ class LibraryImageController @Inject() (
         val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryImageController.defaultImageSize)
         libraryImageCommander.getBestImageForLibrary(libraryId, idealSize) match {
           case Some(img: LibraryImage) =>
-            Ok(Json.toJson(LibraryImageInfoBuilder.createInfo(img)))
+            Ok(Json.toJson(LibraryImageInfo.fromImage(img)))
           case None =>
             NotFound(Json.obj("error" -> "image_not_found"))
         }
@@ -96,7 +96,7 @@ class LibraryImageController @Inject() (
       } keySet
       val size = idealSize.map(ImageSize(_)).getOrElse(ProcessedImageSize.Medium.idealSize)
       val imagesByPublicId = libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size) map {
-        case (id, img) => Library.publicId(id).id -> LibraryImageInfoBuilder.createInfo(img)
+        case (id, img) => Library.publicId(id).id -> LibraryImageInfo.fromImage(img)
       }
       Ok(Json.toJson(imagesByPublicId))
     } else {

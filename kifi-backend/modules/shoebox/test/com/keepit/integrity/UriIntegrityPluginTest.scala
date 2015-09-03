@@ -205,8 +205,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
     "pass an extremely abusive test" in {
       withDb(modules: _*) { implicit injector =>
-        val numUsers = 10
-        val numUrisPerUser = 50
+        val numUsers = 3
+        val numUrisPerUser = 15
         val (users, lib, origUris, dupUris) = db.readWrite { implicit session =>
 
           val users = Random.shuffle(UserFactory.users(numUsers).saved)

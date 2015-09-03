@@ -73,12 +73,6 @@ object OrganizationView {
   }
 }
 
-object OrganizationNotificationInfoBuilder {
-  def fromOrganization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): OrganizationNotificationInfo = {
-    OrganizationNotificationInfo(Organization.publicId(org.id.get), org.name, org.primaryHandle, image.map(_.imagePath))
-  }
-}
-
 case class OrganizationInitialValues(name: String, description: Option[String] = None, site: Option[String] = None) {
   def asOrganizationModifications: OrganizationModifications = {
     OrganizationModifications(
@@ -107,13 +101,13 @@ object OrganizationInitialValues {
 case class OrganizationModifications(
   name: Option[String] = None,
   description: Option[String] = None,
-  basePermissions: Option[BasePermissions] = None,
+  permissionsDiff: Option[PermissionsDiff] = None,
   site: Option[String] = None)
 object OrganizationModifications {
   private val defaultReads: Reads[OrganizationModifications] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'basePermissions).readNullable[BasePermissions] and
+    (__ \ 'permissions).readNullable[PermissionsDiff] and
     (__ \ 'site).readNullable[String].map {
       case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
       case Some(site) => Some(site)

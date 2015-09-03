@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders._
@@ -14,9 +15,10 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.{ NotificationId, NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
@@ -55,6 +57,8 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
+  orgRepo: OrganizationRepo,
+  organizationAvatarCommander: OrganizationAvatarCommander,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
   libraryAccessCommander: LibraryAccessCommander,
@@ -76,9 +80,12 @@ class ShoeboxController @Inject() (
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
+  s3ImageStore: S3ImageStore,
+  pathCommander: PathCommander,
   organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
-  rover: RoverServiceClient)(implicit private val clock: Clock,
+  rover: RoverServiceClient,
+  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 

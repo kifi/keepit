@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.util.Paginator
+import com.keepit.model.OrganizationPermission.FORCE_EDIT_LIBRARIES
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryFactory._
@@ -59,7 +60,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   }
   // Fill the system with a bunch of garbage
   def fillWithGarbage()(implicit injector: Injector, session: RWSession): Unit = {
-    val n = 5
+    val n = 2
     for (i <- 1 to n) {
       val orgOwner = UserFactory.user().saved
       val libOwners = UserFactory.users(n).saved
@@ -307,7 +308,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val member = UserFactory.user().saved
 
             // This org is super crappy, members can't do anything
-            val crappyBPs = BasePermissions(Map(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION)))
+            val crappyBPs = Organization.defaultBasePermissions.withPermissions(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION))
 
             val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
             (org, owner, member)
@@ -351,6 +352,82 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
     "when modify library is called:" in {
+      "handle library moves correctly" in {
+        withDb(modules: _*) { implicit injector =>
+          val (orgOwner, libOwner, member, lib, orgs) = db.readWrite { implicit session =>
+            val orgOwner = UserFactory.user().saved
+            val libOwner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val orgs = OrganizationFactory.organizations(2).map(_.withOwner(orgOwner).withMembers(Seq(libOwner, member))).saved
+            val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).saved
+            (orgOwner, libOwner, member, lib, orgs)
+          }
+
+          val org1 = orgs(0)
+          val org2 = orgs(1)
+          // Move the libraries into the org
+          // Only the owner can do this
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beRight
+
+          // Move the library back into the user's space
+          // Again, only the owner can do this
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beRight
+
+          // Back to org 1
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beRight
+          // And then directly into org 2
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(org2.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(org2.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org2.id.get))) must beRight
+
+          // And then back to org 1
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org1.id.get))) must beRight
+        }
+      }
+      "let org members with the force-edit permission move libraries" in {
+        withDb(modules: _*) { implicit injector =>
+          val (orgOwner, libOwner, member, lib, org) = db.readWrite { implicit session =>
+            val orgOwner = UserFactory.user().saved
+            val libOwner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner, member)).saved
+            val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).saved
+            (orgOwner, libOwner, member, lib, org)
+          }
+
+          // Move the libraries into the org
+          // Only the owner can do this
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(org.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(org.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org.id.get))) must beRight
+
+          // Move the library back into the user's space
+          // By default, only the owner can do this
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = member.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beLeft
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beRight
+
+          // Back to the org
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifyRequest(space = Some(org.id.get))) must beRight
+
+          // However, if we give the admin force-edit permissions
+          // TODO(ryan): can we find a way to test this without manually modifying the db?
+          db.readWrite { implicit session =>
+            val ownerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, orgOwner.id.get).get
+            orgMembershipRepo.save(ownerMembership.withPermissions(ownerMembership.permissions + FORCE_EDIT_LIBRARIES))
+          }
+          // They still can't steal the library
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(orgOwner.id.get))) must beLeft
+          // But they can force it back into the owner's personal space
+          libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifyRequest(space = Some(libOwner.id.get))) must beRight
+        }
+      }
       "allow changing organizationId of library" in {
         withDb(modules: _*) { implicit injector =>
           val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
@@ -538,10 +615,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             starkOrgAlias.get.libraryId === ironLib.id.get
           }
 
-          // TODO(ryan): This part of the test has been changed TEMPORARILY to let frontend UI catch up
-          // Very soon it needs to be changed back to response4 must beLeft
-
-          // Try to move it back into starkOrg, should fail since by default members cannot remove libraries
+          // Try to move it back into starkOrg, should succeed since by default members can remove libraries
           val response4 = libraryCommander.modifyLibrary(libraryId = ironLib.id.get, userId = ironMan.id.get,
             LibraryModifyRequest(space = Some(starkOrg.id.get)))
           response4 must beRight
@@ -766,7 +840,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Cannot inject libraries from an organization you are part of to a random organization.
         libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, otherOrg.id.get) must equalTo(false)
 
-        skipped("TODO(ryan): skipped temporarily to let frontend ui catch up to backend restrictions")
         db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = otherOrg.id)) }
         // Cannot remove libraries from other organizations you are not part of.
         libraryCommander.canMoveTo(user.id.get, newLibrary.id.get, user.id.get) must equalTo(false)
@@ -1499,7 +1572,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libraryCommander = inject[LibraryCommander]
           val (lib, memberships, users) = db.readWrite { implicit s =>
             fillWithGarbage()
-            val users = Random.shuffle(UserFactory.users(100).saved)
+            val users = Random.shuffle(UserFactory.users(50)).saved
             val (owner, rest) = (users.head, users.tail)
             val (collaborators, followers) = rest.splitAt(20)
             val lib = LibraryFactory.library().published().withOwner(owner).withCollaborators(collaborators).withFollowers(followers).saved
@@ -1516,9 +1589,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val canonical = memberships.sortBy(metric).tail // always drop the owner
           val extToIntMap = users.map(u => u.externalId -> u.id.get).toMap
-          val members = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 50, false).map(_.member.left.get)
+          val members = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 30, false).map(_.member.left.get)
 
-          val expected = canonical.drop(10).take(50)
+          val expected = canonical.drop(10).take(30)
           members.map(bu => extToIntMap(bu.externalId)) === expected.map(_.userId)
         }
       }
@@ -1527,7 +1600,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (lib, invites, emails) = db.readWrite { implicit s =>
             fillWithGarbage()
             val owner = UserFactory.user().saved
-            val emails = randomEmails(100)
+            val emails = randomEmails(50)
             val lib = LibraryFactory.library().withOwner(owner).withInvitedEmails(emails).saved
             val invites = inject[LibraryInviteRepo].getByLibraryIdAndInviterId(lib.id.get, owner.id.get)
             (lib, invites, emails)
@@ -1539,8 +1612,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           val canonical = invites.sortBy(metric)
-          val libraryInvites = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 50, fillInWithInvites = true).map(_.member.right.get)
-          val expected = canonical.drop(10).take(50)
+          val libraryInvites = inject[LibraryInfoCommander].getLibraryMembersAndInvitees(lib.id.get, 10, 30, fillInWithInvites = true).map(_.member.right.get)
+          val expected = canonical.drop(10).take(30)
           libraryInvites.map(bc => bc.email) === expected.map(_.emailAddress.get)
         }
       }

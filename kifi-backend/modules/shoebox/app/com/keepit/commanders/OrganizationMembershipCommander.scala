@@ -21,6 +21,7 @@ import com.keepit.typeahead.KifiUserTypeahead
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.core._
+import com.keepit.payments.{ PlanManagementCommander, ActionAttribution }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -77,6 +78,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     httpClient: HttpClient,
+    planCommander: PlanManagementCommander,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
 
   private val httpLock = new ReactiveLock(5)
@@ -251,6 +253,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
             savedMembership
           }
         }
+        planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
         Right(OrganizationMembershipAddResponse(request, newMembership))
     }
   }
@@ -271,6 +274,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
         session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         organizationMembershipRepo.deactivate(membership)
+        planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
         Right(OrganizationMembershipRemoveResponse(request))
     }
   }

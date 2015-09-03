@@ -28,13 +28,16 @@ trait KeepToLibraryCommander {
   def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary
   def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit]
   def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit
+  def deactivate(ktl: KeepToLibrary)(implicit session: RWSession): Unit
 
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
   def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
-  // TODO(ryan): make this private and expose a public method `syncLibrary(lib): Future[Unit]`
+  def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary
+
+  // TODO(ryan): expose a public method `syncLibrary(lib): Future[Unit]`
   def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
 
@@ -67,16 +70,19 @@ class KeepToLibraryCommanderImpl @Inject() (
     }
   }
 
+  def deactivate(ktl: KeepToLibrary)(implicit session: RWSession): Unit = {
+    ktlRepo.deactivate(ktl)
+  }
   def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit] = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId) match {
       case None => Failure(KeepToLibraryFail.NOT_IN_LIBRARY)
       case Some(activeKtl) =>
-        ktlRepo.deactivate(activeKtl)
+        deactivate(activeKtl)
         Success(())
     }
   }
   def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
-    ktlRepo.getAllByKeepId(keep.id.get).foreach(ktlRepo.deactivate)
+    ktlRepo.getAllByKeepId(keep.id.get).foreach(deactivate)
   }
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
@@ -91,7 +97,7 @@ class KeepToLibraryCommanderImpl @Inject() (
     // Sync ALL of the keeps (including the dead ones)
     ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktl => syncWithKeep(ktl, keep) }
   }
-  private def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
+  def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
     ktlRepo.save(ktl.withUriId(keep.uriId).withPrimary(ktl.isActive && keep.isPrimary))
   }

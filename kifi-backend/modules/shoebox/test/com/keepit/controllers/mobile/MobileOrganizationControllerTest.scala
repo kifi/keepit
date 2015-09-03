@@ -202,11 +202,10 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           }
 
           val json =
-            """{ "basePermissions":
+            """{ "permissions":
                 {
-                  "none":[],
-                  "member":["view_organization","add_libraries"],
-                  "admin":["invite_members","edit_organization","view_organization","remove_libraries","modify_members","remove_members","add_libraries"]
+                  "add": {"member": ["invite_members"]},
+                  "remove": {"none": ["view_organization"]}
                 }
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
@@ -215,6 +214,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
 
           db.readOnlyMaster { implicit session =>
             orgRepo.get(org.id.get).getNonmemberPermissions === Set.empty
+            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
           }
         }
       }
@@ -226,26 +226,11 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val publicId = Organization.publicId(org.id.get)
 
           val json =
-            """{ "basePermissions":
+            """{ "permissions":
                 {
-                  "none":[],
-                  "member":["view_organization","add_libraries"],
-                  "admin":["invite_members","view_organization","remove_libraries","modify_members","remove_members","add_libraries"]
+                  "remove": { "admin": ["remove_libraries"] }
                 }
                } """.stripMargin
-          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
-          val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFICATIONS
-        }
-      }
-
-      "fail for missing role in basePermissions" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner)
-          val publicId = Organization.publicId(org.id.get)
-
-          val json = """{ "basePermissions": {"admin": [], "none": []} }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           response === OrganizationFail.INVALID_MODIFICATIONS

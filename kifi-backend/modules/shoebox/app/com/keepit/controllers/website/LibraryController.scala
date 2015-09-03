@@ -110,7 +110,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
+  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
 
@@ -328,7 +328,6 @@ class LibraryController @Inject() (
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
-            println(("membership" -> LibraryMembershipInfo.fromMembership(mem)))
             Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
         }
     }

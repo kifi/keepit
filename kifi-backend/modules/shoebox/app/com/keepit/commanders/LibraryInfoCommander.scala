@@ -141,7 +141,8 @@ class LibraryInfoCommanderImpl @Inject() (
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membership = membershipsByLibraryId.get(libId).flatten
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
+        val path = libPathCommander.pathForLibrary(lib)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership, lib.ownerId, path)
       }.toMap
     }
   }
@@ -315,7 +316,7 @@ class LibraryInfoCommanderImpl @Inject() (
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
-          image = libImageOpt.map(LibraryImageInfoBuilder.createInfo),
+          image = libImageOpt.map(LibraryImageInfo.fromImage),
           followers = followers,
           collaborators = collaborators,
           keeps = keepInfos,
@@ -706,7 +707,7 @@ class LibraryInfoCommanderImpl @Inject() (
       name = lib.name,
       description = lib.description,
       color = lib.color,
-      image = image.map(LibraryImageInfoBuilder.createInfo),
+      image = image.map(LibraryImageInfo.fromImage),
       slug = lib.slug,
       visibility = lib.visibility,
       owner = owner,

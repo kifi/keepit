@@ -4,6 +4,7 @@ import com.keepit.common.cache._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.Id.mapOfIdToObjectFormat
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import play.api.libs.functional.syntax._
@@ -61,6 +62,7 @@ case class BasicUser(
     pictureName: String,
     username: Username) extends BasicUserLikeEntity with BasicUserFields {
   override def asBasicUser = Some(this)
+  def path: Path = Path(username.value)
 }
 
 object BasicUser {

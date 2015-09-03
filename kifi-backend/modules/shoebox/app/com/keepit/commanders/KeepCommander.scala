@@ -87,6 +87,8 @@ trait KeepCommander {
   def assembleKeepExport(keepExports: Seq[KeepExport]): String
   def numKeeps(userId: Id[User]): Int
   def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep
+  def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep
+  def refreshParticipantsHash(keep: Keep)(implicit session: RWSession): Keep
   def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep
@@ -147,6 +149,8 @@ class KeepCommanderImpl @Inject() (
       keeps.map {
         case (id, keep) => id -> BasicKeep(
           keep.externalId,
+          keep.title,
+          keep.url,
           keep.visibility,
           Library.publicId(keep.libraryId.get),
           users(keep.userId).externalId
@@ -793,11 +797,11 @@ class KeepCommanderImpl @Inject() (
 
     keep
   }
-  private def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep = {
+  def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep = {
     val libraries = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
     keepRepo.save(keep.withLibraries(libraries))
   }
-  private def refreshParticipantsHash(keep: Keep)(implicit session: RWSession): Keep = {
+  def refreshParticipantsHash(keep: Keep)(implicit session: RWSession): Keep = {
     val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
     keepRepo.save(keep.withParticipants(users))
   }

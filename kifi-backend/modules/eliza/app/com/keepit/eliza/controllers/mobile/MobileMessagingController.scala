@@ -2,6 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.UserAgent
@@ -9,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
 import com.keepit.heimdal._
-import com.keepit.model.User
+import com.keepit.model.{ Organization, User }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 
@@ -99,17 +100,13 @@ class MobileMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
-
-    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
-    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
-
+    val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
     val url = (o \ "url").as[String]
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
 
-    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, url, request.userId, contextBuilder.build).map {
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfoOpt, messages) =>
         Ok(Json.obj(
           "id" -> message.externalId.id,
@@ -262,18 +259,19 @@ class MobileMessagingController @Inject() (
   }
 
   def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
-    val source = UserAgent(request) match {
-      case agent if agent.isAndroid => MessageSource.ANDROID
-      case agent if agent.isIphone => MessageSource.IPHONE
-      case agent => throw new IllegalArgumentException(s"user agent not supported: $agent")
-    }
     if (users.nonEmpty || emailContacts.nonEmpty) {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       contextBuilder += ("source", "mobile")
       //assuming the client does the proper checks!
       val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
-      val validUserIds = users.split(",").map(_.trim).filterNot(_.isEmpty).map { id => ExternalId[User](id) }
-      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, Some(source))(contextBuilder.build)
+      val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+        // This API is basically insane. Passing comma separated entities in URL params on a POST?
+        ExternalId.asOpt[User](id) match {
+          case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
+          case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+        }
+      }
+      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
     }
     Ok("")
   }

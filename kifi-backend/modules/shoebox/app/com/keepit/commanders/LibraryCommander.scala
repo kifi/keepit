@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, FORCE_EDIT_LIBRARIES }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.kifi.macros.json
@@ -57,7 +58,7 @@ class LibraryCommanderImpl @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
-    organizationMembershipCommander: OrganizationMembershipCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     keepCommander: KeepCommander,
@@ -111,7 +112,7 @@ class LibraryCommanderImpl @Inject() (
         db.readOnlyReplica { implicit s =>
           val userHasPermissionToCreateInSpace = targetSpace match {
             case OrganizationSpace(orgId) =>
-              organizationMembershipCommander.getPermissionsHelper(orgId, Some(ownerId)).contains(OrganizationPermission.ADD_LIBRARIES)
+              orgMembershipCommander.getPermissionsHelper(orgId, Some(ownerId)).contains(OrganizationPermission.ADD_LIBRARIES)
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
@@ -169,18 +170,21 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
-    db.readOnlyReplica { implicit s => libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) } exists { membership => //not cached!
-      membership.canWrite
+    db.readOnlyReplica { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val libMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      def canDirectlyEditLibrary = libMembershipOpt.exists(_.canWrite)
+      def canIndirectlyEditLibrary = libMembershipOpt.isDefined && lib.organizationId.exists { orgId =>
+        orgMembershipCommander.getPermissionsHelper(orgId, Some(userId)).contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
+      }
+      canDirectlyEditLibrary || canIndirectlyEditLibrary
     }
   }
 
   def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifyRequest): Option[LibraryFail] = {
     def validateUserWritePermission: Option[LibraryFail] = {
-      val membershipOpt = db.readOnlyMaster { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId) }
-      membershipOpt match {
-        case Some(membership) if membership.canWrite => None
-        case _ => Some(LibraryFail(FORBIDDEN, "permission_denied"))
-      }
+      if (canModifyLibrary(library.id.get, userId)) None
+      else Some(LibraryFail(FORBIDDEN, "permission_denied"))
     }
 
     def validateSpace(newSpaceOpt: Option[LibrarySpace]): Option[LibraryFail] = {
@@ -338,7 +342,6 @@ class LibraryCommanderImpl @Inject() (
     val keepChanges = updateKeepVisibility(newVisibility, 0)
     keepChanges.onComplete { _ => searchClient.updateKeepIndex() }
 
-    // TODO(ryan): please find a way to remove this, why are we modifying LibraryMembership.listed in the middle of this library stuff?
     val edits = Map(
       "title" -> (newName != library.name),
       "slug" -> (newSlug != library.slug),
@@ -369,7 +372,7 @@ class LibraryCommanderImpl @Inject() (
         }
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
-      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) => // TODO(ryan): Can this session be made implicit?
+      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         // ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
         keepCommander.deactivateKeep(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
@@ -412,23 +415,25 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
-    db.readOnlyMaster { implicit session =>
+    val userCanModifyLibrary = canModifyLibrary(libId, userId)
+
+    val (canMoveFromSpace, canMoveToSpace) = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libId)
       val from: LibrarySpace = library.space
-      val userOwnsLibrary = library.ownerId == userId
       val canMoveFromSpace = from match {
         case OrganizationSpace(fromOrg) =>
-          library.ownerId == userId
-        // TODO(ryan): when the frontend has UI for this, add it in
-        // organizationMembershipCommander.getPermissions(fromOrg, Some(userId)).contains(OrganizationPermission.REMOVE_LIBRARIES)
-        case UserSpace(fromUser) => fromUser == userId // Can move libraries from Personal space to Organization Space.
+          val fromPermissions = orgMembershipCommander.getPermissionsHelper(fromOrg, Some(userId))
+          fromPermissions.contains(FORCE_EDIT_LIBRARIES) || (userId == library.ownerId && fromPermissions.contains(REMOVE_LIBRARIES))
+        case UserSpace(fromUser) => userId == library.ownerId
       }
       val canMoveToSpace = to match {
-        case OrganizationSpace(toOrg) => organizationMembershipCommander.getPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
-        case UserSpace(toUser) => toUser == userId // Can move from Organization Space to Personal space.
+        case OrganizationSpace(toOrg) => orgMembershipCommander.getPermissions(toOrg, Some(userId)).contains(ADD_LIBRARIES)
+        case UserSpace(toUser) => toUser == library.ownerId
       }
-      userOwnsLibrary && canMoveFromSpace && canMoveToSpace
+      (canMoveFromSpace, canMoveToSpace)
     }
+
+    userCanModifyLibrary && canMoveFromSpace && canMoveToSpace
   }
 
   def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>

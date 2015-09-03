@@ -17,8 +17,6 @@ import scala.util.Random
 
 class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
-  implicit def ktlCommander(implicit injector: Injector) = inject[KeepToLibraryCommander]
-  implicit def ktlRepo(implicit injector: Injector) = inject[KeepToLibraryRepo]
 
   def modules = Seq()
 

@@ -6,6 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
+import com.keepit.common.store.ImagePath
 import com.keepit.social.{ BasicUser, BasicUserFields }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -166,7 +167,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
       color = lib.color,
-      image = image.map(LibraryImageInfoBuilder.createInfo(_)),
+      image = image.map(LibraryImageInfo.fromImage),
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -234,12 +235,6 @@ object LibraryCardInfo {
 
   def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {
     followers.filter(_.pictureName != "0.jpg").take(4) // 3 shown, 1 extra in case viewer is one and leaves
-  }
-}
-
-object LibraryNotificationInfoBuilder {
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfoBuilder.createInfo), owner)
   }
 }
 

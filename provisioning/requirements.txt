@@ -1,3 +1,2 @@
 williamyeh.oracle-java
-ricbra.logentries
 jtyr.ulimit

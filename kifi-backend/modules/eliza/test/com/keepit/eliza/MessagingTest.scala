@@ -5,14 +5,14 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationDeliveryCommander }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ UserFactory, User }
+import com.keepit.model.{ Organization, UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
@@ -152,7 +152,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty, None)
+        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty, Seq.empty)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }

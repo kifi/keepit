@@ -3,19 +3,20 @@ package com.keepit.model
 import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ PublicId, ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
+import com.keepit.model.OrganizationPermission._
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{ QueryStringBindable, PathBindable }
+import play.api.mvc.PathBindable
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
@@ -39,12 +40,12 @@ case class Organization(
   def withName(newName: String): Organization = this.copy(name = newName)
   def withDescription(newDescription: Option[String]): Organization = this.copy(description = newDescription)
   def withOwner(newOwner: Id[User]): Organization = this.copy(ownerId = newOwner)
-  def withBasePermissions(newBasePermissions: BasePermissions): Organization = {
-    this.copy(basePermissions = new BasePermissions(basePermissions.permissionsMap ++ newBasePermissions.permissionsMap))
+  def applyPermissionsDiff(pdiff: PermissionsDiff): Organization = {
+    this.copy(basePermissions = basePermissions.applyPermissionsDiff(pdiff))
   }
   def withSite(newSite: Option[String]): Organization = this.copy(site = newSite)
   def hiddenFromNonmembers: Organization = {
-    this.withBasePermissions(BasePermissions(Map(None -> Set())))
+    this.copy(basePermissions = basePermissions.removePermission(None -> VIEW_ORGANIZATION))
   }
 
   def abbreviatedName = this.name.abbreviate(33)
@@ -86,16 +87,23 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   protected val publicIdIvSpec = new IvParameterSpec(Array(62, 91, 74, 34, 82, -77, 19, -35, -118, 3, 112, -59, -70, 94, 101, -115))
 
   val defaultBasePermissions: BasePermissions =
-    BasePermissions(Map(
-      None -> Set(OrganizationPermission.VIEW_ORGANIZATION),
-
-      Some(OrganizationRole.ADMIN) -> OrganizationPermission.all,
-
+    BasePermissions(
+      None -> Set(VIEW_ORGANIZATION),
+      Some(OrganizationRole.ADMIN) -> Set(
+        VIEW_ORGANIZATION,
+        EDIT_ORGANIZATION,
+        INVITE_MEMBERS,
+        MODIFY_MEMBERS,
+        REMOVE_MEMBERS,
+        ADD_LIBRARIES,
+        REMOVE_LIBRARIES
+      ),
       Some(OrganizationRole.MEMBER) -> Set(
-        OrganizationPermission.VIEW_ORGANIZATION,
-        OrganizationPermission.ADD_LIBRARIES
+        VIEW_ORGANIZATION,
+        ADD_LIBRARIES,
+        REMOVE_LIBRARIES
       )
-    ))
+    )
   val totallyInvisiblePermissions: BasePermissions =
     BasePermissions(OrganizationRole.allOpts.map(_ -> Set.empty[OrganizationPermission]).toMap)
 
@@ -182,46 +190,18 @@ object OrganizationHandle {
 @json
 case class PrimaryOrganizationHandle(original: OrganizationHandle, normalized: OrganizationHandle)
 
-case class BasePermissions(permissionsMap: Map[Option[OrganizationRole], Set[OrganizationPermission]]) {
-  def forRole(role: OrganizationRole): Set[OrganizationPermission] = permissionsMap(Some(role))
-  def forNonmember: Set[OrganizationPermission] = permissionsMap(None)
-
-  // Return a BasePermissions where "role" has added and removed permissions
-  def modified(roleOpt: Option[OrganizationRole], added: Set[OrganizationPermission], removed: Set[OrganizationPermission]): BasePermissions =
-    BasePermissions(permissionsMap.updated(roleOpt, permissionsMap(roleOpt) ++ added -- removed))
-}
-
-object BasePermissions {
-  implicit val format: Format[BasePermissions] = new Format[BasePermissions] {
-    def reads(json: JsValue): JsResult[BasePermissions] = {
-      json.validate[JsObject].map { obj =>
-        val permissionsMap = (for ((k, v) <- obj.value) yield {
-          val roleOpt = if (k == "none") None else Some(OrganizationRole(k))
-          val permissions = v.as[Set[OrganizationPermission]]
-          roleOpt -> permissions
-        }).toMap
-        BasePermissions(permissionsMap)
-      }
-    }
-    def writes(bp: BasePermissions): JsValue = {
-      val jsonMap = for ((roleOpt, permissions) <- bp.permissionsMap) yield {
-        val k = roleOpt.map(_.value).getOrElse("none")
-        val v = Json.toJson(permissions)
-        k -> v
-      }
-      JsObject(jsonMap.toSeq)
-    }
-  }
-}
-
 // BasicOrganization should ONLY contain public information. No internal ids.
 case class BasicOrganization(
-  orgId: PublicId[Organization],
-  ownerId: ExternalId[User],
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  avatarPath: Option[ImagePath])
+    orgId: PublicId[Organization],
+    ownerId: ExternalId[User],
+    handle: OrganizationHandle,
+    name: String,
+    description: Option[String],
+    avatarPath: Option[ImagePath]) {
+
+  def abbreviatedName = this.name.abbreviate(33)
+
+}
 
 object BasicOrganization {
   implicit val defaultFormat = (

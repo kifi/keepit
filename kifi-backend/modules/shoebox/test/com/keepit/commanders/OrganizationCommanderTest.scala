@@ -155,14 +155,15 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           try1 === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // An owner can change the base permissions so that members CAN do this
-          val betterBasePermissions = org.basePermissions.modified(Some(OrganizationRole.MEMBER), added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
+          val permissionsDiff = PermissionsDiff(added = PermissionsMap(Some(OrganizationRole.MEMBER) -> Set[OrganizationPermission](OrganizationPermission.INVITE_MEMBERS)))
           val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
-            modifications = OrganizationModifications(basePermissions = Some(betterBasePermissions)))
+            modifications = OrganizationModifications(permissionsDiff = Some(permissionsDiff)))
 
           val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
           orgModifyResponse must beRight
           orgModifyResponse.right.get.request === orgModifyRequest
-          orgModifyResponse.right.get.modifiedOrg.basePermissions === betterBasePermissions
+          orgModifyResponse.right.get.modifiedOrg.basePermissions === org.basePermissions.applyPermissionsDiff(permissionsDiff)
+          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
 
           // Now the member should be able to invite others
           val try2 = orgMembershipCommander.addMembership(memberInviteMember)

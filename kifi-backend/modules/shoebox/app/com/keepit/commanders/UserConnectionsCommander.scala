@@ -235,9 +235,8 @@ class UserConnectionsCommander @Inject() (
     elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
-      myUserId
+      myUser.id.get
     ))
-
     emailF flatMap (_ => friendReqF)
   }
 
