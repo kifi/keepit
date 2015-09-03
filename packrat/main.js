@@ -1222,13 +1222,13 @@ api.port.on({
   },
   search_contacts: function (data, respond, tab) {
     if (!contactSearchCache) {
-      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(3600000);
+      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(30000);
     }
     var contacts = contactSearchCache.get(data.q);
     if (contacts) {
       respond(toResults(contacts));
     } else {
-      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n}, function (contacts) {
+      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n + (data.exclude && data.exclude.length) || 0}, function (contacts) {
         contactSearchCache.put(data.q, contacts);
         respond(toResults(contacts));
       }, function () {
@@ -1245,7 +1245,11 @@ api.port.on({
       if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
         appendUserResult(contacts, data.n, SUPPORT);
       }
-      var results = contacts.map(toContactResult, {sf: sf, q: data.q});
+      //debugger;
+      var results = contacts
+        .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
+        .slice(0, data.n)
+        .map(toContactResult, {sf: sf, q: data.q});
       if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
         results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
       }
