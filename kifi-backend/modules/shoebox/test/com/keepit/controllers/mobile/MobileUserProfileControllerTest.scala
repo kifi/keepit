@@ -432,7 +432,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":["invite_collaborators","invite_members","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
                   "modifiedAt":${lib2.updatedAt.getMillis},
                   "path": "/spongebob/catching-jellyfish"
                 },
@@ -459,7 +459,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":["invite_collaborators","invite_members","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
                   "modifiedAt":${lib1.updatedAt.getMillis},
                   "path": "/spongebob/krabby-patty"
                 }

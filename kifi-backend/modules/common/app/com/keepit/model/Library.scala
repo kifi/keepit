@@ -83,7 +83,6 @@ case class Library(
       LibraryPermission.REMOVE_MEMBERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.EDIT_ANY_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
       LibraryPermission.REMOVE_ANY_KEEPS
     )
