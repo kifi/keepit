@@ -2,6 +2,8 @@
   <nav class="kf-upl-nav">
     <a class="kf-upl-nav-link" ui-sref=".own" ng-class="{'kf-selected': libraryType === 'own', 'kf-my': viewingOwnProfile}"
       ng-click="trackLibraryNav('own')">Libraries</a>
+    <a class="kf-upl-nav-link"
+      ng-click="" ng-repeat="org in orgs">{{ org.name }}</a>
     <a class="kf-upl-nav-link" ui-sref=".following" ng-class="{'kf-selected': libraryType === 'following'}"
       ng-click="trackLibraryNav('following')">Following</a>
     <a class="kf-upl-nav-link" ui-sref=".invited" ng-class="{'kf-selected': libraryType === 'invited'}" ng-if="showInvitedLibraries()"

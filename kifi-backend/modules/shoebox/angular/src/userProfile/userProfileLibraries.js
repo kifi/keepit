@@ -12,6 +12,7 @@ angular.module('kifi')
 
     $scope.libraries = null;
     $scope.libraryType = $state.current.name.split('.').pop();
+    $scope.orgs = profileService.me.orgs;
 
     var libraryLazyLoader = new Paginator();
 
