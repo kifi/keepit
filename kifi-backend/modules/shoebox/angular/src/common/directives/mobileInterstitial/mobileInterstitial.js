@@ -8,7 +8,16 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'common/directives/mobileInterstitial/mobileInterstitial.tpl.html',
       scope: { show: '=' },
-      replace: true
+      link: function($scope) {
+        if (!!document.cookie.replace(/(?:(?:^|.*;\s*)kfShowMobileInterstitial\s*\=\s*([^;]*).*$)|^.*$/, "$1")) {
+          $scope.show = false;
+        }
+
+        $scope.permanentlyHide = function() {
+          $scope.show = false;
+          document.cookie="kfShowMobileInterstitial=true";
+        };
+      }
     };
   }
 );
