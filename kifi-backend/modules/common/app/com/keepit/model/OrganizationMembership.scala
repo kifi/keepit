@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -87,6 +88,15 @@ case class IngestableOrganizationMembership(
 object IngestableOrganizationMembership {
   implicit val format = Json.format[IngestableOrganizationMembership]
 }
+
+@json
+case class OrganizationUserRelationship(
+  orgId: Id[Organization],
+  userId: Id[User],
+  role: Option[OrganizationRole],
+  permissions: Option[Set[OrganizationPermission]],
+  isInvited: Boolean,
+  isCandidate: Boolean)
 
 case class OrganizationMembersKey(id: Id[Organization]) extends Key[Set[Id[User]]] {
   override val version = 1

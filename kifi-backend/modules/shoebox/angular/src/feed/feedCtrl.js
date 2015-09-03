@@ -60,7 +60,7 @@ angular.module('kifi')
       var eventAction = event.currentTarget.getAttribute('click-action');
       $analytics.eventTrack('user_clicked_page', { type: 'userFeed', action: eventAction });
 
-      if (eventAction === 'clickedArticleTitle' || eventAction === 'clickedArticleImage'){
+      if (eventAction === 'clickedArticleTitle' || eventAction === 'clickedArticleImage') {
         $analytics.eventTrack('user_viewed_content', { source: 'feed', contentType: 'keep', keep: keep.id,
           libraryId: keep.library && keep.library.id, orgId: keep.organization && keep.organization.id });
       }

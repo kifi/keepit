@@ -136,6 +136,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]]
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -849,4 +851,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]] = {
+    call(Shoebox.internal.getLibraryMembershipView(libraryId, userId)).map { _.json.as[Option[LibraryMembershipView]] }
+  }
+
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship] = {
+    call(Shoebox.internal.getOrganizationUserRelationship(orgId, userId)).map { _.json.as[OrganizationUserRelationship] }
+  }
 }

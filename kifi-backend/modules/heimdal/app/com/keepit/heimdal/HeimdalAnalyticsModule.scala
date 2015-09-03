@@ -7,9 +7,9 @@ import play.api.Play.current
 
 trait AnalyticsModule extends ScalaModule {
   @Provides @Singleton
-  def amplitude(primaryOrgProvider: PrimaryOrgProvider, ws: WebService): AmplitudeClient = {
+  def amplitude(ws: WebService): AmplitudeClient = {
     val apiKey: String = current.configuration.getString("amplitude.api_key").get
-    new AmplitudeClientImpl(apiKey, primaryOrgProvider, ws)
+    new AmplitudeClientImpl(apiKey, ws)
   }
 }
 
@@ -18,8 +18,8 @@ case class ProdAnalyticsModule() extends AnalyticsModule {
   def configure() = {}
 
   @Provides @Singleton
-  def mixpanel(primaryOrgProvider: PrimaryOrgProvider): MixpanelClient = {
+  def mixpanel(): MixpanelClient = {
     val projectToken: String = current.configuration.getString("mixpanel.token").get
-    new MixpanelClientImpl(projectToken, primaryOrgProvider)
+    new MixpanelClientImpl(projectToken)
   }
 }
