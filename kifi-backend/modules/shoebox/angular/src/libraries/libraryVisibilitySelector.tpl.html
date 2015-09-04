@@ -2,28 +2,42 @@
   class="kf-library-visibility-selector kf-row"
   ng-class="{'team-disabled': !spaceIsOrg()}"
 >
-  <div class="kf-triptych">
+  <label class="kf-triptych kf-library-visibility-selector-public"
+    ng-class="{ 'active': library.visibility === 'published' }"
+  >
+    <input type="radio" ng-model="library.visibility" ng-value="'published'" />
     <svg 
       kf-symbol-sprite 
       icon="globe"
       class="kf-library-visibility-selector-icon"
     ></svg>
     <span class="kf-library-visibility-selector-caption">Public</span>
-  </div>
-  <div class="kf-triptych kf-library-visibility-selector-team">
+  </label>
+  <label class="kf-triptych kf-library-visibility-selector-team"
+    ng-class="{ 'active': library.visibility === 'organization' }"
+  >
+    <input 
+      type="radio" 
+      ng-model="library.visibility" 
+      ng-value="'organization'" 
+      ng-disabled="!spaceIsOrg()"
+    />
     <svg 
       kf-symbol-sprite 
       icon="org"
       class="kf-library-visibility-selector-icon"
     ></svg>
     <span class="kf-library-visibility-selector-caption">Team</span>
-  </div>
-  <div class="kf-triptych">
+  </label>
+  <label class="kf-triptych kf-library-visibility-selector-private"
+    ng-class="{ 'active': library.visibility === 'secret' }"
+  >
+    <input type="radio" ng-model="library.visibility" ng-value="'secret'" />
     <svg 
       kf-symbol-sprite 
       icon="lock"
       class="kf-library-visibility-selector-icon"
     ></svg>
     <span class="kf-library-visibility-selector-caption">Private</span>
-  </div>
+  </label>
 </div>
