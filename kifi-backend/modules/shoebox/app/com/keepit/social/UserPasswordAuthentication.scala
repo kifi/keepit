@@ -14,19 +14,10 @@ class UserPasswordAuthentication @Inject() (
     db: Database,
     userCredRepo: UserCredRepo) extends PasswordAuthentication with Logging {
 
-  val pwdHasher = "bcrypt"
-
   def authenticate(userId: Id[User], providedCreds: String): Boolean = {
-    val credsOpt = db.readOnlyMaster { implicit session =>
-      userCredRepo.findByUserIdOpt(userId)
+    db.readOnlyMaster { implicit session =>
+      userCredRepo.verifyPassword(userId, providedCreds)
     }
-    if (credsOpt.isEmpty) log.warn(s"[authenticate(${userId})] credentials not found")
-    credsOpt map { creds =>
-      Registry.hashers.get(pwdHasher) match {
-        case None => throw new IllegalStateException(s"Password Hasher $pwdHasher not found")
-        case Some(hasher) => hasher.matches(PasswordInfo(pwdHasher, creds.credentials, None), providedCreds)
-      }
-    } getOrElse false
   }
 
 }
