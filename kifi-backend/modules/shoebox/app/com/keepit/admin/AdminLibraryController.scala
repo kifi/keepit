@@ -19,6 +19,7 @@ import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import play.api.mvc.Action
 import views.html
 
 import scala.concurrent.Future
@@ -364,7 +365,7 @@ class AdminLibraryController @Inject() (
     }
   }
 
-  def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+  def removeLibrariesWithInactiveOwner() = Action { request =>
     // delete all libraries with an inactive owner: no exceptions for collaborative or system libraries
 
     val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
@@ -373,9 +374,9 @@ class AdminLibraryController @Inject() (
     Ok
   }
 
-  def getLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+  def getLibrariesWithInactiveOwner() = Action { request =>
     val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
-    Ok(Json.obj("ids" -> libIds, "count" -> libIds.length))
+    Ok(Json.obj("ids" -> Json.toJson(libIds), "count" -> libIds.length))
   }
 
 }
