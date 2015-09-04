@@ -363,4 +363,11 @@ class AdminLibraryController @Inject() (
     }
   }
 
+  def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    val libsAndOwners = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwnerMemberships() }
+    implicit val context = HeimdalContext.empty
+    libsAndOwners.foreach { case (libId, userId) => libraryCommander.deleteLibrary(libId, userId) }
+    Ok
+  }
+
 }
