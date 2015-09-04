@@ -33,8 +33,10 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def sendUnreadNotifications(notif: Notification, recipient: Recipient): Unit = {
-    val unreadMessages = getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
-    val unreadNotifications = getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name)
+    val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
+      (notificationRepo.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name),
+      notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name))
+    }
     recipient match {
       case UserRecipient(user, _) =>
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -55,30 +57,14 @@ class NotificationMessagingCommander @Inject() (
   def changeNotificationUnread(userId: Id[User], notif: Notification, item: NotificationItem, unread: Boolean)(implicit context: HeimdalContext): Unit = {
     val updated = notificationCommander.updateNotificationUnread(notif.id.get, unread)
     if (updated) {
-      val nUrl = notificationCommander.getMessageThread(notif.id.get).flatMap(_.nUrl).getOrElse("")
+      val nUrl = db.readOnlyMaster { implicit session =>
+        notificationCommander.getMessageThread(notif.id.get).flatMap(_.nUrl).getOrElse("")
+      }
       webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
       if (unread) {
         messagingAnalytics.clearedNotification(userId, ExternalId[Message](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
       }
       sendUnreadNotifications(notif, Recipient(userId))
-    }
-  }
-
-  def getUnreadEnabledNotificationsCount(recipient: Recipient): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCount(recipient)
-    }
-  }
-
-  def getUnreadEnabledNotificationsCountForKind(recipient: Recipient, kind: String): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCountForKind(recipient, kind)
-    }
-  }
-
-  def getUnreadEnabledNotificationsCountExceptKind(recipient: Recipient, kind: String): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, kind)
     }
   }
 

@@ -1,16 +1,20 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
-import com.keepit.model.{ User, NotificationCategory }
+import com.keepit.model.{NormalizedURI, User, NotificationCategory}
+import com.keepit.notify.info.{NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo}
 import com.keepit.notify.model.event.LegacyNotification
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
+
+import scala.concurrent.Future
 
 @Singleton
 class NotificationCommander @Inject() (
@@ -112,10 +116,28 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def getMessageThread(notifId: Id[Notification]): Option[MessageThread] = {
+  /**
+   * Gets the message thread that is potentially associated with a notification. This should only return a message thread
+   * if the notification kind is of [[com.keepit.notify.model.event.NewMessage]], as that is the only kind associated with
+   * message threads.
+   */
+  def getMessageThread(notifId: Id[Notification])(implicit session: RSession): Option[MessageThread] = {
+     userThreadRepo.getByNotificationId(notifId).map { userThread =>
+      messageThreadRepo.get(userThread.threadId)
+    }
+  }
+
+  /**
+   * Gets the URI associated with a notification. If the notification represents a [[LegacyNotification]], then getting
+   * the URI just means getting the uri off of the notification's info object. Otherwise, the notification may be connected
+   * with a message thread that does have a normalized URI associated with it.
+   */
+  def getURI(notifId: Id[Notification]): Option[Id[NormalizedURI]] = {
     db.readOnlyMaster { implicit session =>
-      userThreadRepo.getByNotificationId(notifId).map { userThread =>
-        messageThreadRepo.get(userThread.threadId)
+      val items = notificationItemRepo.getAllForNotification(notifId)
+      items.head.event match { // these two cases are mutually exclusive. legacy notifications do not have message threads
+        case LegacyNotification(_, _, _, uriId) => uriId
+        case _ =>  getMessageThread(notifId).flatMap(_.uriId)
       }
     }
   }

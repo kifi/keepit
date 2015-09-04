@@ -8,6 +8,7 @@ import com.keepit.eliza.model.{ Notification, NotificationItem }
 import com.keepit.model.NormalizedURI
 import com.keepit.notify.info._
 import com.keepit.notify.model.event.LegacyNotification
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.store.ElizaS3ExternalIdImageStore
 import play.api.libs.json.{ Json, JsValue }
@@ -15,10 +16,11 @@ import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class ElizaNotificationInfo @Inject() (
+class NotificationJsonFormat @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     notificationJsonMaker: NotificationJsonMaker,
+    roverServiceClient: RoverServiceClient,
     implicit val executionContext: ExecutionContext) {
 
   def toRawNotification(item: NotificationItem): (JsValue, Option[Id[NormalizedURI]]) = {
@@ -28,7 +30,12 @@ class ElizaNotificationInfo @Inject() (
     }
   }
 
-  def mkJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo): Future[JsValue] = {
+  def resolveImage(image: NotificationImage): String = image match {
+    case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
+    case PublicImage(url) => url
+  }
+
+  def basicJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo): Future[JsValue] = {
     val maxByTime = items.maxBy(_.event.time)
     val maxTime = maxByTime.event.time
     notifInfo match {
@@ -54,9 +61,8 @@ class ElizaNotificationInfo @Inject() (
     }
   }
 
-  def resolveImage(image: NotificationImage): String = image match {
-    case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
-    case PublicImage(url) => url
+  def extendedJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo, uriSummary: Boolean = false): Future[JsValue] = {
+
   }
 
 }
