@@ -1,43 +1,64 @@
 <div 
-  class="kf-library-visibility-selector kf-row"
+  class="kf-library-visibility-selector"
   ng-class="{'team-disabled': !spaceIsOrg()}"
 >
-  <label class="kf-triptych kf-library-visibility-selector-public"
-    ng-class="{ 'active': library.visibility === 'published' }"
+  <div class="kf-row">
+    <label class="kf-triptych kf-library-visibility-selector-public"
+      ng-class="{ 'active': library.visibility === 'published' }"
+    >
+      <input type="radio" ng-model="library.visibility" ng-value="'published'" />
+      <svg 
+        kf-symbol-sprite 
+        icon="globe"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Public</span>
+    </label>
+    <label class="kf-triptych kf-library-visibility-selector-team"
+      ng-class="{ 'active': library.visibility === 'organization' }"
+    >
+      <input 
+        type="radio" 
+        ng-model="library.visibility" 
+        ng-value="'organization'" 
+        ng-disabled="!spaceIsOrg()"
+      />
+      <svg 
+        kf-symbol-sprite 
+        icon="org"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Team</span>
+    </label>
+    <label class="kf-triptych kf-library-visibility-selector-private"
+      ng-class="{ 'active': library.visibility === 'secret' }"
+    >
+      <input type="radio" ng-model="library.visibility" ng-value="'secret'" />
+      <svg 
+        kf-symbol-sprite 
+        icon="lock"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Private</span>
+    </label>
+  </div>
+  <p 
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'published'"
   >
-    <input type="radio" ng-model="library.visibility" ng-value="'published'" />
-    <svg 
-      kf-symbol-sprite 
-      icon="globe"
-      class="kf-library-visibility-selector-icon"
-    ></svg>
-    <span class="kf-library-visibility-selector-caption">Public</span>
-  </label>
-  <label class="kf-triptych kf-library-visibility-selector-team"
-    ng-class="{ 'active': library.visibility === 'organization' }"
+    Anyone can see and follow this library
+  </p>
+  <p 
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'organization'"
   >
-    <input 
-      type="radio" 
-      ng-model="library.visibility" 
-      ng-value="'organization'" 
-      ng-disabled="!spaceIsOrg()"
-    />
-    <svg 
-      kf-symbol-sprite 
-      icon="org"
-      class="kf-library-visibility-selector-icon"
-    ></svg>
-    <span class="kf-library-visibility-selector-caption">Team</span>
-  </label>
-  <label class="kf-triptych kf-library-visibility-selector-private"
-    ng-class="{ 'active': library.visibility === 'secret' }"
+    Only members of {{ space.destination | name }} can see this library
+  </p>
+  <p 
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'secret'"
   >
-    <input type="radio" ng-model="library.visibility" ng-value="'secret'" />
-    <svg 
-      kf-symbol-sprite 
-      icon="lock"
-      class="kf-library-visibility-selector-icon"
-    ></svg>
-    <span class="kf-library-visibility-selector-caption">Private</span>
-  </label>
+    Only people you invite can see this library
+  </p>
 </div>
+
