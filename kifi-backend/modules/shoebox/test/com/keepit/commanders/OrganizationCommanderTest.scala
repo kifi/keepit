@@ -14,6 +14,8 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.{ Random, Try }
 
 class OrganizationCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -245,6 +247,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           val maybeResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get))
           maybeResponse must beRight
+
+          Await.result(maybeResponse.right.get.returningLibsFut, Duration.Inf)
 
           db.readOnlyMaster { implicit session =>
             handleCommander.getByHandle(org.handle) must beNone
