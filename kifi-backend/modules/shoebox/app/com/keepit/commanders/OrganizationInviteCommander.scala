@@ -423,8 +423,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         val nonMembers = db.readOnlyMaster { implicit session =>
           val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
           val fakes = userCommander.get().getAllFakeUsers()
-          val admins = userExperimentRepo.getUserIdsByExperiment(UserExperimentType.ADMIN)
-          users.filter(id => !members.exists(_.userId == id) && (!fakes.contains(id) || admins.contains(id)))
+          val isRequesterAdmin = userExperimentRepo.hasExperiment(userId, UserExperimentType.ADMIN)
+          users.filter(id => !members.exists(_.userId == id) && (!fakes.contains(id) || isRequesterAdmin))
         }
 
         val uniqueEmailsWithName = contacts.groupBy(_.email.address.toLowerCase).map {
