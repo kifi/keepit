@@ -58,9 +58,12 @@ case class Library(
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED
+  def isSystemCreated: Boolean = !isUserCreated
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
+  // TODO(ryan): this is pretty fragile, we should move this type of thing into library creation and store the permissions with the Library
   def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
     case LibraryAccess.READ_ONLY => Set(
       LibraryPermission.VIEW_LIBRARY,
@@ -73,18 +76,24 @@ case class Library(
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS
-    ) ++ whoCanInvite.collect { case LibraryInvitePermissions.COLLABORATOR => LibraryPermission.INVITE_COLLABORATORS }
+    ) ++ (if (!whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
-    case LibraryAccess.OWNER => Set(
+    case LibraryAccess.OWNER if isSystemCreated => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    )
+    case LibraryAccess.OWNER if isUserCreated => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.INVITE_COLLABORATORS,
       LibraryPermission.REMOVE_MEMBERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
-      LibraryPermission.REMOVE_ANY_KEEPS
+      LibraryPermission.REMOVE_ANY_KEEPS,
+      LibraryPermission.INVITE_FOLLOWERS,
+      LibraryPermission.INVITE_COLLABORATORS
     )
   }
   def getMembershipInfo(mem: LibraryMembership): LibraryMembershipInfo = {
