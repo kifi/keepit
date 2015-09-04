@@ -43,9 +43,9 @@ case class Notification(
 
   def unread: Boolean = !disabled && hasNewEvent
 
-  def asRead = copy(lastChecked = Some(lastEvent))
+  def withUnread(unread: Boolean) = if (unread) copy(lastChecked = None) else copy(lastChecked = Some(lastEvent))
 
-  def asUnread = copy(lastChecked = None)
+  def withDisabled(disabled: Boolean) = copy(disabled = disabled)
 
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 

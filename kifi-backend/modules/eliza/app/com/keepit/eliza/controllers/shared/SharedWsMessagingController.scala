@@ -231,7 +231,7 @@ class SharedWsMessagingController @Inject() (
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         legacyNotificationCheck.ifNotifItemExists(messageId) {
           case (notif, item) =>
-            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, true)
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
           messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
         }
@@ -245,7 +245,7 @@ class SharedWsMessagingController @Inject() (
         implicit val context = contextBuilder.build
         legacyNotificationCheck.ifNotifItemExists(messageId) {
           case (notif, item) =>
-            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, false)
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
         } {
           messagingCommander.setRead(socket.userId, msgExtId)
           messagingCommander.setLastSeen(socket.userId, msgExtId)
@@ -255,7 +255,7 @@ class SharedWsMessagingController @Inject() (
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
-          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = true)
+          notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = true)
         } {
           messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
         }
@@ -265,7 +265,7 @@ class SharedWsMessagingController @Inject() (
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         val notifExternalId = ExternalId[Notification](jsThreadId)
         legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
-          notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = false)
+          notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
         } {
           messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
         }

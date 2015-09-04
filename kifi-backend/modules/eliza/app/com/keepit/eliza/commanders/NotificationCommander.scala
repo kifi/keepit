@@ -42,28 +42,25 @@ class NotificationCommander @Inject() (
     }.toSet
   }
 
-  def updateNotificationStatus(notifId: Id[Notification], disabled: Boolean): Boolean = {
+  def setNotificationDisabledTo(notifId: Id[Notification], disabled: Boolean): Boolean = {
     db.readWrite { implicit session =>
       val notif = notificationRepo.get(notifId)
       if (notif.disabled == disabled) {
         false
       } else {
-        notificationRepo.save(notif.copy(disabled = disabled))
+        notificationRepo.save(notif.withDisabled(disabled))
         true
       }
     }
   }
 
-  def updateNotificationUnread(notifId: Id[Notification], unread: Boolean): Boolean = {
+  def setNotificationUnreadTo(notifId: Id[Notification], unread: Boolean): Boolean = {
     db.readWrite { implicit session =>
       val notif = notificationRepo.get(notifId)
       if (notif.unread == unread) {
         false
       } else {
-        notificationRepo.save(
-          if (unread) notif.asUnread
-          else notif.asRead
-        )
+        notificationRepo.save(notif.withUnread(unread))
         true
       }
     }
@@ -129,7 +126,7 @@ class NotificationCommander @Inject() (
 
   /**
    * Gets the URI associated with a notification. If the notification represents a [[LegacyNotification]], then getting
-   * the URI just means getting the uri off of the notification's info object. Otherwise, the notification may be connected
+   * the URI just means getting the uri off of the notification's event object. Otherwise, the notification may be connected
    * with a message thread that does have a normalized URI associated with it.
    */
   def getURI(notifId: Id[Notification]): Option[Id[NormalizedURI]] = {
