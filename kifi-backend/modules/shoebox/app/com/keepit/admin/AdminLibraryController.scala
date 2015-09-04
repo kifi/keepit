@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -364,9 +365,11 @@ class AdminLibraryController @Inject() (
   }
 
   def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
-    val libsAndOwners = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwnerMemberships() }
-    implicit val context = HeimdalContext.empty
-    libsAndOwners.foreach { case (libId, userId) => libraryCommander.deleteLibrary(libId, userId) }
+    // delete all libraries with an inactive owner: no exceptions for collaborative or system libraries
+
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
+    FutureHelpers.sequentialExec(libIds)(libraryCommander.unsafeAsyncDeleteLibrary)
+
     Ok
   }
 
