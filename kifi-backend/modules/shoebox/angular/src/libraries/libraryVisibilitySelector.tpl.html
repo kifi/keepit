@@ -60,5 +60,9 @@
   >
     Only people you invite can see this library
   </p>
+  <label ng-if="spaceIsOrg()">
+    <input type="checkbox" />
+    Members of {{ space.name }} can join, add, and modify keeps
+  </label>
 </div>
 
