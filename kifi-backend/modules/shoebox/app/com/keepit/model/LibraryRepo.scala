@@ -73,6 +73,9 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
   def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
+
+  // one-time admin cleanup endpoint
+  def getLibrariesWithInactiveOwnerMemberships()(implicit session: RSession): Seq[(Id[Library], Id[User])]
 }
 
 @Singleton
@@ -514,11 +517,17 @@ class LibraryRepoImpl @Inject() (
       Map()
     } else {
       val inIds = owners.map { _.id }.mkString("(", ",", ")")
-      val q = sql"""select owner_id, count(*) from library  where owner_id in #${inIds} and kind = 'user_created' and state = 'active' and visibility = 'published' group by owner_id"""
+      val q = sql"""select owner_id, count(*) from library where owner_id in #${inIds} and kind = 'user_created' and state = 'active' and visibility = 'published' group by owner_id"""
 
       val cnts = q.as[(Int, Int)].list.map { case (userId, count) => Id[User](userId) -> count }.toMap
       owners.map { user => user -> cnts.getOrElse(user, 0) }.toMap
     }
+  }
+
+  def getLibrariesWithInactiveOwnerMemberships()(implicit session: RSession): Seq[(Id[Library], Id[User])] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select lib.id, u.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
+    q.as[(Id[Library], Id[User])].list
   }
 }
 
