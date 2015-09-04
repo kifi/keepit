@@ -49,6 +49,7 @@ trait LibraryCommander {
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
   def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User]): Library
+  def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit]
 }
 
 class LibraryCommanderImpl @Inject() (
@@ -394,6 +395,36 @@ class LibraryCommanderImpl @Inject() (
       }
       searchClient.updateLibraryIndex()
       None
+    }
+  }
+
+  def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit] = { // used to manually delete libraries
+    val deletedMembersFut = db.readWriteAsync { implicit session =>
+      libraryMembershipRepo.getWithLibraryId(libraryId).foreach { mem =>
+        libraryMembershipRepo.save(mem.withState(LibraryMembershipStates.INACTIVE))
+      }
+    }
+
+    val deletedInvitesFut = db.readWriteAsync { implicit session =>
+      libraryInviteRepo.getWithLibraryId(libraryId).foreach { invite =>
+        libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE))
+      }
+    }
+
+    val deletedKeepsFut = db.readWriteAsync { implicit session =>
+      keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
+      searchClient.updateKeepIndex()
+    }
+
+    for {
+      deletedMembers <- deletedMembersFut
+      deletedInvites <- deletedInvitesFut
+      deletedKeeps <- deletedKeepsFut
+    } yield {
+      db.readWriteAsync { implicit session =>
+        libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
+        searchClient.updateLibraryIndex()
+      }
     }
   }
 

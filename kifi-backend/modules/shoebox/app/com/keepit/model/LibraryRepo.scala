@@ -75,7 +75,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // one-time admin cleanup endpoint
-  def getLibrariesWithInactiveOwnerMemberships()(implicit session: RSession): Seq[(Id[Library], Id[User])]
+  def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -524,10 +524,10 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  def getLibrariesWithInactiveOwnerMemberships()(implicit session: RSession): Seq[(Id[Library], Id[User])] = {
+  def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select lib.id, u.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
-    q.as[(Id[Library], Id[User])].list
+    val q = sql"""select lib.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
+    q.as[Id[Library]].list
   }
 }
 
