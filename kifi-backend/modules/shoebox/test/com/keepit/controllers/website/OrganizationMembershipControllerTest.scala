@@ -48,6 +48,7 @@ class OrganizationMembershipControllerTest extends Specification with ShoeboxTes
           .withMembers(members)
           .withInvitedUsers(invitedUsers)
           .withInvitedEmails(invitedEmails)
+          .withWeakMembers()
           .saved
 
         (org, owner, members, invitedUsers, invitedEmails)

@@ -33,6 +33,9 @@ object OrganizationFactory {
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
     def withBasePermissions(newBasePermissions: BasePermissions) = this.copy(org = org.copy(basePermissions = newBasePermissions))
+
+    // This method makes it so an org's members cannot invite, useful for testing
+    def withWeakMembers() = this.copy(org = org.applyPermissionsDiff(PermissionsDiff.justRemove(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.INVITE_MEMBERS))))
     def secret() = this.copy(org = org.hiddenFromNonmembers)
   }
 }
