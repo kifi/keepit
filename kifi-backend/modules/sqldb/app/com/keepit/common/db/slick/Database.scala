@@ -1,8 +1,9 @@
 package com.keepit.common.db.slick
 
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.Mode.Mode
-import play.api.{ Mode, Play }
+import play.api.{ Logger, Mode, Play }
 
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
@@ -39,11 +40,58 @@ trait SlickSessionProvider {
 
 @Singleton
 class SlickSessionProviderImpl extends SlickSessionProvider {
+  import com.keepit.common.db.slick.DBSession.ROSession
+
+  private class SessionWrapper(session: Session, onClose: => Unit) extends Session {
+    override def resultSetType = session.resultSetType
+    override def resultSetConcurrency = session.resultSetConcurrency
+    override def resultSetHoldability = session.resultSetHoldability
+    def database = session.database
+    def conn = session.conn
+    def metaData = session.metaData
+    def capabilities = session.capabilities
+    def close() = onClose
+    def rollback() = session.rollback()
+    def withTransaction[T](f: => T) = session.withTransaction(f)
+  }
+
+  // Using two, so we can save a reference to both kinds
+  private val existingROSession = new ThreadLocal[Session]
+  private val existingRWSession = new ThreadLocal[Session]
+
   def createReadOnlySession(handle: SlickDatabase): Session = {
-    handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
+    val existingOpt = Option(existingROSession.get).orElse(Option(existingRWSession.get))
+    existingOpt match {
+      case Some(existing) =>
+        new SessionWrapper(existing, {
+          // Do nothing. If working on reducing these, feel free to add logs.
+        })
+      case None => // This is the expected/good case.
+        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
+        val newSession = new SessionWrapper(rawSession, {
+          existingROSession.set(null)
+          rawSession.close()
+        })
+        existingROSession.set(newSession)
+        newSession
+    }
   }
   def createReadWriteSession(handle: SlickDatabase): Session = {
-    handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
+    val existingOpt = Option(existingRWSession.get)
+    existingOpt match {
+      case Some(existing) =>
+        new SessionWrapper(existing, {
+          // Do nothing. If working on reducing these, feel free to add logs.
+        })
+      case None => // This is the expected/good case.
+        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
+        val newSession = new SessionWrapper(rawSession, {
+          existingRWSession.set(null)
+          rawSession.close()
+        })
+        existingRWSession.set(newSession)
+        newSession
+    }
   }
 }
 
