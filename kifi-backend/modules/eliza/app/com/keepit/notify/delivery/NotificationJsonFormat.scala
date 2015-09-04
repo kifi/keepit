@@ -83,7 +83,7 @@ class NotificationJsonFormat @Inject() (
     }
   }
 
-  def getParticipantInfo(notif: Notification): Future[Set[BasicUserLikeEntity]] = {
+  def getParticipants(notif: Notification): Future[Set[BasicUserLikeEntity]] = {
     val participants = notificationCommander.getParticipants(notif)
     val userIds = participants.collect {
       case UserRecipient(userId, _) => userId
@@ -97,7 +97,7 @@ class NotificationJsonFormat @Inject() (
     for {
       userParticipants <- userParticipantsF
     } yield {
-      userParticipants.toSet //| otherParticipants
+      userParticipants.toSet | otherParticipants
     }
   }
 
@@ -106,7 +106,7 @@ class NotificationJsonFormat @Inject() (
       case NotificationWithInfo(notif, items, info) =>
         val notifId = notif.id.get
         val uriSummaryF = getUriSummary(notifId)
-        val participants = notificationCommander.getParticipants(notif)
+        val participantsF = getParticipants(notif)
         val jsonF = for {
           uriSummary <- uriSummaryF
         } yield {

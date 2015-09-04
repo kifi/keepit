@@ -60,7 +60,6 @@ case class Notification(
 class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
 
   require(items.forall(_.kind == notification.kind))
-
   require(relevantItem.eventTime == notification.lastEvent)
 
   lazy val relevantItem = items.maxBy(_.eventTime)
