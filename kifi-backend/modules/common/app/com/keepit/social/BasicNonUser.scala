@@ -23,9 +23,7 @@ object NonUserKinds {
   val email = NonUserKind("email")
 }
 
-case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String]) extends BasicUserLikeEntity {
-  override def asBasicNonUser: Option[BasicNonUser] = Some(this)
-}
+case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
 
 object BasicNonUser {
   val DefaultPictureName = S3UserPictureConfig.defaultName + ".jpg"

@@ -89,18 +89,16 @@ class NotificationJsonMaker @Inject() (
 
   private def author(value: JsValue): Future[Option[BasicUserLikeEntity]] = {
     value.asOpt[BasicUserLikeEntity] match {
-      case Some(bu: BasicUser) => updateBasicUser(bu) map Some.apply
+      case Some(BasicUserLikeEntity.user(bu)) => updateBasicUser(bu).map(u => Some(BasicUserLikeEntity(u)))
       case x => Future.successful(x)
     }
   }
 
   private def participants(value: JsValue): Future[Seq[BasicUserLikeEntity]] = {
     value.asOpt[Seq[BasicUserLikeEntity]] map { participants =>
-      Future.sequence(participants.map { participant =>
-        participant match {
-          case p: BasicUser => updateBasicUser(p)
-          case p => Future.successful(p)
-        }
+      Future.sequence(participants.map {
+        case BasicUserLikeEntity.user(p) => updateBasicUser(p).map(u => BasicUserLikeEntity(u))
+        case p => Future.successful(p)
       })
     } getOrElse {
       Future.successful(Seq.empty)

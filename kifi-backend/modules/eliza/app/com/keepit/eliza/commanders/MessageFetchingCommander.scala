@@ -31,7 +31,7 @@ class MessageFetchingCommander @Inject() (
     nUrl: String,
     user: Option[BasicUser],
     participants: Seq[BasicUserLikeEntity]): Future[MessageWithBasicUser] = {
-    modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, source, auxData, url, nUrl, user, participants))
+    modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, source, auxData, url, nUrl, user.map(u => BasicUserLikeEntity(u)), participants))
   }
 
   //this is for internal use (not just this class, also several other commanders and tests). Do not use from a controller!
@@ -58,11 +58,11 @@ class MessageFetchingCommander @Inject() (
           url = message.sentOnUrl.getOrElse(""),
           nUrl = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
           user = message.from match {
-            case MessageSender.User(id) => Some(id2BasicUser(id))
-            case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+            case MessageSender.User(id) => Some(Right(id2BasicUser(id)))
+            case MessageSender.NonUser(nup) => Some(Left(NonUserParticipant.toBasicNonUser(nup)))
             case _ => None
           },
-          participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
+          participants = userParticipantSet.toSeq.map(user => Right(id2BasicUser(user))) ++ nonUsers.map(nonUser => Left(nonUser))
         )
       }
     })
@@ -83,11 +83,12 @@ class MessageFetchingCommander @Inject() (
     val adderUserId = Id[User](jsAdderUserId.toLong)
     new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
       val adderUser = basicUsers(adderUserId)
-      val addedBasicUsers = addedUsers.map(u => basicUsers(u)) ++ addedNonUsers.map(NonUserParticipant.toBasicNonUser)
+      val addedBasicUsers = addedUsers.map(u => BasicUserLikeEntity(basicUsers(u))) ++
+        addedNonUsers.map(participant => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(participant)))
       val addedUsersString = addedBasicUsers.map { bule =>
         bule match {
-          case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
-          case bnu: BasicNonUser => bnu.lastName.map(ln => s"${bnu.firstName.get} $ln").getOrElse(bnu.firstName.get)
+          case BasicUserLikeEntity.user(bu) => s"${bu.firstName} ${bu.lastName}"
+          case BasicUserLikeEntity.nonUser(bnu) => bnu.lastName.map(ln => s"${bnu.firstName.get} $ln").getOrElse(bnu.firstName.get)
           case _ => "Kifi User"
         }
       }.toList match {
@@ -123,7 +124,7 @@ class MessageFetchingCommander @Inject() (
           }
           auxModifiedFuture.map {
             case (text, aux) =>
-              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"))))
+              m.copy(auxData = Some(aux), text = text, user = Some(Right(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss")))))
           }
         case None =>
           Promise.successful(m).future

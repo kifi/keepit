@@ -166,8 +166,8 @@ class MobileMessagingController @Inject() (
               "text" -> m.text
             )
             val msgJson = baseJson ++ (m.user match {
-              case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
               case _ => Json.obj()
             })
 
@@ -206,8 +206,8 @@ class MobileMessagingController @Inject() (
               "text" -> m.text
             )
             val msgJson = baseJson ++ (m.user match {
-              case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
               case _ => Json.obj()
             })
 
