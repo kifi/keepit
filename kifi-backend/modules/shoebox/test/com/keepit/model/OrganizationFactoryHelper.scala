@@ -9,7 +9,7 @@ import com.keepit.payments.{ PlanManagementCommander, PaidPlan, BillingCycle, Do
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      injector.getInstance(classOf[PlanManagementCommander]).createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+      injector.getInstance(classOf[PlanManagementCommander]).createNewPlanHelper(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       val handleCommander = injector.getInstance(classOf[HandleCommander])
       val org = if (orgTemplate.primaryHandle.isEmpty) {
