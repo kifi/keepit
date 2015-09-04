@@ -81,7 +81,8 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
     existingOpt match {
       case Some(existing) =>
         new SessionWrapper(existing, {
-          // Do nothing. If working on reducing these, feel free to add logs.
+          existing.conn.commit()
+          // Do nothing else. If working on reducing these, feel free to add logs.
         })
       case None => // This is the expected/good case.
         val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
