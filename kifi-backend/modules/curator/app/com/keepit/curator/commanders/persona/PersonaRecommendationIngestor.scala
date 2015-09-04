@@ -58,7 +58,7 @@ class PersonaRecommendationIngestor @Inject() (
   private def ingestLibraryRecos(userId: Id[User], libRecos: Seq[LibraryRecommendation], reverseIngestion: Boolean): Unit = {
     val (existing, uniqueLibRecosToIngest) = db.readOnlyMaster { implicit s =>
       val userLibs = libMembershipRepo.getLibrariesByUserId(userId).toSet
-      val existing = db.readOnlyMaster { implicit s => libRecRepo.getLibraryIdsForUser(userId) }
+      val existing = libRecRepo.getLibraryIdsForUser(userId)
       val uniqueLibRecosToIngest = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }.toSeq.filter(x => !userLibs.contains(x.libraryId))
       (existing, uniqueLibRecosToIngest)
     }

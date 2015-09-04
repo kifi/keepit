@@ -76,7 +76,7 @@ class Database @Inject() (
   val dialect: DatabaseDialect[_] = db.dialect
 
   def enteringSession[T](f: => T) = {
-    val detectLayeredSessions = false && !Play.maybeApplication.exists(_.mode == Mode.Prod) // Remove `false &&` to enable this
+    val detectLayeredSessions = !Play.maybeApplication.exists(_.mode == Mode.Prod) // Remove `false &&` to enable this
     if (detectLayeredSessions) {
       val wasInSession = Option(DatabaseSessionLock.tl.get).getOrElse(false)
       val verbose = true
@@ -85,12 +85,13 @@ class Database @Inject() (
         var sourceState: SourceState = NoSession
         val databaseSources = Set("Database.scala", "DBSession.scala")
         val stack = new InSessionException("").getStackTrace.filter(_.getClassName.contains("com.keepit")).flatMap { l =>
+          val testCreatedTheSessionTag = if (l.getFileName.endsWith("Test.scala")) " \u001b[34m(in test)\u001b[0m" else ""
           if (sourceState == WriteSession && !databaseSources.contains(l.getFileName)) {
             sourceState = NoSession
-            Some(l.getFileName + ":" + l.getLineNumber + " \u001b[33;1mWRITE\u001b[0m")
+            Some(l.getFileName + ":" + l.getLineNumber + " \u001b[33;1mWRITE\u001b[0m" + testCreatedTheSessionTag)
           } else if (sourceState == ReadSession && !databaseSources.contains(l.getFileName)) {
             sourceState = NoSession
-            Some(l.getFileName + ":" + l.getLineNumber)
+            Some(l.getFileName + ":" + l.getLineNumber + testCreatedTheSessionTag)
           } else if (l.getFileName == "Database.scala") {
             if (l.getMethodName.contains("readWrite")) {
               sourceState = WriteSession
@@ -99,14 +100,9 @@ class Database @Inject() (
             }
             None
           } else {
-            if (verbose) {
-              Some("\t" + l.getFileName + ":" + l.getLineNumber)
-            } else {
-              None
-            }
+            Some("\t" + l.getFileName + ":" + l.getLineNumber)
           }
         }
-        new InSessionException("").printStackTrace()
         println("\uD83D\uDEA6  \u001b[31;4mMultiple sessions created:\u001b[0m\n\t" + stack.mkString("\n\t"))
       }
       DatabaseSessionLock.tl.set(true)
@@ -141,7 +137,7 @@ class Database @Inject() (
       }
   }
 
-  private def readOnlyWithAttempts[T](attempts: Int, dbMasterReplica: DBMasterReplica)(f: ROSession => T)(location: Location): T = enteringSession { // retry by default with implicit override?
+  private def readOnlyWithAttempts[T](attempts: Int, dbMasterReplica: DBMasterReplica)(f: ROSession => T)(location: Location): T = { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
         return readOnlyOneAttempt(dbMasterReplica)(f)(location)
