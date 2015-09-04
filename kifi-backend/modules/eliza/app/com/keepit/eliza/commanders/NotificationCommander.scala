@@ -16,6 +16,7 @@ import play.api.libs.json.{ JsObject, Json }
 class NotificationCommander @Inject() (
     db: Database,
     userThreadRepo: UserThreadRepo,
+    messageThreadRepo: MessageThreadRepo,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo) extends Logging {
 
@@ -38,16 +39,29 @@ class NotificationCommander @Inject() (
   }
 
   def updateNotificationStatus(notifId: Id[Notification], disabled: Boolean): Boolean = {
-    val notif = db.readOnlyMaster { implicit session =>
-      notificationRepo.get(notifId)
-    }
-    if (notif.disabled == disabled) {
-      false
-    } else {
-      db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
+      val notif = notificationRepo.get(notifId)
+      if (notif.disabled == disabled) {
+        false
+      } else {
         notificationRepo.save(notif.copy(disabled = disabled))
+        true
       }
-      true
+    }
+  }
+
+  def updateNotificationUnread(notifId: Id[Notification], unread: Boolean): Boolean = {
+    db.readWrite { implicit session =>
+      val notif = notificationRepo.get(notifId)
+      if (notif.unread == unread) {
+        false
+      } else {
+        notificationRepo.save(
+          if (unread) notif.asUnread
+          else notif.asRead
+        )
+        true
+      }
     }
   }
 
@@ -94,6 +108,14 @@ class NotificationCommander @Inject() (
           } { notif =>
             (notif, notificationItemRepo.getAllForNotification(notif.id.get).head)
           }
+      }
+    }
+  }
+
+  def getMessageThread(notifId: Id[Notification]): Option[MessageThread] = {
+    db.readOnlyMaster { implicit session =>
+      userThreadRepo.getByNotificationId(notifId).map { userThread =>
+        messageThreadRepo.get(userThread.threadId)
       }
     }
   }

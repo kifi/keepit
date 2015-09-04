@@ -31,16 +31,13 @@ class ElizaNotificationInfo @Inject() (
   def mkJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo): Future[JsValue] = {
     val maxByTime = items.maxBy(_.event.time)
     val maxTime = maxByTime.event.time
-    val lastEventMoreRecentThanChecked = notif.lastChecked.fold(true) { checked =>
-      notif.lastEvent > checked
-    }
     notifInfo match {
       case info: StandardNotificationInfo =>
         Future.successful(Json.obj(
           "id" -> maxByTime.externalId,
           "time" -> maxTime,
           "thread" -> notif.externalId,
-          "unread" -> Json.toJson(!notif.disabled && lastEventMoreRecentThanChecked),
+          "unread" -> Json.toJson(notif.unread),
           "category" -> "triggered",
           "fullCategory" -> "replace me",
           "title" -> info.title,
@@ -53,7 +50,7 @@ class ElizaNotificationInfo @Inject() (
         ))
       case info: LegacyNotificationInfo =>
         val (json, uriId) = toRawNotification(items.head)
-        notificationJsonMaker.makeOne((json, !notif.disabled && lastEventMoreRecentThanChecked, uriId), true).map(_.obj)
+        notificationJsonMaker.makeOne((json, notif.unread, uriId), true).map(_.obj)
     }
   }
 

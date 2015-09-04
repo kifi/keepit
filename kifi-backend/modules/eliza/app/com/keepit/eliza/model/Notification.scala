@@ -37,9 +37,20 @@ case class Notification(
     disabled: Boolean = false,
     externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
 
+  def hasNewEvent: Boolean = lastChecked.fold(true) { checked =>
+    lastEvent > checked
+  }
+
+  def unread: Boolean = !disabled && hasNewEvent
+
+  def asRead = copy(lastChecked = Some(lastEvent))
+
+  def asUnread = copy(lastChecked = None)
+
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 
   override def withUpdateTime(now: DateTime): Notification = copy(updatedAt = updatedAt)
+
 }
 
 object Notification {

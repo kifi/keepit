@@ -215,8 +215,6 @@ class SharedWsMessagingController @Inject() (
         legacyNotificationCheck.ifNotifItemExists(notifId) {
           case (notif, item) =>
             val recipient = Recipient(socket.userId)
-            val numUnreadMessages = notificationMessagingCommander.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
-            val numUnreadNotifs = notificationMessagingCommander.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
           val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
@@ -230,8 +228,10 @@ class SharedWsMessagingController @Inject() (
 
     "set_message_unread" -> {
       case JsString(messageId) +: _ =>
+        implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         legacyNotificationCheck.ifNotifItemExists(messageId) {
-          case (notif, item) => notificationMessagingCommander.setNotificationUnread(notif)
+          case (notif, item) =>
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, true)
         } {
           messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
         }
@@ -244,7 +244,8 @@ class SharedWsMessagingController @Inject() (
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
         implicit val context = contextBuilder.build
         legacyNotificationCheck.ifNotifItemExists(messageId) {
-          case (notif, item) => notificationMessagingCommander.setNotificationRead(notif)
+          case (notif, item) =>
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, false)
         } {
           messagingCommander.setRead(socket.userId, msgExtId)
           messagingCommander.setLastSeen(socket.userId, msgExtId)
