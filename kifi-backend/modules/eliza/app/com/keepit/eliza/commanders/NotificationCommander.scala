@@ -17,8 +17,7 @@ class NotificationCommander @Inject() (
     db: Database,
     userThreadRepo: UserThreadRepo,
     notificationRepo: NotificationRepo,
-    notificationItemRepo: NotificationItemRepo,
-    notificationDeliveryCommander: NotificationDeliveryCommander) extends Logging {
+    notificationItemRepo: NotificationItemRepo) extends Logging {
 
   def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
     db.readOnlyMaster { implicit session =>
