@@ -35,7 +35,7 @@ class NotificationMessagingCommander @Inject() (
   def sendUnreadNotifications(notif: Notification, recipient: Recipient): Unit = {
     val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
       (notificationRepo.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name),
-      notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name))
+        notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name))
     }
     recipient match {
       case UserRecipient(user, _) =>

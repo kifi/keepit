@@ -61,6 +61,7 @@ class NotificationJsonFormat @Inject() (
     }
   }
 
+
   def extendedJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo, uriSummary: Boolean = false): Future[JsValue] = {
 
   }

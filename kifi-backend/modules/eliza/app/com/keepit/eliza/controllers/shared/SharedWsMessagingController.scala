@@ -166,13 +166,18 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) {
+          3
+        } {
+          val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_sent_threads_before" -> {

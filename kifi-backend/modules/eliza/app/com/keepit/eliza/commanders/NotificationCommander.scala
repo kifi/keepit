@@ -7,8 +7,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
-import com.keepit.model.{NormalizedURI, User, NotificationCategory}
-import com.keepit.notify.info.{NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo}
+import com.keepit.model.{ NormalizedURI, User, NotificationCategory }
+import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo }
 import com.keepit.notify.model.event.LegacyNotification
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
@@ -119,7 +119,7 @@ class NotificationCommander @Inject() (
    * message threads.
    */
   def getMessageThread(notifId: Id[Notification])(implicit session: RSession): Option[MessageThread] = {
-     userThreadRepo.getByNotificationId(notifId).map { userThread =>
+    userThreadRepo.getByNotificationId(notifId).map { userThread =>
       messageThreadRepo.get(userThread.threadId)
     }
   }
@@ -134,7 +134,7 @@ class NotificationCommander @Inject() (
       val items = notificationItemRepo.getAllForNotification(notifId)
       items.head.event match { // these two cases are mutually exclusive. legacy notifications do not have message threads
         case LegacyNotification(_, _, _, uriId) => uriId
-        case _ =>  getMessageThread(notifId).flatMap(_.uriId)
+        case _ => getMessageThread(notifId).flatMap(_.uriId)
       }
     }
   }
