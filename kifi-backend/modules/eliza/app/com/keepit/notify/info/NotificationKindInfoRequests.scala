@@ -13,7 +13,7 @@ import NotificationInfoRequest._
 class NotificationKindInfoRequests @Inject() () {
 
   private def genericInfoFn[N <: NotificationEvent](
-    fn: Set[N] => RequestingNotificationInfos[StandardNotificationInfo]
+    fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
     // the function does not know that the items it has have the same kind
     fn match {
@@ -47,6 +47,7 @@ class NotificationKindInfoRequests @Inject() () {
       case OwnedLibraryNewCollaborator => genericInfoFn(infoForOwnedLibraryNewCollaborator)
       case NewSocialConnection => genericInfoFn(infoForNewSocialConection)
       case SocialContactJoined => genericInfoFn(infoForSocialContactJoined)
+      case LegacyNotification => genericInfoFn(infoForLegacyNotification)
     }
     infoFn(items.map(_.event))
   }

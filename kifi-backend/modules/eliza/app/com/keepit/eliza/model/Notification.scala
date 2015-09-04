@@ -3,6 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.notify.info.NotificationInfo
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model._
 import org.joda.time.DateTime
@@ -52,6 +53,20 @@ case class Notification(
   override def withUpdateTime(now: DateTime): Notification = copy(updatedAt = updatedAt)
 
 }
+
+class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
+  require(items.forall(_.kind == notification.kind))
+  def relevantItem = items.maxBy(_.eventTime)
+}
+
+case class NotificationWithItems(
+  override val notification: Notification,
+  override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
+
+case class NotificationWithInfo(
+  override val notification: Notification,
+  override val items: Set[NotificationItem], info: NotificationInfo)
+    extends ExtendedNotification(notification, items)
 
 object Notification {
 

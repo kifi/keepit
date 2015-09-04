@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.eliza.commanders.NotificationJsonMaker
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
-import com.keepit.eliza.model.{ Notification, NotificationItem }
+import com.keepit.eliza.model.{ NotificationWithInfo, Notification, NotificationItem }
 import com.keepit.model.NormalizedURI
 import com.keepit.notify.info._
 import com.keepit.notify.model.event.LegacyNotification
@@ -35,32 +35,31 @@ class NotificationJsonFormat @Inject() (
     case PublicImage(url) => url
   }
 
-  def basicJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo): Future[JsValue] = {
-    val maxByTime = items.maxBy(_.event.time)
-    val maxTime = maxByTime.event.time
-    notifInfo match {
-      case info: StandardNotificationInfo =>
-        Future.successful(Json.obj(
-          "id" -> maxByTime.externalId,
-          "time" -> maxTime,
-          "thread" -> notif.externalId,
-          "unread" -> Json.toJson(notif.unread),
-          "category" -> "triggered",
-          "fullCategory" -> "replace me",
-          "title" -> info.title,
-          "bodyHtml" -> info.body,
-          "linkText" -> info.linkText,
-          "url" -> info.url,
-          "isSticky" -> false,
-          "image" -> resolveImage(info.image),
-          "extra" -> info.extraJson
-        ))
-      case info: LegacyNotificationInfo =>
-        val (json, uriId) = toRawNotification(items.head)
-        notificationJsonMaker.makeOne((json, notif.unread, uriId), true).map(_.obj)
-    }
+  def basicJson(notifWithInfo: NotificationWithInfo): Future[JsValue] = notifWithInfo match {
+    case NotificationWithInfo(notif, items, info) =>
+      val relevantItem = notifWithInfo.relevantItem
+      notifWithInfo.info match {
+        case info: StandardNotificationInfo =>
+          Future.successful(Json.obj(
+            "id" -> relevantItem.externalId,
+            "time" -> notif.lastEvent,
+            "thread" -> notif.externalId,
+            "unread" -> Json.toJson(notif.unread),
+            "category" -> "triggered",
+            "fullCategory" -> "replace me",
+            "title" -> info.title,
+            "bodyHtml" -> info.body,
+            "linkText" -> info.linkText,
+            "url" -> info.url,
+            "isSticky" -> false,
+            "image" -> resolveImage(info.image),
+            "extra" -> info.extraJson
+          ))
+        case info: LegacyNotificationInfo =>
+          val (json, uriId) = toRawNotification(items.head)
+          notificationJsonMaker.makeOne((json, notif.unread, uriId), includeUriSummary = true).map(_.obj)
+      }
   }
-
 
   def extendedJson(notif: Notification, items: Set[NotificationItem], notifInfo: NotificationInfo, uriSummary: Boolean = false): Future[JsValue] = {
 
