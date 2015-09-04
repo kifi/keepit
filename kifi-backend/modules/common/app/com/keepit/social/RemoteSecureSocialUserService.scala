@@ -80,9 +80,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
     }
   }
 
-  def save(identity: Identity): SocialUser = reportExceptions {
-    SocialUser(identity)
-  }
+  def save(identity: Identity): UserIdentity = throw new IllegalStateException(s"Attempt to call RemoteSecureSocialUserPlugin.save with identity $identity")
 
   // TODO(greg): implement when we start using the UsernamePasswordProvider
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = ???
