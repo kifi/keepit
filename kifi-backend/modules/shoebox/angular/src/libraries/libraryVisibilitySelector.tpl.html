@@ -1,23 +1,29 @@
-<div class="library-visibility-selector">
-  <label ng-if="!spaceIsOrg(space)">
-    <input class="library-visibility-checkbox-input" type="checkbox" ng-model="library.visibility" ng-false-value="'published'" ng-true-value="'secret'">
-    <div class="library-visibility-checkbox-custom-input kf-transitions">
-      <div class="library-visibility-checkbox-custom-input-public-background"></div>
-      <div class="library-visibility-checkbox-custom-input-secret-background svg-card-lock"></div>
-    </div>
-  </label>
-  <div ng-if="spaceIsOrg(space)" class="library-visibility-radio-settings-option">
-    <label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'published'">
-      <span class="library-visibility-option-text">Public</span>
-    </label><!-- remove extra space from inline-block
-    --><label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'organization'">
-      <span class="library-visibility-option-text">Organization</span>
-    </label><!-- remove extra space from inline-block
-    --><label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'secret'">
-      <span class="library-visibility-option-text">Private</span>
-    </label>
+<div 
+  class="kf-library-visibility-selector kf-row"
+  ng-class="{'team-disabled': !spaceIsOrg()}"
+>
+  <div class="kf-triptych">
+    <svg 
+      kf-symbol-sprite 
+      icon="globe"
+      class="kf-library-visibility-selector-icon"
+    ></svg>
+    <span class="kf-library-visibility-selector-caption">Public</span>
+  </div>
+  <div class="kf-triptych kf-library-visibility-selector-team">
+    <svg 
+      kf-symbol-sprite 
+      icon="org"
+      class="kf-library-visibility-selector-icon"
+    ></svg>
+    <span class="kf-library-visibility-selector-caption">Team</span>
+  </div>
+  <div class="kf-triptych">
+    <svg 
+      kf-symbol-sprite 
+      icon="lock"
+      class="kf-library-visibility-selector-icon"
+    ></svg>
+    <span class="kf-library-visibility-selector-caption">Private</span>
   </div>
 </div>

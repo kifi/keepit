@@ -60,17 +60,8 @@
 
           <div class="manage-lib-input-wrapper">
             <h3 class="manage-lib-heading">Privacy</h3>
-            <div class="manage-lib-input-area manage-lib-create-visibility-wrapper" ng-switch="library.visibility">
+            <div class="manage-lib-input-area manage-lib-create-visibility-wrapper">
               <div kf-library-visibility-selector library="library" space="space.destination"></div>
-              <p ng-switch-when="published" class="manage-lib-create-visibility-description">
-                Anyone can see and follow this library
-              </p>
-              <p ng-switch-when="organization" class="manage-lib-create-visibility-description">
-                Only members of {{ space.destination | name }} can see this library
-              </p>
-              <p ng-switch-when="secret" class="manage-lib-create-visibility-description">
-                Only people you invite can see this library
-              </p>
             </div>
           </div>
 

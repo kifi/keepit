@@ -1,85 +1,25 @@
-//==========================
-// Checkbox Styles
-//==========================
+.kf-library-visibility-selector
+  max-width: 250px
 
-.library-visibility-checkbox-input
-  display: none
+  &.team-disabled
+    .kf-library-visibility-selector-team
+      .kf-library-visibility-selector-icon
+        fill: textLightGrey
 
-.library-visibility-checkbox-custom-input
-  position: relative
-  display: inline-block
-  border-radius: 18px
-  width: 55px
-  height: 28px
-  margin: 0 10px 0 0
-  background-color: #6FCA72
-  vertical-align: middle
-  cursor: pointer
+      .kf-library-visibility-selector-caption
+        color: textLightGrey
 
-  &.kf-transitions
-    transition: background-color 0.2s
-
-  .library-visibility-checkbox-input:checked ~ &
-    background-color: libraryRed
-
-    &::after
-      transform: translate(28px)
-
-  &::after
-    position: absolute;
-    bottom: 0
-    left: 0
-    border: 1px solid #eee
-    border-radius: 50%
-    width: 26px
-    height: 26px
-    background-color: #fff
-    box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
-    content: '';
-
-  &.kf-transitions::after
-    transition: transform 0.2s
-
-  &:focus::after
-  &:hover::after
-    background-color: #fefcf1
-
-.library-visibility-checkbox-custom-input-secret-background
-  position: absolute
-  left: 4px
-  width: 50%
-  height: 100%
-  background-position: 8px 7px
-  background-size: auto 12px
-  background-repeat: no-repeat
-
-//==========================
-// Radio Button Styles
-//==========================
-
-.library-visibility-radio-label
-  display: block
+.kf-triptych
+  border-radius: defaultBorderRadius
+  padding: defaultPadding
   box-sizing: border-box
-  padding: 5px 0
-  vertical-align: top
 
-  @media (min-width: appMobileWidth)
-    display: inline-block
-    padding: 5px 10px
-    border: 1px solid whitesmoke
-    text-align: center
-    cursor: pointer
+.kf-library-visibility-selector-icon
+  display: block
+  margin: 0px auto
+  width: 30px
+  height: 30px
 
-    &:first-child
-      border-top-left-radius: 8px
-      border-bottom-left-radius: 8px
-
-    &:last-child
-      border-top-right-radius: 8px
-      border-bottom-right-radius: 8px
-
-    & + &
-      margin-left: -1px
-
-.library-visibility-radio-input
-  margin-right: 5px
+.kf-library-visibility-selector-caption
+  text-align: center
+  display: block
