@@ -416,18 +416,15 @@ class LibraryCommanderImpl @Inject() (
       searchClient.updateKeepIndex()
     }
 
-    val deletedLibraryFut = db.readWriteAsync { implicit session =>
-      libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
-      searchClient.updateLibraryIndex()
-    }
-
     for {
       deletedMembers <- deletedMembersFut
       deletedInvites <- deletedInvitesFut
       deletedKeeps <- deletedKeepsFut
-      deletedLibrary <- deletedLibraryFut
     } yield {
-      () // all deletions completed
+      db.readWriteAsync { implicit session =>
+        libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
+        searchClient.updateLibraryIndex()
+      }
     }
   }
 

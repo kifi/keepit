@@ -373,4 +373,9 @@ class AdminLibraryController @Inject() (
     Ok
   }
 
+  def getLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
+    Ok(Json.obj("ids" -> libIds, "count" -> libIds.length))
+  }
+
 }
