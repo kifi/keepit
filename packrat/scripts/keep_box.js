@@ -480,7 +480,35 @@ k.keepBox = k.keepBox || (function () {
       if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
         setVisibility.call(this, e);
       }
+    })
+    .on('click', '.kifi-keep-box-new-lib-visibility-item-no-orgs', function (e) {
+      window.location.href = 'https://www.kifi.com/teams';
     });
+
+    if ($box.data('organizations').length === 0) {
+      $view.hoverfu('.kifi-keep-box-new-lib-visibility-item', function (configureHover) {
+        var $this = $(this);
+
+        if ($this.children('[disabled]').length === 0) {
+          return;
+        }
+
+        $this.addClass('kifi-keep-box-new-lib-visibility-item-no-orgs');
+
+        var btn = this;
+        k.render('html/keeper/titled_tip', {
+          dir: 'above',
+          cssClass: 'kifi-pane-settings-tip',
+          title: 'Curious?',
+          html: 'Click to get early access<br />to the Kifi for Teams beta'
+        }, function (html) {
+          configureHover(html, {
+            mustHoverFor: 300, hideAfter: 0, click: 'hide',
+            position: {my: 'center bottom-4px', at: 'top', of: btn, collision: 'none'}
+          });
+        });
+      });
+    }
 
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
     .on('click', function (e) {
