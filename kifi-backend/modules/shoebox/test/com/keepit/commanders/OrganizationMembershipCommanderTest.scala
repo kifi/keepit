@@ -106,11 +106,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.addMembership(ownerAddUser).isRight === true
 
-        // members cannot invite users by default.
-        val memberAddUser = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(memberAddUser) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-
-        // they definitely can't add owners
+        // members can't add owners
         val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.ADMIN)
         orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
