@@ -24,47 +24,11 @@ class NotificationMessagingCommander @Inject() (
     userThreadRepo: UserThreadRepo,
     messageThreadRepo: MessageThreadRepo) {
 
-  def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getOpt(notifId)
-    }
-  }
-
-  def notificationItemByExternalId(notifItemId: ExternalId[NotificationItem]): Option[NotificationItem] = {
-    db.readOnlyMaster { implicit session =>
-      notificationItemRepo.getOpt(notifItemId)
-    }
-  }
-
   private def messageThreadIdForNotif(notif: Notification): ExternalId[MessageThread] = db.readOnlyMaster { implicit session =>
     val userThread = userThreadRepo.getByNotificationId(notif.id.get)
     // messaging analytics expects a message thread id, for now
     userThread.fold(ExternalId[MessageThread](notif.externalId.id)) { userThread =>
       messageThreadRepo.get(userThread.threadId).externalId
-    }
-  }
-
-  /**
-   * Temporary before replacing completely with new system
-   */
-  def ifExists(potentialNotifId: String)(doIfExists: Notification => Unit)(doElse: => Unit): Unit = {
-    val notifOpt = ExternalId.asOpt[Notification](potentialNotifId).flatMap { id => notificationByExternalId(id) }
-    notifOpt.fold(doElse) { notif => doIfExists(notif) }
-  }
-
-  /**
-   * Also temporary
-   */
-  def ifItemExists(potentialItemId: String)(doIfExists: (Notification, NotificationItem) => Unit)(doElse: => Unit): Unit = {
-    val notifItemOpt = ExternalId.asOpt[NotificationItem](potentialItemId).flatMap { id =>
-      notificationItemByExternalId(id)
-    }.map { item =>
-      (db.readOnlyMaster { implicit session =>
-        notificationRepo.get(item.notificationId)
-      }, item)
-    }
-    notifItemOpt.fold(doElse) {
-      case (notif, item) => doIfExists(notif, item)
     }
   }
 

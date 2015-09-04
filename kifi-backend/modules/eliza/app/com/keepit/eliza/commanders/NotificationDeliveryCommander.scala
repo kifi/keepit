@@ -15,7 +15,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.notify.NotificationExperimentCheck
+import com.keepit.notify.{ LegacyNotificationCheck, LegacyNotificationCheck$ }
 import com.keepit.notify.model.UserRecipient
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -39,7 +39,7 @@ class NotificationDeliveryCommander @Inject() (
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
-    notificationExperimentCheck: NotificationExperimentCheck,
+    legacyNotificationCheck: LegacyNotificationCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
@@ -183,9 +183,9 @@ class NotificationDeliveryCommander @Inject() (
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]) = {
-    val experiments = userIds.map(id => notificationExperimentCheck.checkExperiment(UserRecipient(id)))
+    val experiments = userIds.map(id => legacyNotificationCheck.checkUserExperiment(UserRecipient(id)))
     val experimentsMap = experiments.map {
-      case NotificationExperimentCheck.Result(experimentEnabled, UserRecipient(id, _)) => id -> experimentEnabled
+      case LegacyNotificationCheck.Result(experimentEnabled, UserRecipient(id, _)) => id -> experimentEnabled
     }.toMap
     if (!experiments.forall(_.experimentEnabled)) {
       val (message, thread) = db.readWrite { implicit session =>

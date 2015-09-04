@@ -6,6 +6,7 @@ import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
+import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -32,6 +33,7 @@ class SharedWsMessagingController @Inject() (
   notificationDeliveryCommander: NotificationDeliveryCommander,
   notificationCommander: NotificationCommander,
   notificationMessagingCommander: NotificationMessagingCommander,
+  legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
   protected val websocketRouter: WebSocketRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
@@ -210,7 +212,7 @@ class SharedWsMessagingController @Inject() (
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
         val messageId = ExternalId[Message](notifId)
-        notificationMessagingCommander.ifItemExists(notifId) {
+        legacyNotificationCheck.ifNotifItemExists(notifId) {
           case (notif, item) =>
             val recipient = Recipient(socket.userId)
             val numUnreadMessages = notificationMessagingCommander.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
@@ -228,7 +230,7 @@ class SharedWsMessagingController @Inject() (
 
     "set_message_unread" -> {
       case JsString(messageId) +: _ =>
-        notificationMessagingCommander.ifItemExists(messageId) {
+        legacyNotificationCheck.ifNotifItemExists(messageId) {
           case (notif, item) => notificationMessagingCommander.setNotificationUnread(notif)
         } {
           messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
@@ -241,7 +243,7 @@ class SharedWsMessagingController @Inject() (
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
         implicit val context = contextBuilder.build
-        notificationMessagingCommander.ifItemExists(messageId) {
+        legacyNotificationCheck.ifNotifItemExists(messageId) {
           case (notif, item) => notificationMessagingCommander.setNotificationRead(notif)
         } {
           messagingCommander.setRead(socket.userId, msgExtId)
@@ -251,7 +253,7 @@ class SharedWsMessagingController @Inject() (
     "mute_thread" -> {
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        notificationMessagingCommander.ifExists(jsThreadId) { notif =>
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = true)
         } {
           messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
@@ -261,7 +263,7 @@ class SharedWsMessagingController @Inject() (
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
         val notifExternalId = ExternalId[Notification](jsThreadId)
-        notificationMessagingCommander.ifExists(jsThreadId) { notif =>
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationStatus(socket.userId, notif, disabled = false)
         } {
           messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
