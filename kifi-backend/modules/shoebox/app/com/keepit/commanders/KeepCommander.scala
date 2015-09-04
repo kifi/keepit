@@ -121,6 +121,7 @@ class KeepCommanderImpl @Inject() (
     curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
+    libraryAccessCommander: LibraryAccessCommander,
     libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
@@ -560,7 +561,7 @@ class KeepCommanderImpl @Inject() (
 
   def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
     val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
-      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryCommander.canModifyLibrary(id, userId))
+      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryAccessCommander.canModifyLibrary(id, userId))
       keepIds map keepRepo.get partition { keep =>
         keep.libraryId.exists(canAccess)
       }

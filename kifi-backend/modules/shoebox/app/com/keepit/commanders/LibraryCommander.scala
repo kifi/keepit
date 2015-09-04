@@ -34,11 +34,9 @@ object MarketingSuggestedLibrarySystemValue {
 trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
   def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
-  def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
   def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifyRequest): LibraryModifyResponse
   def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
-  def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean
   def createReadItLaterLibrary(userId: Id[User]): Library
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
   def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
@@ -60,6 +58,7 @@ class LibraryCommanderImpl @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
+    libraryAccessCommander: LibraryAccessCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     keepCommander: KeepCommander,
@@ -170,27 +169,15 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
-    db.readOnlyReplica { implicit s =>
-      val lib = libraryRepo.get(libraryId)
-      val libMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      def canDirectlyEditLibrary = libMembershipOpt.exists(_.canWrite)
-      def canIndirectlyEditLibrary = libMembershipOpt.isDefined && lib.organizationId.exists { orgId =>
-        orgMembershipCommander.getPermissionsHelper(orgId, Some(userId)).contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
-      }
-      canDirectlyEditLibrary || canIndirectlyEditLibrary
-    }
-  }
-
   def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifyRequest): Option[LibraryFail] = {
     def validateUserWritePermission: Option[LibraryFail] = {
-      if (canModifyLibrary(library.id.get, userId)) None
+      if (libraryAccessCommander.canModifyLibrary(library.id.get, userId)) None
       else Some(LibraryFail(FORBIDDEN, "permission_denied"))
     }
 
     def validateSpace(newSpaceOpt: Option[LibrarySpace]): Option[LibraryFail] = {
       newSpaceOpt.flatMap { newSpace =>
-        if (!canMoveTo(userId = userId, libId = library.id.get, to = newSpace)) Some(LibraryFail(BAD_REQUEST, "invalid_space"))
+        if (!libraryAccessCommander.canMoveTo(userId = userId, libId = library.id.get, to = newSpace)) Some(LibraryFail(BAD_REQUEST, "invalid_space"))
         else None
       }
     }
@@ -445,28 +432,6 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
-    val userCanModifyLibrary = canModifyLibrary(libId, userId)
-
-    val (canMoveFromSpace, canMoveToSpace) = db.readOnlyMaster { implicit session =>
-      val library = libraryRepo.get(libId)
-      val from: LibrarySpace = library.space
-      val canMoveFromSpace = from match {
-        case OrganizationSpace(fromOrg) =>
-          val fromPermissions = orgMembershipCommander.getPermissionsHelper(fromOrg, Some(userId))
-          fromPermissions.contains(FORCE_EDIT_LIBRARIES) || (userId == library.ownerId && fromPermissions.contains(REMOVE_LIBRARIES))
-        case UserSpace(fromUser) => userId == library.ownerId
-      }
-      val canMoveToSpace = to match {
-        case OrganizationSpace(toOrg) => orgMembershipCommander.getPermissions(toOrg, Some(userId)).contains(ADD_LIBRARIES)
-        case UserSpace(toUser) => toUser == library.ownerId
-      }
-      (canMoveFromSpace, canMoveToSpace)
-    }
-
-    userCanModifyLibrary && canMoveFromSpace && canMoveToSpace
-  }
-
   def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>
     val readItLaterLib = libraryRepo.save(Library(name = "Read It Later", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("read_id_later"), kind = LibraryKind.SYSTEM_READ_IT_LATER, memberCount = 1, keepCount = 0))
     libraryMembershipRepo.save(LibraryMembership(libraryId = readItLaterLib.id.get, userId = userId, access = LibraryAccess.OWNER))
@@ -551,7 +516,7 @@ class LibraryCommanderImpl @Inject() (
     val sortedKeeps = keeps.toSeq.sortBy(keep => (keep.keptAt, keep.id.get))
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
-        case Some(membership) if membership.canWrite => {
+        case Some(membership) if membership.canWrite =>
           val toLibrary = libraryRepo.get(toLibraryId)
           val validSourceLibraryIds = sortedKeeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).isDefined
@@ -578,7 +543,6 @@ class LibraryCommanderImpl @Inject() (
             }
           }
           (successes.toSeq, failures.toSeq)
-        }
         case _ => (Seq.empty[Keep], sortedKeeps.map(_ -> LibraryError.DestPermissionDenied))
       }
     }
@@ -614,12 +578,11 @@ class LibraryCommanderImpl @Inject() (
     } match {
       case None => Left(LibraryFail(NOT_FOUND, "need_to_follow_to_subscribe"))
       case Some(mem) if mem.subscribedToUpdates == subscribedToUpdatesNew => Right(mem)
-      case Some(mem) => {
+      case Some(mem) =>
         val updatedMembership = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem.copy(subscribedToUpdates = subscribedToUpdatesNew))
         }
         Right(updatedMembership)
-      }
     }
   }
 }
