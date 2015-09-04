@@ -17,7 +17,7 @@ class NotificationProcessing @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     delivery: WsNotificationDelivery,
-    notifExperimentCheck: NotificationExperimentCheck,
+    legacyNotificationCheck: LegacyNotificationCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
@@ -91,7 +91,7 @@ class NotificationProcessing @Inject() (
     val items = db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notif.id.get)
     }.toSet
-    notifExperimentCheck.ifExperiment(notif.recipient) { recipient =>
+    legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
       delivery.deliver(recipient, notif, items)
     }
     notif

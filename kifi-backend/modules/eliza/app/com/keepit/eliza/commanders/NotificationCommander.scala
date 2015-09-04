@@ -20,6 +20,18 @@ class NotificationCommander @Inject() (
     notificationItemRepo: NotificationItemRepo,
     notificationDeliveryCommander: NotificationDeliveryCommander) extends Logging {
 
+  def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
+    db.readOnlyMaster { implicit session =>
+      notificationRepo.getOpt(notifId)
+    }
+  }
+
+  def notificationItemByExternalId(notifItemId: ExternalId[NotificationItem]): Option[NotificationItem] = {
+    db.readOnlyMaster { implicit session =>
+      notificationItemRepo.getOpt(notifItemId)
+    }
+  }
+
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {
     db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notification)
