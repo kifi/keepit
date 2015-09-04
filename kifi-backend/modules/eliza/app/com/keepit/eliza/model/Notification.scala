@@ -54,9 +54,17 @@ case class Notification(
 
 }
 
+/**
+ * Represents a notification and its collection of items, along with the guarantees that these objects hold.
+ */
 class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
+
   require(items.forall(_.kind == notification.kind))
-  def relevantItem = items.maxBy(_.eventTime)
+
+  require(relevantItem.eventTime == notification.lastEvent)
+
+  lazy val relevantItem = items.maxBy(_.eventTime)
+
 }
 
 case class NotificationWithItems(

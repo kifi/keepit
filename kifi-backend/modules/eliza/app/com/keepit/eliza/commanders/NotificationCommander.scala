@@ -80,7 +80,7 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[RawNotification]): Seq[(Notification, NotificationItem)] = {
+  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[RawNotification]): Seq[NotificationWithItems] = {
     val recipient = Recipient(userId)
     db.readWrite { implicit session =>
       rawNotifs.map {
@@ -105,9 +105,9 @@ class NotificationCommander @Inject() (
               ),
               eventTime = time
             ))
-            (notif, item)
+            NotificationWithItems(notif, Set(item))
           } { notif =>
-            (notif, notificationItemRepo.getAllForNotification(notif.id.get).head)
+            NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
           }
       }
     }
@@ -135,6 +135,21 @@ class NotificationCommander @Inject() (
       items.head.event match { // these two cases are mutually exclusive. legacy notifications do not have message threads
         case LegacyNotification(_, _, _, uriId) => uriId
         case _ => getMessageThread(notifId).flatMap(_.uriId)
+      }
+    }
+  }
+
+  def getParticipants(notif: Notification): Set[Recipient] = {
+    val messageThreadOpt = db.readOnlyReplica { implicit session =>
+      getMessageThread(notif.id.get)
+    }
+    messageThreadOpt.fold(Set(notif.recipient)) { messageThread =>
+      messageThread.participants.fold(Set[Recipient]()) { participants =>
+        participants.allUsers.map { user =>
+          Recipient(user)
+        } ++ participants.allNonUsers.collect {
+          case NonUserEmailParticipant(address) => Recipient(address)
+        }
       }
     }
   }

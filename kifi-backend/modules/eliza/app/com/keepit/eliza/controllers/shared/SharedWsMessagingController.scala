@@ -27,6 +27,8 @@ import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
+import scala.concurrent.Future
+
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
@@ -167,9 +169,9 @@ class SharedWsMessagingController @Inject() (
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val recipient = Recipient(socket.userId)
-        legacyNotificationCheck.ifElseUserExperiment(recipient) {
-          3
-        } {
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          Future.successful(())
+        } { recip =>
           val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
           fut.foreach { notices =>
             socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
