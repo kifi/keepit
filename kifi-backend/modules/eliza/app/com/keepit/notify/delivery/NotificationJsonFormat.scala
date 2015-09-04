@@ -88,12 +88,16 @@ class NotificationJsonFormat @Inject() (
     val userIds = participants.collect {
       case UserRecipient(userId, _) => userId
     }
-    val userParticipantsF = shoeboxServiceClient.getBasicUsers(userIds.toSeq).map(_.values)
+
+    val userParticipantsF = shoeboxServiceClient.getBasicUsers(userIds.toSeq)
+      .map(_.values.map(u => BasicUserLikeEntity(u)))
+
     val otherParticipants = participants.collect {
       case EmailRecipient(address) =>
         val participant = NonUserEmailParticipant(address)
-        NonUserParticipant.toBasicNonUser(participant)
+        BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(participant))
     }
+
     for {
       userParticipants <- userParticipantsF
     } yield {
