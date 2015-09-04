@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -8,7 +9,6 @@ import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
-import play.api.Mode
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -18,7 +18,6 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders._
 import com.keepit.social._
-import securesocial.core.providers.utils.PasswordHasher
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
@@ -41,7 +40,7 @@ import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 
@@ -98,68 +97,49 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
-    db.readOnlyMaster { implicit s =>
-      socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
-        emailAddressRepo.getByAddress(email).map {
-          case emailAddr if emailAddr.verified =>
-            (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-          case emailAddr =>
-            // Someone is trying to register with someone else's unverified + non-login email address.
-            (false, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
-        }.flatMap {
-          case candidate if candidate._2.isDefined => Some((candidate._1, candidate._2.get))
-          case otherwise => None
-        }
-      }
-    }
-  }
-
-  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, passwordOpt: Option[String])(implicit request: MaybeUserRequest[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
+  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, passwordOpt: Option[String])(implicit request: MaybeUserRequest[_]): Result = timing(s"handleEmailPasswordSuccess($emailAddress)") {
     val hasher = Registry.hashers.currentHasher
-    val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
-    val res: Result = tupleOpt collect {
-      case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
-        // Social user exists with these credentials
-        val identity = sui.credentials.get
+    UserService.find(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
+      case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+        // User exists with these credentials
         val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
         if (matchesOpt.exists(p => p)) {
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
               val finalized = db.readOnlyMaster { implicit session =>
-                userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
+                userRepo.get(userId).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
                 Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String])) // todo(ray): uri not relevant for mobile
-                  .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
+                  .withSession((session - SecureSocial.OriginalUrlKey).setUserId(userId))
                   .withCookies(authenticator.toCookie)
               } else {
                 Ok(Json.obj("success" -> true))
-                  .withSession(session.setUserId(sui.userId.get))
+                  .withSession(session.setUserId(userId))
                   .withCookies(authenticator.toCookie)
               }
             }
           )
         } else {
-          // emailIsVerifiedOrPrimary lets you know if the email is verified to the user.
-          // Deal with later?
           Forbidden(Json.obj("error" -> "user_exists_failed_auth"))
         }
-    } getOrElse {
-      val pInfo = passwordOpt.map(p => hasher.hash(p))
-      val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, firstName = "", lastName = "", isComplete = false)
-      Authenticator.create(newIdentity).fold(
-        error => Status(INTERNAL_SERVER_ERROR)("0"),
-        authenticator =>
-          Ok(Json.obj("success" -> true))
-            .withSession(session.setUserId(userId))
-            .withCookies(authenticator.toCookie)
-      )
+      }
+
+      case _ => {
+        val pInfo = passwordOpt.map(p => hasher.hash(p))
+        val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, emailAddress, pInfo, firstName = "", lastName = "", isComplete = false)
+        Authenticator.create(newIdentity).fold(
+          error => Status(INTERNAL_SERVER_ERROR)("0"),
+          authenticator =>
+            Ok(Json.obj("success" -> true))
+              .withSession(session.setUserId(userId))
+              .withCookies(authenticator.toCookie)
+        )
+      }
     }
-    res
   }
 
   val emailPasswordForm = Form[EmailPassword](
@@ -468,50 +448,27 @@ class AuthHelper @Inject() (
       code <- (request.body \ "code").asOpt[String]
       password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
     } yield {
-      db.readWrite { implicit s =>
-        passwordResetRepo.getByToken(code) match {
-          case Some(pr) if passwordResetRepo.useResetToken(code, IpAddress(request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))) =>
-            emailAddressRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
-            val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
-              val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
-              UserService.save(UserIdentity(
-                userId = sui.userId,
-                socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(pwdInfo)
-                )
-              ))
-              val updated = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
-                userCredRepo.save(userCred.withCredentials(pwdInfo.password))
-              }
-              log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId}")}")
-              authenticateUser(sui.userId.get, onError = { error =>
-                throw error
-              }, onSuccess = { authenticator =>
-                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
-                  .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-              })
-            }
-            results.headOption.getOrElse {
-              Ok(Json.obj("error" -> "invalid_user"))
-            }
-          case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
-            Ok(Json.obj("error" -> "expired"))
-          case Some(pr) if pr.state == PasswordResetStates.USED =>
-            Ok(Json.obj("error" -> "already_used"))
-          case _ =>
-            Ok(Json.obj("error" -> "invalid_code"))
+      val ip = IpAddress(request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+      userCommander.resetPassword(code, ip, password) match {
+        case Right(userId) => db.readOnlyMaster { implicit session =>
+          authenticateUser(userId, onError = { error =>
+            throw error
+          }, onSuccess = { authenticator =>
+            Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
+              .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+              .withCookies(authenticator.toCookie)
+          })
         }
+        case Left(errorCode) => Ok(Json.obj("error" -> errorCode))
       }
     }) getOrElse BadRequest("0")
   }
 
-  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
-    val identity = db.readOnlyMaster { implicit session =>
-      val suis = socialRepo.getByUser(userId)
-      val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
-      sui.credentials.get
-    }
+  private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T)(implicit session: RSession) = {
+    val user = userRepo.get(userId)
+    val emailAddress = emailAddressRepo.getByUser(userId)
+    val userCred = userCredRepo.findByUserIdOpt(userId)
+    val identity = UserIdentity(user, emailAddress, userCred)
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 

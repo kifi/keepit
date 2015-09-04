@@ -69,21 +69,9 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
       val hasher = Registry.hashers.get("bcrypt").get
       val pwdInfo = hasher.hash(oldPwd1)
       val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, credentials = pwdInfo.password))
-      val socialUserRepo = inject[SocialUserInfoRepo]
-      val socialUser = SocialUser(
-        identityId = IdentityId(email1a.address.address, "userpass"),
-        firstName = user1.firstName,
-        lastName = user1.lastName,
-        fullName = user1.fullName,
-        email = Some(email1a.address.address),
-        avatarUrl = None,
-        authMethod = AuthenticationMethod.UserPassword,
-        passwordInfo = Some(pwdInfo)
-      )
-      val sui1 = socialUserRepo.save(SocialUserInfo(userId = user1.id, fullName = user1.fullName, socialId = SocialId(email1a.address.address), networkType = SocialNetworks.FORTYTWO, credentials = Some(socialUser)))
       val passwordResetRepo = inject[PasswordResetRepo]
       val resetToken1 = passwordResetRepo.createNewResetToken(user1.id.get, email1a.address)
-      (user1, email1a, email1b, sui1, uc1, hasher, pwdInfo, resetToken1)
+      (user1, email1a, email1b, uc1, hasher, pwdInfo, resetToken1)
     }
   }
 
@@ -112,7 +100,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
     "handle change password (multi-email)" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (user, email1a, email1b, sui, uc, hasher, pwdInfo, _) = setUp()
+        val (user, email1a, email1b, uc, hasher, pwdInfo, _) = setUp()
         val path = com.keepit.controllers.website.routes.UserController.changePassword().toString()
         path === "/site/user/password"
 
@@ -141,7 +129,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
     "handle set password (multi-email)" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (user, email1a, email1b, sui, uc, hasher, pwdInfo, resetToken) = setUp()
+        val (user, email1a, email1b, uc, hasher, pwdInfo, resetToken) = setUp()
         val path = com.keepit.controllers.core.routes.AuthController.setPassword().toString
         path === "/password/set"
 
@@ -170,7 +158,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
     "verify the email address a reset link has been sent to" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (_, _, _, _, _, _, _, resetToken) = setUp()
+        val (_, _, _, _, _, _, resetToken) = setUp()
 
         def emailAddress = db.readOnlyMaster { implicit session =>
           userEmailAddressRepo.getByAddress(resetToken.sentTo).get

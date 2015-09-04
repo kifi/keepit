@@ -14,6 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.service.IpAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
@@ -30,7 +31,8 @@ import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadH
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import securesocial.core.{ Identity, Registry, UserService }
+import securesocial.core._
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util._
@@ -108,6 +110,7 @@ class UserCommander @Inject() (
     userRepo: UserRepo,
     handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
+    passwordResetRepo: PasswordResetRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -424,48 +427,37 @@ class UserCommander @Inject() (
     } else Future.successful(())
   }
 
-  private def setNewPassword(userId: Id[User], sui: SocialUserInfo, newPassword: String): Identity = {
-    val pwdInfo = Registry.hashers.currentHasher.hash(newPassword)
-    val savedIdentity = UserService.save(UserIdentity(
-      userId = sui.userId,
-      socialUser = sui.credentials.get.copy(passwordInfo = Some(pwdInfo))
-    ))
-    val updatedCred = db.readWrite { implicit session =>
-      userCredRepo.findByUserIdOpt(userId) map { userCred =>
-        userCredRepo.save(userCred.withCredentials(pwdInfo.password))
+  def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit] = Try {
+    db.readWrite { implicit session =>
+      val isAllowed = oldPassword.exists(userCredRepo.verifyPassword(userId, _)) || userValueRepo.getValue(userId, UserValues.hasNoPassword)
+      if (isAllowed) {
+        doChangePassword(userId, newPassword)
+      } else {
+        log.warn(s"Failed to change password for user $userId, invalid old password: $oldPassword")
+        throw new IllegalArgumentException("bad_old_password")
       }
     }
-    log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId}")}")
-    savedIdentity
   }
 
-  def doChangePassword(userId: Id[User], oldPassword: Option[String], newPassword: String): Try[Identity] = Try {
-    val (sfi, hasNoPassword) = db.readOnlyMaster { implicit session =>
-      val sfi = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
-      val hasNoPassword = userValueRepo.getValue(userId, UserValues.hasNoPassword)
-      (sfi, hasNoPassword)
-    }
-    val resOpt = sfi map { sui =>
-      if (hasNoPassword) {
-        val identity = setNewPassword(userId, sui, newPassword)
-        db.readWrite { implicit s =>
-          userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, false)
-        }
-        identity
-      } else if (oldPassword.nonEmpty) {
-        val hasher = Registry.hashers.currentHasher
-        val identity = sui.credentials.get
-        if (hasher.matches(identity.passwordInfo.get, oldPassword.get)) {
-          setNewPassword(userId, sui, newPassword)
-        } else {
-          log.warn(s"[doChangePassword($userId)] oldPwd=${oldPassword.get} newPwd=$newPassword pwd=${identity.passwordInfo.get}")
-          throw new IllegalArgumentException("bad_old_password")
-        }
-      } else {
-        throw new IllegalArgumentException("empty_password_and_nonSocialSignup")
+  def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]] = {
+    db.readWrite { implicit s =>
+      passwordResetRepo.getByToken(code) match {
+        case Some(pr) if passwordResetRepo.useResetToken(code, ip) =>
+          emailRepo.getByAddress(pr.sentTo).foreach(userEmailAddressCommander.saveAsVerified(_)) // mark email address as verified
+          doChangePassword(pr.userId, newPassword = password)
+          Right(pr.userId)
+        case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE => Left("expired")
+        case Some(pr) if pr.state == PasswordResetStates.USED => Left("already_used")
+        case _ => Left("invalid_code")
       }
     }
-    resOpt getOrElse { throw new IllegalArgumentException("no_user") }
+  }
+
+  private def doChangePassword(userId: Id[User], newPassword: String)(implicit session: RWSession): Unit = {
+    val newPasswordInfo = Registry.hashers.currentHasher.hash(newPassword)
+    val cred = userCredRepo.internUserPassword(userId, newPasswordInfo.password)
+    log.info(s"[doChangePassword] UserCreds updated=[id=${cred.id} userId=${cred.userId}]")
+    userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, false)
   }
 
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]

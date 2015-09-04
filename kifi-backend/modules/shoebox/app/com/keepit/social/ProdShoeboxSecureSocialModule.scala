@@ -26,10 +26,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
   @Provides
   def secureSocialAuthenticatorPlugin(
     db: Database,
-    suiRepo: SocialUserInfoRepo,
-    usRepo: UserSessionRepo,
+    userSessionRepo: UserSessionRepo,
+    userIdentityHelper: UserIdentityHelper,
     airbrake: AirbrakeNotifier,
-    app: play.api.Application): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, airbrake, app)
+    app: play.api.Application): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, userSessionRepo, userIdentityHelper, airbrake, app)
 
   @Singleton
   @Provides
@@ -45,8 +45,9 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     userCommander: UserCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
+    userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, userEmailAddressCommander, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
   )
 
   @Singleton
