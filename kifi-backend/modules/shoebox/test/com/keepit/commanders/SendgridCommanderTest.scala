@@ -149,7 +149,9 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
 
           db.readOnlyMaster { implicit session =>
             optOutRepo.hasOptedOut(emailAddr.address) should beFalse
-            commander.processNewEvents(Seq(sgEvent))
+          }
+          commander.processNewEvents(Seq(sgEvent))
+          db.readOnlyMaster { implicit session =>
             optOutRepo.hasOptedOut(emailAddr.address) should beTrue
           }
         }
@@ -165,7 +167,9 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
 
           db.readOnlyMaster { implicit session =>
             optOutRepo.hasOptedOut(emailAddr.address) should beFalse
-            commander.processNewEvents(Seq(sgEvent))
+          }
+          commander.processNewEvents(Seq(sgEvent))
+          db.readOnlyMaster { implicit session =>
             optOutRepo.hasOptedOut(emailAddr.address) should beTrue
           }
         }
