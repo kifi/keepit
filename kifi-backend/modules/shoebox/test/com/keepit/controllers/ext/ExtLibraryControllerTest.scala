@@ -91,7 +91,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                   "access" -> LibraryAccess.OWNER,
                   "listed" -> true,
                   "subscribed" -> false,
-                  "permissions" -> Json.arr("invite_collaborators", "invite_followers", "view_library", "remove_own_keeps", "remove_any_keeps", "edit_library", "edit_own_keeps", "remove_members", "add_keeps")
+                  "permissions" -> Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))
                 )
               ),
               Json.obj(
@@ -107,7 +107,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                   "access" -> LibraryAccess.READ_WRITE,
                   "listed" -> true,
                   "subscribed" -> false,
-                  "permissions" -> Json.arr("invite_followers", "view_library", "remove_own_keeps", "edit_own_keeps", "add_keeps")
+                  "permissions" -> Json.toJson(lib2.permissionsByAccess(LibraryAccess.READ_WRITE))
                 )
               ),
               Json.obj(

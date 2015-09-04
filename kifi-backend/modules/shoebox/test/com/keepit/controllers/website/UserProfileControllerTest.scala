@@ -448,7 +448,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
                 "following":true,
-                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":["invite_collaborators","invite_followers","view_library","remove_own_keeps","remove_any_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
+                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
                 "modifiedAt":${lib1Updated.updatedAt.getMillis},
                 "path": "/firstuser/lib1",
                 "subscriptions": []
