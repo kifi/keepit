@@ -69,14 +69,9 @@ class KeepDecoratorImpl @Inject() (
         }
 
         val libIdToBasicOrg = {
-          val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
-          val libId2OrgCard = db.readOnlyMaster { implicit s =>
-            libId2orgId.map {
-              case (libId, orgId) =>
-                libId -> organizationCommander.getBasicOrganization(orgId)
-            }
-          }
-          libId2OrgCard
+          val libIdToOrgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgId)) => id -> orgId }
+          val orgIdToBasicOrg = organizationCommander.getBasicOrganizations(libIdToOrgId.values.toSet)
+          libIdToOrgId.mapValues(orgIdToBasicOrg(_))
         }
 
         val idToBasicUser = {

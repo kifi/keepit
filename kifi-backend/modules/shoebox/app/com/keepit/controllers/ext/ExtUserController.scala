@@ -28,8 +28,10 @@ class ExtUserController @Inject() (
     val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
 
     val orgsToInclude = if (request.experiments.contains(UserExperimentType.ADMIN)) {
-      val orgsUserIsIn = db.readOnlyReplica(implicit s => orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId))
-      val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+      val basicOrgs = db.readOnlyReplica { implicit s =>
+        val orgsUserIsIn = orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
+        orgCommander.getBasicOrganizationsHelper(orgsUserIsIn.toSet).values
+      }
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs
         case orgQ =>

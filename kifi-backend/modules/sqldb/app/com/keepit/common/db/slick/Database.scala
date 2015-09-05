@@ -76,7 +76,7 @@ class Database @Inject() (
   val dialect: DatabaseDialect[_] = db.dialect
 
   def enteringSession[T](f: => T) = {
-    val detectLayeredSessions = false && !Play.maybeApplication.exists(_.mode == Mode.Prod) // Remove `false &&` to enable this
+    val detectLayeredSessions = !Play.maybeApplication.exists(_.mode == Mode.Prod) // Remove `false &&` to enable this
     if (detectLayeredSessions) {
       val wasInSession = Option(DatabaseSessionLock.tl.get).getOrElse(false)
       val verbose = true
