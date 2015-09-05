@@ -45,9 +45,9 @@ class ExtUserController @Inject() (
         Json.obj(
           "name" -> (org.name + " Members"),
           "id" -> org.orgId,
-          "pictureName" -> ("../../../../" + org.avatarPath.map(_.path).getOrElse("NONE"): String), // one weird trick
+          "pictureName" -> ("../../../../" + org.avatarPath.path: String), // one weird trick
           "kind" -> "org",
-          "avatarPath" -> (org.avatarPath.map(_.path).getOrElse("NONE"): String),
+          "avatarPath" -> (org.avatarPath.path: String),
           "handle" -> org.handle
         )
       }.toList

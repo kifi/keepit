@@ -47,6 +47,16 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           memberships.size === 1
           memberships.head.userId === Id[User](1)
           memberships.head.role === OrganizationRole.ADMIN
+
+          val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
+          avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
+          avatar1.width === 200
+          avatar1.height === 200
+
+          val avatar2 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, CropScaledImageSize.Tiny.idealSize)
+          avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
+          avatar2.width === 100
+          avatar2.height === 100
         }
       }
       "not hide valid exceptions" in {

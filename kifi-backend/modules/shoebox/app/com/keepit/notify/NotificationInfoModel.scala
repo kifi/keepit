@@ -21,12 +21,12 @@ object NotificationInfoModel {
         Json.obj("image" -> Json.toJson(LibraryImageInfo.fromImage(img)))
       }
 
-  def organization(org: Organization, image: Option[OrganizationAvatar])(implicit config: PublicIdConfiguration): JsObject =
+  def organization(org: Organization, image: OrganizationAvatar)(implicit config: PublicIdConfiguration): JsObject =
     Json.obj(
       "id" -> Organization.publicId(org.id.get),
       "name" -> org.name,
       "handle" -> org.primaryHandle,
-      "image" -> image.map(_.imagePath)
+      "image" -> image.imagePath
     )
 
 }

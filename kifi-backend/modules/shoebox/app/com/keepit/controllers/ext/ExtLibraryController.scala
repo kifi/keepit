@@ -78,7 +78,7 @@ class ExtLibraryController @Inject() (
           hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
-          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
+          orgAvatar = orgAvatarsById(lib.organizationId.get).imagePath,
           membership = membership.map(lib.getMembershipInfo)
         )
     }
@@ -117,7 +117,7 @@ class ExtLibraryController @Inject() (
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val data = db.readOnlyMaster { implicit session =>
-              val orgAvatar = lib.organizationId.flatMap(organizationAvatarCommander.getBestImageByOrgId(_, ExtLibraryController.defaultImageSize).map(_.imagePath))
+              val orgAvatar = organizationAvatarCommander.getBestImageByOrgId(lib.organizationId.get, ExtLibraryController.defaultImageSize).imagePath
               val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
               LibraryData(
                 id = Library.publicId(lib.id.get),
