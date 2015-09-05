@@ -116,7 +116,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   def getMembersAndUniqueInvitees(orgId: Id[Organization], offset: Offset, limit: Limit, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
-    db.readOnlyMaster { implicit session =>
+    val (members, invitees) = db.readOnlyMaster { implicit session =>
       val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
       val invitees = includeInvitees match {
         case true =>
@@ -132,8 +132,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
           } else Seq.empty[OrganizationInvite]
         case false => Seq.empty[OrganizationInvite]
       }
-      buildMaybeMembers(members, invitees)
+      (members, invitees)
     }
+
+    buildMaybeMembers(members, invitees)
   }
 
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]] = {

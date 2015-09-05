@@ -152,31 +152,21 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
     "remove members from org" in {
       withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
-        val planCommander = inject[PlanManagementCommander]
-
-        val org = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))
-          planCommander.createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-          planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, org.ownerId, session)
-          org
+        val (org, owner, members) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val members = UserFactory.users(3).saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
+          (org, owner, members)
         }
         val orgId = org.id.get
 
-        val orgMembershipCommander = inject[OrganizationMembershipCommander]
-
-        val ownerDelMember = OrganizationMembershipRemoveRequest(orgId, Id[User](1), Id[User](2))
+        val ownerDelMember = OrganizationMembershipRemoveRequest(orgId, owner.id.get, members(0).id.get)
         orgMembershipCommander.removeMembership(ownerDelMember) === Right(OrganizationMembershipRemoveResponse(ownerDelMember))
 
-        val memberDelOwner = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](1))
+        val memberDelOwner = OrganizationMembershipRemoveRequest(orgId, members(2).id.get, owner.id.get)
         orgMembershipCommander.removeMembership(memberDelOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        val memberDelNone = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](2))
+        val memberDelNone = OrganizationMembershipRemoveRequest(orgId, members(2).id.get, members(1).id.get)
         orgMembershipCommander.removeMembership(memberDelNone) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // there are futures running in the background that will blow up if the test ends and the db is dumped
