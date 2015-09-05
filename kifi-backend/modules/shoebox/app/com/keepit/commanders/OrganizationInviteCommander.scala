@@ -309,7 +309,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
         val organization = organizationRepo.get(orgId)
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
+        val orgAvatar = organizationAvatarCommander.getBestImageByOrgId(orgId, ProcessedImageSize.Medium.idealSize)
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization, orgAvatar)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
           if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
@@ -319,9 +320,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
+  def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization, orgImageOpt: Option[OrganizationAvatar]): Unit = {
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId

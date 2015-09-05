@@ -31,7 +31,7 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
       withDb() { implicit injector =>
         val orgAvatarRepo = inject[OrganizationAvatarRepo]
         val orgId = Id[Organization](1)
-        val range: Inclusive = 1 to 20
+        val range = (1 to 20).toSet
         db.readWrite { implicit session =>
           for (count <- range) {
             val path: ImagePath = ImagePath("prefix", ImageHash("x"), ImageSize(count, count), ProcessImageOperation.CenteredCrop, ImageFormat.JPG)
@@ -42,8 +42,8 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
         }
 
         val avatarsForOrganization = db.readOnlyMaster { implicit s => orgAvatarRepo.getByOrgId(orgId) }
-        avatarsForOrganization.length === range.length
-        avatarsForOrganization.map(_.width).diff(range) === List.empty[Int]
+        avatarsForOrganization.size === range.size
+        avatarsForOrganization.map(_.width) === range
       }
     }
   }

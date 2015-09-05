@@ -10,8 +10,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
-  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar]
-  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]]
+  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Set[OrganizationAvatar]
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Set[OrganizationAvatar]]
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar
 }
 
@@ -82,16 +82,16 @@ class OrganizationAvatarRepoImpl @Inject() (
     orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
   }
 
-  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar] = {
-    getByOrgIds(Set(orgId), excludeState).apply(orgId)
+  def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Set[OrganizationAvatar] = {
+    getByOrgIds(Set(orgId), excludeState).values.head
   }
-  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]] = {
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Set[OrganizationAvatar]] = {
     val result = orgAvatarCache.bulkGetOrElse(orgIds.map(OrganizationAvatarKey)) { missingKeys =>
       val missingIds = missingKeys.map(_.orgId)
       val q = for (row <- rows if row.organizationId.inSet(missingIds) && row.state =!= excludeState.orNull) yield row
-      q.list.groupBy(_.organizationId).map { case (orgId, avatars) => OrganizationAvatarKey(orgId) -> avatars }
+      q.list.groupBy(_.organizationId).map { case (orgId, avatars) => OrganizationAvatarKey(orgId) -> avatars.toSet }
     }.map { case (key, orgAvatar) => key.orgId -> orgAvatar }
-    result.withDefaultValue(Seq.empty[OrganizationAvatar])
+    result.withDefaultValue(Set.empty[OrganizationAvatar])
   }
 
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {

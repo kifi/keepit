@@ -30,15 +30,10 @@ class OrganizationAvatarController @Inject() (
     val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
     val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
     uploadImageF.map {
-      case Left(fail) => InternalServerError(Json.obj("error" -> fail.reason))
-      case Right(hash) =>
-        orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize) match {
-          case Some(avatar: OrganizationAvatar) =>
-            Ok(Json.obj("uploaded" -> avatar.imagePath))
-          case None =>
-            airbrake.notify(s"Uploaded an avatar for org ${request.orgId} but could not retrieve it", new Exception())
-            NotFound(Json.obj("error" -> "image_not_found"))
-        }
+      case Left(fail) => throw new Exception(fail.reason)
+      case Right(avatars) =>
+        val avatar = ProcessedImageSize.pickByIdealImageSize(OrganizationAvatarConfiguration.defaultSize, avatars, strictAspectRatio = false)(_.imageSize).get
+        Ok(Json.obj("uploaded" -> avatar.imagePath))
     }
   }
 }
