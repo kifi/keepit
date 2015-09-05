@@ -15,8 +15,8 @@ angular.module('kifi')
         // Internal data.
         //
         var resultIndex = -1;
-        var searchInput = element.find('.opis-search-input');
-        var contactList = element.find('.opis-contact-list');
+        var searchInput = element.find('.opi-search-input');
+        var contactList = element.find('.opi-contact-list');
 
         //
         // Scope data.
