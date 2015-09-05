@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
@@ -157,6 +157,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             (org, invite)
           }
           inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inject[WatchableExecutionContext].drain()
+          1 === 1
         }
       }
 
@@ -174,6 +176,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             org
           }
           inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inject[WatchableExecutionContext].drain()
+          1 === 1
         }
       }
     }

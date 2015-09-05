@@ -310,7 +310,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         // Notify inviters on organization joined.
         val organization = organizationRepo.get(orgId)
         val orgAvatar = organizationAvatarCommander.getBestImageByOrgId(orgId, ProcessedImageSize.Medium.idealSize)
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization, orgAvatar)
+        s.onTransactionSuccess { notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization, orgAvatar) }
+
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
           if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
