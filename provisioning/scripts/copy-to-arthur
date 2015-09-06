@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# helper script to copy provisioning scripts to the Arthur machine
+#
+
+if [[ ! -f ansible.cfg ]]; then
+  echo "This script should be run from the provisioning/ directory"
+  exit 1
+fi
+
+# assumes the caller has an SSH alias "arthur" that has the correct host/ip & port
+HOST=arthur
+USER=eng
+
+# example usage: ./scripts/copy-to-arthur --dry-run
+RSYNC_OPTS=$@
+
+# sync all files to athur, does not overwrite files that are newer on arthur
+rsync -rz . ${USER}@${HOST}:~/ansible \
+  $RSYNC_OPTS \
+  --itemize-changes \
+  --delete \
+  --update \
+  --exclude "*.sw?" \
+  --exclude .envrc \
+  --exclude .vagrant/ \
+  --exclude .cache/ \
+  --exclude .DS_STORE

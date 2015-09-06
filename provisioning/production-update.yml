@@ -1,44 +1,29 @@
+# run this playbook to update existing remote EC2 instances
 ---
 - hosts: ec2
   sudo: yes
   vars_files:
     - vars/ec2.yml
-  pre_tasks:
+  tasks:
     # remove old init.d script
     - name: remove init.d/kifi-register-host service
       file: state=absent path=/etc/init.d/kifi-register-host
+
     - name: disable kifi-register-host service
       command: "update-rc.d kifi-register-host remove"
       changed_when: False
 
-    # add kifi-register-host as upstart
-    - name: add ec2-tag script
-      template:
-        src: templates/opt/ec2-tags.j2
-        dest: /opt/ec2-tags
-        owner: root
-        group: root
-        mode: 751
-    - name: add /opt/kifi-register-host script
-      template:
-        src: templates/opt/kifi-register-host.j2
-        dest: /opt/kifi-register-host
-        owner: root
-        group: root
-        mode: 0750
-    - name: add /etc/init/kifi-register-host.conf
-      template:
-        src: templates/etc/init/kifi-register-host.conf.j2
-        dest: /etc/init/kifi-register-host.conf
-        owner: root
-        group: root
-        mode: 0750
-    - command: /opt/kifi-register-host
-      changed_when: False
-    - command: /opt/ec2-tags Name
-      changed_when: False
-      register: kifi_hostname
-    - set_fact:
-        ansible_fqdn: "{{ kifi_hostname.stdout_lines.0 }}"
+    # remove old init service
+    - name: remove init/kifi-register-host service
+      file: state=absent path=/etc/init/kifi-register-host
+
+    # remove old scripts
+    - name: remove /opt/ec2-tags script
+      file: state=absent path=/opt/ec2-tags
+
+    - name: remove /opt/kifi-register-host script
+      file: state=absent path=/opt/kifi-register-host
+
+- include: kifi-node-setup.yml
 
 - include: ec2-service.yml
