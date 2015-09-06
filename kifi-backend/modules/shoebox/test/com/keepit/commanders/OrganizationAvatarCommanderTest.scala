@@ -59,8 +59,8 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           val file = genNewFakeFile1
           val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, file, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+          saved must haveClass[Right[ImageStoreFailure, Set[OrganizationAvatar]]]
+          saved.right.get.head.sourceFileHash === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
           file.delete()
         }
@@ -84,8 +84,8 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           val file = genNewFakeFile1
           val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
-          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+          saved must haveClass[Right[ImageStoreFailure, Set[OrganizationAvatar]]]
+          saved.right.get.head.sourceFileHash === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           file.delete()
         }
 
@@ -99,7 +99,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile2, cropRegion = SquareImageCropRegion(ImageOffset(0, 0), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
+          saved.right.get.head.sourceFileHash === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
@@ -127,7 +127,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           val savedF = commander.persistOrganizationAvatarsFromUserUpload(org1.id.get, genNewFakeFile1, cropRegion = SquareImageCropRegion(ImageOffset(x, x), 50))
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+          saved.right.get.head.sourceFileHash === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           file.delete()
         }
 
