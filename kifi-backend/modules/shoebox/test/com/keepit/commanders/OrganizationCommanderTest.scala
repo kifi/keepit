@@ -143,47 +143,36 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
       "modify an organization's base permissions" in {
         withDb(modules: _*) { implicit injector =>
-          val orgCommander = inject[OrganizationCommander]
-          val orgMembershipRepo = inject[OrganizationMembershipRepo]
-          val orgMembershipCommander = inject[OrganizationMembershipCommander]
-
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-
-          val users = db.readWrite { implicit session => UserFactory.users(3).saved }
-
-          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
-          val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must beRight
-          val org = createResponse.right.get.newOrg
-
-          db.readWrite { implicit session =>
-            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
+          val (org, owner, member, rando1, rando2) = db.readWrite { implicit session =>
+            val Seq(owner, member, rando1, rando2) = UserFactory.users(4).saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            (org, owner, member, rando1, rando2)
           }
 
-          val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = users(1).id.get, targetId = users(2).id.get, newRole = OrganizationRole.MEMBER)
+          // Member adds rando, succeeds because of default invite permissions
+          val memberAddRando1 = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = member.id.get, targetId = rando1.id.get, newRole = OrganizationRole.MEMBER)
+          orgMembershipCommander.addMembership(memberAddRando1) must beRight
 
-          // By default, Organizations do not allow members to invite other members
-          val try1 = orgMembershipCommander.addMembership(memberInviteMember)
-          try1 === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+          // The owner decides that members are too irresponsible and should not invite others
 
-          // An owner can change the base permissions so that members CAN do this
-          val permissionsDiff = PermissionsDiff(added = PermissionsMap(Some(OrganizationRole.MEMBER) -> Set[OrganizationPermission](OrganizationPermission.INVITE_MEMBERS)))
-          val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
+          // An owner can change the base permissions so that members CANNOT do this
+          val permissionsDiff = PermissionsDiff.justRemove(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.INVITE_MEMBERS))
+          val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = owner.id.get,
             modifications = OrganizationModifications(permissionsDiff = Some(permissionsDiff)))
-
           val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
           orgModifyResponse must beRight
+
           orgModifyResponse.right.get.request === orgModifyRequest
           orgModifyResponse.right.get.modifiedOrg.basePermissions === org.basePermissions.applyPermissionsDiff(permissionsDiff)
-          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
+          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.VIEW_ORGANIZATION)
 
-          // Now the member should be able to invite others
-          val try2 = orgMembershipCommander.addMembership(memberInviteMember)
-          try2 must beRight
+          // Now the member should not be able to invite others
+          val memberAddRando2 = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = member.id.get, targetId = rando2.id.get, newRole = OrganizationRole.MEMBER)
+          orgMembershipCommander.addMembership(memberAddRando2) must beLeft
 
           val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
           allMembers.size === 3
-          allMembers.map(_.userId) === users.map(_.id.get).toSet
+          allMembers.map(_.userId) === Set(owner, member, rando1).map(_.id.get)
         }
       }
     }

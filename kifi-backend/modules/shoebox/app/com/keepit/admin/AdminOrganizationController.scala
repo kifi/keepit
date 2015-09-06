@@ -412,7 +412,7 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val pdiff = PermissionsDiff(added = PermissionsMap(roleOpt -> Set(permission)))
+      val pdiff = PermissionsDiff.justAdd(roleOpt -> Set(permission))
       orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
     Ok(JsString(s"added $permission to $roleOpt"))
@@ -423,7 +423,7 @@ class AdminOrganizationController @Inject() (
     val permission = OrganizationPermission(permissionStr)
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val pdiff = PermissionsDiff(removed = PermissionsMap(roleOpt -> Set(permission)))
+      val pdiff = PermissionsDiff.justRemove(roleOpt -> Set(permission))
       orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
     Ok(JsString(s"removed $permission from $roleOpt"))
