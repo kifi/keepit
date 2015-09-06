@@ -39,11 +39,10 @@ trait OrganizationInviteCommander {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
-  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite]
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
-  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): Option[OrganizationInviteInfo]
 }
 
 @Singleton
@@ -393,12 +392,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite] = {
-    db.readOnlyReplica { implicit session =>
-      organizationInviteRepo.getLastSentByOrgIdAndUserId(orgId, inviteeId)
-    }
-  }
-
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
     val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
@@ -450,8 +443,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken) }.isDefined
   }
 
-  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo] = {
-    val userInviteOpt = viewerIdOpt.flatMap(getLastSentByOrganizationIdAndInviteeId(orgId, _))
+  def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): Option[OrganizationInviteInfo] = {
+    val userInviteOpt = viewerIdOpt.flatMap(organizationInviteRepo.getLastSentByOrgIdAndUserId(orgId, _))
     val authTokenInviteOpt = authTokenOpt.flatMap(getInviteByOrganizationIdAndAuthToken(orgId, _))
     val inviteOpt = userInviteOpt.orElse(authTokenInviteOpt)
     inviteOpt.map { invite =>

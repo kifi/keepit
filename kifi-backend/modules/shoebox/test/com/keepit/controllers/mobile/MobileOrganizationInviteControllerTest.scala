@@ -2,6 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id }
@@ -50,6 +51,8 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
 
+          Thread.sleep(1000) // TODO(ryan): Ask Andrew is there's any way to avoid doing this. WatchableExecutionContext.drain() does not seem to work
+
           status(result) must equalTo(NO_CONTENT)
         }
       }
@@ -72,6 +75,9 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, invite.authToken)
           val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+
+          Thread.sleep(1000) // TODO(ryan): Ask Andrew is there's any way to avoid doing this. WatchableExecutionContext.drain() does not seem to work
+
           status(result) must equalTo(NO_CONTENT)
         }
       }
