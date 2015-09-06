@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+# {{ ansible_managed }}
+#
+# Setup instanct with hostname and to be provisioned by ansible
+#
+
+from subprocess import call
+
+import boto3
+import requests
+import sys
+import yaml
+
+EC2_REGION_NAME = 'us-west-1'
+
+def instance_id():
+    return requests.get("http://169.254.169.254/latest/meta-data/instance-id", timeout=1.0).text
+
+def ec2_instance():
+    ec2 = boto3.resource('ec2', region_name=EC2_REGION_NAME)
+    ec2_iter = ec2.instances.filter(InstanceIds=[instance_id()])
+    return next(i for i in ec2_iter) # get the first element
+
+def xform_tags(kv_dict):
+    tags = {}
+    for pair in kv_dict: tags[pair['Key']] = pair['Value']
+    return tags
+
+def ec2_tags(instance):
+    return xform_tags(instance.tags)
+
+def ec2_spot_request_id():
+    return ec2_instance().spot_instance_request_id
+
+def ec2_spot_requests():
+    ec2 = boto3.client('ec2', region_name=EC2_REGION_NAME)
+    return iter(spot for spot in ec2.describe_spot_instance_requests()['SpotInstanceRequests'])
+
+def ec2_spot_request():
+    return next((i for i in ec2_spot_requests() if i['SpotInstanceRequestId'] == ec2_spot_request_id()), None)
+
+def set_tags_from_spot_request(instance):
+    spot_req = ec2_spot_request()
+    if spot_req is not None:
+        log("Spot request found: %s" % spot_req['SpotInstanceRequestId'])
+        spot_tags = spot_req['Tags']
+        log("Adding tags from spot request %s" % spot_tags)
+        instance.create_tags(Tags=spot_tags)
+        return True
+    else:
+        log("Spot request not found")
+        return False
+
+# set hostname to EC2 Name
+def set_hostname(name):
+  with open("/etc/hostname", "w") as f:
+    f.write(name + "\n")
+  update_code = call(['hostname', '-F', '/etc/hostname'])
+  if update_code != 0: log('Error updating hostname')
+  else: log('Updated hostname %s' % name)
+
+# make sure EC2 Name is in the hosts file
+def update_hosts(name):
+  with open("/etc/hosts", "a+") as f:
+    existing_name = f.read()
+    if name not in existing_name:
+      f.write("\n127.0.0.1 " + name + "\n")
+
+# creates a yaml "ansible vars_file" that's dynamically imported into an
+# ansible playbook to set certain variables about the node
+def generate_vars_file(tags, instance):
+    vars_data = {
+        'kifi_hostname': my_tags['Name'],
+        'ec2_instance_type': instance.instance_type,
+        'public_dns_name': instance.public_dns_name
+    }
+
+    for key, value in my_tags.iteritems():
+        vars_data['ec2_tag_' + key] = value
+
+    with open('/opt/kifi-vars.yml', 'w+') as f:
+        output = yaml.dump(vars_data, explicit_start=True, default_flow_style=False)
+        f.write(output)
+
+def log(msg):
+  call(["logger", "[kifi-node-setup] %s" % msg])
+
+if __name__ == "__main__":
+    instance = ec2_instance()
+    set_tags_from_spot_request(instance)
+    my_tags = ec2_tags(instance)
+
+    name_tag = my_tags['Name']
+    update_hosts(name_tag)
+    set_hostname(name_tag)
+
+    generate_vars_file(my_tags, instance)

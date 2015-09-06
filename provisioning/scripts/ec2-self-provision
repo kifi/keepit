@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# This is only to be run on instances that are running ansible against themselves
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get -yq install software-properties-common
+apt-add-repository -y ppa:ansible/ansible
+apt-get update
+apt-get -yq install ansible
+ansible-playbook ec2-local.yml

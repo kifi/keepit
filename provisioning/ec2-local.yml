@@ -1,0 +1,53 @@
+---
+- hosts: localhost
+  sudo: yes
+  tasks:
+    - name: install kifi-node-setup python dependencies
+      pip: name={{ item }}
+      with_items:
+        - boto3
+
+    # add kifi-node-setup as upstart
+    - name: add /opt/kifi-node-setup script
+      template:
+        src: templates/opt/kifi-node-setup.j2
+        dest: /opt/kifi-node-setup
+        owner: root
+        group: root
+        mode: 0750
+    - name: add /etc/init/kifi-node-setup.conf
+      template:
+        src: templates/etc/init/kifi-node-setup.conf.j2
+        dest: /etc/init/kifi-node-setup.conf
+        owner: root
+        group: root
+        mode: 0750
+    - command: /opt/kifi-node-setup
+      changed_when: False
+    - include_vars: /opt/kifi-vars.yml
+    - set_fact:
+        ansible_fqdn: "{{ kifi_hostname }}"
+    - name: add ec2 instances to our hosts lists
+      add_host:
+        name: localhost
+        groups: ec2,tag_Service_{{ ec2_tag_Service }}
+    - name: notify slack started
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local started: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"
+
+- include: ec2-service.yml
+
+- hosts: localhost
+  sudo: yes
+  tasks:
+    - name: notify slack completed
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local completed: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"
