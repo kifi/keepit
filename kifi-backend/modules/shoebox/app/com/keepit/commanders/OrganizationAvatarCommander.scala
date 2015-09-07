@@ -41,7 +41,9 @@ class OrganizationAvatarCommanderImpl @Inject() (
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar] = {
     val candidatesById = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrgIds(orgIds) }
     orgIds.map { orgId =>
-      orgId -> ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById(orgId), strictAspectRatio = false)(_.imageSize).get
+      val avatarOpt = ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById(orgId), strictAspectRatio = false)(_.imageSize)
+      val avatar = avatarOpt.getOrElse(throw new Exception(s"no avatar for org $orgId with image size $imageSize"))
+      orgId -> avatar
     }.toMap
   }
 

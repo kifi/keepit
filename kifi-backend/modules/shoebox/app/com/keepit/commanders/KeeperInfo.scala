@@ -113,7 +113,7 @@ case class LibraryData(
   hasCollaborators: Boolean,
   subscribedToUpdates: Boolean, // deprecated, use membership.subscribed instead
   collaborators: Seq[BasicUser],
-  orgAvatar: ImagePath,
+  orgAvatar: Option[ImagePath], //not all libs have orgs
   membership: Option[LibraryMembershipInfo])
 
 object LibraryData {
@@ -126,7 +126,7 @@ object LibraryData {
     (__ \ 'hasCollaborators).write[Boolean] and
     (__ \ 'subscribedToUpdates).write[Boolean] and
     (__ \ 'collaborators).write[Seq[BasicUser]] and
-    (__ \ 'orgAvatar).write[ImagePath] and
+    (__ \ 'orgAvatar).writeNullable[ImagePath] and
     (__ \ 'membership).writeNullable[LibraryMembershipInfo]
   )(unlift(LibraryData.unapply))
 }

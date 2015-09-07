@@ -3,6 +3,9 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.commanders.HandleCommander
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.images.RawImageInfo
+import com.keepit.common.store.ImagePath
+import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model.OrganizationFactory.PartialOrganization
 import com.keepit.payments._
 
@@ -37,6 +40,10 @@ object OrganizationFactoryHelper {
       for (invitedEmail <- partialOrganization.invitedEmails) {
         orgInvRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))
       }
+      val imageHash = ImageHash("076fccc32247ae67bb75d48879230953")
+      val orgAvatarRepo = injector.getInstance(classOf[OrganizationAvatarRepoImpl])
+      orgAvatarRepo.save(OrganizationAvatar(organizationId = org.id.get, width = 100, height = 100, format = ImageFormat.JPG, kind = ProcessImageOperation.CropScale, imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"), source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None))
+      orgAvatarRepo.save(OrganizationAvatar(organizationId = org.id.get, width = 200, height = 200, format = ImageFormat.JPG, kind = ProcessImageOperation.CropScale, imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"), source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None))
       org
     }
   }

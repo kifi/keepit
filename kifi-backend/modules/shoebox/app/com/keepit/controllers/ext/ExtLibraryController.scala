@@ -69,6 +69,9 @@ class ExtLibraryController @Inject() (
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
+        val orgAvatar = lib.organizationId.map { orgId =>
+          orgAvatarsById.get(orgId).getOrElse(throw new Exception(s"No avatar for org of lib $lib"))
+        }
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -78,7 +81,7 @@ class ExtLibraryController @Inject() (
           hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
-          orgAvatar = orgAvatarsById(lib.organizationId.get).imagePath,
+          orgAvatar = orgAvatar.map(_.imagePath),
           membership = membership.map(lib.getMembershipInfo)
         )
     }
@@ -117,7 +120,9 @@ class ExtLibraryController @Inject() (
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val data = db.readOnlyMaster { implicit session =>
-              val orgAvatar = organizationAvatarCommander.getBestImageByOrgId(lib.organizationId.get, ExtLibraryController.defaultImageSize).imagePath
+              val orgAvatar = lib.organizationId.map { orgId =>
+                organizationAvatarCommander.getBestImageByOrgId(orgId, ExtLibraryController.defaultImageSize).imagePath
+              }
               val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
               LibraryData(
                 id = Library.publicId(lib.id.get),

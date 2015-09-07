@@ -728,7 +728,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
                   "ownerId":"${user1.externalId}",
                   "handle":"${org1.handle.value}",
-                  "name":"${org1.name}"
+                  "name":"${org1.name}",
+                  "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
                },
                "membership":{
                 "access":"owner",
