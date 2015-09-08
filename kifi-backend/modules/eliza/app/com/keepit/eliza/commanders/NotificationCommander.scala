@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -9,10 +9,11 @@ import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
 import com.keepit.model.{ NormalizedURI, User, NotificationCategory }
 import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo }
-import com.keepit.notify.model.event.LegacyNotification
+import com.keepit.notify.model.event.{NewMessage, LegacyNotification}
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 
@@ -20,6 +21,7 @@ import scala.concurrent.Future
 class NotificationCommander @Inject() (
     db: Database,
     userThreadRepo: UserThreadRepo,
+    messageRepo: MessageRepo,
     messageThreadRepo: MessageThreadRepo,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo) extends Logging {
@@ -61,30 +63,69 @@ class NotificationCommander @Inject() (
         case (json, unread, uri) =>
           val time = (json \ "time").as[DateTime]
           val id = (json \ "id").as[String]
+
           notificationRepo.getByKindAndGroupIdentifier(LegacyNotification, id).fold {
-            val notif = notificationRepo.save(Notification(
-              recipient = recipient,
-              kind = LegacyNotification,
-              lastEvent = time,
-              groupIdentifier = Some(id)
-            ))
-            val item = notificationItemRepo.save(NotificationItem(
-              notificationId = notif.id.get,
-              kind = LegacyNotification,
-              event = LegacyNotification(
+            val threadId = (json \ "threadId").as[String]
+            val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
+            if (messageThread.replyable) {
+              backfillMessageThreadForUser(userId, messageThread)
+            } else {
+              val notif = notificationRepo.save(Notification(
                 recipient = recipient,
-                time = time,
-                json = json,
-                uriId = uri
-              ),
-              eventTime = time
-            ))
-            NotificationWithItems(notif, Set(item))
+                kind = LegacyNotification,
+                lastEvent = time,
+                groupIdentifier = Some(id)
+              ))
+              val item = notificationItemRepo.save(NotificationItem(
+                notificationId = notif.id.get,
+                kind = LegacyNotification,
+                event = LegacyNotification(
+                  recipient = recipient,
+                  time = time,
+                  json = json,
+                  uriId = uri
+                ),
+                eventTime = time
+              ))
+              NotificationWithItems(notif, Set(item))
+            }
           } { notif =>
             NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
           }
       }
     }
+  }
+
+  def backfillMessageThreadForUser(userId: Id[User], messageThread: MessageThread)(implicit session: RWSession): NotificationWithItems = {
+    val recipient = Recipient(userId)
+    val userThread = userThreadRepo.getUserThread(userId, messageThread.id.get)
+    val lastChecked = Seq(userThread.lastActive, userThread.lastSeen, userThread.notificationLastSeen).collect {
+      case Some(time) => time
+    }.maxOpt
+    val messages = messageRepo.get(messageThread.id.get, 0)
+    val lastEvent = messages.map(_.createdAt).max
+    val notif = notificationRepo.save(Notification(
+      recipient = recipient,
+      kind = NewMessage,
+      lastEvent = lastEvent,
+      groupIdentifier = Some(messageThread.id.get.toString)
+    ))
+    val notifId = notif.id.get
+    val items = messages.map { message =>
+      notificationItemRepo.save(NotificationItem(
+        notificationId = notif.id.get,
+        kind = NewMessage,
+        event = NewMessage(
+          recipient = recipient,
+          time = message.createdAt,
+          from = message.from.asRecipient.get,
+          messageId = message.id.get.id,
+          messageThreadId = messageThread.id.get.id
+        ),
+        eventTime = message.createdAt
+      ))
+    }
+    NotificationWithItems(notif, items.toSet)
   }
 
   /**
