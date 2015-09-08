@@ -26,7 +26,7 @@ trait OrganizationCommander {
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
+  def getBasicOrganizationsHelper(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
@@ -72,33 +72,32 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
-    db.readOnlyReplica { implicit session =>
-      basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
-        missing.map(_.id).map { orgId => orgId -> getBasicOrganization(orgId) }.toMap.map {
-          case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
-        }
-      }
-    }.map {
-      case (orgKey, org) => (orgKey.id, org)
-    }
+    db.readOnlyReplica { implicit session => getBasicOrganizationsHelper(orgIds) }
   }
-
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization = {
-    val org = orgRepo.get(orgId)
-    val orgHandle = org.handle
-    val orgName = org.name
-    val description = org.description
-
-    val ownerId = userRepo.get(org.ownerId).externalId
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
-
-    BasicOrganization(
-      orgId = Organization.publicId(orgId),
-      ownerId = ownerId,
-      handle = orgHandle,
-      name = orgName,
-      description = description,
-      avatarPath = avatarPath)
+  def getBasicOrganizationsHelper(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization] = {
+    val basicOrgs = basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
+      if (missing.isEmpty) Map.empty
+      else {
+        val missingOrgIds = missing.map(_.id)
+        val orgs = orgRepo.getByIds(missingOrgIds)
+        val owners = userRepo.getUsers(orgs.values.map(_.ownerId).toSeq)
+        val avatars = organizationAvatarCommander.getBestImagesByOrgIds(missingOrgIds, ImageSize(200, 200))
+        missingOrgIds.map { orgId =>
+          val org = orgs(orgId)
+          val owner = owners(org.ownerId)
+          val avatar = avatars(orgId)
+          BasicOrganizationIdKey(orgId) -> BasicOrganization(
+            orgId = Organization.publicId(orgId),
+            ownerId = owner.externalId,
+            handle = org.handle,
+            name = org.name,
+            description = org.description,
+            avatarPath = avatar.map(_.imagePath)
+          )
+        }.toMap
+      }
+    }
+    basicOrgs.map { case (orgKey, basicOrg) => (orgKey.id, basicOrg) }
   }
 
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = db.readOnlyReplica { implicit session =>

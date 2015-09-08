@@ -234,10 +234,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val basicOrgByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
-        val orgMap = orgRepo.getByIds(allOrgsShown)
-        orgMap.map {
-          case (id, _) => id -> organizationCommander.getBasicOrganization(id)
-        }
+        organizationCommander.getBasicOrganizationsHelper(allOrgsShown)
       }
     }
 
@@ -615,7 +612,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerOpt.map { viewer =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
     } getOrElse Map.empty
-    val basicOrgs = organizationCommander.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
+    val basicOrgs = organizationCommander.getBasicOrganizationsHelper(libs.flatMap(_.organizationId).toSet)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -653,7 +650,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val userIds = memberships.values.map(_.map(_.userId)).flatten.toSet
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
-    val basicOrgById = organizationCommander.getBasicOrganizations(libs.flatMap(_.organizationId).toSet)
+    val basicOrgById = organizationCommander.getBasicOrganizationsHelper(libs.flatMap(_.organizationId).toSet)
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)

@@ -53,11 +53,11 @@ object OrganizationAvatar {
 
 object OrganizationAvatarStates extends States[OrganizationAvatar]
 
-case class OrganizationAvatarKey(orgId: Id[Organization]) extends Key[Seq[OrganizationAvatar]] {
-  override val version = 1
+case class OrganizationAvatarKey(orgId: Id[Organization]) extends Key[Set[OrganizationAvatar]] {
+  override val version = 2
   val namespace = "organization_avatar"
   def toKey(): String = orgId.toString
 }
 
 class OrganizationAvatarCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[OrganizationAvatarKey, Seq[OrganizationAvatar]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[OrganizationAvatarKey, Set[OrganizationAvatar]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

@@ -64,7 +64,7 @@ class ExtLibraryController @Inject() (
 
     val libs = librariesWithMembershipAndCollaborators.map(_._1)
     val orgIds = libs.flatMap(_.organizationId)
-    val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, defaultLibraryImageSize)
+    val orgAvatarsById = db.readOnlyReplica { implicit session => organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, defaultLibraryImageSize) }
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))

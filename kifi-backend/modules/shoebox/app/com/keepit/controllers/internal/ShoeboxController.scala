@@ -80,6 +80,7 @@ class ShoeboxController @Inject() (
   libraryInfoCommander: LibraryInfoCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
+  orgInviteRepo: OrganizationInviteRepo,
   organizationMembershipCommander: OrganizationMembershipCommander,
   s3ImageStore: S3ImageStore,
   pathCommander: PathCommander,
@@ -558,10 +559,12 @@ class ShoeboxController @Inject() (
   }
 
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Action { request =>
-    val (membershipOpt, candidateOpt) = db.readOnlyReplica { implicit session =>
-      (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId), orgCandidateRepo.getByUserAndOrg(userId, orgId))
+    val (membershipOpt, candidateOpt, inviteOpt) = db.readOnlyReplica { implicit session =>
+      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      val candidateOpt = orgCandidateRepo.getByUserAndOrg(userId, orgId)
+      val inviteOpt = orgInviteRepo.getLastSentByOrgIdAndUserId(orgId, userId)
+      (membershipOpt, candidateOpt, inviteOpt)
     }
-    val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
     Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
   }
 }
