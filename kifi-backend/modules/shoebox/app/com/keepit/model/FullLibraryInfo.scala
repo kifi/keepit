@@ -200,7 +200,8 @@ case class LibraryCardInfo(
   kind: LibraryKind,
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
-  org: Option[BasicOrganization])
+  org: Option[BasicOrganization],
+  orgMemberAccess: Option[LibraryAccess])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
@@ -227,7 +228,8 @@ object LibraryCardInfo {
       "kind" -> o.kind,
       "invite" -> o.invite,
       "path" -> o.path,
-      "org" -> o.org).nonNullFields
+      "org" -> o.org,
+      "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
   }
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown

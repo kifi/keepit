@@ -81,7 +81,8 @@ class UserProfileCommander @Inject() (
           membership = memberships(lib.id.get).map(lib.getMembershipInfo),
           modifiedAt = lib.updatedAt,
           path = info.path,
-          org = info.org
+          org = info.org,
+          orgMemberAccess = info.orgMemberAccess
         )
     }
   }
