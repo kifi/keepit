@@ -288,6 +288,9 @@ GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
 POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
+GET     /m/1/libraries/marketing-suggestions    @com.keepit.controllers.mobile.MobileLibraryController.marketingSiteSuggestedLibraries()
+
+
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
