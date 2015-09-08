@@ -596,7 +596,9 @@ class LibraryInfoCommanderImpl @Inject() (
               modifiedAt = lib.updatedAt,
               path = info.path,
               kind = lib.kind,
-              org = info.org)
+              org = info.org,
+              orgMemberAccess = lib.organizationMemberAccess
+            )
         }.seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -697,7 +699,8 @@ class LibraryInfoCommanderImpl @Inject() (
         membership = None, // not needed
         path = path,
         modifiedAt = lib.updatedAt,
-        org = orgInfoOpt)
+        org = orgInfoOpt,
+        orgMemberAccess = lib.organizationMemberAccess)
       (info, viewerMem, subscriptions)
     }
   }
@@ -725,7 +728,8 @@ class LibraryInfoCommanderImpl @Inject() (
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,
-      org = basicOrg
+      org = basicOrg,
+      orgMemberAccess = lib.organizationMemberAccess
     )
   }
 
