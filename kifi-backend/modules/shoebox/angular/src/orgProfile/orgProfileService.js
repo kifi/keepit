@@ -59,7 +59,7 @@ angular.module('kifi')
       },
       suggestOrgMember: function (orgId, query, limit) {
         if (typeof limit === 'undefined') {
-          limit = 3;
+          limit = 10;
         }
 
         return net.suggestOrgMember(orgId, query, limit).then(function (response) {
