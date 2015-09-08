@@ -202,7 +202,8 @@ class SharedWsMessagingController @Inject() (
           notificationMessagingCommander.getNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket)).andThen {
             case Success(NotificationResultsForPage(page, results)) =>
               socket.channel.push(Json.arr(requestId.toLong, page, results.results.map(_.json), results.numTotal, results.numUnread))
-            case Failure(_) => socket.channel.push(Json.arr("server_error", requestId.toLong))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
           }
         } { recip =>
           val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
