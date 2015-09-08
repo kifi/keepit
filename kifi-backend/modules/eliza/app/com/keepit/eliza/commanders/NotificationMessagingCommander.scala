@@ -9,13 +9,13 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
 import com.keepit.notify.model.{ UserRecipient, Recipient }
 import com.keepit.notify.model.event.NewMessage
-import com.keepit.realtime.MessageThreadPushNotification
+import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 class NotificationMessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
-    notificationDeliveryCommander: NotificationDeliveryCommander,
+    pushNotifier: MobilePushNotifier,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
@@ -32,47 +32,37 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def changeNotificationStatus(userId: Id[User], notif: Notification, disabled: Boolean)(implicit context: HeimdalContext) = {
-    val updated = notificationCommander.updateNotificationStatus(notif.id.get, disabled)
+  def sendUnreadNotifications(notif: Notification, recipient: Recipient): Unit = {
+    val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
+      (notificationRepo.getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name),
+        notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name))
+    }
+    recipient match {
+      case UserRecipient(user, _) =>
+        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
+        val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
+        pushNotifier.notifyUser(user, pushNotif, false)
+      case _ =>
+    }
+  }
+
+  def changeNotificationDisabled(userId: Id[User], notif: Notification, disabled: Boolean)(implicit context: HeimdalContext) = {
+    val updated = notificationCommander.setNotificationDisabledTo(notif.id.get, disabled)
     if (updated) {
       webSocketRouter.sendToUser(userId, Json.arr("thread_muted", notif.externalId, disabled))
       messagingAnalytics.changedMute(userId, messageThreadIdForNotif(notif), disabled, context)
     }
   }
 
-  def setNotificationRead(notif: Notification)(implicit context: HeimdalContext): Unit = {
-    notificationCommander.setNotificationRead(notif.id.get)
-  }
-
-  def setNotificationUnread(notif: Notification): Unit = {
-    notificationCommander.setNotificationUnread(notif.id.get)
-  }
-
-  def getUnreadEnabledNotificationsCount(recipient: Recipient): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCount(recipient)
-    }
-  }
-
-  def getUnreadEnabledNotificationsCountForKind(recipient: Recipient, kind: String): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCountForKind(recipient, kind)
-    }
-  }
-
-  def getUnreadEnabledNotificationsCountExceptKind(recipient: Recipient, kind: String): Int = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getUnreadEnabledNotificationsCountExceptKind(recipient, kind)
-    }
-  }
-
-  def sendUnreadNotifications(recipient: Recipient) = {
-    val unreadMessages = getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
-    val unreadNotifications = getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name)
-    recipient match {
-      case UserRecipient(user, _) =>
-        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-      case _ =>
+  def changeNotificationUnread(userId: Id[User], notif: Notification, item: NotificationItem, unread: Boolean)(implicit context: HeimdalContext): Unit = {
+    val updated = notificationCommander.setNotificationUnreadTo(notif.id.get, unread)
+    if (updated) {
+      val nUrl = notificationCommander.getURI(notif.id.get)
+      webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
+      if (unread) {
+        messagingAnalytics.clearedNotification(userId, ExternalId[Message](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
+      }
+      sendUnreadNotifications(notif, Recipient(userId))
     }
   }
 
@@ -80,13 +70,9 @@ class NotificationMessagingCommander @Inject() (
     db.readWrite { implicit session =>
       notificationRepo.setAllReadBefore(recipient, item.eventTime)
     }
-    val unreadMessages = getUnreadEnabledNotificationsCountForKind(recipient, NewMessage.name)
-    val unreadNotifications = getUnreadEnabledNotificationsCountExceptKind(recipient, NewMessage.name)
+    sendUnreadNotifications(notif, recipient)
     recipient match {
       case UserRecipient(user, _) =>
-        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-        val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
-        notificationDeliveryCommander.sendPushNotification(user, pushNotif)
         webSocketRouter.sendToUser(user, Json.arr("all_notifications_visited", item.externalId, item.eventTime))
       case _ =>
     }

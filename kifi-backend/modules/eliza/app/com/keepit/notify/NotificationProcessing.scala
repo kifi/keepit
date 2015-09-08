@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
+import com.keepit.eliza.model._
 import com.keepit.notify.delivery.WsNotificationDelivery
 import com.keepit.notify.info.StandardNotificationInfo
 import com.keepit.notify.model.NotificationKind
@@ -92,7 +92,7 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.getAllForNotification(notif.id.get)
     }.toSet
     legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
-      delivery.deliver(recipient, notif, items)
+      delivery.deliver(recipient, NotificationWithItems(notif, items))
     }
     notif
   }

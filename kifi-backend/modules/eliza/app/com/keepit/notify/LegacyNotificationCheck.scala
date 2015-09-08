@@ -49,7 +49,7 @@ class LegacyNotificationCheck @Inject() (
     check.recipient
   }
 
-  def IfElseUserExperiment(recipient: Recipient)(f: (Recipient) => Unit)(elseF: (Recipient) => Unit): Recipient = {
+  def ifElseUserExperiment(recipient: Recipient)(f: (Recipient) => Unit)(elseF: (Recipient) => Unit): Recipient = {
     val check = checkUserExperiment(recipient)
     if (check.experimentEnabled) {
       f(check.recipient)

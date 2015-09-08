@@ -3,7 +3,8 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.model.event.{ NewMessage, NotificationEvent }
 import com.keepit.notify.model._
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -37,10 +38,53 @@ case class Notification(
     disabled: Boolean = false,
     externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
 
+  def hasNewEvent: Boolean = lastChecked.fold(true) { checked =>
+    lastEvent > checked
+  }
+
+  def unread: Boolean = !disabled && hasNewEvent
+
+  def withUnread(unread: Boolean) = if (unread) copy(lastChecked = None) else copy(lastChecked = Some(lastEvent))
+
+  def withDisabled(disabled: Boolean) = copy(disabled = disabled)
+
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 
   override def withUpdateTime(now: DateTime): Notification = copy(updatedAt = updatedAt)
+
 }
+
+/**
+ * Represents a notification and its collection of items, along with the guarantees that these objects hold.
+ */
+class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
+
+  require(items.forall(_.kind == notification.kind))
+  require(relevantItem.eventTime == notification.lastEvent)
+
+  lazy val relevantItem = items.maxBy(_.eventTime)
+
+  def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
+
+  def unreadAuthors: Set[Recipient] = {
+    // only makes sense if this is a message notification
+    if (notification.kind == NewMessage) {
+      items.map(_.event).collect {
+        case e: NewMessage => e
+      }.map(_.from)
+    } else Set()
+  }
+
+}
+
+case class NotificationWithItems(
+  override val notification: Notification,
+  override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
+
+case class NotificationWithInfo(
+  override val notification: Notification,
+  override val items: Set[NotificationItem], info: NotificationInfo)
+    extends ExtendedNotification(notification, items)
 
 object Notification {
 

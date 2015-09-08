@@ -240,6 +240,7 @@ object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFoll
 case class NewMessage(
   recipient: Recipient,
   time: DateTime,
+  from: Recipient,
   messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
   messageId: Long // same here
 ) extends NotificationEvent {
@@ -255,10 +256,11 @@ object NewMessage extends NotificationKind[NewMessage] {
 
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
-      (__ \ "time").format[DateTime] and
-      (__ \ "messageThreadId").format[Long] and
-      (__ \ "messageId").format[Long]
-    )(NewMessage.apply, unlift(NewMessage.unapply))
+    (__ \ "time").format[DateTime] and
+    (__ \ "from").format[Recipient] and
+    (__ \ "messageThreadId").format[Long] and
+    (__ \ "messageId").format[Long]
+  )(NewMessage.apply, unlift(NewMessage.unapply))
 
   override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
 

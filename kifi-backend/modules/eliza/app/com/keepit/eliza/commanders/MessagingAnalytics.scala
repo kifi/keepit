@@ -140,15 +140,15 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def clearedNotification(userId: Id[User], message: Message, thread: MessageThread, existingContext: HeimdalContext): Unit = {
+  def clearedNotification(userId: Id[User], message: ExternalId[Message], thread: ExternalId[MessageThread], existingContext: HeimdalContext): Unit = {
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "cleared")
       contextBuilder += ("channel", kifi)
-      contextBuilder += ("messageId", message.externalId.id)
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("messageId", message.id)
+      contextBuilder += ("threadId", thread.id)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
     }
   }

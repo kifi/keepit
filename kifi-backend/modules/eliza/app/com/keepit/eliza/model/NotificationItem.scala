@@ -73,4 +73,5 @@ object NotificationItem {
       item.externalId,
       item.eventTime
     )
+
 }

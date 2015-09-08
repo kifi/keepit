@@ -43,6 +43,9 @@ class NotificationRepoImpl @Inject() (
     def lastEvent = column[DateTime]("last_event", O.NotNull)
     def disabled = column[Boolean]("disabled", O.NotNull)
 
+    def hasNewEvent: Column[Boolean] = lastChecked.getOrElse(START_OF_TIME) < lastEvent
+    def unread: Column[Boolean] = !disabled && hasNewEvent
+
     def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
@@ -68,9 +71,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadEnabledNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient &&
-        !row.disabled &&
-        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+      row <- rows if row.recipient === recipient && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -78,9 +79,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadEnabledNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind == kind &&
-        !row.disabled &&
-        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+      row <- rows if row.recipient === recipient && row.kind === kind && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -88,9 +87,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadEnabledNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind != kind &&
-        !row.disabled &&
-        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent
+      row <- rows if row.recipient === recipient && row.kind =!= kind && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -98,8 +95,7 @@ class NotificationRepoImpl @Inject() (
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
     val q = for (
-      row <- rows if row.recipient === recipient && !row.disabled &&
-        row.lastChecked.getOrElse(START_OF_TIME) < row.lastEvent && row.lastEvent < time
+      row <- rows if row.recipient === recipient && row.unread && row.lastEvent < time
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }

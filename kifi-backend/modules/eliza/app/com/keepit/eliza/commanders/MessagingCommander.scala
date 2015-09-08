@@ -526,7 +526,7 @@ class MessagingCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markRead(userId, thread.id.get, message)
     }
-    messagingAnalytics.clearedNotification(userId, message, thread, context)
+    messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
 
     val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
     val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
