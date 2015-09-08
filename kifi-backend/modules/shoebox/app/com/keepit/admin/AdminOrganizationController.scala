@@ -9,8 +9,11 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
+import com.keepit.common.images.RawImageInfo
 import com.keepit.common.json.KeyFormat
+import com.keepit.common.store.ImagePath
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
+import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model._
 import play.api.{ Mode, Play }
 import play.api.libs.json.{ JsString, Json }
@@ -31,6 +34,7 @@ class AdminOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     db: Database,
+    orgAvatarRepo: OrganizationAvatarRepo,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
     libRepo: LibraryRepo,
@@ -470,6 +474,26 @@ class AdminOrganizationController @Inject() (
       orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(permissionsDiff = Some(pdiff)))
     }
     Ok(Json.obj("added" -> newPermission, "modified" -> orgIds))
+  }
+
+  //kill following code after https://github.com/kifi/keepit/pull/17180 is merged
+  def setAllOrgsWithDefaultAvatars() = Action { implicit request =>
+    val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.map(_.id.get) }
+    var added = 0
+    var existing = 0
+    for (orgId <- orgIds) {
+      db.readWrite { implicit session =>
+        if (orgAvatarRepo.getByOrgId(orgId).isEmpty) {
+          val imageHash = ImageHash("076fccc32247ae67bb75d48879230953")
+          orgAvatarRepo.save(OrganizationAvatar(organizationId = orgId, width = 100, height = 100, format = ImageFormat.JPG, kind = ProcessImageOperation.CropScale, imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"), source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None))
+          orgAvatarRepo.save(OrganizationAvatar(organizationId = orgId, width = 200, height = 200, format = ImageFormat.JPG, kind = ProcessImageOperation.CropScale, imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"), source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None))
+          added += 1
+        } else {
+          existing += 1
+        }
+      }
+    }
+    Ok(Json.obj("added" -> added, "existing" -> existing))
   }
 
 }
