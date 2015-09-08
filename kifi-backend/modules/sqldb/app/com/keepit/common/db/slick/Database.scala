@@ -284,7 +284,9 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
     existingOpt match {
       case Some(existing) =>
         new SessionWrapper(existing, {
-          existing.conn.commit()
+          if (!existing.conn.getAutoCommit) {
+            existing.conn.commit()
+          }
           // Do nothing else. If working on reducing these, feel free to add logs.
         })
       case None => // This is the expected/good case.
