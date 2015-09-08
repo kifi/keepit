@@ -144,7 +144,9 @@ class LibraryCommanderImpl @Inject() (
                   }
                   lib
                 case Some(lib) =>
-                  val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+                  val newLib = libraryRepo.save(Library(id = lib.id, ownerId = ownerId,
+                    name = libCreateReq.name, description = libCreateReq.description, visibility = libCreateReq.visibility, slug = validSlug, color = newColor, kind = newKind,
+                    memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
