@@ -1,8 +1,10 @@
 package com.keepit.notify.delivery
 
 import com.google.inject.Inject
+import com.keepit.common.JsObjectExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.store.ImageSize
 import com.keepit.eliza.commanders.{ NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
@@ -15,7 +17,7 @@ import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
 import com.keepit.store.ElizaS3ExternalIdImageStore
-import play.api.libs.json.{ Json, JsValue }
+import play.api.libs.json.{JsObject, Json, JsValue}
 import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -42,7 +44,7 @@ class NotificationJsonFormat @Inject() (
     case PublicImage(url) => url
   }
 
-  def basicJson(notifWithInfo: NotificationWithInfo): Future[JsValue] = notifWithInfo match {
+  def basicJson(notifWithInfo: NotificationWithInfo): Future[JsObject] = notifWithInfo match {
     case NotificationWithInfo(notif, items, info) =>
       val relevantItem = notifWithInfo.relevantItem
       notifWithInfo.info match {
@@ -83,7 +85,7 @@ class NotificationJsonFormat @Inject() (
     }
   }
 
-  def getParticipants(notif: Notification): Future[Set[BasicUserLikeEntity]] = {
+  def getParticipants(notif: Notification): Future[(BasicUserLikeEntity, Set[BasicUserLikeEntity])] = {
     val participants = notificationCommander.getParticipants(notif)
     val userIds = participants.collect {
       case UserRecipient(userId, _) => userId
@@ -101,22 +103,61 @@ class NotificationJsonFormat @Inject() (
     for {
       userParticipants <- userParticipantsF
     } yield {
-      userParticipants.toSet | otherParticipants
+      val participantsSet = userParticipants.toSet | otherParticipants
+      participantsSet.partition(_ == notif.recipient) match {
+        case (author, rest) =>
+          (author.head, rest)
+      }
     }
   }
 
-  def extendedJson(notifWithInfo: NotificationWithInfo, uriSummary: Boolean = false): Future[JsValue] = {
+  private val idealImageSize = ImageSize(65, 95) // todo figure out where these somewhat magic image size numbers are needed
+
+  def extendedJson(notifWithInfo: NotificationWithInfo, uriSummary: Boolean = false): Future[JsObject] = {
     notifWithInfo match {
       case NotificationWithInfo(notif, items, info) =>
         val notifId = notif.id.get
         val uriSummaryF = getUriSummary(notifId)
         val participantsF = getParticipants(notif)
-        val jsonF = for {
+        val basicFormatF = basicJson(notifWithInfo)
+        for {
           uriSummary <- uriSummaryF
+          (author, participants) <- participantsF
+          basicFormat <- basicFormatF
         } yield {
+            val unreadJson =
+              if (notif.unread)
+                Json.obj(
+                  "unread" -> true,
+                  "unreadMessages" -> math.max(1, notifWithInfo.unreadMessages.size),
+                  "unreadAuthors" -> math.max(1, notifWithInfo.unreadAuthors.size)
+                )
+              else
+                Json.obj(
+                  "unread" -> false,
+                  "unreadMessages" -> 0,
+                  "unreadAuthors" -> 0
+                )
 
+            val participantsJson =
+              Option(participants).filter(_.nonEmpty).fold(Json.obj()) { participants =>
+                Json.obj("participants" -> participants)
+              }
+
+            val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
+              val image = summary.images.get(idealImageSize)
+              Json.obj("uriSummary" -> Json.obj(
+                "title" -> summary.article.title,
+                "description" -> summary.article.description,
+                "imageUrl" -> image.map(_.path.getUrl),
+                "imageWidth" -> image.map(_.size.width),
+                "imageHeight" -> image.map(_.size.height
+              )))
+            }
+
+            basicFormat ++ Json.obj("author" -> author) ++ unreadJson ++
+              participantsJson ++ uriSummaryJson
         }
-        null
     }
   }
 
