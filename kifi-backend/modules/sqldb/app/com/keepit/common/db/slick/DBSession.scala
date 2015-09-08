@@ -16,7 +16,7 @@ import com.keepit.common.db.slick.Database.Master
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends SessionDef with Logging with TransactionalCaching {
-    def database = _session.database
+    def database = session.database
     private var open = false
     private var wasOpened = false
     private var doRollback = false
