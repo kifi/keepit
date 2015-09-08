@@ -114,6 +114,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
       }
     }
+
     "be sure that every distinct upload gets its own file path" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]

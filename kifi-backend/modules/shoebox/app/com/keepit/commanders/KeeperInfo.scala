@@ -113,8 +113,9 @@ case class LibraryData(
   hasCollaborators: Boolean,
   subscribedToUpdates: Boolean, // deprecated, use membership.subscribed instead
   collaborators: Seq[BasicUser],
-  orgAvatar: Option[ImagePath],
+  orgAvatar: Option[ImagePath], //not all libs have orgs
   membership: Option[LibraryMembershipInfo])
+
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and

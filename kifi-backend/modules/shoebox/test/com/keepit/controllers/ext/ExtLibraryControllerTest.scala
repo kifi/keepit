@@ -118,7 +118,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "path" -> "/braff/robbers",
                 "hasCollaborators" -> true,
                 "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get))
+                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
+                "orgAvatar" -> "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
               )
             )
           )
