@@ -3,7 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.eliza.commanders.NotificationMessagingCommander.{SubsetNotificationResults, FullNotificationResults, NotificationResultsForPage}
+import com.keepit.eliza.commanders.NotificationMessagingCommander.{ SubsetNotificationResults, FullNotificationResults, NotificationResultsForPage }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
@@ -102,7 +102,7 @@ class NotificationMessagingCommander @Inject() (
           }
         }
         val finalNotifsF = notificationInfoGenerator.generateInfo(notifsForPage).flatMap { infos =>
-          Future.sequence(infos.map {info => notificationJsonFormat.extendedJson(info, uriSummary)})
+          Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
         }
         val resultsF = finalNotifsF.map { finalNotifs =>
           if (notifsForPage.length < howMany) {
@@ -139,7 +139,7 @@ class NotificationMessagingCommander @Inject() (
           }
         }
         notificationInfoGenerator.generateInfo(notifsForPage).flatMap { infos =>
-          Future.sequence(infos.map {info => notificationJsonFormat.extendedJson(info, uriSummary)})
+          Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
         }
       case Right(prenormalizedUrl) =>
         Future.successful(Seq())

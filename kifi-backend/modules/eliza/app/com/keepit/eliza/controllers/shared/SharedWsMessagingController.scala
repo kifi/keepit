@@ -29,8 +29,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
 import scala.concurrent.Future
-import scala.tools.nsc.interpreter.Results.Success
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
