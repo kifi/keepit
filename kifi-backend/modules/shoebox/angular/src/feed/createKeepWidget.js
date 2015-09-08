@@ -13,8 +13,10 @@ angular.module('kifi')
       replace: true,
       scope: {},
       link: function (scope) {
+        libraryService.fetchLibraryInfos().then(function () {
+          scope.selectedLibrary = libraryService.getSysMainInfo();
+        });
 
-        scope.selectedLibrary = libraryService.getSysMainInfo();
         scope.onLibrarySelected = function (selectedLibrary) {
           scope.selectedLibrary = selectedLibrary;
         };
