@@ -21,7 +21,7 @@ import scala.util.{ Failure, Success }
 trait OrganizationAvatarCommander {
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): OrganizationAvatar
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar]
-  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[ImageHash]
+  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
   def saveNewAvatars(orgId: Id[Organization], imageHash: ImageHash, uploadedImages: Set[ImageProcessState.UploadedImage]): Unit
 }
 
@@ -41,26 +41,53 @@ class OrganizationAvatarCommanderImpl @Inject() (
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar] = {
     val candidatesById = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrgIds(orgIds) }
     orgIds.map { orgId =>
-      val avatarOpt = ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById(orgId), strictAspectRatio = false)(_.imageSize)
+      val avatarOpt = ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById.get(orgId).getOrElse(defaultOrgImages(orgId)), strictAspectRatio = false)(_.imageSize)
       val avatar = avatarOpt.getOrElse(throw new Exception(s"no avatar for org $orgId with image size $imageSize"))
       orgId -> avatar
     }.toMap
   }
 
-  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[ImageHash] = {
+  private def defaultOrgImages(orgId: Id[Organization]): Seq[OrganizationAvatar] = {
+    //hard coded detault image at https://djty7jcqog9qu.cloudfront.net/oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg
+    val imageHash = ImageHash("076fccc32247ae67bb75d48879230953")
+    Seq(
+      OrganizationAvatar(organizationId = orgId,
+        width = 100,
+        height = 100,
+        format = ImageFormat.JPG,
+        kind = ProcessImageOperation.CropScale,
+        imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"),
+        source = ImageSource.Unknown,
+        sourceFileHash = imageHash, sourceImageURL = None),
+      OrganizationAvatar(organizationId = orgId,
+        width = 200,
+        height = 200,
+        format = ImageFormat.JPG,
+        kind = ProcessImageOperation.CropScale,
+        imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"),
+        source = ImageSource.Unknown,
+        sourceFileHash = imageHash, sourceImageURL = None))
+  }
+
+  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashLocalImage(imageFile).flatMap {
-      case Left(storeError) => throw storeError.asException
+      case Left(storeError) => Future.successful(Left(storeError))
       case Right(sourceImage) =>
         validateAndGetImageInfo(sourceImage.file) match {
-          case Failure(validationError) => throw validationError
+          case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
           case Success(imageInfo) =>
             val uploadedImagesFut = persistOrganizationAvatarsFromSourceImage(orgId, sourceImage, imageInfo, cropRegion)
             uploadedImagesFut.imap {
-              case Left(uploadError) => throw uploadError.asException
+              case Left(uploadError) => Left(uploadError)
               case Right(uploadedImages) =>
-                val hash = sourceImage.hash
-                saveNewAvatars(orgId, hash, uploadedImages)
-                hash
+                try {
+                  saveNewAvatars(orgId, sourceImage.hash, uploadedImages)
+                  Right(sourceImage.hash)
+                } catch {
+                  case repoError: Exception =>
+                    log.error(s"Failed to update OrganizationAvatarRepo after processing image from user uploaded file: $repoError")
+                    Left(ImageProcessState.DbPersistFailed(repoError))
+                }
             }
         }
     }

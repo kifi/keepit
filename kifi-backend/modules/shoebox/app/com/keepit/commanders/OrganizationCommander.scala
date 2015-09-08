@@ -228,12 +228,6 @@ class OrganizationCommanderImpl @Inject() (
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             org
           }
-          //hard coded detault image at https://djty7jcqog9qu.cloudfront.net/oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg
-          val imageHash = ImageHash("076fccc32247ae67bb75d48879230953")
-          val uploadedImages = Set(
-            ImageProcessState.UploadedImage(key = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"), format = ImageFormat.JPG, imageInfo = RawImageInfo(ImageFormat.JPG.value, 100, 100), processOperation = ProcessImageOperation.CropScale),
-            ImageProcessState.UploadedImage(key = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"), format = ImageFormat.JPG, imageInfo = RawImageInfo(ImageFormat.JPG.value, 200, 200), processOperation = ProcessImageOperation.CropScale))
-          organizationAvatarCommander.saveNewAvatars(org.id.get, imageHash, uploadedImages)
           Right(OrganizationCreateResponse(request, org))
       }
     } match {
