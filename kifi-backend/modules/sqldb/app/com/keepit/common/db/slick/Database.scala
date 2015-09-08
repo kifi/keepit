@@ -191,28 +191,7 @@ class Database @Inject() (
       val wasInSession = Option(DatabaseSessionLock.tl.get).getOrElse(false)
       val verbose = true
       if (wasInSession) {
-        import DatabaseSessionLock._
-        var sourceState: SourceState = NoSession
-        val databaseSources = Set("Database.scala", "DBSession.scala")
-        val stack = new InSessionException("").getStackTrace.filter(_.getClassName.contains("com.keepit")).flatMap { l =>
-          val testCreatedTheSessionTag = if (l.getFileName.endsWith("Test.scala")) " \u001b[34m(in test)\u001b[0m" else ""
-          if (sourceState == WriteSession && !databaseSources.contains(l.getFileName)) {
-            sourceState = NoSession
-            Some(l.getFileName + ":" + l.getLineNumber + " \u001b[33;1mWRITE\u001b[0m" + testCreatedTheSessionTag)
-          } else if (sourceState == ReadSession && !databaseSources.contains(l.getFileName)) {
-            sourceState = NoSession
-            Some(l.getFileName + ":" + l.getLineNumber + testCreatedTheSessionTag)
-          } else if (l.getFileName == "Database.scala") {
-            if (l.getMethodName.contains("readWrite")) {
-              sourceState = WriteSession
-            } else if (l.getMethodName.contains("readOnly")) {
-              sourceState = ReadSession
-            }
-            None
-          } else {
-            Some("\t" + l.getFileName + ":" + l.getLineNumber)
-          }
-        }
+        val stack = DatabaseSessionLock.prettyDbStack()
         println("\uD83D\uDEA6  \u001b[31;4mMultiple sessions created:\u001b[0m\n\t" + stack.mkString("\n\t"))
       }
       DatabaseSessionLock.tl.set(true)
@@ -232,6 +211,30 @@ private object DatabaseSessionLock {
   case object ReadSession extends SourceState
   case object WriteSession extends SourceState
   case object NoSession extends SourceState
+
+  private val databaseSources = Set("Database.scala", "DBSession.scala")
+  def prettyDbStack(): List[String] = {
+    var sourceState: SourceState = NoSession
+    new InSessionException("").getStackTrace.filter(_.getClassName.contains("com.keepit")).flatMap { l =>
+      val testCreatedTheSessionTag = if (l.getFileName.endsWith("Test.scala")) " \u001b[34m(in test)\u001b[0m" else ""
+      if (sourceState == WriteSession && !databaseSources.contains(l.getFileName)) {
+        sourceState = NoSession
+        Some(l.getFileName + ":" + l.getLineNumber + " \u001b[33;1mWRITE\u001b[0m" + testCreatedTheSessionTag)
+      } else if (sourceState == ReadSession && !databaseSources.contains(l.getFileName)) {
+        sourceState = NoSession
+        Some(l.getFileName + ":" + l.getLineNumber + testCreatedTheSessionTag)
+      } else if (l.getFileName == "Database.scala") {
+        if (l.getMethodName.contains("readWrite")) {
+          sourceState = WriteSession
+        } else if (l.getMethodName.contains("readOnly")) {
+          sourceState = ReadSession
+        }
+        None
+      } else {
+        Some("\t" + l.getFileName + ":" + l.getLineNumber)
+      }
+    }.toList
+  }
 }
 
 // this allows us to replace the database session implementation in tests and check when sessions are being obtained
@@ -283,16 +286,9 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
     val existingOpt = Option(existingRWSession.get)
     existingOpt match {
       case Some(existing) =>
-        // This is currently problematic because of autocommit / rollback
-        //        new SessionWrapper(existing, {
-        //          if (!existing.conn.getAutoCommit) {
-        //            existing.conn.commit()
-        //          }
-        //          // Do nothing else. If working on reducing these, feel free to add logs.
-        //        })
-        // Just create one anyways. Sigh.
-        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
-        rawSession
+        new SessionWrapper(existing, {
+          // Do nothing else. If working on reducing these, feel free to add logs.
+        })
       case None => // This is the expected/good case.
         val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
         val newSession = new SessionWrapper(rawSession, {

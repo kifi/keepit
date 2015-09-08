@@ -81,7 +81,8 @@ object DBSession {
     }
 
     def withTransaction[T](f: => T): T = if (inTransaction) f else {
-      if (open) conn.setAutoCommit(false)
+      val prevAutoCommit = conn.getAutoCommit
+      if (open && prevAutoCommit) conn.setAutoCommit(false)
       transaction = Some(Promise())
       transactionFuture = transaction.map(_.future)
       beginCacheTransaction()
@@ -103,15 +104,18 @@ object DBSession {
           }
         }
       } finally {
-        if (open) conn.setAutoCommit(true)
+        if (open && prevAutoCommit) conn.setAutoCommit(true)
         transaction = None
         transactionFuture = None
       }
     }
 
     def withAutocommit[T](f: => T): T = {
-      if (open) conn.setAutoCommit(true)
-      f
+      val prevAutoCommit = conn.getAutoCommit
+      if (open && !prevAutoCommit) conn.setAutoCommit(true)
+      val res = f
+      if (open && !prevAutoCommit) conn.setAutoCommit(false)
+      res
     }
 
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
