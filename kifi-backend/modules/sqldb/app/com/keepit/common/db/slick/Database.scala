@@ -266,38 +266,10 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
   private val existingRWSession = new ThreadLocal[Session]
 
   def createReadOnlySession(handle: SlickDatabase): Session = {
-    val existingOpt = Option(existingROSession.get).orElse(Option(existingRWSession.get))
-    existingOpt match {
-      case Some(existing) =>
-        new SessionWrapper(existing, {
-          // Do nothing. If working on reducing these, feel free to add logs.
-        })
-      case None => // This is the expected/good case.
-        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
-        val newSession = new SessionWrapper(rawSession, {
-          existingROSession.set(null)
-          rawSession.close()
-        })
-        existingROSession.set(newSession)
-        newSession
-    }
+    handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
   }
   def createReadWriteSession(handle: SlickDatabase): Session = {
-    val existingOpt = Option(existingRWSession.get)
-    existingOpt match {
-      case Some(existing) =>
-        new SessionWrapper(existing, {
-          // Do nothing else. If working on reducing these, feel free to add logs.
-        })
-      case None => // This is the expected/good case.
-        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
-        val newSession = new SessionWrapper(rawSession, {
-          existingRWSession.set(null)
-          rawSession.close()
-        })
-        existingRWSession.set(newSession)
-        newSession
-    }
+    handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
   }
 }
 
