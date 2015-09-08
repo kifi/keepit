@@ -281,7 +281,7 @@ class LibraryController @Inject() (
           hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
-          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
+          orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
           membership = membership.map(lib.getMembershipInfo)
         )
     }
