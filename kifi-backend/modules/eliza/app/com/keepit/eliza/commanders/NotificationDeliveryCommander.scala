@@ -15,7 +15,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.notify.{ LegacyNotificationCheck, LegacyNotificationCheck$ }
+import com.keepit.notify.{ LegacyNotificationCheck }
 import com.keepit.notify.model.UserRecipient
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -88,7 +88,9 @@ class NotificationDeliveryCommander @Inject() (
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
-      val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
+      val participants: Seq[BasicUserLikeEntity] =
+        basicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++
+          thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).map(BasicUserLikeEntity.apply).toSeq
       val notificationJson = Json.obj(
         "id" -> message.externalId.id,
         "time" -> message.createdAt,
@@ -347,8 +349,8 @@ class NotificationDeliveryCommander @Inject() (
 
       if (!muted) {
         val sender = messageWithBasicUser.user match {
-          case Some(bu: BasicUser) => bu.firstName + ": "
-          case Some(bnu: BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
+          case Some(BasicUserLikeEntity.user(bu)) => bu.firstName + ": "
+          case Some(BasicUserLikeEntity.nonUser(bnu)) => bnu.firstName.getOrElse(bnu.id) + ": "
           case _ => ""
         }
         val notifText = sender + MessageFormatter.toText(message.messageText)
@@ -388,6 +390,7 @@ class NotificationDeliveryCommander @Inject() (
       val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
       val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
+        .map(nu => BasicUserLikeEntity(nu))
 
       val orderedMessageWithBasicUser = MessageWithBasicUser(
         message.externalId,
@@ -398,11 +401,11 @@ class NotificationDeliveryCommander @Inject() (
         message.sentOnUrl.getOrElse(""),
         thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
         message.from match {
-          case MessageSender.User(id) => Some(id2BasicUser(id))
-          case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+          case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
+          case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
           case _ => None
         },
-        threadActivity.map { ta => id2BasicUser(ta.userId) } ++ nonUsers
+        threadActivity.map { ta => BasicUserLikeEntity(id2BasicUser(ta.userId)) } ++ nonUsers
       )
 
       val notifJson = buildMessageNotificationJson(
