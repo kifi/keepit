@@ -8,6 +8,7 @@ import com.keepit.commanders._
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id, ExternalId }
 
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -35,11 +36,13 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json._
+import play.api.mvc.Call
 import play.api.test.Helpers._
 import play.api.test._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
@@ -58,6 +61,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[LibraryController]
   private def route = com.keepit.controllers.website.routes.LibraryController
+  def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
 
   private def fakeImage1 = {
     val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
@@ -805,6 +809,46 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
+      }
+    }
+
+    "get all of the libraries that a user can keep to" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user, org, libs) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val users = UserFactory.users(10).saved.toSet
+          val (members, randos) = users.splitAt(5)
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(members.toSeq).saved
+          val libraries = users.flatMap { user =>
+            val lib = LibraryFactory.library().withOwner(user).withCollaborators(Random.shuffle(users - user).take(3).toSeq).saved
+            val orgLib = LibraryFactory.library().withOwner(user).withCollaborators(Random.shuffle(users - user).take(3).toSeq).withOrganization(org).saved
+            Set(lib, orgLib)
+          }
+          (members.head, org, libraries)
+        }
+
+        val (directLibs, indirectLibs) = db.readOnlyMaster { implicit session =>
+          val direct = libraryMembershipRepo.getWithUserId(user.id.get).map(_.libraryId).toSet
+          val viaOrg = libraryRepo.getOrganizationLibraries(org.id.get).map(_.id.get).toSet
+          (direct, viaOrg -- direct)
+        }
+
+        inject[FakeUserActionsHelper].setUser(user)
+
+        val request1 = createFakeRequest(route.getKeepableLibraries(includeOrgLibraries = false))
+        val result1 = controller.getKeepableLibraries(includeOrgLibraries = false)(request1)
+        status(result1) === OK
+        val payload1 = contentAsJson(result1)
+        (payload1 \ "libraries").as[Seq[JsValue]].length === directLibs.size
+        (payload1 \ "libraries").as[Seq[JsObject]].count { _.keys.contains("membership") } === directLibs.size
+
+        val request2 = createFakeRequest(route.getKeepableLibraries(includeOrgLibraries = true))
+        val result2 = controller.getKeepableLibraries(includeOrgLibraries = true)(request2)
+        status(result2) === OK
+        val payload2 = contentAsJson(result2)
+        (payload2 \ "libraries").as[Seq[JsValue]].length === (directLibs ++ indirectLibs).size
+        (payload2 \ "libraries").as[Seq[JsObject]].count { _.keys.contains("membership") } === directLibs.size
+        (payload2 \ "libraries").as[Seq[JsObject]].count { !_.keys.contains("membership") } === indirectLibs.size
       }
     }
 

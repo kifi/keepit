@@ -39,6 +39,7 @@ class LibraryController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   orgRepo: OrganizationRepo,
+  orgAvatarCommander: OrganizationAvatarCommander,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
@@ -256,6 +257,37 @@ class LibraryController @Inject() (
     }
   }
 
+  def getKeepableLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
+    val basicUserById = {
+      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
+      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+    }
+
+    val libs = librariesWithMembershipAndCollaborators.map(_._1)
+    val orgIds = libs.flatMap(_.organizationId)
+    val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
+
+    val datas = librariesWithMembershipAndCollaborators map {
+      case (lib, membership, collaboratorsIds) =>
+        val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
+        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
+        LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          color = lib.color,
+          visibility = lib.visibility,
+          path = libPathCommander.getPathForLibrary(lib),
+          hasCollaborators = collabs.nonEmpty,
+          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
+          collaborators = collabs,
+          orgAvatar = lib.organizationId.flatMap(orgId => orgAvatarsById(orgId).map(_.imagePath)),
+          membership = membership.map(lib.getMembershipInfo)
+        )
+    }
+    Ok(Json.obj("libraries" -> datas))
+  }
+
   def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
     (json \ "type").as[String] match {
       case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
@@ -320,7 +352,6 @@ class LibraryController @Inject() (
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
 
-        println("Joining with subscribed = " + subscribedOpt)
         libraryMembershipCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))

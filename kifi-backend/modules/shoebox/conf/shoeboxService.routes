@@ -413,6 +413,7 @@ GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserP
 GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.UserProfileController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
+GET     /site/keepableLibraries     @com.keepit.controllers.website.LibraryController.getKeepableLibraries(includeOrgLibraries: Boolean ?= false)
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
