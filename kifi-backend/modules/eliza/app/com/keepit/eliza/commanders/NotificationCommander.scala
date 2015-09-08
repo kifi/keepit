@@ -112,6 +112,9 @@ class NotificationCommander @Inject() (
       groupIdentifier = Some(messageThread.id.get.toString)
     ))
     val notifId = notif.id.get
+    userThreadRepo.save(userThread.copy(
+      notificationId = Some(notifId)
+    ))
     val items = messages.map { message =>
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,

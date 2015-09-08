@@ -86,6 +86,11 @@ case class NotificationWithInfo(
   override val items: Set[NotificationItem], info: NotificationInfo)
     extends ExtendedNotification(notification, items)
 
+case class NotificationWithJson(
+  override val notification: Notification,
+  override val items: Set[NotificationItem],
+  json: JsObject) extends ExtendedNotification(notification, items)
+
 object Notification {
 
   implicit val format = (

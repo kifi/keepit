@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.notify.model.{ Recipient, NKind }
 import org.joda.time.DateTime
 
@@ -24,11 +24,16 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit
 
+  def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
+
 }
 
 @Singleton
 class NotificationRepoImpl @Inject() (
     val db: DataBaseComponent,
+    val userThreadRepoImpl: UserThreadRepoImpl,
     val clock: Clock) extends NotificationRepo with DbRepo[Notification] with ExternalIdColumnDbFunction[Notification] {
 
   import db.Driver.simple._
@@ -98,6 +103,22 @@ class NotificationRepoImpl @Inject() (
       row <- rows if row.recipient === recipient && row.unread && row.lastEvent < time
     ) yield row.lastChecked
     q.update(Some(clock.now()))
+  }
+
+  def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient
+      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
 }

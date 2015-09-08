@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.eliza.commanders.NotificationMessagingCommander.NotificationResultsForPage
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
@@ -28,6 +29,8 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
 import scala.concurrent.Future
+import scala.tools.nsc.interpreter.Results.Success
+import scala.util.{Success, Failure}
 
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
@@ -195,25 +198,43 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-        val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
-        fut.foreach {
-          case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recip =>
+          notificationMessagingCommander.getNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(NotificationResultsForPage(page, results)) =>
+              socket.channel.push(Json.arr(requestId.toLong, page, results.results.map(_.json), results.numTotal, results.numUnread))
+            case Failure(_) => socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
+          fut.foreach {
+            case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
+              socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_page_threads_before" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recip =>
+          notificationMessagingCommander.getNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(_) => socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "set_all_notifications_visited" -> {

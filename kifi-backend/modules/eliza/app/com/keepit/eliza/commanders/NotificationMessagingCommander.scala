@@ -3,18 +3,26 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.eliza.commanders.NotificationMessagingCommander.{SubsetNotificationResults, FullNotificationResults, NotificationResultsForPage}
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
+import com.keepit.notify.delivery.NotificationJsonFormat
+import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model.{ UserRecipient, Recipient }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
+import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 class NotificationMessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
+    notificationJsonFormat: NotificationJsonFormat,
+    notificationInfoGenerator: NotificationInfoGenerator,
     pushNotifier: MobilePushNotifier,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
@@ -22,7 +30,9 @@ class NotificationMessagingCommander @Inject() (
     webSocketRouter: WebSocketRouter,
     messagingAnalytics: MessagingAnalytics,
     userThreadRepo: UserThreadRepo,
-    messageThreadRepo: MessageThreadRepo) {
+    messageThreadRepo: MessageThreadRepo,
+    shoeboxServiceClient: ShoeboxServiceClient,
+    implicit val executionContext: ExecutionContext) {
 
   private def messageThreadIdForNotif(notif: Notification): ExternalId[MessageThread] = db.readOnlyMaster { implicit session =>
     val userThread = userThreadRepo.getByNotificationId(notif.id.get)
@@ -76,7 +86,82 @@ class NotificationMessagingCommander @Inject() (
         webSocketRouter.sendToUser(user, Json.arr("all_notifications_visited", item.externalId, item.eventTime))
       case _ =>
     }
-
   }
+
+  def getNotificationsForPage(userId: Id[User], url: String, howMany: Int, uriSummary: Boolean = false): Future[NotificationResultsForPage] = {
+    val recipient = Recipient(userId)
+    shoeboxServiceClient.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
+      case Left(nUri) =>
+        val previous = db.readOnlyReplica { implicit session =>
+          userThreadRepo.getLatestRawNotificationsForUri(userId, nUri.id.get, howMany)
+        }
+        notificationCommander.backfillLegacyNotificationsFor(userId, previous)
+        val notifsForPage = db.readOnlyReplica { implicit session =>
+          notificationRepo.getNotificationsForPage(recipient, nUri.id.get, howMany).map { notif =>
+            NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
+          }
+        }
+        val finalNotifsF = notificationInfoGenerator.generateInfo(notifsForPage).flatMap { infos =>
+          Future.sequence(infos.map {info => notificationJsonFormat.extendedJson(info, uriSummary)})
+        }
+        val resultsF = finalNotifsF.map { finalNotifs =>
+          if (notifsForPage.length < howMany) {
+            FullNotificationResults(finalNotifs)
+          } else {
+            val (numTotal, numUnread) = db.readOnlyReplica { implicit session =>
+              userThreadRepo.getThreadCountsForUri(userId, nUri.id.get)
+            }
+            SubsetNotificationResults(finalNotifs, numTotal, numUnread)
+          }
+        }
+        resultsF.map { results =>
+          NotificationResultsForPage(nUri.url, results)
+        }
+      case Right(prenormalizedUrl) =>
+        Future.successful(NotificationResultsForPage(
+          pageUri = prenormalizedUrl,
+          results = FullNotificationResults(Seq())
+        ))
+    }
+  }
+
+  def getNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+    val recipient = Recipient(userId)
+    shoeboxServiceClient.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
+      case Left(nUri) =>
+        val previous = db.readOnlyReplica { implicit session =>
+          userThreadRepo.getRawNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
+        }
+        notificationCommander.backfillLegacyNotificationsFor(userId, previous)
+        val notifsForPage = db.readOnlyReplica { implicit session =>
+          notificationRepo.getNotificationsForPageBefore(recipient, nUri.id.get, time, howMany).map { notif =>
+            NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
+          }
+        }
+        notificationInfoGenerator.generateInfo(notifsForPage).flatMap { infos =>
+          Future.sequence(infos.map {info => notificationJsonFormat.extendedJson(info, uriSummary)})
+        }
+      case Right(prenormalizedUrl) =>
+        Future.successful(Seq())
+    }
+  }
+
+}
+
+object NotificationMessagingCommander {
+
+  class NotificationResults(val results: Seq[NotificationWithJson]) {
+    def numTotal = results.size
+    def numUnread = results.count(_.notification.unread)
+  }
+
+  case class FullNotificationResults(override val results: Seq[NotificationWithJson])
+    extends NotificationResults(results)
+
+  case class SubsetNotificationResults(override val results: Seq[NotificationWithJson],
+    override val numTotal: Int,
+    override val numUnread: Int) extends NotificationResults(results)
+
+  case class NotificationResultsForPage(pageUri: String, results: NotificationResults)
 
 }
