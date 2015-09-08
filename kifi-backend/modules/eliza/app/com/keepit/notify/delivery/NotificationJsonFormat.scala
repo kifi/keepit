@@ -140,9 +140,10 @@ class NotificationJsonFormat @Inject() (
                 )
 
             val participantsJson =
-              Option(participants).filter(_.nonEmpty).fold(Json.obj()) { participants =>
+              if (participants.isEmpty)
+                Json.obj()
+              else
                 Json.obj("participants" -> participants)
-              }
 
             val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
               val image = summary.images.get(idealImageSize)

@@ -24,18 +24,6 @@ class NotificationCommander @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo) extends Logging {
 
-  def notificationByExternalId(notifId: ExternalId[Notification]): Option[Notification] = {
-    db.readOnlyMaster { implicit session =>
-      notificationRepo.getOpt(notifId)
-    }
-  }
-
-  def notificationItemByExternalId(notifItemId: ExternalId[NotificationItem]): Option[NotificationItem] = {
-    db.readOnlyMaster { implicit session =>
-      notificationItemRepo.getOpt(notifItemId)
-    }
-  }
-
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {
     db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notification)
@@ -63,20 +51,6 @@ class NotificationCommander @Inject() (
         notificationRepo.save(notif.withUnread(unread))
         true
       }
-    }
-  }
-
-  def setNotificationRead(notifId: Id[Notification]): Notification = {
-    db.readWrite { implicit session =>
-      val notif = notificationRepo.get(notifId)
-      notificationRepo.save(notif.copy(lastChecked = Some(notif.lastEvent)))
-    }
-  }
-
-  def setNotificationUnread(notifId: Id[Notification]): Notification = {
-    db.readWrite { implicit session =>
-      val notif = notificationRepo.get(notifId)
-      notificationRepo.save(notif.copy(lastChecked = None))
     }
   }
 
