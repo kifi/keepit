@@ -664,19 +664,19 @@ k.keepBox = k.keepBox || (function () {
   }
 
   function tryKeepTo(library, guided) {
-    if (library.isOpenCollaborationCandidate && !guided) {
+    if (library.isOpenCollaborationCandidate) {
       // we need to join open collaboration libraries before we can keep to them
-      return joinAndKeepTo(library);
+      return joinAndKeepTo(library, guided);
     } else {
       return keepTo(library, guided);
     }
   }
 
-  function joinAndKeepTo(library) {
+  function joinAndKeepTo(library, guided) {
     var deferred = Q.defer();
 
     api.port.emit('follow_library', library.id, function () {
-      keepTo(library, false)
+      keepTo(library, guided)
       .then(function (keep) {
         library.isOpenCollaborationCandidate = false;
         deferred.resolve(keep);
