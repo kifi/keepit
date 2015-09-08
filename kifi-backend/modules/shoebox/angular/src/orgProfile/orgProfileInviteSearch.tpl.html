@@ -4,8 +4,7 @@
     <h1 class="dialog-header">Add Team Members</h1>
     <div class="dialog-body">
       <div class="opi-header">
-        <p class="opi-large-team">Large team? <button class="kf-link kf-link-underline" ng-click="modalData.addMany = true">Add many emails at once...</button></p>
-        <p class="opi-lead-in">Invite individuals suggested below</p>
+        <p>Large team? <button class="kf-link kf-link-underline" ng-click="modalData.addMany = true">Add many emails at once…</button></p>
       </div>
       <!-- Search -->
       <div class="opi-search-box">
@@ -29,7 +28,7 @@
             </div>
             <button ng-show="!result.sent && !result.isInvited" ng-click="inviteKifiFriend(result)" class="opi-contact-button">
               <svg kf-symbol-sprite icon="share" class="opi-content-button-icon"></svg>
-              <span class="opi-content-button-label">Invite</span>
+              <span class="opi-contact-button-label">Invite</span>
             </button>
             <div ng-show="!result.sent && result.isInvited" class="opi-invite-invited">Invited</div>
             <div ng-show="result.sent" class="opi-invite-sent">Sent!</div>
