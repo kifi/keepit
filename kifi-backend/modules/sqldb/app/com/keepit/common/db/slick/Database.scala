@@ -283,12 +283,16 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
     val existingOpt = Option(existingRWSession.get)
     existingOpt match {
       case Some(existing) =>
-        new SessionWrapper(existing, {
-          if (!existing.conn.getAutoCommit) {
-            existing.conn.commit()
-          }
-          // Do nothing else. If working on reducing these, feel free to add logs.
-        })
+        // This is currently problematic because of autocommit / rollback
+        //        new SessionWrapper(existing, {
+        //          if (!existing.conn.getAutoCommit) {
+        //            existing.conn.commit()
+        //          }
+        //          // Do nothing else. If working on reducing these, feel free to add logs.
+        //        })
+        // Just create one anyways. Sigh.
+        val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
+        rawSession
       case None => // This is the expected/good case.
         val rawSession = handle.createSession().forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
         val newSession = new SessionWrapper(rawSession, {
