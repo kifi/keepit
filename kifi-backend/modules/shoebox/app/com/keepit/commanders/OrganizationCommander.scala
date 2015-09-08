@@ -215,7 +215,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
     Try {
-      db.readWrite { implicit session => getValidationError(request) } match {
+      db.readOnlyMaster { implicit session => getValidationError(request) } match {
         case Some(fail) =>
           Left(fail)
         case None =>
