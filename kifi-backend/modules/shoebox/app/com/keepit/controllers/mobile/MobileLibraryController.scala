@@ -26,7 +26,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.keepit.common.core._
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -593,6 +593,10 @@ class MobileLibraryController @Inject() (
         }
         Ok(Json.obj("members" -> membersList))
     }
+  }
+
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
   }
 
   def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
