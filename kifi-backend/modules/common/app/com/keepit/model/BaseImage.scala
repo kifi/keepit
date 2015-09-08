@@ -69,9 +69,7 @@ sealed trait ImageStoreInProgress extends ImageProcessState
 sealed trait ImageProcessDone extends ImageProcessState
 
 sealed trait ImageProcessSuccess extends ImageProcessDone
-sealed abstract class ImageStoreFailure(val reason: String, val cause: Option[Throwable] = None) extends ImageProcessState with ImageProcessDone {
-  def asException: Exception = cause.map(ex => new Exception(reason, ex)).getOrElse(new Exception(reason))
-}
+sealed abstract class ImageStoreFailure(val reason: String, val cause: Option[Throwable] = None) extends ImageProcessState with ImageProcessDone
 
 object ImageProcessState {
   // In-progress

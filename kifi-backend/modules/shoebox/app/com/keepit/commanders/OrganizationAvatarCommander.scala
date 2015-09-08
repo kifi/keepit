@@ -22,7 +22,6 @@ trait OrganizationAvatarCommander {
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): OrganizationAvatar
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar]
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
-  def saveNewAvatars(orgId: Id[Organization], imageHash: ImageHash, uploadedImages: Set[ImageProcessState.UploadedImage]): Unit
 }
 
 @Singleton
@@ -110,7 +109,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def saveNewAvatars(orgId: Id[Organization], imageHash: ImageHash, uploadedImages: Set[ImageProcessState.UploadedImage]): Unit = {
+  private def saveNewAvatars(orgId: Id[Organization], imageHash: ImageHash, uploadedImages: Set[ImageProcessState.UploadedImage]): Unit = {
     db.readWrite(attempts = 3) { implicit session =>
       orgAvatarRepo.getByOrgId(orgId).foreach(orgAvatarRepo.deactivate)
       uploadedImages.foreach { img =>
