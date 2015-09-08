@@ -116,17 +116,14 @@ class LibraryCommanderImpl @Inject() (
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
-          val sameNameOpt = libraryRepo.getBySpaceAndName(targetSpace, libCreateReq.name)
           val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
-          (userHasPermissionToCreateInSpace, sameNameOpt, sameSlugOpt)
+          (userHasPermissionToCreateInSpace, sameSlugOpt)
         } match {
-          case (false, _, _) =>
+          case (false, _) =>
             Left(LibraryFail(FORBIDDEN, "cannot_add_library_to_space"))
-          case (_, Some(sameName), _) =>
-            Left(LibraryFail(BAD_REQUEST, "library_name_exists"))
-          case (_, _, Some(sameSlug)) =>
+          case (_, Some(sameSlug)) =>
             Left(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-          case (_, None, None) =>
+          case (_, None) =>
             val newColor = libCreateReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor()))
             val newListed = libCreateReq.listed.getOrElse(true)
             val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)
@@ -186,14 +183,7 @@ class LibraryCommanderImpl @Inject() (
       newNameOpt.flatMap { name =>
         if (!Library.isValidName(name)) {
           Some(LibraryFail(BAD_REQUEST, "invalid_name"))
-        } else {
-          db.readOnlyMaster { implicit s =>
-            libraryRepo.getBySpaceAndName(newSpace, name)
-          } match {
-            case Some(other) if other.id.get != library.id.get => Some(LibraryFail(BAD_REQUEST, "library_name_exists"))
-            case _ => None
-          }
-        }
+        } else None
       }
     }
 
