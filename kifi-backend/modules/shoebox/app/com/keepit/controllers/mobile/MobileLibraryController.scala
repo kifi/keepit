@@ -26,7 +26,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.keepit.common.core._
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -447,6 +447,25 @@ class MobileLibraryController @Inject() (
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)))
         }
     }
+  }
+
+  def joinLibraries() = UserAction(parse.tolerantJson) { request =>
+    val libIds = request.body.as[Seq[PublicId[Library]]]
+    val results: Seq[(PublicId[Library], Either[LibraryFail, LibraryMembershipInfo])] = libIds.map { pubId =>
+      Library.decodePublicId(pubId) match {
+        case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
+        case Success(libId) =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
+            case Left(libFail) => (pubId, Left(libFail))
+            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+          }
+      }
+    }
+    val errorsJson = results.collect { case (id, Left(fail)) => Json.obj("id" -> id.id, "error" -> fail.message) }
+    val successesJson = results.collect { case (id, Right(membership)) => Json.obj("id" -> id.id, "membership" -> membership) }
+
+    Ok(Json.obj("errors" -> errorsJson, "successes" -> successesJson))
   }
 
   def declineLibrary(pubId: PublicId[Library]) = UserAction { request =>
