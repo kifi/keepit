@@ -121,7 +121,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // change a library title to an existing library's title
         val result2 = modifyLibrary(user, pubLib1, Json.obj("newName" -> lib2.name))
-        status(result2) must equalTo(BAD_REQUEST)
+        status(result2) must equalTo(OK)
 
         // change a library slug to an existing library's slug
         val result3 = modifyLibrary(user, pubLib1, Json.obj("newSlug" -> lib2.slug.value))

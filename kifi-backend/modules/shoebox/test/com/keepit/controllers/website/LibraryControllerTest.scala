@@ -128,8 +128,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             "visibility" -> "secret"
           ))
           val result3 = libraryController.addLibrary()(request3)
-          status(result3) must equalTo(BAD_REQUEST)
-          Json.parse(contentAsString(result3)) === Json.parse(s"""{"error":"library_name_exists"}""")
+          status(result3) must equalTo(OK)
 
           // Re-add Library 1 (same slug)
           val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(Json.obj(
@@ -288,8 +287,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // modify to existing library name
         val request3 = FakeRequest("POST", testPath).withBody(Json.obj("name" -> "Library2"))
         val result3 = libraryController.modifyLibrary(pubId)(request3)
-        status(result3) must equalTo(BAD_REQUEST)
-        Json.parse(contentAsString(result3)) === Json.parse(s"""{"error":"library_name_exists"}""")
+        status(result3) must equalTo(OK)
 
         // modify to existing library slug
         val request4 = FakeRequest("POST", testPath).withBody(Json.obj("slug" -> "lib2"))
