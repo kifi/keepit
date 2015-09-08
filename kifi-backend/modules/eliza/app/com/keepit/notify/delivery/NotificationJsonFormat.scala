@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.JsObjectExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.eliza.commanders.{ NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
@@ -17,7 +17,7 @@ import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
 import com.keepit.store.ElizaS3ExternalIdImageStore
-import play.api.libs.json.{JsObject, Json, JsValue}
+import play.api.libs.json.{ JsObject, Json, JsValue }
 import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -30,6 +30,7 @@ class NotificationJsonFormat @Inject() (
     notificationJsonMaker: NotificationJsonMaker,
     roverServiceClient: RoverServiceClient,
     notificationCommander: NotificationCommander,
+    implicit val s3ImageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext) {
 
   def toRawNotification(item: NotificationItem): (JsValue, Option[Id[NormalizedURI]]) = {
@@ -125,39 +126,39 @@ class NotificationJsonFormat @Inject() (
           (author, participants) <- participantsF
           basicFormat <- basicFormatF
         } yield {
-            val unreadJson =
-              if (notif.unread)
-                Json.obj(
-                  "unread" -> true,
-                  "unreadMessages" -> math.max(1, notifWithInfo.unreadMessages.size),
-                  "unreadAuthors" -> math.max(1, notifWithInfo.unreadAuthors.size)
-                )
-              else
-                Json.obj(
-                  "unread" -> false,
-                  "unreadMessages" -> 0,
-                  "unreadAuthors" -> 0
-                )
+          val unreadJson =
+            if (notif.unread)
+              Json.obj(
+                "unread" -> true,
+                "unreadMessages" -> math.max(1, notifWithInfo.unreadMessages.size),
+                "unreadAuthors" -> math.max(1, notifWithInfo.unreadAuthors.size)
+              )
+            else
+              Json.obj(
+                "unread" -> false,
+                "unreadMessages" -> 0,
+                "unreadAuthors" -> 0
+              )
 
-            val participantsJson =
-              if (participants.isEmpty)
-                Json.obj()
-              else
-                Json.obj("participants" -> participants)
+          val participantsJson =
+            if (participants.isEmpty)
+              Json.obj()
+            else
+              Json.obj("participants" -> participants)
 
-            val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
-              val image = summary.images.get(idealImageSize)
-              Json.obj("uriSummary" -> Json.obj(
-                "title" -> summary.article.title,
-                "description" -> summary.article.description,
-                "imageUrl" -> image.map(_.path.getUrl),
-                "imageWidth" -> image.map(_.size.width),
-                "imageHeight" -> image.map(_.size.height
+          val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
+            val image = summary.images.get(idealImageSize)
+            Json.obj("uriSummary" -> Json.obj(
+              "title" -> summary.article.title,
+              "description" -> summary.article.description,
+              "imageUrl" -> image.map(_.path.getUrl),
+              "imageWidth" -> image.map(_.size.width),
+              "imageHeight" -> image.map(_.size.height
               )))
-            }
+          }
 
-            basicFormat ++ Json.obj("author" -> author) ++ unreadJson ++
-              participantsJson ++ uriSummaryJson
+          basicFormat ++ Json.obj("author" -> author) ++ unreadJson ++
+            participantsJson ++ uriSummaryJson
         }
     }
   }

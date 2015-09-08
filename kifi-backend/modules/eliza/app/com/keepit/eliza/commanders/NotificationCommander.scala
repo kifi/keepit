@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -9,11 +9,12 @@ import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
 import com.keepit.model.{ NormalizedURI, User, NotificationCategory }
 import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo }
-import com.keepit.notify.model.event.{NewMessage, LegacyNotification}
+import com.keepit.notify.model.event.{ NewMessage, LegacyNotification }
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
 import com.keepit.common.core._
+import com.keepit.common.time._
 
 import scala.concurrent.Future
 
