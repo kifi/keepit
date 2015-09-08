@@ -60,9 +60,9 @@
   >
     Only people you invite can see this library
   </p>
-  <label ng-if="spaceIsOrg()">
-    <input type="checkbox" />
-    Members of {{ space.name }} can join, add, and modify keeps
+  <label class="kf-library-visibility-selector-checkbox" ng-if="spaceIsOrg()">
+    <input type="checkbox" ng-change="changeOrgMemberAccess()" ng-model="orgMemberAccessWrite" />
+    Members of {{ space.name }} can join and add & modify keeps
   </label>
 </div>
 

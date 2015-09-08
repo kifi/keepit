@@ -164,6 +164,7 @@ angular.module('kifi')
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
             subscriptions: nonEmptySubscriptions,
+            orgMemberAccess: scope.library.orgMemberAccess,
             space: owner
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
@@ -179,6 +180,7 @@ angular.module('kifi')
             if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
+
 
             if (!returnAction) {
               $location.url(newLibrary.url || newLibrary.path);
@@ -281,7 +283,8 @@ angular.module('kifi')
             'name': '',
             'description': '',
             'slug': '',
-            'visibility': 'published'
+            'visibility': 'published',
+            'orgMemberAccess': 'read_write'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
