@@ -76,7 +76,10 @@ object OrganizationFail {
   case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
   case object BAD_PARAMETERS extends OrganizationFail(BAD_REQUEST, "bad_parameters")
   case object INVALID_MODIFICATIONS extends OrganizationFail(BAD_REQUEST, "invalid_modifications")
-  case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
+  case object INVALID_MODIFY_NAME extends OrganizationFail(BAD_REQUEST, "invalid_modifications_name")
+  case object INVALID_MODIFY_PERMISSIONS extends OrganizationFail(BAD_REQUEST, "invalid_modifications_permissions")
+  case object INVALID_MODIFY_SITEURL extends OrganizationFail(BAD_REQUEST, "invalid_modifications_name")
+  case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found_siteurl")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
 
