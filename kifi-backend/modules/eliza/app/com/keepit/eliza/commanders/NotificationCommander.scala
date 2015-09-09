@@ -65,7 +65,7 @@ class NotificationCommander @Inject() (
           val time = (json \ "time").as[DateTime]
           val id = (json \ "id").as[String]
 
-          notificationRepo.getByKindAndGroupIdentifier(LegacyNotification, id).fold {
+          notificationRepo.getByGroupIdentifier(recipient, LegacyNotification, id).fold {
             val threadId = (json \ "threadId").as[String]
             val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
             if (messageThread.replyable) {
