@@ -131,7 +131,7 @@ class LibraryCommanderImpl @Inject() (
             val newListed = libCreateReq.listed.getOrElse(true)
             val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)
             val newInviteToCollab = libCreateReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
-            val newOrgMemberAccessOpt = orgIdOpt.flatMap(_ => libCreateReq.organizationMemberAccess)
+            val newOrgMemberAccessOpt = orgIdOpt.map(_ => libCreateReq.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) // Paid feature?
 
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
@@ -265,6 +265,10 @@ class LibraryCommanderImpl @Inject() (
   def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifyRequest): LibraryModifyResponse = {
     val currentSpace = library.space
     val newSpace = modifyReq.space.getOrElse(currentSpace)
+    val newOrgIdOpt = newSpace match {
+      case OrganizationSpace(orgId) => Some(orgId)
+      case UserSpace(_) => None
+    }
 
     val currentSlug = library.slug
     val newSlug = modifyReq.slug.map(LibrarySlug(_)).getOrElse(currentSlug)
@@ -276,14 +280,16 @@ class LibraryCommanderImpl @Inject() (
     val newDescription = modifyReq.description.orElse(library.description)
     val newColor = modifyReq.color.orElse(library.color)
     val newInviteToCollab = modifyReq.whoCanInvite.orElse(library.whoCanInvite)
-    val newOrgMemberAccessOpt = modifyReq.organizationMemberAccess orElse library.organizationMemberAccess
+    val newOrgMemberAccessOpt = newOrgIdOpt match {
+      case Some(orgId) => Some(modifyReq.organizationMemberAccess orElse library.organizationMemberAccess getOrElse (LibraryAccess.READ_WRITE))
+      case None => library.organizationMemberAccess
+    }
 
     // New library subscriptions
-    newSubKeysOpt match {
-      case Some(newSubKeys) => db.readWrite { implicit s =>
+    newSubKeysOpt.foreach { newSubKeys =>
+      db.readWrite { implicit s =>
         librarySubscriptionCommander.updateSubsByLibIdAndKey(library.id.get, newSubKeys)
       }
-      case None =>
     }
 
     val modifiedLibrary = db.readWrite { implicit s =>
@@ -292,12 +298,7 @@ class LibraryCommanderImpl @Inject() (
         libraryAliasRepo.alias(currentSpace, library.slug, library.id.get) // Make a new alias for where library used to live
       }
 
-      val newOrgId = newSpace match {
-        case OrganizationSpace(orgId) => Some(orgId)
-        case UserSpace(_) => None
-      }
-
-      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgId, organizationMemberAccess = newOrgMemberAccessOpt))
+      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
     }
 
     // Update visibility of keeps
