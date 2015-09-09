@@ -189,6 +189,38 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
+  def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+    val recipient = Recipient(userId)
+    val previous = db.readOnlyReplica { implicit session =>
+      userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
+    }
+    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
+    val sentNotifs = db.readOnlyReplica { implicit session =>
+      notificationRepo.getNotificationsWithNewEvents(recipient, howMany).map { notif =>
+        NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
+      }
+    }
+    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
+      Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+    }
+  }
+
+  def getNotificationsWithNewEventsBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+    val recipient = Recipient(userId)
+    val previous = db.readOnlyReplica { implicit session =>
+      userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
+    }
+    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
+    val sentNotifs = db.readOnlyReplica { implicit session =>
+      notificationRepo.getNotificationsWithNewEventsBefore(recipient, time, howMany).map { notif =>
+        NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
+      }
+    }
+    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
+      Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+    }
+  }
+
 }
 
 object NotificationMessagingCommander {

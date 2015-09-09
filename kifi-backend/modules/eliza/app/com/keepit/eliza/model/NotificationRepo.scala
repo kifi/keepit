@@ -32,6 +32,10 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
 
+  def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
+
 }
 
 @Singleton
@@ -140,5 +144,20 @@ class NotificationRepoImpl @Inject() (
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
+
+  def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient && notif.hasNewEvent
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.hasNewEvent
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
 
 }
