@@ -171,15 +171,12 @@ class OrganizationCommanderImpl @Inject() (
 
   private def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
     request match {
-      case OrganizationCreateRequest(_, initialValues) =>
-        if (!areAllValidModifications(initialValues.asOrganizationModifications)) Some(OrganizationFail.BAD_PARAMETERS)
-        else None
+      case OrganizationCreateRequest(_, initialValues) => validateModifications(initialValues.asOrganizationModifications)
 
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
         val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(requesterId))
         if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        else if (!areAllValidModifications(modifications)) Some(OrganizationFail.INVALID_MODIFICATIONS)
-        else None
+        else validateModifications(modifications)
 
       case OrganizationDeleteRequest(requesterId, orgId) =>
         if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
@@ -191,7 +188,7 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
-  private def areAllValidModifications(modifications: OrganizationModifications): Boolean = {
+  private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
     val badName = modifications.name.exists(_.isEmpty)
     val badPermissionsChange = modifications.permissionsDiff.exists { pdiff =>
       def roleCannotSeeOrg = OrganizationRole.all.exists { role => pdiff.removed(Some(role)).contains(VIEW_ORGANIZATION) }
@@ -203,7 +200,12 @@ class OrganizationCommanderImpl @Inject() (
       else "https://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    !badName && !badPermissionsChange && !badSiteUrl
+    (badName, badPermissionsChange, badSiteUrl) match {
+      case (true, _, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
+      case (_, true, _) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
+      case (_, _, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
+      case _ => None
+    }
   }
 
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
