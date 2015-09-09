@@ -398,7 +398,8 @@ object ProcessedImageHelper {
     "30d57a48f6f155affd542a528dd02506", // Aa icon
     "cc1023b3cf6c90f2b838495b3e9917d4", // Youtube error image
     "cb6b256050c23a71b2b4996e88f77225", // missing link logo
-    "42573fffcf02644c0b5a14074afc3c64" // ghost icon
+    "42573fffcf02644c0b5a14074afc3c64", // ghost icon
+    "7595be5afed36a595ac3161b585a2911" // white image
   )
 }
 
