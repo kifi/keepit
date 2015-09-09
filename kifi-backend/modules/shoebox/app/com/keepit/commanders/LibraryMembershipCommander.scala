@@ -238,7 +238,7 @@ class LibraryMembershipCommanderImpl @Inject() (
 
           if ((requesterMem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
             (requesterMem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
-            (requesterMem.isFollower && requesterMem.userId == targetMem.userId)) { // a follower can only edit herself
+            (requesterMem.isFollower && requesterMem.userId == targetMem.userId && !newAccess.exists(_.priority > targetMem.access.priority))) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
