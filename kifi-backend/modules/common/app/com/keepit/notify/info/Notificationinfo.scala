@@ -1,6 +1,5 @@
 package com.keepit.notify.info
 
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.social.BasicUser
