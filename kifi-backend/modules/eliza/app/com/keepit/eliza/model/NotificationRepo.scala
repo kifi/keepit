@@ -18,9 +18,9 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def getUnreadEnabledNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
 
-  def getUnreadEnabledNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
+  def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
 
-  def getUnreadEnabledNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
+  def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit
 
@@ -35,6 +35,10 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
 
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
 
 }
 
@@ -90,7 +94,7 @@ class NotificationRepoImpl @Inject() (
     unreadCount.run
   }
 
-  def getUnreadEnabledNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
+  def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
       row <- rows if row.recipient === recipient && row.kind === kind && row.unread
     ) yield row
@@ -98,7 +102,7 @@ class NotificationRepoImpl @Inject() (
     unreadCount.run
   }
 
-  def getUnreadEnabledNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
+  def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
       row <- rows if row.recipient === recipient && row.kind =!= kind && row.unread
     ) yield row
@@ -159,5 +163,18 @@ class NotificationRepoImpl @Inject() (
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
+  def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
 
 }
