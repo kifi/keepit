@@ -5,10 +5,10 @@ import com.keepit.common.JsObjectExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import com.keepit.eliza.commanders.{ NotificationCommander, NotificationJsonMaker }
+import com.keepit.eliza.commanders.{ MessageWithBasicUser, NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ NotificationCategory, NormalizedURI }
 import com.keepit.notify.info._
 import com.keepit.notify.model.{ EmailRecipient, UserRecipient, Recipient }
 import com.keepit.notify.model.event.{ NewMessage, LegacyNotification }
@@ -28,6 +28,9 @@ class NotificationJsonFormat @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     notificationJsonMaker: NotificationJsonMaker,
+    messageThreadRepo: MessageThreadRepo,
+    messageRepo: MessageRepo,
+    userThreadRepo: UserThreadRepo,
     roverServiceClient: RoverServiceClient,
     notificationCommander: NotificationCommander,
     implicit val s3ImageConfig: S3ImageConfig,
@@ -43,6 +46,49 @@ class NotificationJsonFormat @Inject() (
   private def resolveImage(image: NotificationImage): String = image match {
     case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
     case PublicImage(url) => url
+  }
+
+  def messageInfo(notifWithInfo: NotificationWithInfo): Future[JsObject] = {
+    notifWithInfo match {
+      case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
+        val mostRecent = messages.maxBy(_.time)
+        val (message, messageThread, threadActivity, numMessages, numUnread) = db.readOnlyReplica { implicit session =>
+          val messageThreadId = Id[MessageThread](mostRecent.messageThreadId)
+          val (numMessages, numUnread) = messageRepo.getMessageCounts(messageThreadId, notif.lastChecked)
+          (messageRepo.get(Id[Message](mostRecent.messageId)),
+            messageThreadRepo.get(messageThreadId),
+            userThreadRepo.getThreadActivity(messageThreadId).toList, numMessages, numUnread)
+        }
+
+        val authorActivities = threadActivity.filter(_.lastActive.isDefined)
+        val originalAuthor = authorActivities.filter(_.started).zipWithIndex.head._2
+        val unseenAuthors = notif.lastChecked.fold(authorActivities.length) { checked =>
+          authorActivities.toList.count(_.lastActive.get.isAfter(checked))
+        }
+
+        for {
+          (sender, participants) <- getParticipants(notif)
+        } yield {
+          Json.obj(
+            "id" -> items.maxBy(_.eventTime).externalId,
+            "time" -> mostRecent.time,
+            "thread" -> notif.externalId,
+            "text" -> message.messageText,
+            "url" -> messageThread.nUrl,
+            "title" -> messageThread.pageTitle,
+            "author" -> sender,
+            "locator" -> ("/messages/" + messageThread.externalId.id),
+            "unread" -> notif.unread,
+            "category" -> NotificationCategory.User.MESSAGE.category,
+            "firstAuthor" -> originalAuthor,
+            "authors" -> authorActivities.length,
+            "messages" -> numMessages,
+            "unreadAuthors" -> unseenAuthors,
+            "unreadMessages" -> numUnread,
+            "muted" -> notif.disabled
+          )
+        }
+    }
   }
 
   def basicJson(notifWithInfo: NotificationWithInfo): Future[NotificationWithJson] = notifWithInfo match {
@@ -70,6 +116,10 @@ class NotificationJsonFormat @Inject() (
           notificationJsonMaker.makeOne((json, notif.unread, uriId), includeUriSummary = true).map(_.obj).map { json =>
             NotificationWithJson(notif, items, json)
           }
+        case info: MessageNotificationInfo =>
+          messageInfo(notifWithInfo).map { json =>
+            NotificationWithJson(notif, items, json)
+          }
       }
   }
 
@@ -95,7 +145,7 @@ class NotificationJsonFormat @Inject() (
     }
 
     val userParticipantsF = shoeboxServiceClient.getBasicUsers(userIds.toSeq)
-      .map(_.values.map(u => BasicUserLikeEntity(u)))
+      .map(_.mapValues(u => BasicUserLikeEntity(u)))
 
     val otherParticipants = participants.collect {
       case EmailRecipient(address) =>
@@ -106,10 +156,16 @@ class NotificationJsonFormat @Inject() (
     for {
       userParticipants <- userParticipantsF
     } yield {
-      val participantsSet = userParticipants.toSet | otherParticipants
-      participantsSet.partition(_ == notif.recipient) match {
+      val participantsSet = userParticipants.values.toSet | otherParticipants
+      val recipientBasic = notif.recipient match {
+        case UserRecipient(userId, _) => userParticipants(userId)
+        case EmailRecipient(address) =>
+          val participant = NonUserEmailParticipant(address)
+          BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(participant))
+      }
+      participantsSet.partition(_ == recipientBasic) match {
         case (author, rest) =>
-          (author.head, rest)
+          (author.head, rest | author)
       }
     }
   }
@@ -164,16 +220,6 @@ class NotificationJsonFormat @Inject() (
 
           NotificationWithJson(notif, items, json)
         }
-    }
-  }
-
-  def messageInfo(notifWithInfo: NotificationWithInfo): Seq[JsObject] = {
-    notifWithInfo match {
-      case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
-        val kind = notif.kind match {
-          case k: NewMessage => k
-        }
-        ???
     }
   }
 

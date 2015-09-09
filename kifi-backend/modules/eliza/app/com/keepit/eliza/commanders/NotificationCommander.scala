@@ -105,31 +105,42 @@ class NotificationCommander @Inject() (
     }.maxOpt
     val messages = messageRepo.get(messageThread.id.get, 0)
     val lastEvent = messages.map(_.createdAt).max
-    val notif = notificationRepo.save(Notification(
-      recipient = recipient,
-      kind = NewMessage,
-      lastEvent = lastEvent,
-      groupIdentifier = Some(messageThread.id.get.toString)
-    ))
-    val notifId = notif.id.get
-    userThreadRepo.save(userThread.copy(
-      notificationId = Some(notifId)
-    ))
-    val items = messages.map { message =>
-      notificationItemRepo.save(NotificationItem(
-        notificationId = notif.id.get,
+    val groupIdentifier = messageThread.id.get.toString
+    notificationRepo.getByKindAndGroupIdentifier(NewMessage, groupIdentifier).fold({
+      val notif = notificationRepo.save(Notification(
+        recipient = recipient,
         kind = NewMessage,
-        event = NewMessage(
-          recipient = recipient,
-          time = message.createdAt,
-          from = message.from.asRecipient.get,
-          messageId = message.id.get.id,
-          messageThreadId = messageThread.id.get.id
-        ),
-        eventTime = message.createdAt
+        lastEvent = lastEvent,
+        groupIdentifier = Some(messageThread.id.get.toString)
       ))
+      val notifId = notif.id.get
+      userThreadRepo.save(userThread.copy(
+        notificationId = Some(notifId)
+      ))
+      val items = messages.map { message =>
+        (message, message.from.asRecipient)
+      }.collect {
+        case (message, Some(from)) => (message, from)
+      }.map {
+        case (message, from) =>
+          notificationItemRepo.save(NotificationItem(
+            notificationId = notif.id.get,
+            kind = NewMessage,
+            event = NewMessage(
+              recipient = recipient,
+              time = message.createdAt,
+              from = from,
+              messageId = message.id.get.id,
+              messageThreadId = messageThread.id.get.id
+            ),
+            eventTime = message.createdAt
+          ))
+      }
+      NotificationWithItems(notif, items.toSet)
+    }) { notif =>
+      NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
     }
-    NotificationWithItems(notif, items.toSet)
+
   }
 
   /**
