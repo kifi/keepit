@@ -418,9 +418,9 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def getCollaboratorsByLibrary(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Set[Id[User]]] = {
-    (for { row <- rows if row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.access.inSet(LibraryAccess.collaborativePermissions) } yield (row.userId, row.libraryId)).list.groupBy(_._2).mapValues { collaboratorAndLibraries =>
-      collaboratorAndLibraries.map(_._1).toSet
-    }
+    val q = rows.filter(row => row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.access.inSet(LibraryAccess.collaborativePermissions))
+    val result = q.list.groupBy(_.libraryId).map { case (libId, memberships) => libId -> memberships.map(_.userId).toSet }
+    libIds.map { libId => libId -> result.getOrElse(libId, Set.empty) }.toMap
   }
 
   private val getCollaboratorsCompiled = Compiled { (userId: Column[Id[User]]) =>
