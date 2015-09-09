@@ -63,7 +63,7 @@ class EventContextHelperImpl @Inject() (
       userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
       Seq(
-        ("orgId", ContextStringData(orgId.toString)),
+        ("userOrgId", ContextStringData(orgId.toString)),
         ("orgLibrariesCreated", ContextDoubleData(shoeboxValues.libraryCount)),
         ("orgKeepCount", ContextDoubleData(shoeboxValues.keepCount)),
         ("orgInviteCount", ContextDoubleData(shoeboxValues.inviteCount)),
@@ -96,7 +96,7 @@ class EventContextHelperImpl @Inject() (
 
       val orgRoleOpt = orgUserRelations.role.map(role => ContextStringData(role.value))
 
-      Seq(("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)]) ++
+      Seq(("eventOrgId", ContextStringData(orgId.toString)), ("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)]) ++
         orgRoleOpt.map(role => Seq(("orgRole", role))).getOrElse(Seq.empty[(String, ContextStringData)])
     }
   }
