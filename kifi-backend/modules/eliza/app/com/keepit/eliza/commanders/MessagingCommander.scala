@@ -14,7 +14,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -639,19 +639,27 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients)
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
+    val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
       shoebox.hasOrganizationMembership(oid, userId).flatMap {
-        case true => shoebox.getOrganizationMembers(oid)
-        case false => Future.successful(Set.empty[Id[User]])
+        case true =>
+          //ignoring case of multiple org ids in the same chat, just picking the last one
+          moreContext += ("org_chat", true)
+          moreContext += ("org_id", oid.id)
+          shoebox.getOrganizationMembers(oid)
+        case false =>
+          Future.successful(Set.empty[Id[User]])
       }
     }).map(_.flatten)
+
+    val context = moreContext.addExistingContext(initContext).build
 
     val resFut = for {
       userRecipients <- userRecipientsFuture
