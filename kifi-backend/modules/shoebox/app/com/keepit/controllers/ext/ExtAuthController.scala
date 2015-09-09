@@ -50,6 +50,11 @@ class ExtAuthController @Inject() (
 
   def start = UserAction(parse.tolerantJson) { implicit request =>
     val userId = request.userId
+    val user = request.user
+    if (user.state != UserStates.ACTIVE) {
+      throw new RuntimeException(s"User $userId (${user.firstName} ${user.lastName}) is not active, denying access.")
+    }
+
     val json = request.body
     val (userAgent, version, installationIdOpt) =
       (UserAgent(request.headers.get("user-agent").getOrElse("")),

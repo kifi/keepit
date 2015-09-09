@@ -329,7 +329,7 @@ class LibraryInfoCommanderImpl @Inject() (
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
           org = basicOrgOpt,
-          orgMemberAccess = lib.organizationMemberAccess
+          orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
         )
       }
     }
@@ -381,7 +381,7 @@ class LibraryInfoCommanderImpl @Inject() (
   }
 
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])] = {
-    db.readOnlyMaster { implicit s =>
+    db.readOnlyReplica { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
       val libsWithMembershipIds = libsWithMembership.map(_._1.id.get).toSet
 
@@ -392,10 +392,26 @@ class LibraryInfoCommanderImpl @Inject() (
         } yield library
       } else Seq.empty
 
-      val libIds = libsWithMembershipIds ++ libsFromOrganizations.map(_.id.get)
+      val memberOrOpenOrgLibIds = libsWithMembershipIds ++ libsFromOrganizations.map(_.id.get).toSet
+
+      // Include org libs that user is invited to
+      val libsInvitedToInOrgs = if (includeOrgLibraries) {
+        libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.DECLINED, LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE)).collect {
+          case ((invite, lib)) if !memberOrOpenOrgLibIds.contains(lib.id.get) && lib.organizationId.isDefined =>
+            lib
+        }
+      } else Seq.empty
+
+      val libIds = memberOrOpenOrgLibIds ++ libsInvitedToInOrgs.map(_.id.get).toSet
+
+      val nonMemberLibraries = libsInvitedToInOrgs ++ libsFromOrganizations
+
       val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
-      libsWithMembership.map { case (lib, membership) => (lib, Some(membership), collaborators(lib.id.get)) } ++
-        libsFromOrganizations.map { lib => (lib, None, collaborators(lib.id.get)) }
+
+      libsWithMembership.map {
+        case (lib, membership) =>
+          (lib, Some(membership), collaborators(lib.id.get))
+      } ++ nonMemberLibraries.map { lib => (lib, None, collaborators(lib.id.get)) }
     }
   }
 
@@ -729,7 +745,7 @@ class LibraryInfoCommanderImpl @Inject() (
       kind = lib.kind,
       path = path,
       org = basicOrg,
-      orgMemberAccess = lib.organizationMemberAccess
+      orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
     )
   }
 

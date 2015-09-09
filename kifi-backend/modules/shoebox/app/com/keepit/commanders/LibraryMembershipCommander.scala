@@ -136,10 +136,10 @@ class LibraryMembershipCommanderImpl @Inject() (
     } else if (!userCanJoinLibraryWithoutInvite && inviteList.isEmpty && existingActiveMembership.isEmpty) {
       // private library & no library invites with matching authtoken
       Left(LibraryFail(FORBIDDEN, "cant_join_library_without_an_invite"))
-    } else {
+    } else { // User can at least view the library, so can join as read_only. Determine if they could do better.
       val maxAccess: LibraryAccess = {
         val orgMemberAccess: Option[LibraryAccess] = if (lib.isSecret) None else lib.organizationId.flatMap { orgId =>
-          lib.organizationMemberAccess.filter { _ => organizationMembershipCommander.getMembership(orgId, userId).isDefined }
+          lib.organizationMemberAccess.orElse(Some(LibraryAccess.READ_WRITE)).filter { _ => organizationMembershipCommander.getMembership(orgId, userId).isDefined }
         }
         (inviteList.map(_.access).toSet ++ orgMemberAccess).maxOpt.getOrElse(LibraryAccess.READ_ONLY)
       }

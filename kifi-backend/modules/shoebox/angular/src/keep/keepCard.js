@@ -216,17 +216,11 @@ angular.module('kifi')
               scope.$emit('keepAdded', [fullKeep], clickedLibrary);
             };
 
-            (scope.keep.id ? // Recommended keeps have no keep.id.
-              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id, scope.galleryView).then(function (result) {
-                if (result.successes.length > 0) {
-                  return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
-                }
-              }) :
-              keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
-                if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
-                }
-              }))['catch'](modalService.openGenericErrorModal);
+            keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
+              if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
+              }
+            })['catch'](modalService.openGenericErrorModal);
           }
         };
 
