@@ -84,7 +84,16 @@ angular.module('kifi')
 
     [
       $rootScope.$on('keepAdded', function (e, keeps) {
-        $scope.feed.unshift(keeps[0]);
+        keeps.forEach(function (keep) {
+          // only add the keep to the feed if it is not already present
+          var duplicates = $scope.feed.filter(function isDuplicate(f) {
+            return f.id === keep.id;
+          });
+
+          if (duplicates.length === 0) {
+            $scope.feed.unshift(keep);
+          }
+        });
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
