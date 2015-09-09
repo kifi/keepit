@@ -85,7 +85,8 @@ case class UserProfileStats(
   numTags: Int,
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None,
-  orgs: Seq[OrganizationInfo])
+  orgs: Seq[OrganizationInfo],
+  pendingOrgs: Set[OrganizationInfo])
 object UserProfileStats {
   implicit val writes: Writes[UserProfileStats] = (
     (__ \ 'numLibraries).write[Int] and
@@ -97,7 +98,8 @@ object UserProfileStats {
     (__ \ 'numTags).write[Int] and
     (__ \ 'numInvitedLibraries).writeNullable[Int] and
     (__ \ 'biography).writeNullable[String] and
-    (__ \ 'orgs).write[Seq[OrganizationInfo]]
+    (__ \ 'orgs).write[Seq[OrganizationInfo]] and
+    (__ \ 'pendingOrgs).write[Set[OrganizationInfo]]
   )(unlift(UserProfileStats.unapply))
 }
 
