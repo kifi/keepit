@@ -66,7 +66,7 @@ class NotificationCommander @Inject() (
           val id = (json \ "id").as[String]
 
           notificationRepo.getByGroupIdentifier(recipient, LegacyNotification, id).fold {
-            val threadId = (json \ "threadId").as[String]
+            val threadId = (json \ "thread").as[String]
             val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
             if (messageThread.replyable) {
               backfillMessageThreadForUser(userId, messageThread)
@@ -106,7 +106,7 @@ class NotificationCommander @Inject() (
     val messages = messageRepo.get(messageThread.id.get, 0)
     val lastEvent = messages.map(_.createdAt).max
     val groupIdentifier = messageThread.id.get.toString
-    notificationRepo.getByKindAndGroupIdentifier(NewMessage, groupIdentifier).fold({
+    notificationRepo.getByGroupIdentifier(recipient, NewMessage, groupIdentifier).fold({
       val notif = notificationRepo.save(Notification(
         recipient = recipient,
         kind = NewMessage,
