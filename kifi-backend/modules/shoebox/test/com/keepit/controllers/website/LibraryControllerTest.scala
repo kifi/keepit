@@ -733,6 +733,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "name":"${org1.name}",
                   "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
                },
+               "orgMemberAccess": "read_write",
                "membership":{
                 "access":"owner",
                 "listed":false,
