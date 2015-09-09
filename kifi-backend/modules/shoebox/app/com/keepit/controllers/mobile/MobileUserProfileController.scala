@@ -30,7 +30,7 @@ class MobileUserProfileController @Inject() (
   userValueRepo: UserValueRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   organizationCommander: OrganizationCommander,
-  orgInviteCommander: OrganizationInviteCommander,
+  orgInviteRepo: OrganizationInviteRepo,
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
   collectionCommander: CollectionCommander,
@@ -61,7 +61,7 @@ class MobileUserProfileController @Inject() (
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
           val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-          val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
+          val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
             organizationCommander.getOrganizationInfo(orgId, viewerOpt.flatMap(_.id))
           }
           val orgInfos = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
