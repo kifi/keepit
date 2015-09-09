@@ -67,6 +67,10 @@ class NotificationJsonFormat @Inject() (
             userThreadRepo.getThreadActivity(messageThreadId).toList, numMessages, numUnread)
         }
 
+        val messageIds = items.map(item => (item, item.event)).collect {
+          case (i, event: NewMessage) => event.messageId -> i.externalId.id
+        }.toMap
+
         val authorActivities = threadActivity.filter(_.lastActive.isDefined)
         val originalAuthor = authorActivities.filter(_.started).zipWithIndex.head._2
         val unseenAuthors = notif.lastChecked.fold(authorActivities.length) { checked =>
@@ -77,7 +81,7 @@ class NotificationJsonFormat @Inject() (
           (sender, participants) <- getParticipants(notif)
         } yield {
           Json.obj(
-            "id" -> items.maxBy(_.eventTime).externalId,
+            "id" -> messageIds(messageNotif.messageId),
             "time" -> messageNotif.time,
             "thread" -> notif.externalId,
             "text" -> message.messageText,
