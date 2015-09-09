@@ -281,7 +281,7 @@ class LibraryCommanderImpl @Inject() (
     val newColor = modifyReq.color.orElse(library.color)
     val newInviteToCollab = modifyReq.whoCanInvite.orElse(library.whoCanInvite)
     val newOrgMemberAccessOpt = newOrgIdOpt match {
-      case Some(orgId) => Some(modifyReq.organizationMemberAccess orElse library.organizationMemberAccess getOrElse (LibraryAccess.READ_WRITE))
+      case Some(orgId) => Some(modifyReq.organizationMemberAccess orElse library.organizationMemberAccess getOrElse LibraryAccess.READ_WRITE)
       case None => library.organizationMemberAccess
     }
 

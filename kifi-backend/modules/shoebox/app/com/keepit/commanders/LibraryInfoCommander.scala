@@ -329,7 +329,7 @@ class LibraryInfoCommanderImpl @Inject() (
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
           org = basicOrgOpt,
-          orgMemberAccess = lib.organizationMemberAccess
+          orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
         )
       }
     }
@@ -745,7 +745,7 @@ class LibraryInfoCommanderImpl @Inject() (
       kind = lib.kind,
       path = path,
       org = basicOrg,
-      orgMemberAccess = lib.organizationMemberAccess
+      orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
     )
   }
 
