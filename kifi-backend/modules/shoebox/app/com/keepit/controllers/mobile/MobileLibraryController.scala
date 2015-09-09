@@ -449,6 +449,25 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  def joinLibraries() = UserAction(parse.tolerantJson) { request =>
+    val libIds = request.body.as[Seq[PublicId[Library]]]
+    val results: Seq[(PublicId[Library], Either[LibraryFail, LibraryMembershipInfo])] = libIds.map { pubId =>
+      Library.decodePublicId(pubId) match {
+        case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
+        case Success(libId) =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
+            case Left(libFail) => (pubId, Left(libFail))
+            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+          }
+      }
+    }
+    val errorsJson = results.collect { case (id, Left(fail)) => Json.obj("id" -> id.id, "error" -> fail.message) }
+    val successesJson = results.collect { case (id, Right(membership)) => Json.obj("id" -> id.id, "membership" -> membership) }
+
+    Ok(Json.obj("errors" -> errorsJson, "successes" -> successesJson))
+  }
+
   def declineLibrary(pubId: PublicId[Library]) = UserAction { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
