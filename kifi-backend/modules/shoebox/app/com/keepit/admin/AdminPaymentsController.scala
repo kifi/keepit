@@ -49,7 +49,7 @@ class AdminPaymentsController @Inject() (
               planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.userId, session) match {
                 case Success(event) => {
                   channel.push(s"Successfully created paid account for org ${org.id.get}\n")
-                  channel.push(event.toString)
+                  channel.push(event.toString + "\n")
                 }
                 case Failure(ex) => {
                   channel.push(s"Failed creating paid account for org ${org.id.get}: ${ex.getMessage}\n")
