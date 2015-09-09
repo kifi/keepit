@@ -24,6 +24,7 @@ class NotificationMessagingCommander @Inject() (
     notificationJsonFormat: NotificationJsonFormat,
     notificationInfoGenerator: NotificationInfoGenerator,
     pushNotifier: MobilePushNotifier,
+    messageFetchingCommander: MessageFetchingCommander,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
@@ -144,6 +145,16 @@ class NotificationMessagingCommander @Inject() (
       case Right(prenormalizedUrl) =>
         Future.successful(Seq())
     }
+  }
+
+  def getNotificationMessages(userId: Id[User], notifId: Id[Notification]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+    db.readOnlyReplica { implicit session =>
+      notificationCommander.getMessageThread(notifId)
+    }.fold(
+      Future.failed[(MessageThread, Seq[MessageWithBasicUser])](new Exception(s"Notification $notifId does not have a message thread"))
+    ) { messageThread =>
+        messageFetchingCommander.getThreadMessagesWithBasicUser(userId, messageThread)
+      }
   }
 
 }

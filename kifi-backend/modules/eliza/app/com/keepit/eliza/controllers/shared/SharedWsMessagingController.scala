@@ -35,7 +35,6 @@ class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
   notificationDeliveryCommander: NotificationDeliveryCommander,
-  notificationCommander: NotificationCommander,
   notificationMessagingCommander: NotificationMessagingCommander,
   legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
@@ -78,10 +77,18 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> {
       case JsString(threadId) +: _ =>
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
-          case (thread, msgs) =>
-            val url = thread.url.getOrElse("") // needs to change when we have detached threads
-            SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+        legacyNotificationCheck.ifNotifExists(threadId) { notif =>
+          notificationMessagingCommander.getNotificationMessages(socket.userId, notif.id.get) map {
+            case (thread, msgs) =>
+              val url = thread.url.getOrElse("")
+              SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+          }
+        } {
+          basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
+            case (thread, msgs) =>
+              val url = thread.url.getOrElse("") // needs to change when we have detached threads
+              SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+          }
         }
     },
     "add_participants_to_thread" -> {

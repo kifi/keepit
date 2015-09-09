@@ -110,7 +110,9 @@ class NotificationRepoImpl @Inject() (
       notif <- rows if notif.recipient === recipient
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
     } yield notif
-    q.sortBy(_.lastEvent.desc).take(howMany).list
+    val finalQ = q.sortBy(_.lastEvent.desc).take(howMany)
+    val Qstr = finalQ.selectStatement
+    finalQ.list
   }
 
   def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {

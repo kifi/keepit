@@ -48,14 +48,21 @@ class NotificationJsonFormat @Inject() (
     case PublicImage(url) => url
   }
 
-  def messageInfo(notifWithInfo: NotificationWithInfo): Future[JsObject] = {
+  def threadInfo(notifWithInfo: NotificationWithInfo): Future[JsObject] = {
     notifWithInfo match {
       case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
         val mostRecent = messages.maxBy(_.time)
+        messageInfo(notifWithInfo, mostRecent)
+    }
+  }
+
+  def messageInfo(notifWithInfo: NotificationWithInfo, messageNotif: NewMessage): Future[JsObject] = {
+    notifWithInfo match {
+      case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
         val (message, messageThread, threadActivity, numMessages, numUnread) = db.readOnlyReplica { implicit session =>
-          val messageThreadId = Id[MessageThread](mostRecent.messageThreadId)
+          val messageThreadId = Id[MessageThread](messageNotif.messageThreadId)
           val (numMessages, numUnread) = messageRepo.getMessageCounts(messageThreadId, notif.lastChecked)
-          (messageRepo.get(Id[Message](mostRecent.messageId)),
+          (messageRepo.get(Id[Message](messageNotif.messageId)),
             messageThreadRepo.get(messageThreadId),
             userThreadRepo.getThreadActivity(messageThreadId).toList, numMessages, numUnread)
         }
@@ -71,7 +78,7 @@ class NotificationJsonFormat @Inject() (
         } yield {
           Json.obj(
             "id" -> items.maxBy(_.eventTime).externalId,
-            "time" -> mostRecent.time,
+            "time" -> messageNotif.time,
             "thread" -> notif.externalId,
             "text" -> message.messageText,
             "url" -> messageThread.nUrl,
@@ -117,7 +124,7 @@ class NotificationJsonFormat @Inject() (
             NotificationWithJson(notif, items, json)
           }
         case info: MessageNotificationInfo =>
-          messageInfo(notifWithInfo).map { json =>
+          threadInfo(notifWithInfo).map { json =>
             NotificationWithJson(notif, items, json)
           }
       }
