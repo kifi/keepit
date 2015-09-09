@@ -179,7 +179,12 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val recipient = Recipient(socket.userId)
         legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
-          Future.successful(())
+          notificationMessagingCommander.getNotificationsForSentMessages(socket.userId, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         } { recip =>
           val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
           fut.foreach { notices =>
@@ -193,13 +198,23 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getNotificationsForSentMessagesBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_page_threads" -> {

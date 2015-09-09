@@ -28,6 +28,10 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
 
+  def getNotificationsForSentMessages(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
+
 }
 
 @Singleton
@@ -110,15 +114,29 @@ class NotificationRepoImpl @Inject() (
       notif <- rows if notif.recipient === recipient
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
     } yield notif
-    val finalQ = q.sortBy(_.lastEvent.desc).take(howMany)
-    val Qstr = finalQ.selectStatement
-    finalQ.list
+    q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
       notif <- rows if notif.recipient === recipient && notif.lastEvent < time
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getNotificationsForSentMessages(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient
+      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
+    } yield notif
+    q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
+    val q = for {
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
