@@ -61,7 +61,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
           // Caine and Freeman belong to an organization with a library open to organization members
           val org = OrganizationFactory.organization().withName("Braff").withHandle(OrganizationHandle("braff")).withOwner(user2).withMembers(Seq(user1)).saved
-          val lib4 = LibraryFactory.library().withName("Going In Style").withOwner(user2).withOrganization(org).withVisibility(LibraryVisibility.ORGANIZATION).withOrgMemberCollaborativePermission().withSlug("robbers").withColor(LibraryColor.SKY_BLUE).saved
+          val lib4 = LibraryFactory.library().withName("Going In Style").withOwner(user2).withOrganization(org).withVisibility(LibraryVisibility.ORGANIZATION).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_WRITE)).withSlug("robbers").withColor(LibraryColor.SKY_BLUE).saved
 
           (user1, user2, lib1, lib2, lib3, lib4)
         }
@@ -407,10 +407,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val member = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner, member)).saved
 
-          val collabLib = LibraryFactory.library().withOwner(libOwner).withOrganization(org).withOrgMemberCollaborativePermission().orgVisible().saved
+          val collabLib = LibraryFactory.library().withOwner(libOwner).withOrganization(org).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_WRITE)).orgVisible().saved
 
-          val followerLib1 = LibraryFactory.library().withOwner(libOwner).withOrganization(org).published().saved
-          val followerLib2 = LibraryFactory.library().withOwner(libOwner).withOrgMemberCollaborativePermission().published().saved
+          val followerLib1 = LibraryFactory.library().withOwner(libOwner).withOrganization(org).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_ONLY)).published().saved
+          val followerLib2 = LibraryFactory.library().withOwner(libOwner).withOrganization(org).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_ONLY)).published().saved
           val followerLib3 = LibraryFactory.library().withOwner(libOwner).published().saved
           (libOwner, member, collabLib, Seq(followerLib1, followerLib2, followerLib3))
         }
