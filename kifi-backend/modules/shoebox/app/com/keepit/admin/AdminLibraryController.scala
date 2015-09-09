@@ -365,17 +365,17 @@ class AdminLibraryController @Inject() (
     }
   }
 
-  def removeLibrariesWithInactiveOwner() = Action { request =>
+  def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
     // delete all libraries with an inactive owner: no exceptions for collaborative or system libraries
 
-    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
     FutureHelpers.sequentialExec(libIds)(libraryCommander.unsafeAsyncDeleteLibrary)
 
     Ok
   }
 
-  def getLibrariesWithInactiveOwner() = Action { request =>
-    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner() }
+  def getLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
     Ok(Json.obj("ids" -> Json.toJson(libIds), "count" -> libIds.length))
   }
 
