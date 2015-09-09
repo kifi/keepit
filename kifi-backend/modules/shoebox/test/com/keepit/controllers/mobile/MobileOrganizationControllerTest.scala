@@ -188,7 +188,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val json = """{ "name": "" }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFICATIONS
+          response === OrganizationFail.INVALID_MODIFY_NAME
         }
       }
       "succeed for valid modifications" in {
@@ -233,7 +233,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFICATIONS
+          response === OrganizationFail.INVALID_MODIFY_PERMISSIONS
         }
       }
     }

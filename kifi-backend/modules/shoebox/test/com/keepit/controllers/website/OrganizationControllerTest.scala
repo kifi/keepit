@@ -344,7 +344,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val json = """{ "name": "" }"""
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFICATIONS
+          response === OrganizationFail.INVALID_MODIFY_NAME
         }
       }
 
@@ -390,7 +390,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFICATIONS
+          response === OrganizationFail.INVALID_MODIFY_PERMISSIONS
         }
       }
     }
