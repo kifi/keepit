@@ -67,16 +67,18 @@ angular.module('kifi')
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {
-      var url = keepData.url;
-
       var matches = $scope.feed.filter(function (f) {
-        return f.url === url;
+        return f.url === keepData.url;
       });
-      var removedFeedItem = matches && matches[0];
-      var removedIndex = $scope.feed.indexOf(removedFeedItem);
+      var unkeptFeedItem = matches && matches[0];
+      var removedIndex;
 
-      if (removedIndex !== -1) {
-        $scope.feed.splice(removedIndex, 1);
+      if (unkeptFeedItem.libraries.length === 1) {
+        removedIndex = $scope.feed.indexOf(unkeptFeedItem);
+
+        if (removedIndex !== -1) {
+          $scope.feed.splice(removedIndex, 1);
+        }
       }
     });
 
