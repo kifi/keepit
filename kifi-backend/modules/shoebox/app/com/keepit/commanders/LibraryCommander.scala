@@ -116,7 +116,10 @@ class LibraryCommanderImpl @Inject() (
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
-          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
+          val sameSlugOpt = targetSpace match {
+            case UserSpace(space) => libraryRepo.getBySpaceAndSlug(space, validSlug)
+            case OrganizationSpace(space) => libraryRepo.getBySpaceAndSlug(space, validSlug).orElse(libraryRepo.getBySpaceAndSlug(UserSpace(ownerId), validSlug))
+          }
           (userHasPermissionToCreateInSpace, sameSlugOpt)
         } match {
           case (false, _) =>
