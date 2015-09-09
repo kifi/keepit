@@ -30,7 +30,16 @@
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
         <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" class-name="'kf-oph-input'" readonly="readonly"></div>
-        <div class="kf-oph-description" kf-click-to-edit on-save="save" class-name="'kf-oph-input'" input-placeholder="'Description'" value="profile.description" readonly="readonly"></div><div ng-if="showAdminLink"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
+        <div 
+          class="kf-oph-description"
+          kf-click-to-edit
+          on-save="save"
+          class-name="'kf-oph-input'"
+          input-placeholder="'Description'"
+          value="profile.description"
+          readonly="readonly"
+          ng-if="!(readonly && !profile.description.length)"
+        ></div><div ng-if="showAdminLink"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
         <p class="kf-oph-url">
           <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
         </p>
