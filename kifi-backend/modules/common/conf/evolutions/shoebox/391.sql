@@ -2,7 +2,10 @@
 
 # --- !Ups
 
-ALTER TABLE notification DROP INDEX notification_group_identifier;
+ALTER TABLE notification DROP CONSTRAINT notification_group_identifier;
+
+-- mysql
+-- ALTER TABLE notification DROP INDEX notification_group_identifier;
 
 alter table notification add CONSTRAINT notification_group_identifier unique index(recipient, kind, group_identifier);
 
