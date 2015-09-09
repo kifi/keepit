@@ -66,7 +66,7 @@ class NotificationProcessing @Inject() (
     val notif = groupIdentifier match {
       case Some(identifier) =>
         db.readOnlyMaster { implicit session =>
-          notificationRepo.getByKindAndGroupIdentifier(event.kind, identifier)
+          notificationRepo.getByGroupIdentifier(event.recipient, event.kind, identifier)
         } match {
           case Some(notif) => saveToExistingNotification(notif.id.get, event)
           case None => createNewNotification(event)

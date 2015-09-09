@@ -14,7 +14,7 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification]
 
-  def getByKindAndGroupIdentifier(kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
+  def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
 
   def getUnreadEnabledNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
 
@@ -63,9 +63,9 @@ class NotificationRepoImpl @Inject() (
     query.firstOption
   }
 
-  def getByKindAndGroupIdentifier(kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
+  def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
     val kindStr = kind.name
-    val q = for (row <- rows if row.groupIdentifier === identifier && row.kind === kindStr) yield row
+    val q = for (row <- rows if row.recipient === recipient && row.groupIdentifier === identifier && row.kind === kindStr) yield row
     q.firstOption
   }
 
