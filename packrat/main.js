@@ -756,7 +756,13 @@ api.port.on({
     }, respond.bind(null, false));
   },
   follow_library: function (id, respond) {
-    ajax('POST', '/ext/libraries/' + id + '/join', respond.bind(null, true), respond.bind(null, false));
+    ajax('POST', '/ext/libraries/' + id + '/join', function () {
+      // Clear the cache because following libraries makes the cache stale.
+      // The backend will send updated membership information.
+      storeLibraries([]);
+
+      respond(true);
+    }, respond.bind(null, false));
   },
   unfollow_library: function (id, respond) {
     ajax('POST', '/ext/libraries/' + id + '/leave', respond.bind(null, true), respond.bind(null, false));

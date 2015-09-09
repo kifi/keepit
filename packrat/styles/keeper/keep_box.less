@@ -417,14 +417,19 @@
     font-size: 10px;
   }
 }
+.kifi-keep-box-lib-subtext {
+  color: #999;
+  font-style: italic;
+}
 .kifi-keep-box-with-lib-card {
   position: relative;
 }
 
 .kifi-keep-box-lib-icon {
-  display: inline-block;
+  display: none;
   vertical-align: middle;
   margin-top: -1px;
+  margin-right: 3px;
 }
 
 .kifi-keep-box-lib-card {
@@ -441,6 +446,7 @@
 
 .kifi-system.kifi-discoverable .kifi-keep-box-lib-icon {
   @url: %(@svgLibCardStarDataUrl, #000, 4);
+  display: inline-block;
   background-image: url(@url);
   background-position: center;
   background-size: 11px 11px;
@@ -451,6 +457,7 @@
 }
 .kifi-secret .kifi-keep-box-lib-icon {
   @url: %(@svgLibCardLockDataUrl, #000);
+  display: inline-block;
   background-image: url(@url);
   background-position: center;
   background-size: 8px 12px;
@@ -460,6 +467,7 @@
 }
 .kifi-keep-box-lib-organization.kifi-published .kifi-keep-box-lib-icon {
   @url: %(@svgLibCardGlobeDataUrl, #000);
+  display: inline-block;
   background-image: url(@url);
   background-position: center;
   background-size: 12px 12px;
@@ -467,7 +475,7 @@
   width: 12px;
   height: 12px;
   margin-left: -2px;
-  margin-right: -2px;
+  margin-right: 2px;
 }
 
 .kifi-create .kifi-keep-box-lib-card {
@@ -482,7 +490,6 @@
     height: 28px;
   }
 }
-
 
 .kifi-keep-box-button {
   padding: 0 15px;

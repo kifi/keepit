@@ -97,9 +97,34 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
+  function decorateOpenCollaborationCandidates(libraries) {
+    // Add a property that the keep_box_lib template can use later on
+    // to determine whether a lib is allowed in open collaboration
+    libraries.forEach(function (l) {
+      if (isOpenCollaborationCandidate(l)) {
+        l.isOpenCollaborationCandidate = true;
+      }
+    });
+  }
+
+  function isOpenCollaborationCandidate(library) {
+    var isOrgLibrary = !!library.orgAvatar;
+
+    var isAlreadyJoined = (
+      library && library.membership && (
+        library.membership.access === 'owner' ||
+        library.membership.access === 'read_write'
+      )
+    );
+
+    return isOrgLibrary && !isAlreadyJoined;
+  }
+
   function show($parent, trigger, guided, libraries, organizations, me, posting) {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
+    decorateOpenCollaborationCandidates(libraries);
     var params = partitionLibs(libraries);
+
     params.socialPosting = posting;
 
     decorateLocationRecentLibraryCount(libraries, me, organizations);
@@ -619,7 +644,7 @@ k.keepBox = k.keepBox || (function () {
         });
       } else {
         el.style.position = 'relative';
-        progress(el, keepTo(library, guided)).done(function (keep) {
+        progress(el, tryKeepTo(library, guided)).done(function (keep) {
           showKeep(library, subsource, trigger, guided, true);
         });
       }
@@ -638,6 +663,30 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
+  function tryKeepTo(library, guided) {
+    if (library.isOpenCollaborationCandidate) {
+      // we need to join open collaboration libraries before we can keep to them
+      return joinAndKeepTo(library, guided);
+    } else {
+      return keepTo(library, guided);
+    }
+  }
+
+  function joinAndKeepTo(library, guided) {
+    var deferred = Q.defer();
+
+    api.port.emit('follow_library', library.id, function () {
+      keepTo(library, guided)
+      .then(function (keep) {
+        library.isOpenCollaborationCandidate = false;
+        deferred.resolve(keep);
+      })
+      ['catch'](deferred.reject);
+    });
+
+    return deferred.promise;
+  }
+
   function keepTo(library, guided) {
     var $checked = library.visibility === 'published' ? $box.find('.kifi-keep-box-nw-checkbox:checked') : $();
     var data = {
@@ -648,6 +697,7 @@ k.keepBox = k.keepBox || (function () {
     };
     log('[keep]', data);
     var deferred = Q.defer();
+
     api.port.emit('keep', withTitles(withUrls(data)), function (keep) {
       if (keep) {
         if (library.system) {
@@ -1174,7 +1224,7 @@ k.keepBox = k.keepBox || (function () {
         if (library) {
           $box.data('libraryCreated', library);
           $box.data('libraries').push(library);
-          keepTo(library, guided).done(function () {
+          tryKeepTo(library, guided).done(function () {
             deferred.resolve(library);
           }, function () {
             // TODO: undo create library?
