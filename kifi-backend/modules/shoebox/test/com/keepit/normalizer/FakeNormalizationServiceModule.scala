@@ -8,11 +8,11 @@ import scala.concurrent.Future
 
 case class FakeNormalizationServiceModule() extends ScalaModule {
   def configure() {
-    bind[NormalizationService].toInstance(PrenormalizationService)
+    bind[NormalizationService].toInstance(FakePrenormalizationService)
   }
 }
 
-object PrenormalizationService extends NormalizationService {
+object FakePrenormalizationService extends NormalizationService {
   def update(current: NormalizationReference, candidates: Set[NormalizationCandidate]) = Future.successful(None)
   def prenormalize(uriString: String) = Prenormalizer(uriString)
 }

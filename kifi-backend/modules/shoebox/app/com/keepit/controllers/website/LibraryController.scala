@@ -39,6 +39,7 @@ class LibraryController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   orgRepo: OrganizationRepo,
+  orgAvatarCommander: OrganizationAvatarCommander,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
@@ -55,6 +56,7 @@ class LibraryController @Inject() (
   airbrake: AirbrakeNotifier,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
+  val libraryMembershipCommander: LibraryMembershipCommander,
   val libraryAccessCommander: LibraryAccessCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
@@ -255,6 +257,37 @@ class LibraryController @Inject() (
     }
   }
 
+  def getKeepableLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
+    val basicUserById = {
+      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
+      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+    }
+
+    val libs = librariesWithMembershipAndCollaborators.map(_._1)
+    val orgIds = libs.flatMap(_.organizationId)
+    val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
+
+    val datas = librariesWithMembershipAndCollaborators map {
+      case (lib, membership, collaboratorsIds) =>
+        val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
+        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
+        LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          color = lib.color,
+          visibility = lib.visibility,
+          path = libPathCommander.getPathForLibrary(lib),
+          hasCollaborators = collabs.nonEmpty,
+          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
+          collaborators = collabs,
+          orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
+          membership = membership.map(lib.getMembershipInfo)
+        )
+    }
+    Ok(Json.obj("libraries" -> datas))
+  }
+
   def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
     (json \ "type").as[String] match {
       case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
@@ -318,17 +351,33 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
-        }
 
-        libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
+        libraryMembershipCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
-          case Right((_, mem)) =>
-            Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
+          case Right((lib, mem)) =>
+            Ok(Json.obj("membership" -> lib.getMembershipInfo(mem)))
         }
     }
+  }
+
+  def joinLibraries() = UserAction(parse.tolerantJson) { request =>
+    val libIds = request.body.as[Seq[PublicId[Library]]]
+    val results: Seq[(PublicId[Library], Either[LibraryFail, LibraryMembershipInfo])] = libIds.map { pubId =>
+      Library.decodePublicId(pubId) match {
+        case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
+        case Success(libId) =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
+            case Left(libFail) => (pubId, Left(libFail))
+            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+          }
+      }
+    }
+    val errorsJson = results.collect { case (id, Left(fail)) => Json.obj("id" -> id.id, "error" -> fail.message) }
+    val successesJson = results.collect { case (id, Right(membership)) => Json.obj("id" -> id.id, "membership" -> membership) }
+
+    Ok(Json.obj("errors" -> errorsJson, "successes" -> successesJson))
   }
 
   def declineLibrary(pubId: PublicId[Library]) = UserAction { request =>
@@ -349,7 +398,7 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryCommander.leaveLibrary(id, request.userId) match {
+        libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => Ok(JsString("success"))
         }
@@ -622,7 +671,7 @@ class LibraryController @Inject() (
         if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
         else Library.decodePublicId(pubId) match {
           case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
-          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+          case Success(libraryId) => libraryMembershipCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
         }
       }
       case _ => Future.successful(Forbidden)
@@ -657,7 +706,8 @@ class LibraryController @Inject() (
               modifiedAt = info.modifiedAt,
               kind = info.kind,
               path = info.path,
-              org = info.org
+              org = info.org,
+              orgMemberAccess = info.orgMemberAccess
             )
           }
           val t2 = System.currentTimeMillis()
@@ -693,11 +743,11 @@ class LibraryController @Inject() (
         val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
           case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
           case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }

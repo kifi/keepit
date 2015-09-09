@@ -45,19 +45,22 @@ class ExtUserController @Inject() (
         Json.obj(
           "name" -> (org.name + " Members"),
           "id" -> org.orgId,
-          "pictureName" -> ("../../../../" + org.avatarPath.map(_.path).getOrElse("NONE"): String), // one weird trick
+          "pictureName" -> ("../../../../" + org.avatarPath.path: String), // one weird trick
           "kind" -> "org",
-          "avatarPath" -> (org.avatarPath.map(_.path).getOrElse("NONE"): String),
+          "avatarPath" -> (org.avatarPath.path: String),
           "handle" -> org.handle
         )
       }.toList
     } else List.empty
 
     typeaheadF.map { res =>
-      val res1 = res.collect {
+      val orgCount = orgsToInclude.length
+      val contactsToShow = limit.getOrElse(res.length + orgCount) - orgCount
+
+      val res1 = orgsToInclude ++ res.take(contactsToShow).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
-      } ++ orgsToInclude
+      }
       Ok(Json.toJson(res1))
     }
   }

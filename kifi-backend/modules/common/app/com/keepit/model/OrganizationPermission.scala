@@ -55,16 +55,16 @@ case class BasePermissions(permissionsMap: PermissionsMap) {
 
   // Return a BasePermissions where "role" has added and removed permissions
   def modified(roleOpt: Option[OrganizationRole], added: Set[OrganizationPermission], removed: Set[OrganizationPermission]): BasePermissions =
-    this.copy(permissionsMap ++ PermissionsMap(roleOpt -> added) -- PermissionsMap(roleOpt -> removed))
+    this.copy(permissionsMap ++ PermissionsMap.just(roleOpt -> added) -- PermissionsMap.just(roleOpt -> removed))
 
   def applyPermissionsDiff(pdiff: PermissionsDiff): BasePermissions =
     this.copy(permissionsMap ++ pdiff.added -- pdiff.removed)
 
   def addPermission(kv: (Option[OrganizationRole], OrganizationPermission)) =
-    this.applyPermissionsDiff(PermissionsDiff(added = PermissionsMap(kv._1 -> Set(kv._2))))
+    this.applyPermissionsDiff(PermissionsDiff(added = PermissionsMap.just(kv._1 -> Set(kv._2))))
 
   def removePermission(kv: (Option[OrganizationRole], OrganizationPermission)) =
-    this.applyPermissionsDiff(PermissionsDiff(removed = PermissionsMap(kv._1 -> Set(kv._2))))
+    this.applyPermissionsDiff(PermissionsDiff(removed = PermissionsMap.just(kv._1 -> Set(kv._2))))
 
   def diff(that: BasePermissions): PermissionsDiff = PermissionsDiff(added = this.permissionsMap -- that.permissionsMap, that.permissionsMap -- this.permissionsMap)
 }
@@ -84,6 +84,9 @@ object PermissionsDiff {
     (__ \ 'add).formatNullable[PermissionsMap] and
     (__ \ 'remove).formatNullable[PermissionsMap]
   )(PermissionsDiff.fromOptions, PermissionsDiff.toOptions)
+
+  def justAdd(kvs: (Option[OrganizationRole], Set[OrganizationPermission])*): PermissionsDiff = PermissionsDiff(added = PermissionsMap(kvs.toMap))
+  def justRemove(kvs: (Option[OrganizationRole], Set[OrganizationPermission])*): PermissionsDiff = PermissionsDiff(removed = PermissionsMap(kvs.toMap))
 
   def fromOptions(addedOpt: Option[PermissionsMap], removedOpt: Option[PermissionsMap]): PermissionsDiff =
     PermissionsDiff(addedOpt.getOrElse(PermissionsMap.empty), removedOpt.getOrElse(PermissionsMap.empty))
@@ -114,7 +117,7 @@ case class PermissionsMap(pm: Map[Option[OrganizationRole], Set[OrganizationPerm
 }
 object PermissionsMap {
   val empty: PermissionsMap = PermissionsMap(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]])
-  def apply(kvs: (Option[OrganizationRole], Set[OrganizationPermission])*): PermissionsMap = PermissionsMap(kvs.toMap)
+  def just(kvs: (Option[OrganizationRole], Set[OrganizationPermission])*): PermissionsMap = PermissionsMap(kvs.toMap)
   implicit val format: Format[PermissionsMap] = new Format[PermissionsMap] {
     def reads(json: JsValue): JsResult[PermissionsMap] = {
       json.validate[JsObject].map { obj =>

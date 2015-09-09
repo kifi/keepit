@@ -1,0 +1,20 @@
+<div class="organization-invite-search dialog-content">
+  <a class="dialog-x organization-invites-close-x" ng-click="close()"></a>
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header">Add Team Members</h1>
+    <div class="dialog-body">
+        <div class="opi-header">
+          <p><button class="kf-link kf-link-underline" ng-click="modalData.addMany = false">&laquo; Back to suggested invites</button></p>
+        </div>
+        <div class="opi-banner" ng-class="{ 'opi-success-banner': inviteSentCount > 0, 'opi-fail-banner': inviteSentCount === 0 }" ng-if="sent">
+          <span ng-bind="inviteSentCount + (inviteSentCount === 1 ? ' invite' : ' invites')"></span> sent successfully
+        </div>
+        <textarea
+          ng-model="state.emails"
+          class="opi-email-many"
+          placeholder="Paste a list of email addresses separated by commas, e.g. joe@company.com, abbie@company.com"
+        ></textarea>
+        <button class="kf-button opi-send-many" ng-click="inviteMany()">Send</button>
+    </div>
+  </div>
+</div>

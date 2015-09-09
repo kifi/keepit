@@ -48,6 +48,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           .withMembers(members)
           .withInvitedUsers(invitedUsers)
           .withInvitedEmails(invitedEmails)
+          .withWeakMembers()
           .saved
 
         (org, owner, members, invitedUsers, invitedEmails)

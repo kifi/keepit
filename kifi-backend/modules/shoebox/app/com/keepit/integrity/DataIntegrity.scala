@@ -25,7 +25,7 @@ class DataIntegrityPluginImpl @Inject() (
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, SystemLibraryCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 10 minutes, 24 hours, actor.ref, PaymentsMembershipCheck, getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 1 minutes, 30 seconds, actor.ref, KeepsCheck, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 minutes, 15 seconds, actor.ref, KeepsCheck, getClass.getSimpleName)
   }
 }
 

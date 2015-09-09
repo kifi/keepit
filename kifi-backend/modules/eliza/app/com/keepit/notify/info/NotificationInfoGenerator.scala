@@ -3,7 +3,7 @@ package com.keepit.notify.info
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.db.Id
-import com.keepit.eliza.model.{ NotificationItem, Notification }
+import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems, NotificationItem, Notification }
 import com.keepit.model.{ Keep, Organization, Library }
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
@@ -16,14 +16,14 @@ class NotificationInfoGenerator @Inject() (
     notificationKindInfoRequests: NotificationKindInfoRequests,
     implicit val ec: ExecutionContext) {
 
-  def generateInfo(notifs: Map[Notification, Set[NotificationItem]]): Future[Map[Notification, (Set[NotificationItem], NotificationInfo)]] = {
-    val notifInfoRequests = notifs map {
-      case (notif, items) =>
+  def generateInfo(notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
+    val notifInfoRequests = notifs.map {
+      case NotificationWithItems(notif, items) =>
         val infoRequest = notificationKindInfoRequests.requestsFor(notif, items)
         (notif, infoRequest)
-    }
+    }.toMap
 
-    val infoRequests = notifInfoRequests map {
+    val infoRequests = notifInfoRequests.map {
       case (notif, infoRequest) => infoRequest
     }
 
@@ -68,7 +68,7 @@ class NotificationInfoGenerator @Inject() (
       keeps <- keepsF
       externalIds <- externalUserIdsF
       fromExternalIds <- userIdsFromExternalF
-      userIds = (userRequests ++ libs.values.map(_.ownerId) ++ fromExternalIds).toSeq.distinct
+      userIds = (userRequests ++ fromExternalIds).toSeq.distinct
       users <- shoeboxServiceClient.getBasicUsers(userIds)
       usersExternal = externalIds.zip(fromExternalIds).map {
         case (externalId, id) => externalId -> users(id)
@@ -87,9 +87,10 @@ class NotificationInfoGenerator @Inject() (
       batchedInfos <- batchedInfosF
     } yield {
       notifs map {
-        case (notif, items) =>
+        case NotificationWithItems(notif, items) =>
           val infoRequest = notifInfoRequests(notif)
-          (notif, (items, infoRequest.fn(batchedInfos)))
+          val info = infoRequest.fn(batchedInfos)
+          NotificationWithInfo(notif, items, info)
       }
     }
   }

@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -18,6 +19,7 @@ import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import play.api.mvc.Action
 import views.html
 
 import scala.concurrent.Future
@@ -361,6 +363,20 @@ class AdminLibraryController @Inject() (
       val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
       Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))
     }
+  }
+
+  def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    // delete all libraries with an inactive owner: no exceptions for collaborative or system libraries
+
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
+    FutureHelpers.sequentialExec(libIds)(libraryCommander.unsafeAsyncDeleteLibrary)
+
+    Ok
+  }
+
+  def getLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
+    Ok(Json.obj("ids" -> Json.toJson(libIds), "count" -> libIds.length))
   }
 
 }

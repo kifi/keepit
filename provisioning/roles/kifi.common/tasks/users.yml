@@ -66,8 +66,9 @@
 - name: register user forytwo's crontab
   command: crontab -u fortytwo -l
   changed_when: False
+  ignore_errors: yes
   register: fortytwo_crontab
 
 - name: delete user fortytwo's crontab if ansible not altered it before
   command: crontab -u fortytwo -r
-  when: "'#Ansible' not in fortytwo_crontab.stdout"
+  when: "fortytwo_crontab.stdout != '' and '#Ansible' not in fortytwo_crontab.stdout"

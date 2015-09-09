@@ -6,7 +6,7 @@ import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.OrganizationPermission.{ INVITE_MEMBERS, ADD_LIBRARIES, REMOVE_LIBRARIES, VIEW_ORGANIZATION }
+import com.keepit.model.OrganizationPermission._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
@@ -34,13 +34,15 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           (admin, orgs)
         }
 
+        val targetPermission = FORCE_EDIT_LIBRARIES
+
         db.readOnlyMaster { implicit session =>
           orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) }
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER) === Set(VIEW_ORGANIZATION, ADD_LIBRARIES, REMOVE_LIBRARIES) }
+          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER).contains(targetPermission) === false }
         }
 
         inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
-        val payload: JsValue = Json.obj("permission" -> "invite_members", "confirmation" -> "i swear i know what i am doing")
+        val payload: JsValue = Json.obj("permission" -> s"${targetPermission.value}", "confirmation" -> "i swear i know what i am doing")
         val request = route.addPermissionToAllOrganizations().withBody(payload)
         val result = controller.addPermissionToAllOrganizations()(request)
         status(result) === OK
@@ -48,8 +50,8 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
         inject[WatchableExecutionContext].drain()
 
         db.readOnlyMaster { implicit session =>
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) }
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER) === Set(VIEW_ORGANIZATION, ADD_LIBRARIES, REMOVE_LIBRARIES, INVITE_MEMBERS) }
+          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) + targetPermission }
+          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER).contains(targetPermission) === true }
         }
         1 === 1
       }

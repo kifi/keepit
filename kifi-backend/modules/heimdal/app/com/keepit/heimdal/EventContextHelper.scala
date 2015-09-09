@@ -51,24 +51,19 @@ class EventContextHelperImpl @Inject() (
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
     val membersFut = shoebox.getOrganizationMembers(orgId)
-    val messageCountFut = membersFut.flatMap { members =>
-      if (members.size > 1) eliza.getTotalMessageCountForGroup(members)
-      else Future.successful(0)
-    }
+
     val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
     for {
       shoeboxValues <- shoeboxValuesFut
       members <- membersFut
-      messageCount <- messageCountFut
       userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
       Seq(
-        ("orgId", ContextStringData(orgId.toString)),
+        ("userOrgId", ContextStringData(orgId.toString)),
         ("orgLibrariesCreated", ContextDoubleData(shoeboxValues.libraryCount)),
         ("orgKeepCount", ContextDoubleData(shoeboxValues.keepCount)),
         ("orgInviteCount", ContextDoubleData(shoeboxValues.inviteCount)),
-        ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount)),
-        ("orgMessageCount", ContextDoubleData(messageCount))
+        ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount))
       ) ++ userWithMostClickedKeeps.map(userId => Seq(("overallKeepViews", ContextStringData(userId.toString)))).getOrElse(Seq.empty[(String, ContextData)])
     }
   }
@@ -94,7 +89,10 @@ class EventContextHelperImpl @Inject() (
         case _ => None
       }
 
-      Seq(("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)])
+      val orgRoleOpt = orgUserRelations.role.map(role => ContextStringData(role.value))
+
+      Seq(("eventOrgId", ContextStringData(orgId.toString)), ("orgStatus", orgStatus)) ++ memberStatusOpt.map(status => Seq(("memberStatus", status))).getOrElse(Seq.empty[(String, ContextStringData)]) ++
+        orgRoleOpt.map(role => Seq(("orgRole", role))).getOrElse(Seq.empty[(String, ContextStringData)])
     }
   }
 

@@ -118,20 +118,23 @@ class MobileSearchController @Inject() (
       librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, librarySearchContextFuture, maxLibraries, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
-        val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
         val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, idealImageSize getOrElse ProcessedImageSize.Medium.idealSize, Some(userId))
+        val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
+        val futureOrganizations = shoeboxClient.getBasicOrganizationsByIds(libraryRecordsAndVisibilityById.values.flatMap(_._1.orgId).toSet)
 
         for {
           usersById <- futureUsers
+          organizationsById <- futureOrganizations
           libraryDetails <- futureLibraryDetails
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
               case (library, visibility, _) =>
                 val owner = usersById(library.ownerId)
+                val organization = library.orgId.map(organizationsById(_))
                 val details = libraryDetails(library.id)
+                val path = LibraryPathHelper.formatLibraryPath(owner, organization.map(_.handle), details.slug)
 
-                val path = LibraryPathHelper.formatLibraryPath(owner, None, details.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                 val description = library.description.orElse(details.description).getOrElse("")
 
                 Json.obj(
@@ -144,6 +147,7 @@ class MobileSearchController @Inject() (
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,
+                  "org" -> organization,
                   "memberCount" -> (details.numFollowers + details.numCollaborators),
                   "numFollowers" -> details.numFollowers,
                   "numCollaborators" -> details.numCollaborators,

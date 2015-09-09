@@ -4,9 +4,9 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
+import com.keepit.eliza.model._
 import com.keepit.notify.delivery.WsNotificationDelivery
-import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.info.StandardNotificationInfo
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 
@@ -17,7 +17,7 @@ class NotificationProcessing @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     delivery: WsNotificationDelivery,
-    notifExperimentCheck: NotifExperimentCheck,
+    legacyNotificationCheck: LegacyNotificationCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
@@ -36,7 +36,8 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notifId,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
       val notif = notificationRepo.get(notifId)
       notificationRepo.save(notif.copy(lastEvent = event.time))
@@ -53,7 +54,8 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
       notif
     }
@@ -89,8 +91,8 @@ class NotificationProcessing @Inject() (
     val items = db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notif.id.get)
     }.toSet
-    notifExperimentCheck.ifExperiment(notif.recipient) { recipient =>
-      delivery.deliver(recipient, items)
+    legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
+      delivery.deliver(recipient, NotificationWithItems(notif, items))
     }
     notif
   }

@@ -17,7 +17,7 @@ case class OrganizationInfo(
   name: String,
   description: Option[String],
   site: Option[String],
-  avatarPath: Option[ImagePath],
+  avatarPath: ImagePath,
   members: Seq[BasicUser],
   numMembers: Int,
   numLibraries: Int)
@@ -29,7 +29,7 @@ object OrganizationInfo {
     (__ \ 'name).write[String] and
     (__ \ 'description).writeNullable[String] and
     (__ \ 'site).writeNullable[String] and
-    (__ \ 'avatarPath).writeNullable[ImagePath] and
+    (__ \ 'avatarPath).write[ImagePath] and
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int]

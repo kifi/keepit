@@ -13,7 +13,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import java.io.StringReader
-import com.keepit.social.{ BasicUser, BasicNonUser }
+import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
 
 object ThreadIndexFields {
   var titleField = "mt_title"
@@ -80,8 +80,8 @@ class MessageContentIndexable(
     val participantNameList = (0 until data.participants.length).map { i =>
       val participant = data.participants(i)
       val participantName = participant match {
-        case user: BasicUser => user.firstName + " " + user.lastName
-        case nonUser: BasicNonUser => {
+        case BasicUserLikeEntity.user(user) => user.firstName + " " + user.lastName
+        case BasicUserLikeEntity.nonUser(nonUser) => {
           val fullNameOpt = for {
             firstName <- nonUser.firstName
             lastName <- nonUser.lastName

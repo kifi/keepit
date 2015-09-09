@@ -66,13 +66,8 @@ object LibraryMembership {
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
-@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscribed: Boolean)
-
-object LibraryMembershipInfo {
-  def fromMembership(mem: LibraryMembership): LibraryMembershipInfo = {
-    LibraryMembershipInfo(mem.access.value, mem.listed, mem.subscribedToUpdates)
-  }
-}
+@json
+case class LibraryMembershipInfo(access: LibraryAccess, listed: Boolean, subscribed: Boolean, permissions: Set[LibraryPermission])
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
@@ -100,6 +95,46 @@ object LibraryAccess {
 
   val all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_ONLY)
   val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE)
+}
+
+sealed abstract class LibraryPermission(val value: String)
+
+object LibraryPermission {
+  case object VIEW_LIBRARY extends LibraryPermission("view_library")
+  case object EDIT_LIBRARY extends LibraryPermission("edit_library")
+  case object MOVE_LIBRARY extends LibraryPermission("move_library")
+  case object DELETE_LIBRARY extends LibraryPermission("delete_library")
+  case object INVITE_FOLLOWERS extends LibraryPermission("invite_followers")
+  case object INVITE_COLLABORATORS extends LibraryPermission("invite_collaborators")
+  case object REMOVE_MEMBERS extends LibraryPermission("remove_members")
+  case object ADD_KEEPS extends LibraryPermission("add_keeps")
+  case object EDIT_OWN_KEEPS extends LibraryPermission("edit_own_keeps")
+  case object EDIT_OTHER_KEEPS extends LibraryPermission("edit_other_keeps")
+  case object REMOVE_OWN_KEEPS extends LibraryPermission("remove_own_keeps")
+  case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
+
+  implicit val format: Format[LibraryPermission] =
+    Format(__.read[String].map(LibraryPermission(_)), new Writes[LibraryPermission] {
+      def writes(o: LibraryPermission) = JsString(o.value)
+    })
+
+  def apply(str: String): LibraryPermission = {
+    str match {
+      case VIEW_LIBRARY.value => VIEW_LIBRARY
+      case EDIT_LIBRARY.value => EDIT_LIBRARY
+      case MOVE_LIBRARY.value => MOVE_LIBRARY
+      case DELETE_LIBRARY.value => DELETE_LIBRARY
+      case INVITE_FOLLOWERS.value => INVITE_FOLLOWERS
+      case INVITE_COLLABORATORS.value => INVITE_COLLABORATORS
+      case REMOVE_MEMBERS.value => REMOVE_MEMBERS
+      case ADD_KEEPS.value => ADD_KEEPS
+      case EDIT_OWN_KEEPS.value => EDIT_OWN_KEEPS
+      case EDIT_OTHER_KEEPS.value => EDIT_OTHER_KEEPS
+      case REMOVE_OWN_KEEPS.value => REMOVE_OWN_KEEPS
+      case REMOVE_OTHER_KEEPS.value => REMOVE_OTHER_KEEPS
+      // TODO(ryan): should we have a `case _ => ???` here, and what should ??? be
+    }
+  }
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readWrite: Int, owner: Int)

@@ -126,7 +126,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             whoCanInvite = LibraryInvitePermissions.COLLABORATOR,
             modifiedAt = now,
             path = LibraryPathHelper.formatLibraryPath(basicUser1, None, LibrarySlug("scala")),
-            org = None
+            org = None,
+            orgMemberAccess = None
           )
         )
       }

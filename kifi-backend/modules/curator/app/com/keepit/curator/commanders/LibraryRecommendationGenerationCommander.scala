@@ -124,7 +124,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     lazy val usersFollowedLibraries: Set[Id[Library]] = db.readOnlyReplica { implicit s => libMembershipRepo.getLibrariesByUserId(userId).toSet }
 
     def precomputeRecommendations() = {
-      val state: LibraryRecommendationGenerationState = db.readOnlyReplica { implicit session =>
+      val state: LibraryRecommendationGenerationState = {
         val state = getStateOfUser()
         if (state.id.exists(_ => selectionParams.reset)) state.copy(seq = SequenceNumber.ZERO) else state
       }

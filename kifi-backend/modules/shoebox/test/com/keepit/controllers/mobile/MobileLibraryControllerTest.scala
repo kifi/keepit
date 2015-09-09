@@ -121,7 +121,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // change a library title to an existing library's title
         val result2 = modifyLibrary(user, pubLib1, Json.obj("newName" -> lib2.name))
-        status(result2) must equalTo(BAD_REQUEST)
+        status(result2) must equalTo(OK)
 
         // change a library slug to an existing library's slug
         val result3 = modifyLibrary(user, pubLib1, Json.obj("newSlug" -> lib2.slug.value))
@@ -202,7 +202,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                 "membership":{
                   "access" : "owner",
                   "listed" : true,
-                  "subscribed" : false
+                  "subscribed" : false,
+                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
                 },
                 "invite": null
               },
@@ -260,7 +261,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  "membership":{
                    "access" : "owner",
                    "listed" : true,
-                   "subscribed" : false
+                   "subscribed" : false,
+                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
                  },
                  "invite" : null,
                  "path": "/spongebob/krabby-patty"

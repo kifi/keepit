@@ -403,7 +403,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
     val payload = Json.obj("url" -> url, "contentWanted" -> contentWanted)
-    call(Shoebox.internal.internNormalizedURI, payload).map(r => r.json.as[NormalizedURI])
+    call(Shoebox.internal.internNormalizedURI, payload).map(r =>
+      r.json.as[NormalizedURI]
+    )
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit = {
@@ -838,8 +840,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = {
     cacheProvider.basicOrganizationIdCache.bulkGetOrElseFuture(ids.map(BasicOrganizationIdKey.apply _)) { missing =>
-      val playload = Json.toJson(missing.map(_.id))
-      call(Shoebox.internal.getBasicOrganizationsByIds()).map {
+      val payload = Json.toJson(missing.map(_.id))
+      call(Shoebox.internal.getBasicOrganizationsByIds(), payload).map {
         _.json.as[Map[Id[Organization], BasicOrganization]].map {
           case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
         }

@@ -74,7 +74,7 @@ class PaymentsIntegrityChecker @Inject() (
         val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).map(_._1).toSet
 
         val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
-        val perceivedInactiveButActuallyActive = perceivedExMemberIds & memberIds
+        val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
 
         //TODO: one things are stable and everything is backfilled, the two code blocks below should airbake instead of logging
         perceivedActiveButActuallyInactive.foreach { userId =>

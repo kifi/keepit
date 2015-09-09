@@ -58,7 +58,7 @@ angular.module('kifi')
 
     $scope.keepClick = function(keep, event) {
       var eventAction = event.currentTarget.getAttribute('click-action');
-      $analytics.eventTrack('user_clicked_page', { type: 'userFeed', action: eventAction });
+      $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: eventAction });
 
       if (eventAction === 'clickedArticleTitle' || eventAction === 'clickedArticleImage') {
         $analytics.eventTrack('user_viewed_content', { source: 'feed', contentType: 'keep', keep: keep.id,

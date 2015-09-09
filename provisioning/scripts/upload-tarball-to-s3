@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# quick and dirty script to tar the provisioning directory and upload it to S3
+# TODO(josh) automatically upload versioned tarballs via jenkins
+
+if [[ ! -f ./ansible.cfg ]]; then
+  echo "Run $0 from the provisioning/ directory"
+  exit 1
+fi
+
+AWSCLI_PROFILE=kifi
+mkdir -p tarballs
+tar --exclude tarballs/ -cvjf tarballs/ansible.tar.bz2 ./
+aws --profile $AWSCLI_PROFILE s3 cp tarballs/ansible.tar.bz2 s3://fortytwo-ansible-builds/ansible.tar.bz2

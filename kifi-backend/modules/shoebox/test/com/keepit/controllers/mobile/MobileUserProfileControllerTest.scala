@@ -115,7 +115,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
                   "ownerId":"${user1.externalId}",
                   "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
+                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
                   "numMembers":1,
                   "numLibraries":1,
                   "members": [
@@ -158,7 +158,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
                   "ownerId":"${user1.externalId}",
                   "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
+                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
                   "numMembers":1,
                   "numLibraries":1,
                   "members": [
@@ -201,7 +201,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
                   "ownerId":"${user1.externalId}",
                   "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
+                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
                   "numMembers":1,
                   "numLibraries":1,
                   "members": [
@@ -432,7 +432,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(lib2.permissionsByAccess(LibraryAccess.OWNER))}},
                   "modifiedAt":${lib2.updatedAt.getMillis},
                   "path": "/spongebob/catching-jellyfish"
                 },
@@ -459,7 +459,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))}},
                   "modifiedAt":${lib1.updatedAt.getMillis},
                   "path": "/spongebob/krabby-patty"
                 }

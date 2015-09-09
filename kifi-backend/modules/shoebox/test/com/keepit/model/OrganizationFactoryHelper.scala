@@ -3,13 +3,16 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.commanders.HandleCommander
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.images.RawImageInfo
+import com.keepit.common.store.ImagePath
+import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model.OrganizationFactory.PartialOrganization
-import com.keepit.payments.{ PlanManagementCommander, PaidPlan, BillingCycle, DollarAmount }
+import com.keepit.payments._
 
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      injector.getInstance(classOf[PlanManagementCommander]).createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+      injector.getInstance(classOf[PlanManagementCommanderImpl]).createNewPlanHelper(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       val handleCommander = injector.getInstance(classOf[HandleCommander])
       val org = if (orgTemplate.primaryHandle.isEmpty) {

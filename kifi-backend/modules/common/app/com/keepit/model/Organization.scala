@@ -101,7 +101,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       Some(OrganizationRole.MEMBER) -> Set(
         VIEW_ORGANIZATION,
         ADD_LIBRARIES,
-        REMOVE_LIBRARIES
+        REMOVE_LIBRARIES,
+        INVITE_MEMBERS
       )
     )
   val totallyInvisiblePermissions: BasePermissions =
@@ -197,7 +198,7 @@ case class BasicOrganization(
     handle: OrganizationHandle,
     name: String,
     description: Option[String],
-    avatarPath: Option[ImagePath]) {
+    avatarPath: ImagePath) {
 
   def abbreviatedName = this.name.abbreviate(33)
 
@@ -210,7 +211,7 @@ object BasicOrganization {
     (__ \ 'handle).format[OrganizationHandle] and
     (__ \ 'name).format[String] and
     (__ \ 'description).formatNullable[String] and
-    (__ \ 'avatarPath).formatNullable[ImagePath]
+    (__ \ 'avatarPath).format[ImagePath]
   )(BasicOrganization.apply, unlift(BasicOrganization.unapply))
 }
 

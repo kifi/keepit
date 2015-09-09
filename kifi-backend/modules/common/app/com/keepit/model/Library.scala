@@ -11,7 +11,6 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
-import com.keepit.model.view.LibraryMembershipView
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 
@@ -44,7 +43,8 @@ case class Library(
     lastKept: Option[DateTime] = None,
     keepCount: Int = 0,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
-    organizationId: Option[Id[Organization]] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    organizationId: Option[Id[Organization]] = None,
+    organizationMemberAccess: Option[LibraryAccess] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete: Library = this.copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -58,8 +58,49 @@ case class Library(
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED
+  def isSystemCreated: Boolean = !isUserCreated
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+
+  // TODO(ryan): this is pretty fragile, we should move this type of thing into library creation and store the permissions with the Library
+  def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
+    case LibraryAccess.READ_ONLY => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.INVITE_FOLLOWERS
+    )
+
+    case LibraryAccess.READ_WRITE => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.INVITE_FOLLOWERS,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    ) ++ (if (!whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
+
+    case LibraryAccess.OWNER if isSystemCreated => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    )
+    case LibraryAccess.OWNER if isUserCreated => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.EDIT_LIBRARY,
+      LibraryPermission.MOVE_LIBRARY,
+      LibraryPermission.DELETE_LIBRARY,
+      LibraryPermission.REMOVE_MEMBERS,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.REMOVE_OTHER_KEEPS,
+      LibraryPermission.INVITE_FOLLOWERS,
+      LibraryPermission.INVITE_COLLABORATORS
+    )
+  }
+  def getMembershipInfo(mem: LibraryMembership): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access))
+  }
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -91,8 +132,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     lastKept: Option[DateTime],
     keepCount: Int,
     whoCanInvite: Option[LibraryInvitePermissions],
-    organizationId: Option[Id[Organization]] = None) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId)
+    organizationId: Option[Id[Organization]],
+    organizationMemberAccess: Option[LibraryAccess]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -114,7 +156,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.lastKept,
       lib.keepCount,
       lib.whoCanInvite,
-      lib.organizationId)
+      lib.organizationId,
+      lib.organizationMemberAccess)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -138,7 +181,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
-    (__ \ "orgId").formatNullable[Id[Organization]]
+    (__ \ "orgId").formatNullable[Id[Organization]] and
+    (__ \ "orgMemberAccess").formatNullable[LibraryAccess]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
@@ -230,7 +274,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 8
+  override val version = 9
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -371,7 +415,7 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership], // viewer
+  membership: Option[LibraryMembershipInfo], // viewer
   ownerId: Id[User],
   url: Path)
 

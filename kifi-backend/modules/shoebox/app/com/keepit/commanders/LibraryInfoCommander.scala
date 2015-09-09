@@ -40,7 +40,7 @@ trait LibraryInfoCommander {
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, useMultilibLogic: Boolean = false): Future[Seq[(Id[Library], FullLibraryInfo)]]
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])]
+  def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
@@ -140,9 +140,9 @@ class LibraryInfoCommanderImpl @Inject() (
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
-        val membership = membershipsByLibraryId.get(libId).flatten
+        val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership, lib.ownerId, path)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(lib.getMembershipInfo), lib.ownerId, path)
       }.toMap
     }
   }
@@ -328,7 +328,8 @@ class LibraryInfoCommanderImpl @Inject() (
           whoCanInvite = whoCanInvite,
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = basicOrgOpt.map(_.handle), slug = lib.slug),
-          org = basicOrgOpt
+          org = basicOrgOpt,
+          orgMemberAccess = lib.organizationMemberAccess
         )
       }
     }
@@ -337,9 +338,12 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
     userIdOpt.flatMap { userId =>
-      db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      } map LibraryMembershipInfo.fromMembership
+      val (lib, membershipOpt) = db.readOnlyMaster { implicit s =>
+        val lib = libraryRepo.get(libraryId)
+        val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+        (lib, membershipOpt)
+      }
+      membershipOpt.map(lib.getMembershipInfo)
     }
   }
 
@@ -376,15 +380,22 @@ class LibraryInfoCommanderImpl @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Set[Id[User]])] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])] = {
     db.readOnlyMaster { implicit s =>
       val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
-      val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
+      val libsWithMembershipIds = libsWithMembership.map(_._1.id.get).toSet
+
+      val libsFromOrganizations: Seq[Library] = if (includeOrgLibraries) {
+        for {
+          organizationId <- organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+          library <- libraryRepo.getLibrariesWithOpenWriteAccess(organizationId) if !libsWithMembershipIds.contains(library.id.get)
+        } yield library
+      } else Seq.empty
+
+      val libIds = libsWithMembershipIds ++ libsFromOrganizations.map(_.id.get)
       val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
-      libsWithMembership.map {
-        case (lib, membership) =>
-          (lib, membership, collaborators(lib.id.get))
-      }
+      libsWithMembership.map { case (lib, membership) => (lib, Some(membership), collaborators(lib.id.get)) } ++
+        libsFromOrganizations.map { lib => (lib, None, collaborators(lib.id.get)) }
     }
   }
 
@@ -585,7 +596,9 @@ class LibraryInfoCommanderImpl @Inject() (
               modifiedAt = lib.updatedAt,
               path = info.path,
               kind = lib.kind,
-              org = info.org)
+              org = info.org,
+              orgMemberAccess = lib.organizationMemberAccess
+            )
         }.seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -686,7 +699,8 @@ class LibraryInfoCommanderImpl @Inject() (
         membership = None, // not needed
         path = path,
         modifiedAt = lib.updatedAt,
-        org = orgInfoOpt)
+        org = orgInfoOpt,
+        orgMemberAccess = lib.organizationMemberAccess)
       (info, viewerMem, subscriptions)
     }
   }
@@ -710,11 +724,12 @@ class LibraryInfoCommanderImpl @Inject() (
       collaborators = LibraryCardInfo.chooseCollaborators(collaborators),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
-      membership = membershipOpt.map(LibraryMembershipInfo.fromMembership),
+      membership = membershipOpt.map(lib.getMembershipInfo),
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,
-      org = basicOrg
+      org = basicOrg,
+      orgMemberAccess = lib.organizationMemberAccess
     )
   }
 

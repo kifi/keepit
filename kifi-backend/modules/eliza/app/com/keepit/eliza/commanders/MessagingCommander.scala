@@ -14,11 +14,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ NonUserKinds }
+import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
 import scala.util.Try
 
@@ -108,11 +108,15 @@ class MessagingCommander @Inject() (
           (message.externalId, message.createdAt)
         }.toMap
 
-        val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set()).map(NonUserParticipant.toBasicNonUser)
+        val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set())
+          .map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))).toSeq
+
+        val basicUsers = thread.participants.map(_.allUsers).getOrElse(Set())
+          .map(u => BasicUserLikeEntity(userId2BasicUser(u))).toSeq
 
         ElizaThreadInfo(
           externalId = thread.externalId,
-          participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
+          participants = basicUsers ++ nonUsers,
           digest = lastMessage.messageText,
           lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
           messageCount = messagesByThread(thread.id.get).length,
@@ -335,6 +339,7 @@ class MessagingCommander @Inject() (
     val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1.seconds) // todo: remove await
     val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
+      .map(nu => BasicUserLikeEntity(nu))
 
     val messageWithBasicUser = MessageWithBasicUser(
       message.externalId,
@@ -345,11 +350,11 @@ class MessagingCommander @Inject() (
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
       message.from match {
-        case MessageSender.User(id) => Some(id2BasicUser(id))
-        case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+        case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
+        case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
         case _ => None
       },
-      participantSet.toSeq.map(id2BasicUser(_)) ++ basicNonUserParticipants
+      participantSet.toSeq.map(u => BasicUserLikeEntity(id2BasicUser(u))) ++ basicNonUserParticipants
     )
 
     // send message through websockets immediately
@@ -375,7 +380,11 @@ class MessagingCommander @Inject() (
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map { ta => id2BasicUser(ta.userId) } ++ basicNonUserParticipants)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(
+      participants = threadActivity.map { ta =>
+        BasicUserLikeEntity(id2BasicUser(ta.userId))
+      } ++ basicNonUserParticipants
+    )
 
     val usersToNotify = from match {
       case MessageSender.User(id) => thread.allParticipantsExcept(id)
@@ -517,7 +526,7 @@ class MessagingCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markRead(userId, thread.id.get, message)
     }
-    messagingAnalytics.clearedNotification(userId, message, thread, context)
+    messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
 
     val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
     val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
@@ -630,19 +639,27 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients)
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
+    val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
       shoebox.hasOrganizationMembership(oid, userId).flatMap {
-        case true => shoebox.getOrganizationMembers(oid)
-        case false => Future.successful(Set.empty[Id[User]])
+        case true =>
+          //ignoring case of multiple org ids in the same chat, just picking the last one
+          moreContext += ("org_chat", true)
+          moreContext += ("org_id", oid.id)
+          shoebox.getOrganizationMembers(oid)
+        case false =>
+          Future.successful(Set.empty[Id[User]])
       }
     }).map(_.flatten)
+
+    val context = moreContext.addExistingContext(initContext).build
 
     val resFut = for {
       userRecipients <- userRecipientsFuture

@@ -120,19 +120,22 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           }
         }
 
-        val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session =>
-          basicUserRepo.loadAll(inviteeUserIds.toSet)
-        }
-
         contactsByEmailAddressFut map { contactsByEmail =>
-          val addMembers = inviteeUserIds.map { userId =>
+          val (allInviteeUserIds, nonUserContactsByEmail) = contactsByEmail.foldLeft((inviteeUserIds, Map.empty[EmailAddress, RichContact])) {
+            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isDefined => (userIds + contact.userId.get, nonUserContactsByEmail)
+            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isEmpty => (userIds, nonUserContactsByEmail + (email -> contact))
+          }
+
+          val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(allInviteeUserIds) }
+
+          val addMembers = allInviteeUserIds.map { userId =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), message = message)
             val inviteeInfo: Either[BasicUser, RichContact] = Left(basicUserByUserId(userId))
             (orgInvite, inviteeInfo)
           }
-          val addByEmail = inviteeAddresses.map { emailAddress =>
+          val addByEmail = nonUserContactsByEmail.keys.map { emailAddress =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(emailAddress), message = message)
-            val inviteeInfo: Either[BasicUser, RichContact] = Right(contactsByEmail(emailAddress))
+            val inviteeInfo: Either[BasicUser, RichContact] = Right(nonUserContactsByEmail(emailAddress))
             (orgInvite, inviteeInfo)
           }
           val invitesAndInviteeInfos = addMembers ++ addByEmail
@@ -420,7 +423,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         val nonMembers = db.readOnlyMaster { implicit session =>
           val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
           val fakes = userCommander.get().getAllFakeUsers()
-          users.filter(id => !members.exists(_.userId == id) && !fakes.contains(id))
+          val isRequesterAdmin = userExperimentRepo.hasExperiment(userId, UserExperimentType.ADMIN)
+          users.filter(id => !members.exists(_.userId == id) && (!fakes.contains(id) || isRequesterAdmin))
         }
 
         val uniqueEmailsWithName = contacts.groupBy(_.email.address.toLowerCase).map {

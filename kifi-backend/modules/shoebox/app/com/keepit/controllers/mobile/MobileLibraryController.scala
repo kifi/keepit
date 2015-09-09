@@ -26,7 +26,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.keepit.common.core._
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -58,6 +58,7 @@ class MobileLibraryController @Inject() (
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
   val libraryCommander: LibraryCommander,
+  val libraryMembershipCommander: LibraryMembershipCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -193,7 +194,7 @@ class MobileLibraryController @Inject() (
 
       val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
-      val accessStr = membershipOpt.map(_.access).getOrElse("none")
+      val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
       val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
@@ -222,7 +223,7 @@ class MobileLibraryController @Inject() (
 
             val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
-            val accessStr = membershipOpt.map(_.access).getOrElse("none")
+            val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
             val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
@@ -310,7 +311,7 @@ class MobileLibraryController @Inject() (
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
       val invites = lib._2.unzip._1
-      val highestInvite = invites.sorted.last
+      val highestInvite = invites.maxBy(_.access)
       (highestInvite, lib._1)
     }.toSeq
 
@@ -438,7 +439,7 @@ class MobileLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val res = libraryCommander.joinLibrary(request.userId, libId)
+        val res = libraryMembershipCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) => sendFailResponse(fail)
           case Right((lib, _)) =>
@@ -446,6 +447,25 @@ class MobileLibraryController @Inject() (
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)))
         }
     }
+  }
+
+  def joinLibraries() = UserAction(parse.tolerantJson) { request =>
+    val libIds = request.body.as[Seq[PublicId[Library]]]
+    val results: Seq[(PublicId[Library], Either[LibraryFail, LibraryMembershipInfo])] = libIds.map { pubId =>
+      Library.decodePublicId(pubId) match {
+        case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
+        case Success(libId) =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
+            case Left(libFail) => (pubId, Left(libFail))
+            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+          }
+      }
+    }
+    val errorsJson = results.collect { case (id, Left(fail)) => Json.obj("id" -> id.id, "error" -> fail.message) }
+    val successesJson = results.collect { case (id, Right(membership)) => Json.obj("id" -> id.id, "membership" -> membership) }
+
+    Ok(Json.obj("errors" -> errorsJson, "successes" -> successesJson))
   }
 
   def declineLibrary(pubId: PublicId[Library]) = UserAction { request =>
@@ -466,7 +486,7 @@ class MobileLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryCommander.leaveLibrary(id, request.userId) match {
+        libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => sendFailResponse(fail)
           case Right(_) => Ok(JsString("success"))
         }
@@ -594,13 +614,17 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
+  }
+
   def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
     request match {
       case req: UserRequest[_] => {
         if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
         else Library.decodePublicId(pubId) match {
           case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
-          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+          case Success(libraryId) => libraryMembershipCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
         }
       }
       case _ => Future.successful(Forbidden)
@@ -630,11 +654,11 @@ class MobileLibraryController @Inject() (
         val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
           case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
           case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }

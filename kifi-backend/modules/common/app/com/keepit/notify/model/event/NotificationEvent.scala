@@ -1,7 +1,7 @@
 package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
-import com.keepit.model.{Organization, Library, Keep, User}
+import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
@@ -240,6 +240,7 @@ object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFoll
 case class NewMessage(
   recipient: Recipient,
   time: DateTime,
+  from: Recipient,
   messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
   messageId: Long // same here
 ) extends NotificationEvent {
@@ -255,10 +256,11 @@ object NewMessage extends NotificationKind[NewMessage] {
 
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
-      (__ \ "time").format[DateTime] and
-      (__ \ "messageThreadId").format[Long] and
-      (__ \ "messageId").format[Long]
-    )(NewMessage.apply, unlift(NewMessage.unapply))
+    (__ \ "time").format[DateTime] and
+    (__ \ "from").format[Recipient] and
+    (__ \ "messageThreadId").format[Long] and
+    (__ \ "messageId").format[Long]
+  )(NewMessage.apply, unlift(NewMessage.unapply))
 
   override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
 
@@ -508,3 +510,28 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
 }
 
+case class LegacyNotification(
+  recipient: Recipient,
+  time: DateTime,
+  json: JsValue,
+  uriId: Option[Id[NormalizedURI]]
+) extends NotificationEvent {
+
+  type N = LegacyNotification
+  val kind = LegacyNotification
+
+}
+
+
+object LegacyNotification extends NonGroupingNotificationKind[LegacyNotification] {
+
+  override val name: String = "legacy"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "json").format[JsValue] and
+    (__ \ "uriId").formatNullable[Id[NormalizedURI]]
+  )(LegacyNotification.apply, unlift(LegacyNotification.unapply))
+
+}

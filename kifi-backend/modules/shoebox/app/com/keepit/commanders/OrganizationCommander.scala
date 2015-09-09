@@ -1,23 +1,24 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.cache.TransactionalCache
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.images.RawImageInfo
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments.{ PlanManagementCommander, PaidPlan }
 
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
@@ -60,7 +61,8 @@ class OrganizationCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     handleCommander: HandleCommander,
     planManagementCommander: PlanManagementCommander,
-    basicOrganizationIdCache: BasicOrganizationIdCache) extends OrganizationCommander with Logging {
+    basicOrganizationIdCache: BasicOrganizationIdCache,
+    implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session =>
@@ -89,7 +91,7 @@ class OrganizationCommanderImpl @Inject() (
     val description = org.description
 
     val ownerId = userRepo.get(org.ownerId).externalId
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
+    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
     BasicOrganization(
       orgId = Organization.publicId(orgId),
@@ -122,7 +124,7 @@ class OrganizationCommanderImpl @Inject() (
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = orgMembershipRepo.countByOrgId(orgId)
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).map(_.imagePath)
+    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
@@ -213,21 +215,20 @@ class OrganizationCommanderImpl @Inject() (
 
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
     Try {
-      db.readWrite { implicit session =>
-        getValidationError(request) match {
-          case Some(fail) =>
-            Left(fail)
-          case None =>
+      db.readOnlyMaster { implicit session => getValidationError(request) } match {
+        case Some(fail) =>
+          Left(fail)
+        case None =>
+          val org = db.readWrite { implicit session =>
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
-            val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse {
-              throw OrganizationFail.HANDLE_UNAVAILABLE
-            }
+            val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when thing sare solidified
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-            Right(OrganizationCreateResponse(request, org))
-        }
+            org
+          }
+          Right(OrganizationCreateResponse(request, org))
       }
     } match {
       case Success(Left(fail)) => Left(fail)
@@ -271,9 +272,11 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse] = {
-    db.readWrite { implicit session =>
-      getValidationError(request) match {
-        case None =>
+    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
+    validationError match {
+      case Some(orgFail) => Left(orgFail)
+      case None =>
+        val libsToReturn = db.readWrite { implicit session =>
           val org = orgRepo.get(request.orgId)
 
           val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
@@ -285,17 +288,24 @@ class OrganizationCommanderImpl @Inject() (
           val invites = orgInviteRepo.getAllByOrganization(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
-          libraryRepo.getBySpace(org.id.get, excludeState = None).foreach { lib =>
-            libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
-          }
-
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
           planManagementCommander.deactivatePaidAccountForOrganziation(org.id.get, session)
-          organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-          Right(OrganizationDeleteResponse(request))
-        case Some(orgFail) => Left(orgFail)
-      }
+
+          val requester = userRepo.get(request.requesterId)
+          organizationAnalytics.trackOrganizationEvent(org, requester, request)
+
+          val libsToReturn = libraryRepo.getBySpace(org.id.get, excludeState = None)
+          libsToReturn
+        }
+
+        // Modifying an org opens its own DB session. Do these separately from the rest of the logic
+        val returningLibsFut = Future {
+          libsToReturn.foreach { lib =>
+            libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
+          }
+        }
+        Right(OrganizationDeleteResponse(request, returningLibsFut))
     }
   }
 

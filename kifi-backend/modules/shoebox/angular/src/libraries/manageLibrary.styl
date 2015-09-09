@@ -64,10 +64,18 @@
     padding: 0
 
   .dialog-text
-    padding: 0 35px
+    padding: 0 35px 60px 35px
 
   .dialog-buttons
     justify-content: space-between
+    position: absolute
+    bottom: 1px
+    left: 1px
+    right: 1px
+    border-bottom-left-radius: 10px
+    border-bottom-right-radius: 10px
+    z-index: 1060
+    height: 40px
 
 .manage-lib-followers-info
   padding: 25px 115px
@@ -121,6 +129,7 @@ select.manage-lib-input
   width: 100%
   color: textBlackColor
   vertical-align: top
+  margin-bottom: 5px
   placeholder secondaryTextGray
 
   &:focus
@@ -173,15 +182,14 @@ select.manage-lib-input
   resize: none
 
 .manage-lib-create-visibility-wrapper
-  padding-top: 6px
+  padding-top: 10px
 
 .manage-lib-create-visibility-input-container
   display: inline-block
   vertical-align: top
   margin: 7px 20px 0 0
 
-.manage-lib-create-visiblity-description
-  margin-left: 10px
+.manage-lib-create-visibility-description
   color: secondaryTextGray
 
 .manage-lib-color
@@ -551,10 +559,10 @@ button.manage-lib-delete-button
     position: relative
     cursor: pointer
     padding: 0 6px
-    margin-left: 12px
     border-radius: 7px
     display: block
     width: 100%
+    margin-left: -5px
 
     &:hover
       background: #EEEEEE

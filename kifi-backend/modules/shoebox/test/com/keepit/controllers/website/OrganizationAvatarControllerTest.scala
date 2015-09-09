@@ -58,8 +58,6 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
 
           status(result) === OK
           Json.parse(contentAsString(result)) === Json.parse("""{"uploaded": "oa/26dbdc56d54dbc94830f7cfc85031481_50x50-15x23-200x200_cs.png"}""")
-
-          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize) must haveClass[Some[OrganizationAvatar]]
         }
       }
       "forbid a non-member from uploading an organization avatar" in {
@@ -73,7 +71,7 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
           val result = inject[OrganizationAvatarController].uploadAvatar(pubId, 15, 23, 50)(request)
 
           status(result) === FORBIDDEN
-          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).isEmpty === true
+          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).sourceFileHash.hash === "076fccc32247ae67bb75d48879230953" //the default
         }
       }
     }

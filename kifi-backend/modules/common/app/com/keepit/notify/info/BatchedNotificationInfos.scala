@@ -49,7 +49,7 @@ object NotificationInfoRequest {
 /**
  * Represents a wrapper of a function that requests a whole bunch of notification infos, then constructs a value.
  */
-case class RequestingNotificationInfos[A](requests: Seq[NotificationInfoRequest[_, _]])(val fn: BatchedNotificationInfos => A)
+case class RequestingNotificationInfos[+A](requests: Seq[NotificationInfoRequest[_, _]])(val fn: BatchedNotificationInfos => A)
 
 /**
  * The compiler cannot infer that a Seq of specific notification info should be existential using the Seq(...) method,

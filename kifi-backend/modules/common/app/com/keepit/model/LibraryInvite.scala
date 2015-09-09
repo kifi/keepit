@@ -75,10 +75,6 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'authToken).format[String] and
     (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
-
-  implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
-    def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
-  }
 }
 
 @json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: Long)

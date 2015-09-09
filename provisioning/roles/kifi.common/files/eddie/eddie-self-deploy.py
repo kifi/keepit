@@ -3,6 +3,8 @@
 #if version is ommited it falls back to a 'Version' tag on the instance and then 'latest'
 #'force' does not check if there is a deploy in progress already
 
+# possible TODO: update to boto3 and use EC2 IAM profile so access keys do not need to be hardcoded
+
 import boto.ec2
 import requests
 import os

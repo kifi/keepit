@@ -16,7 +16,7 @@ object AmplitudeClient {
   val killedProperties = Set("client", "clientBuild", "clientVersion",
     "device", "experiments", "extensionVersion", "kcid_6", "kcid_7", "kcid_8",
     "kcid_9", "kcid_10", "kcid_11", "os", "osVersion", "remoteAddress", "serviceInstance", "serviceZone",
-    "userId", "userSegment")
+    "userId", "userSegment", "libraryId", "keepId", "keep")
 
   private val killedEvents = Set("user_old_slider_sliderShown", "user_expanded_keeper", "user_used_kifi", "user_reco_action",
     "user_logged_in", "visitor_expanded_keeper", "visitor_reco_action", "visitor_viewed_notification",
@@ -39,7 +39,9 @@ object AmplitudeClient {
   val propertyRenames = Map(
     "kifiInstallationId" -> "installation_id",
     "userCreatedAt" -> "created_at",
-    "$email" -> "email"
+    "$email" -> "email",
+    "userOrgId" -> "orgId",
+    "eventOrgId" -> "orgId" // to prevent collisions when partitioning by userPropertyNames
   )
 
   // classifies properties with these names as "user properties"

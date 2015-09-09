@@ -4,6 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
+import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, FORCE_EDIT_LIBRARIES }
 import com.keepit.model._
 
 class LibraryAccessCommander @Inject() (
@@ -11,7 +13,42 @@ class LibraryAccessCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    orgMembershipCommander: OrganizationMembershipCommander,
     libraryInviteRepo: LibraryInviteRepo) {
+
+  def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
+    db.readOnlyReplica { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val libMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      def canDirectlyEditLibrary = libMembershipOpt.exists(_.canWrite)
+      def canIndirectlyEditLibrary = libMembershipOpt.isDefined && lib.organizationId.exists { orgId =>
+        orgMembershipCommander.getPermissionsHelper(orgId, Some(userId)).contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
+      }
+      canDirectlyEditLibrary || canIndirectlyEditLibrary
+    }
+  }
+
+  def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
+    val userCanModifyLibrary = canModifyLibrary(libId, userId)
+
+    val (canMoveFromSpace, canMoveToSpace) = db.readOnlyMaster { implicit session =>
+      val library = libraryRepo.get(libId)
+      val from: LibrarySpace = library.space
+      val canMoveFromSpace = from match {
+        case OrganizationSpace(fromOrg) =>
+          val fromPermissions = orgMembershipCommander.getPermissionsHelper(fromOrg, Some(userId))
+          fromPermissions.contains(FORCE_EDIT_LIBRARIES) || (userId == library.ownerId && fromPermissions.contains(REMOVE_LIBRARIES))
+        case UserSpace(fromUser) => userId == library.ownerId
+      }
+      val canMoveToSpace = to match {
+        case OrganizationSpace(toOrg) => orgMembershipCommander.getPermissions(toOrg, Some(userId)).contains(ADD_LIBRARIES)
+        case UserSpace(toUser) => toUser == library.ownerId
+      }
+      (canMoveFromSpace, canMoveToSpace)
+    }
+
+    userCanModifyLibrary && canMoveFromSpace && canMoveToSpace
+  }
 
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>

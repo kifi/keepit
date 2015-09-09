@@ -117,8 +117,9 @@ class HeimdalContextBuilder extends Logging {
   def ++=(moreData: Map[String, ContextData]): Unit = { data ++= moreData }
   def build: HeimdalContext = HeimdalContext(data.toMap)
 
-  def addExistingContext(context: HeimdalContext): Unit = {
+  def addExistingContext(context: HeimdalContext): HeimdalContextBuilder = {
     this ++= context.data
+    this
   }
 
   def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyInstanceInfo): Unit = {

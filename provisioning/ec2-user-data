@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#
+# This is to be set as the EC2 user-data value. It can/should be run
+# automatically by a clean Ubuntu AMI, thus eliminating the need to manually
+# create new AMIs
+#
+# This will allow spot instances that get terminated/started automatically to
+# provision themselves and deploy whatever service they are configured for (via
+# tags)
+#
+
+set -e # fail on first error
+
+src="ansible.tar.bz2"
+dest="/opt/ansible-$(date +%Y%m%d-%H%M)"
+tar="${dest}.tar.bz2"
+
+sudo apt-get update && apt-get -yq install python2.7 python-pip
+pip install boto3
+python -c "import boto3;boto3.client('s3').download_file('fortytwo-ansible-builds','$src','$tar')"
+mkdir -p $dest
+tar xvjf $tar -C $dest
+cd $dest && bash ./scripts/ec2-self-provision

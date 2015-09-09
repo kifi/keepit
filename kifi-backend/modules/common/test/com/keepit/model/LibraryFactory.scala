@@ -35,7 +35,14 @@ object LibraryFactory {
     def withSlug(slug: String) = this.copy(library = library.copy(slug = LibrarySlug(slug)))
     def withColor(color: String): PartialLibrary = withColor(LibraryColor(color))
     def withColor(color: LibraryColor) = this.copy(library = library.copy(color = Some(color)))
-    def withKind(kind: LibraryKind) = this.copy(library = library.copy(kind = kind))
+    def withKind(kind: LibraryKind) = kind match {
+      case LibraryKind.SYSTEM_MAIN => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.DISCOVERABLE))
+      case LibraryKind.SYSTEM_SECRET => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_SECRET, visibility = LibraryVisibility.SECRET))
+      case LibraryKind.SYSTEM_GUIDE => ???
+      case LibraryKind.SYSTEM_PERSONA => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_PERSONA, visibility = LibraryVisibility.SECRET))
+      case LibraryKind.SYSTEM_READ_IT_LATER => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.SECRET))
+      case LibraryKind.USER_CREATED => this.copy(library = library.copy(kind = LibraryKind.USER_CREATED))
+    }
     def withState(state: State[Library]) = this.copy(library = library.copy(state = state))
     def withVisibility(viz: LibraryVisibility) = this.copy(library = library.copy(visibility = viz))
     def secret() = this.copy(library = library.copy(visibility = SECRET))
@@ -45,6 +52,7 @@ object LibraryFactory {
     def withLastKept() = this.copy(library = library.copy(lastKept = Some(currentDateTime)))
     def withOrganizationIdOpt(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
     def withOrganization(org: Organization) = this.copy(library = library.copy(organizationId = Some(org.id.get), visibility = LibraryVisibility.ORGANIZATION))
+    def withOrgMemberCollaborativePermission() = this.copy(library = library.copy(organizationMemberAccess = Some(LibraryAccess.READ_WRITE)))
 
     def withFollowers(users: Seq[User]) = this.copy(followers = users)
     def withCollaborators(users: Seq[User]) = this.copy(collaborators = users)

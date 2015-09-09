@@ -77,6 +77,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
                   "ownerId":"${user.externalId}",
                   "handle":"${org.handle.value}",
                   "name":"${org.name}",
+                  "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
                   "members": [
                     {
                       "id":"${user.externalId}",
