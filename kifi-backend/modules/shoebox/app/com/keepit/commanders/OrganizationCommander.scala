@@ -117,7 +117,6 @@ class OrganizationCommanderImpl @Inject() (
     val orgName = org.name
     val description = org.description
     val site = org.site
-
     val ownerId = userRepo.get(org.ownerId).externalId
 
     val memberIds = orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)

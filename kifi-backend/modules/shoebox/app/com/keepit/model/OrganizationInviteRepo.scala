@@ -19,6 +19,7 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrganizationAndDecision(organizationId: Id[Organization], decision: InvitationDecision, offset: Offset, limit: Limit, includeAnonymous: Boolean, excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Seq[OrganizationInvite]
   def getAllByOrgIdAndDecisions(organizationId: Id[Organization], decision: Set[InvitationDecision], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
   def getAllByUserId(userId: Id[User], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite]
+  def getByInviteeIdAndDecision(inviteeId: Id[User], decision: InvitationDecision, excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
@@ -149,6 +150,10 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def getAllByUserId(userId: Id[User], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite] = {
     excludeState.map(state => getAllByUserIdWithExcludeCompiled(userId, state).list.toSet).getOrElse(getAllByUserIdCompiled(userId).list.toSet)
+  }
+
+  def getByInviteeIdAndDecision(inviteeId: Id[User], decision: InvitationDecision, excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite] = {
+    rows.filter(row => row.userId === inviteeId && row.decision === decision && row.state =!= excludeState.orNull).list.toSet
   }
 
   def getByOrganizationAndDecisionWithExcludeStateCompiled = Compiled { (orgId: Column[Id[Organization]], decision: Column[InvitationDecision], offset: ConstColumn[Long], limit: ConstColumn[Long], includeAnonymous: ConstColumn[Boolean], excludeState: Column[State[OrganizationInvite]]) =>

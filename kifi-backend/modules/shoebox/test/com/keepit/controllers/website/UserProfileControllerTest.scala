@@ -174,7 +174,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
     "get profile" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, user4, user5, lib1, user5lib, org1) = db.readWrite { implicit session =>
+        val (user1, user2, user3, user4, user5, lib1, user5lib, org1, org2) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
@@ -182,6 +182,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
 
           val org = OrganizationFactory.organization().withName("America").withOwner(user1).saved
+          val org2 = OrganizationFactory.organization().withName("Canada").withOwner(user5).withInvitedUsers(Seq(user1)).saved
 
           inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           connect(user1 -> user2,
@@ -207,7 +208,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           keeps(3).map(_.withLibrary(user1lib)).saved
           keep().withLibrary(user3lib).saved
 
-          (user1, user2, user3, user4, user5, user1lib, user5lib, org)
+          (user1, user2, user3, user4, user5, user1lib, user5lib, org, org2)
         }
         db.readOnlyMaster { implicit s =>
           val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
@@ -252,132 +253,37 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         val anonViewer = getProfile(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
-        contentAsJson(anonViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries": 1,
-              "numFollowedLibraries": 1,
-              "numCollabLibraries":0,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 2,
-              "biography": "First Prez yo!",
-              "numTags":0,
-              "orgs": [
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
-                  "numMembers":1,
-                  "numLibraries":1,
-                  "members": [
-                   {
-                     "id":"${user1.externalId.id}",
-                      "firstName":"George",
-                      "lastName":"Washington",
-                      "pictureName":"pic1.jpg",
-                      "username": "GDubs"
-                    }
-                  ]
-                }
-              ]
-            }
-          """)
+        val res1 = contentAsJson(anonViewer)
+        (res1 \ "id").as[ExternalId[User]] === user1.externalId
+        (res1 \ "firstName").as[String] === "George"
+        (res1 \ "numKeeps").as[Int] === 5
+
+        implicit val orgInfoReads = OrganizationInfo.testReads
+
+        val validatedOrgs = (res1 \ "orgs").validate[Seq[OrganizationInfo]]
+        validatedOrgs.isSuccess === true
+        val org1Response = validatedOrgs.get.head
+        org1Response.orgId === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
+        org1Response.members.exists(_.externalId == user1.externalId) === true
+
+        val validatedPendingOrgs = (res1 \ "pendingOrgs").validate[Seq[OrganizationInfo]]
+        validatedPendingOrgs.isSuccess === true
+        validatedPendingOrgs.get.length === 1
 
         //seeing a profile of my own
         val selfViewer = getProfile(Some(user1), user1.username)
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
         val res2 = contentAsJson(selfViewer)
-        res2 === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries": 4,
-              "numFollowedLibraries": 2,
-              "numCollabLibraries": 0,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 3,
-              "numInvitedLibraries": 1,
-              "biography": "First Prez yo!",
-              "numTags":0,
-              "orgs": [
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
-                  "members": [
-                    {
-                      "id":"${user1.externalId.id}",
-                      "firstName":"George",
-                      "lastName":"Washington",
-                      "pictureName":"pic1.jpg",
-                      "username":
-                      "GDubs"
-                    }
-                  ],
-                  "numMembers":1,
-                  "numLibraries":1
-                }
-              ]
-            }
-          """)
+        (res2 \ "numLibraries").as[Int] === 4
+        (res2 \ "numInvitedLibraries").as[Int] === 1
 
         //seeing a profile from another user (friend)
         val friendViewer = getProfile(Some(user2), user1.username)
         status(friendViewer) must equalTo(OK)
         contentType(friendViewer) must beSome("application/json")
         val res3 = contentAsJson(friendViewer)
-        res3 === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "isFriend": true,
-              "numLibraries": 2,
-              "numFollowedLibraries": 1,
-              "numCollabLibraries":1,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 3,
-              "biography": "First Prez yo!",
-              "numTags":0,
-              "orgs": [
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}", "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg",
-                  "members": [
-                    {
-                      "id":"${user1.externalId.id}",
-                      "firstName":"George",
-                      "lastName":"Washington",
-                      "pictureName":"pic1.jpg",
-                      "username": "GDubs"
-                    }
-                  ],
-                  "numMembers":1,
-                  "numLibraries":1
-                }
-              ]
-            }
-          """)
+        (res3 \ "isFriend").as[Boolean] === true
       }
     }
 

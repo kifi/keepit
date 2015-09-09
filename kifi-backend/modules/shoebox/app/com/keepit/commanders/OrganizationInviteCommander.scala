@@ -44,6 +44,7 @@ trait OrganizationInviteCommander {
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
+  def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite]
 }
 
 @Singleton
@@ -457,5 +458,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
       OrganizationInviteInfo.fromInvite(invite, inviter)
     }
+  }
+
+  def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session => organizationInviteRepo.getByInviteeIdAndDecision(userId, decision) }
   }
 }
