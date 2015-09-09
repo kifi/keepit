@@ -51,15 +51,11 @@ class EventContextHelperImpl @Inject() (
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
     val membersFut = shoebox.getOrganizationMembers(orgId)
-    val messageCountFut = membersFut.flatMap { members =>
-      if (members.size > 1) eliza.getTotalMessageCountForGroup(members)
-      else Future.successful(0)
-    }
+
     val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
     for {
       shoeboxValues <- shoeboxValuesFut
       members <- membersFut
-      messageCount <- messageCountFut
       userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
       Seq(
@@ -67,8 +63,7 @@ class EventContextHelperImpl @Inject() (
         ("orgLibrariesCreated", ContextDoubleData(shoeboxValues.libraryCount)),
         ("orgKeepCount", ContextDoubleData(shoeboxValues.keepCount)),
         ("orgInviteCount", ContextDoubleData(shoeboxValues.inviteCount)),
-        ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount)),
-        ("orgMessageCount", ContextDoubleData(messageCount))
+        ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount))
       ) ++ userWithMostClickedKeeps.map(userId => Seq(("overallKeepViews", ContextStringData(userId.toString)))).getOrElse(Seq.empty[(String, ContextData)])
     }
   }
