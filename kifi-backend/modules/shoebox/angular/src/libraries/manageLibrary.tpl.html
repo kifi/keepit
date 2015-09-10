@@ -36,24 +36,10 @@
           <div class="manage-lib-input-wrapper" ng-if="me.orgs.length">
             <h3 class="manage-lib-heading">Location</h3>
             <div class="manage-lib-input-area">
-              <div class="manage-lib-org-selector" >
-                <div 
-                  class="manage-lib-org-selector-org" 
-                  ng-click="unsetOrg()"
-                  ng-class="{'selected': !libraryProps.selectedOrgId}"
-                >
-                  <img ng-src="{{ me|pic:100 }}" />
-                  <h1>{{ me|name }}</h1>
-                </div>
-                <div
-                  class="manage-lib-org-selector-org"
-                  ng-repeat="org in me.orgs"
-                  ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
-                  ng-click="setOrg(org.id)"
-                >
-                  <img ng-src="{{ org|pic:100 }}" />
-                  <h1>{{org.name}}</h1>
-                </div>
+              <div
+                kf-org-selector
+                library-props="libraryProps"
+              >
               </div>
             </div>
           </div>
