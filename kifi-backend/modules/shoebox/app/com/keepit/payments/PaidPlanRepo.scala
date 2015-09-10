@@ -7,6 +7,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model.Name
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import play.api.libs.json.Json
 
 @ImplementedBy(classOf[PaidPlanRepoImpl])
 trait PaidPlanRepo extends Repo[PaidPlan] {
@@ -24,6 +25,10 @@ class PaidPlanRepoImpl @Inject() (
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
+  implicit val featuresColumnType = MappedColumnType.base[Set[PlanFeature], String](
+    { obj => Json.stringify(Json.toJson(obj)) },
+    { str => Json.parse(str).as[Set[PlanFeature]] }
+  )
 
   type RepoImpl = PaidPlanTable
   class PaidPlanTable(tag: Tag) extends RepoTable[PaidPlan](db, tag, "paid_plan") {
@@ -31,7 +36,8 @@ class PaidPlanRepoImpl @Inject() (
     def name = column[Name[PaidPlan]]("name", O.NotNull)
     def billingCycle = column[BillingCycle]("billing_cycle", O.NotNull)
     def pricePerCyclePerUser = column[DollarAmount]("price_per_user_per_cycle", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
+    def features = column[Set[PlanFeature]]("features", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, features) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
   }
 
   def table(tag: Tag) = new PaidPlanTable(tag)

@@ -106,7 +106,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                settingsConfiguration = PlanSettingsConfiguration.empty
               )))
             case None =>
               log.info(s"[PAC] $orgId: Creating Account")
@@ -115,7 +116,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                settingsConfiguration = PlanSettingsConfiguration.empty
               )))
           }
           maybeAccount.map { account =>
@@ -322,7 +324,8 @@ class PlanManagementCommanderImpl @Inject() (
       kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
       billingCycle = billingCycle,
-      pricePerCyclePerUser = price
+      pricePerCyclePerUser = price,
+      features = Set.empty //
     ))
   }
 

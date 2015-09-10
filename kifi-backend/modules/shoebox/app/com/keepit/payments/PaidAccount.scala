@@ -30,7 +30,8 @@ case class PaidAccount(
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
-    frozen: Boolean = false) extends ModelWithState[PaidAccount] {
+    frozen: Boolean = false,
+    settingsConfiguration: PlanSettingsConfiguration) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
