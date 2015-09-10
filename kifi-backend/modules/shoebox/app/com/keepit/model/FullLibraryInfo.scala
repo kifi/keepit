@@ -49,7 +49,7 @@ case class ExternalLibraryCreateRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[ExternalLibrarySpace] = None,
-  organizationMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 object ExternalLibraryCreateRequest {
   val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
@@ -79,7 +79,7 @@ case class LibraryCreateRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
-  organizationMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 case class ExternalLibraryModifyRequest(
   name: Option[String] = None,
@@ -91,7 +91,7 @@ case class ExternalLibraryModifyRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   externalSpace: Option[ExternalLibrarySpace] = None,
-  organizationMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 object ExternalLibraryModifyRequest {
   val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
@@ -120,7 +120,7 @@ case class LibraryModifyRequest(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
-  organizationMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,

@@ -131,7 +131,7 @@ class LibraryCommanderImpl @Inject() (
             val newListed = libCreateReq.listed.getOrElse(true)
             val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)
             val newInviteToCollab = libCreateReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
-            val newOrgMemberAccessOpt = orgIdOpt.map(_ => libCreateReq.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) // Paid feature?
+            val newOrgMemberAccessOpt = orgIdOpt.map(_ => libCreateReq.orgMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) // Paid feature?
 
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(targetSpace, validSlug) // there's gonna be a real library there, dump the alias
@@ -276,7 +276,7 @@ class LibraryCommanderImpl @Inject() (
     val newColor = modifyReq.color.orElse(library.color)
     val newInviteToCollab = modifyReq.whoCanInvite.orElse(library.whoCanInvite)
     val newOrgMemberAccessOpt = newOrgIdOpt match {
-      case Some(orgId) => Some(modifyReq.organizationMemberAccess orElse library.organizationMemberAccess getOrElse LibraryAccess.READ_WRITE)
+      case Some(orgId) => Some(modifyReq.orgMemberAccess orElse library.organizationMemberAccess getOrElse LibraryAccess.READ_WRITE)
       case None => library.organizationMemberAccess
     }
 
