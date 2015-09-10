@@ -68,7 +68,7 @@ class ExtLibraryController @Inject() (
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
-        val collabs = collaboratorsIds.map(basicUserById(_)).toSeq
+        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         val orgAvatarPath = lib.organizationId.map { orgId =>
           orgAvatarsById.get(orgId).map(_.imagePath).getOrElse(throw new Exception(s"No avatar for org of lib $lib"))
         }
@@ -78,7 +78,7 @@ class ExtLibraryController @Inject() (
           color = lib.color,
           visibility = lib.visibility,
           path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = (collaboratorsIds - lib.ownerId).nonEmpty,
+          hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = orgAvatarPath,
