@@ -178,9 +178,9 @@ class UserCommander @Inject() (
   }
 
   def updateUserBiography(userId: Id[User], biography: String): Unit = {
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 3) { implicit session =>
       val trimmed = biography.trim
-      if (trimmed != "") {
+      if (trimmed.nonEmpty) {
         userValueRepo.setValue(userId, UserValueName.USER_DESCRIPTION, trimmed)
       } else {
         userValueRepo.clearValue(userId, UserValueName.USER_DESCRIPTION)
