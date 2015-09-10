@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.eliza.commanders.NotificationMessagingCommander.NotificationResultsForPage
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
@@ -28,12 +29,12 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
 import scala.concurrent.Future
+import scala.util.{ Success, Failure }
 
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
   notificationDeliveryCommander: NotificationDeliveryCommander,
-  notificationCommander: NotificationCommander,
   notificationMessagingCommander: NotificationMessagingCommander,
   legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
@@ -76,10 +77,18 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> {
       case JsString(threadId) +: _ =>
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
-          case (thread, msgs) =>
-            val url = thread.url.getOrElse("") // needs to change when we have detached threads
-            SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+        legacyNotificationCheck.ifNotifExists(threadId) { notif =>
+          notificationMessagingCommander.getNotificationMessages(socket.userId, notif.id.get) map {
+            case (thread, msgs) =>
+              val url = thread.url.getOrElse("")
+              SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+          }
+        } {
+          basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
+            case (thread, msgs) =>
+              val url = thread.url.getOrElse("") // needs to change when we have detached threads
+              SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+          }
         }
     },
     "add_participants_to_thread" -> {
@@ -103,9 +112,14 @@ class SharedWsMessagingController @Inject() (
         }
     },
     "get_unread_notifications_count" -> { _ =>
-      val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-      val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-      socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmutedMessages + numUnreadUnmutedNotifications, numUnreadUnmutedMessages, numUnreadUnmutedNotifications))
+      val recipient = Recipient(socket.userId)
+      legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+        notificationMessagingCommander.sendUnreadNotifications(recipient)
+      } { recip =>
+        val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+        val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+        socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmutedMessages + numUnreadUnmutedNotifications, numUnreadUnmutedMessages, numUnreadUnmutedNotifications))
+      }
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
     // inbox notification/thread handlers
@@ -122,55 +136,100 @@ class SharedWsMessagingController @Inject() (
     },
     "get_latest_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.results.map(_.json), results.numTotal, results.numUnread))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getLatestNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_unread_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-        fut.foreach {
-          case (notices, numTotal) =>
-            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          fut.foreach {
+            case (notices, numTotal) =>
+              socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_unread_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getNotificationsWithNewEventsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val recipient = Recipient(socket.userId)
         legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
-          Future.successful(())
+          notificationMessagingCommander.getNotificationsForSentMessages(socket.userId, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         } { recip =>
           val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
           fut.foreach { notices =>
@@ -184,36 +243,65 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
+          notificationMessagingCommander.getNotificationsForSentMessagesBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_page_threads" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-        val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
-        fut.foreach {
-          case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recip =>
+          notificationMessagingCommander.getNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(NotificationResultsForPage(page, results)) =>
+              socket.channel.push(Json.arr(requestId.toLong, page, results.results.map(_.json), results.numTotal, results.numUnread))
+            case Failure(e) =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
+          fut.foreach {
+            case (nUriStr, notices, numTotal, numUnread) =>
+              socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnread))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_page_threads_before" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationDeliveryCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
-        }
-        fut.onFailure {
-          case _ =>
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+        val recipient = Recipient(socket.userId)
+        legacyNotificationCheck.ifElseUserExperiment(recipient) { recip =>
+          notificationMessagingCommander.getNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket)).andThen {
+            case Success(results) =>
+              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+            case Failure(_) => socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
+        } { recip =>
+          val fut = notificationDeliveryCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          fut.foreach { notices =>
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          }
+          fut.onFailure {
+            case _ =>
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "set_all_notifications_visited" -> {

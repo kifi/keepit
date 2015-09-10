@@ -324,7 +324,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
 
-  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = Future.successful(Right(url))
 
   def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
     val uri = allNormalizedURIs.values.find(_.url == url) getOrElse NormalizedURI.withHash(url).copy(id = Some(Id[NormalizedURI](url.hashCode)))
@@ -633,7 +633,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     })
   }
 
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = Future.successful(Map.empty)
 
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 
