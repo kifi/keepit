@@ -167,7 +167,7 @@ angular.module('kifi')
             orgMemberAccess: scope.library.orgMemberAccess,
             space: owner
           }, true).then(function (resp) {
-            libraryService.fetchLibraryInfos(true);
+            // libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
             newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
@@ -180,7 +180,6 @@ angular.module('kifi')
             if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
-
 
             if (!returnAction) {
               $location.url(newLibrary.url || newLibrary.path);

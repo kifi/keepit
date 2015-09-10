@@ -31,7 +31,7 @@ angular.module('kifi')
           currentPageOrigin: currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
-              _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership'));
+              _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership', 'orgMemberAccess'));
               library.subscriptions = data.subscriptions;
               library.path = data.library.path || data.library.url;
               library.followers = _.take(data.library.followers, 3);
