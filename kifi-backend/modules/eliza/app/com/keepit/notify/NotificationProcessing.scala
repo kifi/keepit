@@ -41,6 +41,7 @@ class NotificationProcessing @Inject() (
       ))
       val notif = notificationRepo.get(notifId)
       notificationRepo.save(notif.copy(lastEvent = event.time))
+      notificationRepo.get(notifId)
     }
   }
 
@@ -49,6 +50,7 @@ class NotificationProcessing @Inject() (
       val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
         kind = event.kind,
+        groupIdentifier = None,
         lastEvent = event.time
       ))
       notificationItemRepo.save(NotificationItem(
@@ -57,7 +59,7 @@ class NotificationProcessing @Inject() (
         event = event,
         eventTime = event.time
       ))
-      notif
+      notificationRepo.get(notif.id.get)
     }
   }
 
@@ -68,10 +70,10 @@ class NotificationProcessing @Inject() (
         db.readOnlyMaster { implicit session =>
           notificationRepo.getByGroupIdentifier(event.recipient, event.kind, identifier)
         } match {
-          case Some(notif) => saveToExistingNotification(notif.id.get, event)
+          case Some(notifGrouped) => saveToExistingNotification(notifGrouped.id.get, event)
           case None => createNewNotification(event)
         }
-      case None => {
+      case None =>
         db.readOnlyMaster { implicit session =>
           notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
         } match {
@@ -86,7 +88,6 @@ class NotificationProcessing @Inject() (
             }
           case _ => createNewNotification(event)
         }
-      }
     }
     val items = db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notif.id.get)

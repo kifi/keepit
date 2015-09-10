@@ -33,8 +33,8 @@ case class Notification(
     recipient: Recipient,
     lastChecked: Option[DateTime] = None,
     kind: NKind,
-    groupIdentifier: Option[String] = None,
-    lastEvent: DateTime = currentDateTime,
+    groupIdentifier: Option[String],
+    lastEvent: DateTime,
     disabled: Boolean = false,
     externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
 
