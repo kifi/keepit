@@ -86,7 +86,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "path" -> "/morgan/baby",
                 "hasCollaborators" -> false,
                 "subscribedToUpdates" -> false,
-                "collaborators" -> Seq.empty[BasicUser],
+                "collaborators" -> Seq(basicUserRepo.load(user1.id.get)),
                 "membership" -> Json.obj(
                   "access" -> LibraryAccess.OWNER,
                   "listed" -> true,
@@ -102,7 +102,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "path" -> "/michael/darkknight",
                 "hasCollaborators" -> true,
                 "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
+                "collaborators" -> Seq(basicUserRepo.load(user2.id.get), basicUserRepo.load(user1.id.get)),
                 "membership" -> Json.obj(
                   "access" -> LibraryAccess.READ_WRITE,
                   "listed" -> true,
@@ -116,7 +116,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                 "color" -> LibraryColor.SKY_BLUE,
                 "visibility" -> "organization",
                 "path" -> "/braff/robbers",
-                "hasCollaborators" -> true,
+                "hasCollaborators" -> false,
                 "subscribedToUpdates" -> false,
                 "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
                 "orgAvatar" -> "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
