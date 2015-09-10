@@ -49,7 +49,7 @@ object AmplitudeClient {
     "firstName", "lastName", "$email", "gender",
     "keeps", "kifiConnections", "privateKeeps", "publicKeeps", "socialConnections", "tags", "daysSinceLibraryCreated",
     "daysSinceUserJoined", "orgKeepCount", "orgMessageCount", "orgInviteCount", "orgLibrariesCreated", "orgLibrariesCollaborating",
-    "overallKeepViews", "orgId")
+    "overallKeepViews")
 
   // rename events with these names
   val simpleEventRenames: Map[String, String] = Map(
