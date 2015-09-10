@@ -39,6 +39,7 @@ class NotificationProcessing @Inject() (
         event = event,
         eventTime = event.time
       ))
+      log.info(s"[ELIZA DEBUG] Event time is ${event.time}")
       val notif = notificationRepo.get(notifId)
       notificationRepo.save(notif.copy(lastEvent = event.time))
     }
@@ -49,6 +50,7 @@ class NotificationProcessing @Inject() (
       val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
         kind = event.kind,
+        groupIdentifier = None,
         lastEvent = event.time
       ))
       notificationItemRepo.save(NotificationItem(
