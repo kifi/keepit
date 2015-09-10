@@ -91,10 +91,11 @@ class MobileOrganizationInviteController @Inject() (
     }
   }
 
-  def getPendingOrganizationsForUser(userExtId: ExternalId[User]) = UserAction { request =>
-    val userId = request.userId
-    val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(userId, InvitationDecision.PENDING).map(_.organizationId)
-    val pendingOrgInfos = orgCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt = None).values.toSeq
+  def getPendingOrganizationsForUser(extId: ExternalId[User]) = UserAction { request =>
+    val user = userCommander.getByExternalId(extId)
+    val viewerIdOpt = request.userIdOpt
+    val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
+    val pendingOrgInfos = orgCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt).values.toSeq
     Ok(Json.toJson(pendingOrgInfos))
   }
 }
