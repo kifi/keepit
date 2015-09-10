@@ -14,8 +14,8 @@ case class ProdStripeClientModule() extends StripeClientModule {
 
   @Singleton
   @Provides
-  def stripeClient(mode: Mode): StripeClient = {
-    new StripeClientImpl(mode)
+  def stripeClient(mode: Mode, ec: ExecutionContext): StripeClient = {
+    new StripeClientImpl(mode, ec)
   }
 
 }

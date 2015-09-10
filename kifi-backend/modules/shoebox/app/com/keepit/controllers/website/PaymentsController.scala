@@ -13,6 +13,7 @@ import com.kifi.macros.json
 import play.api.libs.json.{ Json, JsSuccess, JsError }
 
 import scala.util.{ Try, Success, Failure }
+import scala.concurrent.{ ExecutionContext, Future }
 
 import com.google.inject.{ Inject, Singleton }
 
@@ -26,7 +27,8 @@ class PaymentsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     planCommander: PlanManagementCommander,
     stripeClient: StripeClient,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   private val PLAN_MANAGEMENT_PERMISSION = OrganizationPermission.EDIT_ORGANIZATION
 
@@ -48,16 +50,17 @@ class PaymentsController @Inject() (
     }
   }
 
-  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request =>
+  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case Some(token) => {
-        val realToken = stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}")
-        val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-        val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution)
-        planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution)
-        Ok
+        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").map { realToken =>
+          val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+          val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution)
+          planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution)
+          Ok
+        }
       }
-      case None => BadRequest(Json.obj("error" -> "token_missing"))
+      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
     }
   }
 
