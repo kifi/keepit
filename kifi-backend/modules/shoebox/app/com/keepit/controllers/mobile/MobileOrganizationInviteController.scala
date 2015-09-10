@@ -90,4 +90,11 @@ class MobileOrganizationInviteController @Inject() (
       case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
   }
+
+  def getPendingOrganizationsForUser(userExtId: ExternalId[User]) = UserAction { request =>
+    val userId = request.userId
+    val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(userId, InvitationDecision.PENDING).map(_.organizationId)
+    val pendingOrgInfos = orgCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt = None).values.toSeq
+    Ok(Json.toJson(pendingOrgInfos))
+  }
 }
