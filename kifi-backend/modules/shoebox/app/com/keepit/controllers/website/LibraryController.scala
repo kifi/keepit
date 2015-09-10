@@ -92,7 +92,8 @@ class LibraryController @Inject() (
             listed = externalCreateRequest.listed,
             whoCanInvite = externalCreateRequest.whoCanInvite,
             subscriptions = externalCreateRequest.subscriptions,
-            space = space
+            space = space,
+            orgMemberAccess = externalCreateRequest.orgMemberAccess
           )
         }
 
@@ -129,7 +130,8 @@ class LibraryController @Inject() (
         listed = externalLibraryModifyRequest.listed,
         whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
         subscriptions = externalLibraryModifyRequest.subscriptions,
-        space = space
+        space = space,
+        orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess
       )
     }
 
