@@ -125,7 +125,10 @@ class NotificationJsonFormat @Inject() (
         case info: LegacyNotificationInfo =>
           val (json, uriId) = toRawNotification(items.head)
           notificationJsonMaker.makeOne((json, notif.unread, uriId), includeUriSummary = true).map(_.obj).map { json =>
-            NotificationWithJson(notif, items, json)
+            NotificationWithJson(notif, items, json ++ Json.obj(
+              "id" -> items.head.externalId,
+              "thread" -> notif.externalId
+            ))
           }
         case info: MessageNotificationInfo =>
           threadInfo(notifWithInfo).map { json =>
