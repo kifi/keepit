@@ -59,8 +59,8 @@ case class Notification(
  */
 class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
 
-  require(items.forall(_.kind == notification.kind))
-  require(relevantItem.eventTime == notification.lastEvent)
+  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
+  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
 
   lazy val relevantItem = items.maxBy(_.eventTime)
 
