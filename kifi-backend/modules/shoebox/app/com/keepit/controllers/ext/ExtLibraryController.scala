@@ -78,7 +78,7 @@ class ExtLibraryController @Inject() (
           color = lib.color,
           visibility = lib.visibility,
           path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = (collaboratorsIds - lib.ownerId).nonEmpty,
+          hasCollaborators = collabs.nonEmpty,
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = orgAvatarPath,
