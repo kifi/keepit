@@ -7,11 +7,13 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
-      $scope: { 
-        libraryProps: '='
+      scope: { 
+        libraryProps: '=',
+        library: '='
       },
       link: function($scope) {
         $scope.me = profileService.me;
+        $scope.space = $scope.space || {}
 
         $scope.unsetOrg = function() {
           $scope.libraryProps.selectedOrgId = undefined;
@@ -27,6 +29,10 @@ angular.module('kifi')
             return org.id === orgId;
           })[0];
           onChangeSpace();
+        };
+
+        $scope.spaceIsOrg = function (space) {
+          return !('firstName' in (space || {}));
         };
 
         var onChangeSpace = function () {

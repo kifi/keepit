@@ -60,6 +60,10 @@ angular.module('kifi')
         var widgetLibraries = [];
         var libraryNameSearch = null;
 
+        // Initialize library
+        scope.libraryProps = {};
+        scope.newLibrary = {visibility: "published"};
+
 
         //
         // Internal methods.
@@ -275,7 +279,6 @@ angular.module('kifi')
 
           scope.search = {};
           scope.showCreate = false;
-          scope.newLibrary = {};
           scope.$error = {};
 
           libraryList = widget.find('.library-select-list');
