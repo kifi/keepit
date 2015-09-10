@@ -2,9 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryVisibilitySelector', [
-  '$rootScope',
-  function ($rootScope) {
+.directive('kfLibraryVisibilitySelector',
+  function () {
     return {
       restrict: 'A',
       replace: true,
@@ -31,4 +30,4 @@ angular.module('kifi')
       }
     };
   }
-]);
+);
