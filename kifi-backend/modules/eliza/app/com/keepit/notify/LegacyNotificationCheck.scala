@@ -66,6 +66,13 @@ class LegacyNotificationCheck @Inject() (
     notifOpt.fold(doElse) { notif => doIfExists(notif) }
   }
 
+  def ifNotifExistsReturn[A](potentialNotifId: String)(doIfExists: Notification => A)(doElse: => A): A = {
+    val notifOpt = db.readOnlyMaster { implicit session =>
+      ExternalId.asOpt[Notification](potentialNotifId).flatMap { id => notificationRepo.getOpt(id) }
+    }
+    notifOpt.fold(doElse) { notif => doIfExists(notif) }
+  }
+
   def ifNotifItemExists(potentialItemId: String)(doIfExists: (Notification, NotificationItem) => Unit)(doElse: => Unit): Unit = {
     val notifItemOpt = db.readOnlyMaster { implicit session =>
       ExternalId.asOpt[NotificationItem](potentialItemId).flatMap { id =>

@@ -143,6 +143,14 @@ class NotificationCommander @Inject() (
 
   }
 
+  def getNotifForMessageThread(userId: Id[User], messageThreadId: Id[MessageThread]): Option[Notification] = {
+    db.readOnlyMaster { implicit session =>
+      userThreadRepo.getUserThread(userId, messageThreadId).notificationId.map { id =>
+        notificationRepo.get(id)
+      }
+    }
+  }
+
   /**
    * Gets the message thread that is potentially associated with a notification. This should only return a message thread
    * if the notification kind is of [[com.keepit.notify.model.event.NewMessage]], as that is the only kind associated with

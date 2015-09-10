@@ -15,8 +15,9 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.notify.{ LegacyNotificationCheck }
-import com.keepit.notify.model.UserRecipient
+import com.keepit.notify.model.event.NewMessage
+import com.keepit.notify.{ NotificationProcessing, LegacyNotificationCheck }
+import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
@@ -38,7 +39,9 @@ class NotificationDeliveryCommander @Inject() (
     pushNotifier: MobilePushNotifier,
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
+    notificationCommander: NotificationCommander,
     emailCommander: ElizaEmailCommander,
+    notificationProcessing: NotificationProcessing,
     legacyNotificationCheck: LegacyNotificationCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
@@ -151,8 +154,14 @@ class NotificationDeliveryCommander @Inject() (
     })
   }
 
-  def notifyMessage(userId: Id[User], threadExtId: ExternalId[MessageThread], message: MessageWithBasicUser): Unit =
-    sendToUser(userId, Json.arr("message", threadExtId.id, message))
+  def notifyMessage(userId: Id[User], thread: MessageThread, message: MessageWithBasicUser): Unit =
+    legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip =>
+      notificationCommander.getNotifForMessageThread(userId, thread.id.get).foreach { notif =>
+        sendToUser(userId, Json.arr("message", notif.externalId, message))
+      }
+    } { recip =>
+      sendToUser(userId, Json.arr("message", thread.externalId.id, message))
+    }
 
   def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[Message], nUrl: String, creationDate: DateTime, unreadMessages: Int, unreadNotifications: Int): Unit = {
     sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, msgExtId.id))
@@ -344,7 +353,17 @@ class NotificationDeliveryCommander @Inject() (
         (userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(true)), userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(false)))
       }
 
-      notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
+      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip =>
+        notificationProcessing.processNewEvent(NewMessage(
+          recipient = recip,
+          time = currentDateTime,
+          from = message.from.asRecipient.get,
+          messageThreadId = thread.id.get.id,
+          messageId = message.id.get.id
+        ))
+      } { recip =>
+        notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
+      }
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
 
       if (!muted) {
@@ -358,6 +377,7 @@ class NotificationDeliveryCommander @Inject() (
         val notification = MessageThreadPushNotification(thread.externalId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
+
     }
 
     //This is mostly for testing and monitoring
