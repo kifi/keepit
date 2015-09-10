@@ -97,16 +97,6 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
-  function decorateOpenCollaborationCandidates(libraries) {
-    // Add a property that the keep_box_lib template can use later on
-    // to determine whether a lib is allowed in open collaboration
-    libraries.forEach(function (l) {
-      if (isOpenCollaborationCandidate(l)) {
-        l.isOpenCollaborationCandidate = true;
-      }
-    });
-  }
-
   function isOpenCollaborationCandidate(library) {
     var isOrgLibrary = !!library.orgAvatar;
 
@@ -122,9 +112,7 @@ k.keepBox = k.keepBox || (function () {
 
   function show($parent, trigger, guided, libraries, organizations, me, posting) {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
-    decorateOpenCollaborationCandidates(libraries);
     var params = partitionLibs(libraries);
-
     params.socialPosting = posting;
 
     decorateLocationRecentLibraryCount(libraries, me, organizations);
@@ -1298,18 +1286,30 @@ k.keepBox = k.keepBox || (function () {
 
   function setExtraInfo(lib) {
     function smartlyListCollaboratorNames(collabs) {
-      var names = 'Me'; //max 15 characters
-      while (names.length < 15 && collabs.length > 0) {
+      var names = [ 'Me' ]; // max 15 characters
+      var charCount = 0;
+
+      while (charCount < 15 && collabs.length > 0) {
         var collab = collabs.shift();
-        names = names + ', ' + collab.firstName;
+        charCount += (collab.firstName.length + 2); // 2 for space and comma
+        names.push(collab.firstName);
       }
+
       if (collabs.length > 1) {
-        names = names + ', ' + collabs.length + ' others';
+        names.push(collabs.length + ' others');
       } else if (collabs.length === 1) {
-        names = names + ', ' + collabs[0].firstName;
+        names.push(collabs[0].firstName);
       }
-      return names;
+
+      return names.join(', ');
     }
+
+    // Add a property that the keep_box_lib template can use later on
+    // to determine whether a lib is allowed in open collaboration
+    if (isOpenCollaborationCandidate(lib)) {
+      lib.isOpenCollaborationCandidate = true;
+    }
+
     if (lib.system) {
       lib.extraInfo = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
     } else if (lib.hasCollaborators) {
