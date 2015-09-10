@@ -140,7 +140,7 @@ class SharedWsMessagingController @Inject() (
         legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
           notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, needsPageImages(socket)).andThen {
             case Success(results) =>
-              socket.channel.push(Json.arr(requestId.toLong, results.map(_.json)))
+              socket.channel.push(Json.arr(requestId.toLong, results.results.map(_.json), results.numTotal, results.numUnread))
             case Failure(e) =>
               socket.channel.push(Json.arr("server_error", requestId.toLong))
           }
@@ -275,8 +275,8 @@ class SharedWsMessagingController @Inject() (
         } { recip =>
           val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
           fut.foreach {
-            case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-              socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
+            case (nUriStr, notices, numTotal, numUnread) =>
+              socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnread))
           }
           fut.onFailure {
             case _ =>

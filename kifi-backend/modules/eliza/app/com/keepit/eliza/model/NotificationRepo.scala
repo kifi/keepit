@@ -16,7 +16,9 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
 
-  def getUnreadEnabledNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
+  def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int
+
+  def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
 
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
 
@@ -86,7 +88,15 @@ class NotificationRepoImpl @Inject() (
     q.firstOption
   }
 
-  def getUnreadEnabledNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
+  def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int = {
+    val unread = for (
+      row <- rows if row.recipient === recipient && row.hasNewEvent
+    ) yield row
+    val unreadCount = unread.length
+    unreadCount.run
+  }
+
+  def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
       row <- rows if row.recipient === recipient && row.unread
     ) yield row

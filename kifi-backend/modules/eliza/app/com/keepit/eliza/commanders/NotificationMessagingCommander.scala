@@ -3,7 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.eliza.commanders.NotificationMessagingCommander.{ SubsetNotificationResults, FullNotificationResults, NotificationResultsForPage }
+import com.keepit.eliza.commanders.NotificationMessagingCommander.{ NotificationResults, SubsetNotificationResults, FullNotificationResults, NotificationResultsForPage }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
@@ -85,6 +85,9 @@ class NotificationMessagingCommander @Inject() (
       webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
       if (unread) {
         messagingAnalytics.clearedNotification(userId, ExternalId[Message](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
+      }
+      val notifs = db.readOnlyMaster { implicit session =>
+        notificationRepo.all()
       }
       sendUnreadNotificationsWith(notif, Recipient(userId))
     }
@@ -208,12 +211,12 @@ class NotificationMessagingCommander @Inject() (
       userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
     }
     notificationCommander.backfillLegacyNotificationsFor(userId, previous)
-    val sentNotifs = db.readOnlyReplica { implicit session =>
+    val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEvents(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
     }
   }
@@ -224,29 +227,39 @@ class NotificationMessagingCommander @Inject() (
       userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
     }
     notificationCommander.backfillLegacyNotificationsFor(userId, previous)
-    val sentNotifs = db.readOnlyReplica { implicit session =>
+    val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEventsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
     }
   }
 
-  def getLatestNotifications(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+  def getLatestNotifications(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
     val recipient = Recipient(userId)
     val previous = db.readOnlyReplica { implicit session =>
       userThreadRepo.getLatestRawNotifications(userId, howMany, None)
     }
     notificationCommander.backfillLegacyNotificationsFor(userId, previous)
-    val sentNotifs = db.readOnlyReplica { implicit session =>
+    val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotifications(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
-      Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+    notificationInfoGenerator.generateInfo(latestNotifs).flatMap { infos =>
+      val finalNotifsF = Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+      finalNotifsF.map { finalNotifs =>
+        if (latestNotifs.length < howMany) {
+          FullNotificationResults(finalNotifs)
+        } else {
+          val (numTotal, numUnread) = db.readOnlyReplica { implicit session =>
+            (notificationRepo.getNotificationsWithNewEventsCount(recipient), notificationRepo.getUnreadNotificationsCount(recipient))
+          }
+          SubsetNotificationResults(finalNotifs, numTotal, numUnread)
+        }
+      }
     }
   }
 
@@ -256,12 +269,12 @@ class NotificationMessagingCommander @Inject() (
       userThreadRepo.getRawNotificationsBefore(userId, time, howMany, None)
     }
     notificationCommander.backfillLegacyNotificationsFor(userId, previous)
-    val sentNotifs = db.readOnlyReplica { implicit session =>
+    val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotificationsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(sentNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(latestNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
     }
   }
@@ -271,7 +284,7 @@ class NotificationMessagingCommander @Inject() (
 object NotificationMessagingCommander {
 
   class NotificationResults(val results: Seq[NotificationWithJson]) {
-    def numTotal = results.size
+    def numTotal = results.count(_.notification.hasNewEvent)
     def numUnread = results.count(_.notification.unread)
   }
 
