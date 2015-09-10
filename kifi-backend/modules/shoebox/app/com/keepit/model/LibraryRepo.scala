@@ -236,7 +236,8 @@ class LibraryRepoImpl @Inject() (
   def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library] = {
     val collaborativePermissions = LibraryAccess.collaborativePermissions
     val whyCantScalaTypeInfer: LibraryVisibility = LibraryVisibility.SECRET
-    val q = for { r <- rows if r.orgId === organizationId && r.state =!= excludeState.orNull && r.visibility =!= whyCantScalaTypeInfer && r.orgMemberAccess.inSet(collaborativePermissions) } yield r
+    // Treat null orgMemberAccess as READ_WRITE. Revisit if this is no longer true in the future.
+    val q = for { r <- rows if r.orgId === organizationId && r.state =!= excludeState.orNull && r.visibility =!= whyCantScalaTypeInfer && (r.orgMemberAccess.inSet(collaborativePermissions) || r.orgMemberAccess.isEmpty) } yield r
     q.list
   }
 
