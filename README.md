@@ -1,4 +1,4 @@
-Sub mobules
+Sub modules
 ===========
 We use git sub modules to integrate the marketing site. For more info about git submobules see:
 https://chrisjean.com/2009/04/20/git-submodules-adding-using-removing-and-updating/
