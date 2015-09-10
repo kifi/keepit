@@ -20,6 +20,7 @@ import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.json.Json
+import com.keepit.common.time._
 
 import scala.collection.parallel.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
@@ -404,7 +405,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val libIds = memberOrOpenOrgLibIds ++ libsInvitedToInOrgs.map(_.id.get).toSet
 
-      val nonMemberLibraries = libsInvitedToInOrgs ++ libsFromOrganizations
+      val nonMemberLibraries = (libsInvitedToInOrgs ++ libsFromOrganizations).sortBy(l => l.lastKept).reverse
 
       val collaborators: Map[Id[Library], Set[Id[User]]] = libraryMembershipRepo.getCollaboratorsByLibrary(libIds)
 
