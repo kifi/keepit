@@ -28,6 +28,7 @@ import com.keepit.cortex.{ CortexServiceClientModule }
 import com.keepit.graph.{ GraphServiceClientModule }
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
+import com.keepit.payments.ProdStripeClientModule
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
@@ -73,6 +74,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
+  val stripeClientModule = ProdStripeClientModule()
 
   val dbSequencingModule = ShoeboxDbSequencingModule()
 

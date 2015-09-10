@@ -40,7 +40,8 @@ object ApplicationBuild extends Build {
     "com.typesafe.slick" %% "slick-testkit" % slickVersion exclude("play", "*"),
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" % "mango_2.11" % "0.12"
+    "org.feijoas" % "mango_2.11" % "0.12",
+    "com.stripe" % "stripe-java" % "1.34.0"
   )
 
   lazy val heimdalDependencies = Seq(
