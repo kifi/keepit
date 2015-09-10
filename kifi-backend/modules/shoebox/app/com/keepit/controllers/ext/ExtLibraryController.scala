@@ -55,8 +55,8 @@ class ExtLibraryController @Inject() (
 
   val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
 
-  def getLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
-    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
+  def getLibraries(allowOpenCollab: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, allowOpenCollab)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
@@ -68,7 +68,7 @@ class ExtLibraryController @Inject() (
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
-        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
+        val collabs = collaboratorsIds.map(basicUserById(_)).toSeq
         val orgAvatarPath = lib.organizationId.map { orgId =>
           orgAvatarsById.get(orgId).map(_.imagePath).getOrElse(throw new Exception(s"No avatar for org of lib $lib"))
         }

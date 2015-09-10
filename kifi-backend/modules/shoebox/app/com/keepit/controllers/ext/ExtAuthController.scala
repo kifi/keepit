@@ -51,85 +51,87 @@ class ExtAuthController @Inject() (
   def start = UserAction(parse.tolerantJson) { implicit request =>
     val userId = request.userId
     val user = request.user
-    if (user.state != UserStates.ACTIVE) {
-      throw new RuntimeException(s"User $userId (${user.firstName} ${user.lastName}) is not active, denying access.")
-    }
 
-    val json = request.body
-    val (userAgent, version, installationIdOpt) =
-      (UserAgent(request.headers.get("user-agent").getOrElse("")),
-        KifiExtVersion((json \ "version").as[String]),
-        (json \ "installation").asOpt[String].flatMap { id =>
-          val kiId = ExternalId.asOpt[KifiInstallation](id)
-          if (kiId.isEmpty) {
-            // They sent an invalid id. Bug on client side?
-            airbrake.notify(AirbrakeError(
-              method = Some(request.method.toUpperCase),
-              userId = Some(userId),
-              userName = Some(request.user.fullName),
-              url = Some(request.path),
-              message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
+    user.state match {
+      case UserStates.INACTIVE | UserStates.BLOCKED =>
+        Redirect("/logout") // This won't work when we stop blinding accepting redirects here
+      case _ =>
+        val json = request.body
+        val (userAgent, version, installationIdOpt) =
+          (UserAgent(request.headers.get("user-agent").getOrElse("")),
+            KifiExtVersion((json \ "version").as[String]),
+            (json \ "installation").asOpt[String].flatMap { id =>
+              val kiId = ExternalId.asOpt[KifiInstallation](id)
+              if (kiId.isEmpty) {
+                // They sent an invalid id. Bug on client side?
+                airbrake.notify(AirbrakeError(
+                  method = Some(request.method.toUpperCase),
+                  userId = Some(userId),
+                  userName = Some(request.user.fullName),
+                  url = Some(request.path),
+                  message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
+              }
+              kiId
+            })
+
+        val (libraries, organizations, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
+          val libraries = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
+          val orgIds = orgMembershipCommander.getAllOrganizationsForUser(userId)
+          val basicOrgs = orgCommander.getBasicOrganizations(orgIds.toSet).values.toSeq
+          val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
+            installationRepo.getOpt(userId, id)
+          } match {
+            case None =>
+              val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version, platform = KifiInstallationPlatform.Extension))
+              (inst, true, false)
+            case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
+              (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
+            case Some(install) =>
+              (installationRepo.save(install), false, false)
           }
-          kiId
-        })
-
-    val (libraries, organizations, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      val libraries = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
-      val orgIds = orgMembershipCommander.getAllOrganizationsForUser(userId)
-      val basicOrgs = orgCommander.getBasicOrganizations(orgIds.toSet).values.toSeq
-      val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
-        installationRepo.getOpt(userId, id)
-      } match {
-        case None =>
-          val inst = installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version, platform = KifiInstallationPlatform.Extension))
-          (inst, true, false)
-        case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
-          (installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE)), false, true)
-        case Some(install) =>
-          (installationRepo.save(install), false, false)
-      }
-      val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (libraries, basicOrgs, installation, urlPatterns, isInstall, isUpdate)
-    }
-
-    if (isUpdate || isInstall) {
-      SafeFuture {
-        if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(UserExperimentType.VISITED)) {
-          experimentCommander.addExperimentForUser(userId, UserExperimentType.VISITED)
+          val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
+          (libraries, basicOrgs, installation, urlPatterns, isInstall, isUpdate)
         }
 
-        val contextBuilder = heimdalContextBuilder()
-        contextBuilder.addRequestInfo(request)
-        contextBuilder += ("extensionVersion", installation.version.toString)
-        contextBuilder += ("kifiInstallationId", installation.id.get.toString)
+        if (isUpdate || isInstall) {
+          SafeFuture {
+            if (version >= KifiExtVersion(3, 3, 18) && !request.experiments.contains(UserExperimentType.VISITED)) {
+              experimentCommander.addExperimentForUser(userId, UserExperimentType.VISITED)
+            }
 
-        if (isInstall) {
-          contextBuilder += ("action", "installedExtension")
-          val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length }
-          contextBuilder += ("installation", installedExtensions)
-          heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
-          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
-        } else {
-          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.UPDATED_EXTENSION, installation.updatedAt))
+            val contextBuilder = heimdalContextBuilder()
+            contextBuilder.addRequestInfo(request)
+            contextBuilder += ("extensionVersion", installation.version.toString)
+            contextBuilder += ("kifiInstallationId", installation.id.get.toString)
+
+            if (isInstall) {
+              contextBuilder += ("action", "installedExtension")
+              val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length }
+              contextBuilder += ("installation", installedExtensions)
+              heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
+              heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
+            } else {
+              heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.UPDATED_EXTENSION, installation.updatedAt))
+            }
+
+            heimdal.setUserProperties(userId, "latestExtension" -> ContextStringData(installation.version.toString))
+          }
         }
 
-        heimdal.setUserProperties(userId, "latestExtension" -> ContextStringData(installation.version.toString))
-      }
+        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+        val encryptedIp: String = crypt.crypt(ipkey, ip).trim
+
+        Ok(Json.obj(
+          "user" -> BasicUser.fromUser(request.user),
+          "libraryIds" -> Seq(libraries._1.id.get, libraries._2.id.get).map(Library.publicId),
+          "orgs" -> organizations,
+          "installationId" -> installation.externalId.id,
+          "experiments" -> request.experiments.map(_.value),
+          "rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11
+          "patterns" -> urlPatterns,
+          "eip" -> encryptedIp
+        )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
     }
-
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val encryptedIp: String = crypt.crypt(ipkey, ip)
-
-    Ok(Json.obj(
-      "user" -> BasicUser.fromUser(request.user),
-      "libraryIds" -> Seq(libraries._1.id.get, libraries._2.id.get).map(Library.publicId),
-      "orgs" -> organizations,
-      "installationId" -> installation.externalId.id,
-      "experiments" -> request.experiments.map(_.value),
-      "rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11
-      "patterns" -> urlPatterns,
-      "eip" -> encryptedIp
-    )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   def jsTokenLogin(providerName: String) = MaybeUserAction(parse.json) { implicit request =>
