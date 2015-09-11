@@ -16,7 +16,7 @@ case class UserRecipient(id: Id[User], experimentEnabled: Option[Boolean] = None
   override def toString = id.toString
 
   override def equals(that: Any): Boolean = that match {
-    case UserRecipient(id, _) if id == this.id => true
+    case UserRecipient(thatId, _) if thatId == this.id => true
     case _ => false
   }
 }

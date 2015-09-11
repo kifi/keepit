@@ -28,7 +28,7 @@ class WsNotificationDelivery @Inject() (
     notificationInfoGenerator.generateInfo(Seq(notif)).flatMap { infos =>
       elizaNotificationInfo.basicJson(infos.head).map { notifJson =>
         legacyNotificationCheck.ifUserExperiment(recipient) {
-          case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson))
+          case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson.json))
           case _ =>
         }
       }

@@ -164,9 +164,10 @@ angular.module('kifi')
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
             subscriptions: nonEmptySubscriptions,
+            orgMemberAccess: scope.library.orgMemberAccess,
             space: owner
           }, true).then(function (resp) {
-            libraryService.fetchLibraryInfos(true);
+            // libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
             newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
@@ -281,7 +282,8 @@ angular.module('kifi')
             'name': '',
             'description': '',
             'slug': '',
-            'visibility': 'published'
+            'visibility': 'published',
+            'orgMemberAccess': 'read_write'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
@@ -320,43 +322,6 @@ angular.module('kifi')
           scope.library.visibility = 'organization';
         }
 
-        scope.unsetOrg = function() {
-          scope.libraryProps.selectedOrgId = undefined;
-          scope.space.destination = scope.me;
-          onChangeSpace();
-        };
-
-        scope.setOrg = function(id) { 
-          // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-          var orgId = id || (scope.library.org || scope.me.orgs[0]).id;
-          scope.libraryProps.selectedOrgId = orgId;
-          scope.space.destination = scope.me.orgs.filter(function(org) {
-            return org.id === orgId;
-          })[0];
-          onChangeSpace();
-        };
-
-        var onChangeSpace = function () {
-          var currIsOrg = scope.spaceIsOrg(scope.space.current);
-          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
-
-          if (currIsOrg !== destIsOrg) {
-            if (currIsOrg) {
-              if (scope.library.visibility === 'organization') {
-                scope.library.visibility = 'secret';
-              }
-            } else {
-              if (scope.library.visibility === 'secret') {
-                scope.library.visibility = 'organization';
-              }
-            }
-          }
-
-          // Prevent non-org lib from having visibility === 'organization'
-          if (!destIsOrg && scope.library.visibility === 'organization') {
-            scope.library.visibility = 'secret';
-          }
-        };
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 

@@ -5,13 +5,13 @@ import com.keepit.common.JsObjectExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import com.keepit.eliza.commanders.{ NotificationCommander, NotificationJsonMaker }
+import com.keepit.eliza.commanders.{ MessageWithBasicUser, NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ NotificationCategory, NormalizedURI }
 import com.keepit.notify.info._
 import com.keepit.notify.model.{ EmailRecipient, UserRecipient, Recipient }
-import com.keepit.notify.model.event.LegacyNotification
+import com.keepit.notify.model.event.{ NewMessage, LegacyNotification }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -28,29 +28,86 @@ class NotificationJsonFormat @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     notificationJsonMaker: NotificationJsonMaker,
+    messageThreadRepo: MessageThreadRepo,
+    messageRepo: MessageRepo,
+    userThreadRepo: UserThreadRepo,
     roverServiceClient: RoverServiceClient,
     notificationCommander: NotificationCommander,
     implicit val s3ImageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext) {
 
-  def toRawNotification(item: NotificationItem): (JsValue, Option[Id[NormalizedURI]]) = {
+  private def toRawNotification(item: NotificationItem): (JsValue, Option[Id[NormalizedURI]]) = {
     item.event match {
       case legacy: LegacyNotification => (legacy.json, legacy.uriId)
       case _ => throw new IllegalArgumentException(s"Asked to make a raw notification out of $item, an incompatible item")
     }
   }
 
-  def resolveImage(image: NotificationImage): String = image match {
+  private def resolveImage(image: NotificationImage): String = image match {
     case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
     case PublicImage(url) => url
   }
 
-  def basicJson(notifWithInfo: NotificationWithInfo): Future[JsObject] = notifWithInfo match {
+  def threadInfo(notifWithInfo: NotificationWithInfo): Future[JsObject] = {
+    notifWithInfo match {
+      case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
+        val mostRecent = messages.maxBy(_.time)
+        messageInfo(notifWithInfo, mostRecent)
+    }
+  }
+
+  def messageInfo(notifWithInfo: NotificationWithInfo, messageNotif: NewMessage): Future[JsObject] = {
+    notifWithInfo match {
+      case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
+        val (message, messageThread, threadActivity, numMessages, numUnread) = db.readOnlyReplica { implicit session =>
+          val messageThreadId = Id[MessageThread](messageNotif.messageThreadId)
+          val (numMessages, numUnread) = messageRepo.getMessageCounts(messageThreadId, notif.lastChecked)
+          (messageRepo.get(Id[Message](messageNotif.messageId)),
+            messageThreadRepo.get(messageThreadId),
+            userThreadRepo.getThreadActivity(messageThreadId).toList, numMessages, numUnread)
+        }
+
+        val messageIds = items.map(item => (item, item.event)).collect {
+          case (i, event: NewMessage) => event.messageId -> i.externalId.id
+        }.toMap
+
+        val authorActivities = threadActivity.filter(_.lastActive.isDefined)
+        val originalAuthor = authorActivities.filter(_.started).zipWithIndex.head._2
+        val unseenAuthors = notif.lastChecked.fold(authorActivities.length) { checked =>
+          authorActivities.toList.count(_.lastActive.get.isAfter(checked))
+        }
+
+        for {
+          (sender, participants) <- getParticipants(notif)
+        } yield {
+          Json.obj(
+            "id" -> messageIds(messageNotif.messageId),
+            "time" -> messageNotif.time,
+            "thread" -> notif.externalId,
+            "text" -> message.messageText,
+            "url" -> messageThread.nUrl,
+            "title" -> messageThread.pageTitle,
+            "author" -> sender,
+            "locator" -> ("/messages/" + messageThread.externalId.id),
+            "unread" -> notif.unread,
+            "category" -> NotificationCategory.User.MESSAGE.category,
+            "firstAuthor" -> originalAuthor,
+            "authors" -> authorActivities.length,
+            "messages" -> numMessages,
+            "unreadAuthors" -> unseenAuthors,
+            "unreadMessages" -> numUnread,
+            "muted" -> notif.disabled
+          )
+        }
+    }
+  }
+
+  def basicJson(notifWithInfo: NotificationWithInfo): Future[NotificationWithJson] = notifWithInfo match {
     case NotificationWithInfo(notif, items, info) =>
       val relevantItem = notifWithInfo.relevantItem
       notifWithInfo.info match {
         case info: StandardNotificationInfo =>
-          Future.successful(Json.obj(
+          Future.successful(NotificationWithJson(notif, items, Json.obj(
             "id" -> relevantItem.externalId,
             "time" -> relevantItem.eventTime,
             "thread" -> notif.externalId,
@@ -64,14 +121,23 @@ class NotificationJsonFormat @Inject() (
             "isSticky" -> false,
             "image" -> resolveImage(info.image),
             "extra" -> info.extraJson
-          ))
+          )))
         case info: LegacyNotificationInfo =>
           val (json, uriId) = toRawNotification(items.head)
-          notificationJsonMaker.makeOne((json, notif.unread, uriId), includeUriSummary = true).map(_.obj)
+          notificationJsonMaker.makeOne((json, notif.unread, uriId), includeUriSummary = true).map(_.obj).map { json =>
+            NotificationWithJson(notif, items, json ++ Json.obj(
+              "id" -> items.head.externalId,
+              "thread" -> notif.externalId
+            ))
+          }
+        case info: MessageNotificationInfo =>
+          threadInfo(notifWithInfo).map { json =>
+            NotificationWithJson(notif, items, json)
+          }
       }
   }
 
-  def getUriSummary(notifId: Id[Notification]): Future[Option[RoverUriSummary]] = {
+  private def getUriSummary(notifId: Id[Notification]): Future[Option[RoverUriSummary]] = {
     val uriOpt = notificationCommander.getURI(notifId)
     uriOpt.map { uri =>
       roverServiceClient.getUriSummaryByUris(Set(uri)).map { uriMap =>
@@ -86,14 +152,14 @@ class NotificationJsonFormat @Inject() (
     }
   }
 
-  def getParticipants(notif: Notification): Future[(BasicUserLikeEntity, Set[BasicUserLikeEntity])] = {
+  private def getParticipants(notif: Notification): Future[(BasicUserLikeEntity, Set[BasicUserLikeEntity])] = {
     val participants = notificationCommander.getParticipants(notif)
     val userIds = participants.collect {
       case UserRecipient(userId, _) => userId
     }
 
     val userParticipantsF = shoeboxServiceClient.getBasicUsers(userIds.toSeq)
-      .map(_.values.map(u => BasicUserLikeEntity(u)))
+      .map(_.mapValues(u => BasicUserLikeEntity(u)))
 
     val otherParticipants = participants.collect {
       case EmailRecipient(address) =>
@@ -104,17 +170,23 @@ class NotificationJsonFormat @Inject() (
     for {
       userParticipants <- userParticipantsF
     } yield {
-      val participantsSet = userParticipants.toSet | otherParticipants
-      participantsSet.partition(_ == notif.recipient) match {
+      val participantsSet = userParticipants.values.toSet | otherParticipants
+      val recipientBasic = notif.recipient match {
+        case UserRecipient(userId, _) => userParticipants(userId)
+        case EmailRecipient(address) =>
+          val participant = NonUserEmailParticipant(address)
+          BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(participant))
+      }
+      participantsSet.partition(_ == recipientBasic) match {
         case (author, rest) =>
-          (author.head, rest)
+          (author.head, rest | author)
       }
     }
   }
 
   private val idealImageSize = ImageSize(65, 95) // todo figure out where these somewhat magic image size numbers are needed
 
-  def extendedJson(notifWithInfo: NotificationWithInfo, uriSummary: Boolean = false): Future[JsObject] = {
+  def extendedJson(notifWithInfo: NotificationWithInfo, uriSummary: Boolean = false): Future[NotificationWithJson] = {
     notifWithInfo match {
       case NotificationWithInfo(notif, items, info) =>
         val notifId = notif.id.get
@@ -157,8 +229,10 @@ class NotificationJsonFormat @Inject() (
               )))
           }
 
-          basicFormat ++ Json.obj("author" -> author) ++ unreadJson ++
+          val json = basicFormat.json ++ Json.obj("author" -> author) ++ unreadJson ++
             participantsJson ++ uriSummaryJson
+
+          NotificationWithJson(notif, items, json)
         }
     }
   }

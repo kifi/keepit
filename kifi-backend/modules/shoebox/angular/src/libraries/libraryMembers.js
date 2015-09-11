@@ -96,10 +96,14 @@ angular.module('kifi')
 
           // remove/decrement fields in library object based on oldAccess
           if (oldAccess === collabAccess) {
-            scope.library.numCollaborators -= 1;
+            if (scope.library.numCollaborators > 0) {
+              scope.library.numCollaborators -= 1;
+            }
             _.remove(scope.library.collaborators, {id: scope.selectedMember.id});
           } else if (oldAccess === followerAccess) {
-            scope.library.numFollowers -= 1;
+            if (scope.library.numCollaborators > 0) {
+              scope.library.numFollowers -= 1;
+            }
             _.remove(scope.library.followers, {id: scope.selectedMember.id});
           }
 

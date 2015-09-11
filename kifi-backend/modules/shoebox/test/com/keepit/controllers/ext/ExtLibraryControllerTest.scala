@@ -700,7 +700,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibraries(includeOrgLibraries = true)(request(routes.ExtLibraryController.getLibraries(includeOrgLibraries = true)))
+    controller.getLibraries(allowOpenCollab = true)(request(routes.ExtLibraryController.getLibraries(allowOpenCollab = true)))
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {

@@ -31,7 +31,7 @@ angular.module('kifi')
           currentPageOrigin: currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
-              _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership'));
+              _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership', 'orgMemberAccess'));
               library.subscriptions = data.subscriptions;
               library.path = data.library.path || data.library.url;
               library.followers = _.take(data.library.followers, 3);
@@ -95,7 +95,9 @@ angular.module('kifi')
         var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'handle');
         if (membership.access === 'read_write') {  // started collaborating
           if (oldMem && oldMem.access === 'read_only') {
-            lib.numFollowers--;
+            if (lib.numFollowers > 0) { // jshint ignore: line
+              lib.numFollowers--;
+            }
             _.remove(lib.followers, {id: profileService.me.id});
           }
           lib.numCollaborators++;
@@ -107,7 +109,9 @@ angular.module('kifi')
           }
         }
       } else {  // stopped following
-        lib.numFollowers--;
+        if (lib.numFollowers > 0) {
+          lib.numFollowers--;
+        }
         _.remove(lib.followers, {id: profileService.me.id});
       }
       scope.canWrite = membership && {owner: true, read_write: true}[membership.access] || false;

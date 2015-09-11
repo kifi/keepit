@@ -33,8 +33,8 @@ case class Notification(
     recipient: Recipient,
     lastChecked: Option[DateTime] = None,
     kind: NKind,
-    groupIdentifier: Option[String] = None,
-    lastEvent: DateTime = currentDateTime,
+    groupIdentifier: Option[String],
+    lastEvent: DateTime,
     disabled: Boolean = false,
     externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
 
@@ -59,8 +59,8 @@ case class Notification(
  */
 class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
 
-  require(items.forall(_.kind == notification.kind))
-  require(relevantItem.eventTime == notification.lastEvent)
+  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
+  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
 
   lazy val relevantItem = items.maxBy(_.eventTime)
 
@@ -85,6 +85,11 @@ case class NotificationWithInfo(
   override val notification: Notification,
   override val items: Set[NotificationItem], info: NotificationInfo)
     extends ExtendedNotification(notification, items)
+
+case class NotificationWithJson(
+  override val notification: Notification,
+  override val items: Set[NotificationItem],
+  json: JsObject) extends ExtendedNotification(notification, items)
 
 object Notification {
 

@@ -246,7 +246,7 @@ class MessagingAnalytics @Inject() (
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
     orgIdsByUserIdFut.foreach { orgIdsByUserId =>
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      contextBuilder += ("organizationId", commonOrgs.map(_.head.toString).toSeq)
+      contextBuilder += ("eventOrgId", commonOrgs.map(_.head.toString).toSeq)
     }
   }
 }

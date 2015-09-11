@@ -11,6 +11,7 @@ import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
 import com.keepit.eliza.model._
+import com.keepit.eliza.notify.WsTestBehavior
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.{ User, SocialUserInfo }
@@ -24,7 +25,7 @@ import play.api.mvc.WebSocket
 import play.api.test.Helpers._
 import com.keepit.common.time._
 
-class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions {
+class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions with WsTestBehavior {
 
   val modules = List(
     FakeElizaStoreModule(),
@@ -39,16 +40,6 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
   )
 
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)
-
-  def setupSocialUser(implicit injector: Injector): Unit = {
-    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.socialUserInfosByNetworkAndSocialId((FakeSecureSocial.FAKE_SOCIAL_ID, FakeSecureSocial.FAKE_NETWORK_TYPE)) = SocialUserInfo(
-      userId = Some(Id(1)),
-      fullName = FakeSecureSocial.FAKE_SOCIAL_USER.fullName,
-      socialId = FakeSecureSocial.FAKE_SOCIAL_ID,
-      networkType = FakeSecureSocial.FAKE_NETWORK_TYPE
-    )
-  }
 
   "SharedWsMessagingController" should {
 

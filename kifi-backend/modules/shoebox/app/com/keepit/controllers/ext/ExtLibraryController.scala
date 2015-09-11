@@ -55,8 +55,8 @@ class ExtLibraryController @Inject() (
 
   val defaultLibraryImageSize = ProcessedImageSize.Medium.idealSize
 
-  def getLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
-    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
+  def getLibraries(allowOpenCollab: Boolean) = UserAction { request =>
+    val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, allowOpenCollab)
     val basicUserById = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
       db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }

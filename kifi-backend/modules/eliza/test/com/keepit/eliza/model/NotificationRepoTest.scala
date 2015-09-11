@@ -24,6 +24,7 @@ class NotificationRepoTest extends Specification with ElizaTestInjector {
           notificationRepo.save(Notification(
             recipient = Recipient(Id[User](3)),
             kind = NewSocialConnection,
+            groupIdentifier = None,
             lastEvent = currentDateTime
           ))
         }
@@ -33,6 +34,7 @@ class NotificationRepoTest extends Specification with ElizaTestInjector {
           notificationRepo.save(Notification(
             recipient = Recipient(Id[User](4)),
             kind = NewSocialConnection,
+            groupIdentifier = None,
             lastEvent = currentDateTime
           ))
         }

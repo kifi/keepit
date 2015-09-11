@@ -708,10 +708,14 @@ angular.module('kifi')
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.membership) {
               if (lib.membership.access === 'read_only') {
-                lib.numFollowers--;
+                if (lib.numFollowers > 0) {
+                  lib.numFollowers--;
+                }
                 _.remove(lib.followers, {id: profileService.me.id});
               } else if (lib.membership.access === 'read_write') {
-                lib.numCollaborators--;
+                if (lib.numCollaborators > 0) {
+                  lib.numCollaborators--;
+                }
                 _.remove(lib.collaborators, {id: profileService.me.id});
               }
               lib.membership = undefined;

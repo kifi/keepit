@@ -60,6 +60,10 @@ angular.module('kifi')
         var widgetLibraries = [];
         var libraryNameSearch = null;
 
+        // Initialize library
+        scope.libraryProps = {};
+        scope.newLibrary = {visibility: 'published'};
+
 
         //
         // Internal methods.
@@ -275,7 +279,6 @@ angular.module('kifi')
 
           scope.search = {};
           scope.showCreate = false;
-          scope.newLibrary = {};
           scope.$error = {};
 
           libraryList = widget.find('.library-select-list');
@@ -421,8 +424,18 @@ angular.module('kifi')
           }
           scope.$error = {};
 
+          // Create an owner object that declares the type (user/org) for backend.
+          var owner;
+          // If the location is an org
+          if (scope.libraryProps.selectedOrgId) {
+            owner = {
+              org: scope.libraryProps.selectedOrgId
+            };
+          }
+
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
+          library.space = owner;
 
           libraryService.createLibrary(library, true).then(function (res) {
             libraryService.fetchLibraryInfos(true).then(function () {
