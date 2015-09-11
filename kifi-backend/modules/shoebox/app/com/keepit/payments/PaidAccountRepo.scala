@@ -44,8 +44,8 @@ class PaidAccountRepoImpl @Inject() (
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
-    def settingsConfig = column[Map[Name[PlanFeature], Setting]]("settings_configuration", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, settingsConfig) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def settingsByFeature = column[Map[Name[PlanFeature], Setting]]("settings_by_feature", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, settingsByFeature) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
