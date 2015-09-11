@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-ALTER TABLE paid_plan ADD COLUMN features NOT NULL;
+ALTER TABLE paid_plan ADD COLUMN features text NOT NULL;
 
 ALTER TABLE paid_account ADD COLUMN settings_by_feature text NOT NULL;
 

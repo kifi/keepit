@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.commanders.{OrganizationInviteCommander, LibraryCommander, OrganizationCommander}
+import com.keepit.commanders.{ OrganizationInviteCommander, LibraryCommander, OrganizationCommander }
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
@@ -41,11 +41,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     }
   }
 
-  val (org, owner, admin, member, paidPlan, paidAccount) = setup()
-
   "library creation permissions" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
+
+        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
 
         //
         // configure PaidFeature set and PaidFeatureSettings
@@ -72,51 +72,56 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
   "invite member permissions" should {
     "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
 
-      //
-      // configure PaidFeature set and PaidFeatureSettings
-      //
+        //
+        // configure PaidFeature set and PaidFeatureSettings
+        //
 
-      val invitees = UserFactory.users(3).saved
+        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
 
-      val orgInviteCommander = inject[OrganizationInviteCommander]
-      val ownerInviteRequest = OrganizationInviteSendRequest(org.id.get, owner.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(0).id.get))
-      val ownerInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(ownerInviteRequest), Duration(5, "seconds"))
-      ownerInviteResponse.isRight === true
+        val invitees = db.readWrite { implicit sessoin => UserFactory.users(3).saved }
 
-      val adminInviteRequest = OrganizationInviteSendRequest(org.id.get, admin.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(1).id.get))
-      val adminInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(adminInviteRequest), Duration(5, "seconds"))
-      adminInviteResponse.isRight === true
+        val orgInviteCommander = inject[OrganizationInviteCommander]
+        val ownerInviteRequest = OrganizationInviteSendRequest(org.id.get, owner.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(0).id.get))
+        val ownerInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(ownerInviteRequest), Duration(5, "seconds"))
+        ownerInviteResponse.isRight === true
 
-      val memberInviteRequest = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
-      val memberInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest), Duration(5, "seconds"))
-      memberInviteResponse.isRight === false
+        val adminInviteRequest = OrganizationInviteSendRequest(org.id.get, admin.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(1).id.get))
+        val adminInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(adminInviteRequest), Duration(5, "seconds"))
+        adminInviteResponse.isRight === true
+
+        val memberInviteRequest = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
+        val memberInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest), Duration(5, "seconds"))
+        memberInviteResponse.isRight === false
+      }
     }
   }
 
   "edit library permissions" should {
     "be configurable" in {
 
-      //
-      // configure PaidFeature set and PaidFeatureSettings
-      //
+      withDb(modules: _*) { implicit injector =>
 
-      val library = LibraryFactory.library().withOwner(owner).withOrganization(org).saved
+        //
+        // configure PaidFeature set and PaidFeatureSettings
+        //
 
-      val libraryCommander = inject[LibraryCommander]
+        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
 
-      val ownerModifyRequest = LibraryModifyRequest(name = Some("Elon's Main Library"))
-      val adminModifyRequest = LibraryModifyRequest(name = Some("Larry's Main Library"))
-      val memberModifyRequest = LibraryModifyRequest(name = Some("Sergey's Main Library"))
+        val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
 
-      libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest).isRight === true
-      libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest).isRight === true
-      libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest).isRight === false
+        val libraryCommander = inject[LibraryCommander]
+
+        val ownerModifyRequest = LibraryModifyRequest(name = Some("Elon's Main Library"))
+        val adminModifyRequest = LibraryModifyRequest(name = Some("Larry's Main Library"))
+        val memberModifyRequest = LibraryModifyRequest(name = Some("Sergey's Main Library"))
+
+        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest).isRight === true
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest).isRight === true
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest).isRight === false
+      }
     }
   }
-
-
-
-
 
 }

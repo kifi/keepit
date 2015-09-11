@@ -110,7 +110,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                settingsConfiguration = Map.empty
+                settingsByFeature = Map.empty
               )))
             case None =>
               log.info(s"[PAC] $orgId: Creating Account")
@@ -120,7 +120,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                settingsConfiguration = Map.empty
+                settingsByFeature = Map.empty
               )))
           }
           maybeAccount.map { account =>
@@ -497,14 +497,14 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getPlanFeatureSettings(orgId: Id[Organization]): Map[Name[PlanFeature], FeatureSetting] = {
-    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsConfiguration }
+    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsByFeature }
     Map.empty
   }
 
   def setPlanFeatureSettings(orgId: Id[Organization], settings: Map[PlanFeature, FeatureSetting]): Boolean = true
 
   def getPlanOrgPermissionSettings(orgId: Id[Organization]): BasePermissions = {
-    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsConfiguration }
+    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsByFeature }
     BasePermissions(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]])
   }
 

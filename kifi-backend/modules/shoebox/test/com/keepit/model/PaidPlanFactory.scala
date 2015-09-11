@@ -11,7 +11,7 @@ object PaidPlanFactory {
 
   def paidPlan(): PartialPaidPlan = {
     new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name(random(5)),
-      pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1)))
+      pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1), features = Set.empty))
   }
 
   def paidPlans(count: Int): Seq[PartialPaidPlan] = List.fill(count)(paidPlan())
