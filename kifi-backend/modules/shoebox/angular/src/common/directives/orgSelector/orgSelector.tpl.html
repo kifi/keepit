@@ -1,0 +1,19 @@
+<div class="org-selector" >
+  <div 
+    class="org-selector-org" 
+    ng-click="unsetOrg()"
+    ng-class="{'selected': !libraryProps.selectedOrgId}"
+  >
+    <img ng-src="{{ me|pic:100 }}" />
+    <h1>{{ me|name }}</h1>
+  </div>
+  <div
+    class="org-selector-org"
+    ng-repeat="org in me.orgs"
+    ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
+    ng-click="setOrg(org.id)"
+  >
+    <img ng-src="{{ org|pic:100 }}" />
+    <h1>{{org.name}}</h1>
+  </div>
+</div>
