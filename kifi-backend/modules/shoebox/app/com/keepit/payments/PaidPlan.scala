@@ -16,7 +16,7 @@ import javax.crypto.spec.IvParameterSpec
 
 import play.api.libs.json.Format
 
-import scala.util.Try
+import scala.util.{ Success, Failure, Try }
 
 case class BillingCycle(month: Int) extends AnyVal
 
@@ -62,6 +62,50 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
 
 object PaidPlanStates extends States[PaidPlan]
 
+sealed abstract class Setting(val value: String) {
+  override def toString = this.value
+}
+@json
+case class PermissionSetting(role: Option[OrganizationRole]) extends Setting(role.map(_.value).getOrElse("none"))
+
+object Setting {
+  implicit val format = Format(__.read[String].map(Setting(_)), new Writes[Setting] { def writes(o: Setting): JsValue = JsString(o.value) })
+
+  def apply(str: String): Setting = str match {
+    case str if Try(OrganizationRole(str)).isSuccess => PermissionSetting(Some(OrganizationRole(str)))
+    case "none" => PermissionSetting(None)
+    case _ => throw new Exception(s"called Setting.apply with an unsupported value $str")
+  }
+}
+
+case class FeatureSetting(settingsByFeature: Map[Name[PlanFeature], Setting])
+
+object FeatureSetting {
+
+  implicit val format = new Format[FeatureSetting] {
+    def writes(o: FeatureSetting): JsValue = JsObject(o.settingsByFeature.map { case (name, setting) => name.name -> JsString(setting.value) }.toSeq)
+    def reads(json: JsValue): JsResult[FeatureSetting] = {
+      val settingsByFeatureTry = Try(json.as[JsObject].fields.map {
+        case (name, setting) if PermissionsFeatureNames.ALL.contains(Name[PlanFeature](name)) =>
+          if (setting.as[String] == "none") Name[PlanFeature](name) -> PermissionSetting(role = None)
+          else Name[PlanFeature](name) -> PermissionSetting(Some(OrganizationRole(setting.as[String])))
+        case _ => throw new Exception(s"tried to read invalid json=$json as a FeatureSetting")
+      }.toMap)
+      settingsByFeatureTry match {
+        case Failure(errs) => JsError(errs.getStackTrace.toString)
+        case Success(settingsByFeature) => JsSuccess(FeatureSetting(settingsByFeature))
+      }
+    }
+  }
+
+  def toBasePermissions(settings: FeatureSetting): BasePermissions = {
+    val namesAndSettings = settings.settingsByFeature.toSet
+    val permissionsByRole = namesAndSettings.collect { case (name, setting: PermissionSetting) => setting.role -> PlanFeature.toPermission(name) }
+      .groupBy(_._1).map { case (role, rolesAndPermissions) => role -> rolesAndPermissions.map { _._2 } }
+    BasePermissions(permissionsByRole)
+  }
+}
+
 object PermissionsFeatureNames {
   val ADD_PUBLIC_LIBRARY = Name[PlanFeature]("public_library_creation")
   val INVITE_MEMBERS = Name[PlanFeature]("invite_members")
@@ -75,7 +119,7 @@ object PermissionsFeatureNames {
 }
 
 object PlanFeatureNames {
-  val ALL = PermissionsFeatureNames // add any other group names here
+  val ALL = PermissionsFeatureNames
 }
 
 trait PlanFeature {
@@ -83,19 +127,6 @@ trait PlanFeature {
   val editable: Boolean
   val options: Seq[Setting]
   val default: Setting
-
-  def toPermission(feature: PlanFeature): OrganizationPermission = {
-    feature.name match {
-      case PermissionsFeatureNames.ADD_PUBLIC_LIBRARY => OrganizationPermission.ADD_PUBLIC_LIBRARIES
-      case PermissionsFeatureNames.INVITE_MEMBERS => OrganizationPermission.INVITE_MEMBERS
-      case PermissionsFeatureNames.GROUP_MESSAGING => OrganizationPermission.GROUP_MESSAGING
-      case PermissionsFeatureNames.MOVE_LIBRARY => OrganizationPermission.MOVE_LIBRARY
-      case PermissionsFeatureNames.EXPORT_KEEPS => OrganizationPermission.EXPORT_KEEPS
-      case PermissionsFeatureNames.VIEW_MEMBERS => OrganizationPermission.VIEW_MEMBERS
-      case PermissionsFeatureNames.EDIT_LIBRARY => OrganizationPermission.FORCE_EDIT_LIBRARIES
-      case _ => throw new Exception(s"[PlanFeature] called PlanFeature.toPermission with no mapping from $feature to an organization permission")
-    }
-  }
 }
 
 case class PermissionsFeature(name: Name[PlanFeature], editable: Boolean, options: Seq[PermissionSetting], default: PermissionSetting) extends PlanFeature
@@ -109,9 +140,22 @@ object PermissionsFeature {
 }
 
 object PlanFeature {
+  def toPermission(name: Name[PlanFeature]): OrganizationPermission = {
+    name match {
+      case PermissionsFeatureNames.ADD_PUBLIC_LIBRARY => OrganizationPermission.ADD_PUBLIC_LIBRARIES
+      case PermissionsFeatureNames.INVITE_MEMBERS => OrganizationPermission.INVITE_MEMBERS
+      case PermissionsFeatureNames.GROUP_MESSAGING => OrganizationPermission.GROUP_MESSAGING
+      case PermissionsFeatureNames.MOVE_LIBRARY => OrganizationPermission.MOVE_LIBRARY
+      case PermissionsFeatureNames.EXPORT_KEEPS => OrganizationPermission.EXPORT_KEEPS
+      case PermissionsFeatureNames.VIEW_MEMBERS => OrganizationPermission.VIEW_MEMBERS
+      case PermissionsFeatureNames.EDIT_LIBRARY => OrganizationPermission.FORCE_EDIT_LIBRARIES
+      case _ => throw new Exception(s"[PlanFeature] called PlanFeature.toPermission with no mapping from $name to an organization permission")
+    }
+  }
+
   implicit val format = new Format[PlanFeature] {
     def writes(o: PlanFeature): JsValue = {
-      Json.obj("name" -> o.name.toString, "editable" -> o.editable, "options" -> o.options, "default" -> o.default)
+      Json.obj("name" -> o.name.toString, "editable" -> o.editable, "options" -> Json.toJson(o.options), "default" -> o.default.value)
     }
     def reads(json: JsValue): JsResult[PlanFeature] = {
       (json \ "name").as[Name[PlanFeature]](Name.format[PlanFeature]) match {

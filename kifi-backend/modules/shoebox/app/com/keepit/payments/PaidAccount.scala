@@ -2,7 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
-import com.keepit.model.{ Name, OrganizationRole, Organization, User }
+import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.BasicUser
 
@@ -45,46 +45,3 @@ case class PaidAccount(
 }
 
 object PaidAccountStates extends States[PaidAccount]
-
-sealed abstract class Setting(val value: String)
-@json
-case class PermissionSetting(role: Option[OrganizationRole]) extends Setting(role.map(_.value).getOrElse("none"))
-@json
-case class BinarySetting(toggle: Boolean) extends Setting(toggle.toString)
-
-object Setting {
-  implicit val format = Format(__.read[String].map(Setting(_)), new Writes[Setting] { def writes(o: Setting): JsValue = JsString(o.value) })
-
-  def apply(str: String): Setting = str match {
-    case str if Try(OrganizationRole(str)).isSuccess => PermissionSetting(Some(OrganizationRole(str)))
-    case "none" => PermissionSetting(None)
-    case _ => throw new Exception("called Setting.apply with an unsupported value")
-  }
-}
-
-case class FeatureSetting(name: Name[PlanFeature], setting: Setting)
-
-object FeatureSetting {
-
-  implicit val format: Format[FeatureSetting] = (
-    (__ \ 'name).format(Name.format[PlanFeature]) and
-    (__ \ 'setting).format[Setting]
-  )(FeatureSetting.apply, unlift(FeatureSetting.unapply))
-
-  def toSettingsByFeature(settings: Set[FeatureSetting]): Map[Name[PlanFeature], Setting] = {
-    settings.map { case config => config.name -> config.setting }.toMap
-  }
-
-  //  def toBasePermissions(settings: Set[FeatureSettingConfig]): BasePermissions = {
-  //    settings match {
-  //      case permissionSettings: Set[PermissionSettingConfig] => {
-  //        val settingsByFeature = permissionSettings.map {
-  //          case config => config.setting.role -> PlanFeature.toPermission(config.feature) // setting enabled, use specified setting for role
-  //          case config => config.feature.default.role -> PlanFeature.toPermission(config.feature) // setting disabled, use default setting for role
-  //        }.groupBy(_._1).map { case (role, roleAndPermissions) => role -> roleAndPermissions.map(_._2) }
-  //        BasePermissions(settingsByFeature)
-  //      }
-  //      case _ => throw new Exception("can't call .toBasePermissions ")
-  //    }
-  //  }
-}
