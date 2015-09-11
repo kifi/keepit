@@ -62,7 +62,7 @@ angular.module('kifi')
 
         // Initialize library
         scope.libraryProps = {};
-        scope.newLibrary = {visibility: "published"};
+        scope.newLibrary = {visibility: 'published'};
 
 
         //
@@ -435,7 +435,7 @@ angular.module('kifi')
 
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
-          library.space = owner
+          library.space = owner;
 
           libraryService.createLibrary(library, true).then(function (res) {
             libraryService.fetchLibraryInfos(true).then(function () {
