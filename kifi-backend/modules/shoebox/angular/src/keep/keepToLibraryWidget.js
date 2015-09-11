@@ -63,6 +63,7 @@ angular.module('kifi')
         // Initialize library
         scope.libraryProps = {};
         scope.newLibrary = {visibility: 'published'};
+        scope.space = {};
 
 
         //

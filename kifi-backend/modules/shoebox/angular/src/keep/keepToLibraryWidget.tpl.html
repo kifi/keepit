@@ -67,7 +67,12 @@
 
     <div class="keep-to-library-create-heading">Privacy</div>
     <div class="keep-to-library-create-visibility">
-      <div class="keep-to-library-create-visibility-switch" kf-library-visibility-selector library="newLibrary"></div>
+      <div 
+        class="keep-to-library-create-visibility-switch" 
+        kf-library-visibility-selector 
+        library="newLibrary"
+        space="space"
+      ></div>
     </div>
     <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
     <div class="keep-to-library-create-button-container">
