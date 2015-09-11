@@ -74,7 +74,7 @@ object Setting {
   def apply(str: String): Setting = str match {
     case str if Try(OrganizationRole(str)).isSuccess => PermissionSetting(Some(OrganizationRole(str)))
     case "none" => PermissionSetting(None)
-    case _ => throw new Exception(s"called Setting.apply with an unsupported value $str")
+    case _ => throw new IllegalArgumentException(s"called Setting.apply with an unsupported value $str")
   }
 }
 
@@ -89,7 +89,7 @@ object FeatureSetting {
         case (name, setting) if PermissionsFeatureNames.ALL.contains(Name[PlanFeature](name)) =>
           if (setting.as[String] == "none") Name[PlanFeature](name) -> PermissionSetting(role = None)
           else Name[PlanFeature](name) -> PermissionSetting(Some(OrganizationRole(setting.as[String])))
-        case _ => throw new Exception(s"tried to read invalid json=$json as a FeatureSetting")
+        case _ => throw new IllegalArgumentException(s"tried to read invalid json=$json as a FeatureSetting")
       }.toMap)
       settingsByFeatureTry match {
         case Failure(errs) => JsError(errs.getStackTrace.toString)
@@ -149,7 +149,7 @@ object PlanFeature {
       case PermissionsFeatureNames.EXPORT_KEEPS => OrganizationPermission.EXPORT_KEEPS
       case PermissionsFeatureNames.VIEW_MEMBERS => OrganizationPermission.VIEW_MEMBERS
       case PermissionsFeatureNames.EDIT_LIBRARY => OrganizationPermission.FORCE_EDIT_LIBRARIES
-      case _ => throw new Exception(s"[PlanFeature] called PlanFeature.toPermission with no mapping from $name to an organization permission")
+      case _ => throw new IllegalArgumentException(s"[PlanFeature] called PlanFeature.toPermission with no mapping from $name to an organization permission")
     }
   }
 
@@ -160,7 +160,7 @@ object PlanFeature {
     def reads(json: JsValue): JsResult[PlanFeature] = {
       (json \ "name").as[Name[PlanFeature]](Name.format[PlanFeature]) match {
         case name if PermissionsFeatureNames.ALL.contains(name) => Json.fromJson[PermissionsFeature](json)
-        case _ => throw new Exception(s"tried to read invalid json=$json into a PlanFeature")
+        case _ => throw new IllegalArgumentException(s"tried to read invalid json=$json into a PlanFeature")
       }
     }
   }
