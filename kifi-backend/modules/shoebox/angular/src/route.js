@@ -117,6 +117,12 @@ angular.module('kifi')
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
+      .state('organizations', {
+        url: '/organizations'
+      })
+      .state('organizations.new', {
+        url: '/new'
+      })
       .state('userProfile', {
         url: '/:handle?authToken',
         templateUrl: 'userProfile/userProfile.tpl.html',
