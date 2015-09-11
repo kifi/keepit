@@ -9,7 +9,8 @@ angular.module('kifi')
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
       scope: { 
         libraryProps: '=',
-        library: '='
+        library: '=',
+        space: '='
       },
       link: function($scope) {
         $scope.me = profileService.me;
