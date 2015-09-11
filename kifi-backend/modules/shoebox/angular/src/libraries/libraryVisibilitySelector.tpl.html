@@ -52,7 +52,7 @@
     class="kf-library-visibility-selector-helptext"
     ng-if="library.visibility === 'organization'"
   >
-    Only members of {{ space.destination | name }} can see this library
+    Only members of {{ space.name }} can see this library
   </p>
   <p 
     class="kf-library-visibility-selector-helptext"
@@ -62,7 +62,7 @@
   </p>
   <label class="kf-library-visibility-selector-checkbox" ng-if="spaceIsOrg()">
     <input type="checkbox" ng-change="changeOrgMemberAccess()" ng-model="orgMemberAccessWrite" />
-    Members of {{ space.name }} can join and add & modify keeps
+    Members of {{ space.name }} can join and keep to this library.
   </label>
 </div>
 
