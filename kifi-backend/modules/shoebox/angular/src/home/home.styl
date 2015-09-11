@@ -10,12 +10,14 @@
     align-items: initial
     flex-direction: row
     flex-flow: row wrap
-    flex-wrap: nowrap
 
 .kf-home-items
   max-width: 600px
   width: 100%
   margin-top: 20px
+
+  @media (min-width: appMinWidth)
+    width: 75%
 
   .kf-feed-items
     width: auto
