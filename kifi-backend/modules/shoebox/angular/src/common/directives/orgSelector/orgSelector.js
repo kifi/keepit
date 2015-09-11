@@ -10,7 +10,7 @@ angular.module('kifi')
       scope: { 
         libraryProps: '=',
         library: '=',
-        space: '='
+        space: '=?'
       },
       link: function($scope) {
         $scope.me = profileService.me;
