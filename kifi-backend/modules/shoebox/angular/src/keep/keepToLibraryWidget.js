@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
   '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
-  'KEY', 'libraryService', 'util',
+  'KEY', 'libraryService', 'util', 'profileService',
   function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
-    KEY, libraryService, util) {
+    KEY, libraryService, util, profileService) {
     return {
       restrict: 'A',
       /*
@@ -64,6 +64,7 @@ angular.module('kifi')
         scope.libraryProps = {};
         scope.newLibrary = {visibility: 'published'};
         scope.space = {};
+        scope.me = profileService.me;
 
 
         //

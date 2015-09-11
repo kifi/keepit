@@ -55,14 +55,16 @@
       <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
 
-    <div class="keep-to-library-create-heading">Location</div>
-    <div class="keep-to-library-create-org-selector">
-      <div
-        kf-org-selector
-        library-props="libraryProps"
-        library="newLibrary"
-        space="space"
-      >
+    <div ng-if="me.orgs.length">
+      <div class="keep-to-library-create-heading">Location</div>
+      <div class="keep-to-library-create-org-selector">
+        <div
+          kf-org-selector
+          library-props="libraryProps"
+          library="newLibrary"
+          space="space"
+        >
+        </div>
       </div>
     </div>
 
