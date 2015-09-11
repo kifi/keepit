@@ -383,7 +383,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])] = {
     db.readOnlyReplica { implicit s =>
-      val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
+      val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId).sortBy(lwm => lwm._1.lastKept).reverse
       val libsWithMembershipIds = libsWithMembership.map(_._1.id.get).toSet
 
       val libsFromOrganizations: Seq[Library] = if (includeOrgLibraries) {
