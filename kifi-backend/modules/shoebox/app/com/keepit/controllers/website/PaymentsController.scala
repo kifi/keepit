@@ -80,20 +80,16 @@ class PaymentsController @Inject() (
   }
 
   def getPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: This is currently a dummy
-    val settings = PlanSettingsConfiguration(Map(
-      PlanFeature.INVITE_MEMBERS -> PermissionFeatureSetting(enabled = true, role = Some(OrganizationRole.ADMIN)),
-      PlanFeature.EDIT_LIBRARY -> PermissionFeatureSetting(enabled = false, role = Some(OrganizationRole.MEMBER))
-    ))
-    Ok(Json.obj("settings" -> settings))
+    Ok
   }
 
   @json
-  case class SimplePlanFeatureSettingRequest(name: String, enabled: Boolean)
+  case class SimplePlanFeatureSettingRequest(name: String, setting: Setting)
 
   def setPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
     request.body.validate[Seq[SimplePlanFeatureSettingRequest]] match {
-      case JsSuccess(settings, _) => Ok
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
+      case JsSuccess(settings, _) => Ok
     }
   }
 
