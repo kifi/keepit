@@ -67,7 +67,9 @@ class NotificationJsonFormat @Inject() (
         val itemIdsByMessageId = items.map(i => i -> i.event).collect {
           case (i, e: NewMessage) => Id[Message](e.messageId) -> ExternalId[Message](i.externalId.id)
         }.toMap
-        shoeboxServiceClient.getBasicUsers(messages.map(_.from.asUser).collect { case Some(id) => id }).flatMap { users =>
+        val userIds = messages.map(_.from.asUser).collect { case Some(id) => id }
+        val basicUsers = shoeboxServiceClient.getBasicUsers(userIds)
+        basicUsers.flatMap { users =>
           Future.sequence(messages.map { message =>
             messageFetchingCommander.getMessageWithBasicUser(
               itemIdsByMessageId(message.id.get),

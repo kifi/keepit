@@ -81,6 +81,10 @@ class SharedWsMessagingController @Inject() (
           notificationMessagingCommander.getNotificationMessages(socket.userId, notif.id.get) map {
             case (threadObj) =>
               SafeFuture(socket.channel.push(Json.arr("thread", threadObj)))
+          } onFailure {
+            case e =>
+              e.printStackTrace
+              println(e)
           }
         } {
           basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
