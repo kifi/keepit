@@ -13,7 +13,7 @@ angular.module('kifi')
       },
       link: function($scope) {
         $scope.me = profileService.me;
-        $scope.space = $scope.space || {}
+        $scope.space = $scope.space || {};
 
         $scope.unsetOrg = function() {
           $scope.libraryProps.selectedOrgId = undefined;
@@ -57,6 +57,6 @@ angular.module('kifi')
           }
         };
       }
-    }
+    };
   }
 ]);
