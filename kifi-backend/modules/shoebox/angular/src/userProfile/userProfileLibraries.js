@@ -112,6 +112,10 @@ angular.module('kifi')
       });
     };
 
+    if ($stateParams.openCreateLibrary) {
+      $scope.openCreateLibrary();
+    }
+
     resetAndFetchLibraries();
   }
 ]);

@@ -59,7 +59,7 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -77,7 +77,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         params: { organization: null },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -118,7 +118,7 @@ angular.module('kifi')
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
       .state('userProfile', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {
