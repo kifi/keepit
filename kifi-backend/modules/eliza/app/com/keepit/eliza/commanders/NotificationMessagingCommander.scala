@@ -26,6 +26,7 @@ class NotificationMessagingCommander @Inject() (
     pushNotifier: MobilePushNotifier,
     messageFetchingCommander: MessageFetchingCommander,
     notificationRepo: NotificationRepo,
+    messageRepo: MessageRepo,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
@@ -163,14 +164,19 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def getNotificationMessages(userId: Id[User], notifId: Id[Notification]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getNotificationMessages(userId: Id[User], notifId: Id[Notification]): Future[JsObject] = {
     db.readOnlyReplica { implicit session =>
       notificationCommander.getMessageThread(notifId)
-    }.fold(
-      Future.failed[(MessageThread, Seq[MessageWithBasicUser])](new Exception(s"Notification $notifId does not have a message thread"))
-    ) { messageThread =>
-        messageFetchingCommander.getThreadMessagesWithBasicUser(userId, messageThread)
+    }.fold(Future.failed[MessageThread](new Exception(s"Notification $notifId does not have a message thread"))) { messageThread =>
+      Future.successful(messageThread)
+    }.flatMap { messageThread =>
+      val notifWithItems = db.readWrite { implicit session =>
+        notificationCommander.backfillMessageThreadForUser(userId, messageThread.id.get)
       }
+      notificationInfoGenerator.generateInfo(Seq(notifWithItems)).flatMap { infos =>
+        notificationJsonFormat.threadMessagesInfo(infos.head)
+      }
+    }
   }
 
   def getNotificationsForSentMessages(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {

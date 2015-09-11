@@ -79,9 +79,8 @@ class SharedWsMessagingController @Inject() (
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
         legacyNotificationCheck.ifNotifExists(threadId) { notif =>
           notificationMessagingCommander.getNotificationMessages(socket.userId, notif.id.get) map {
-            case (thread, msgs) =>
-              val url = thread.url.getOrElse("")
-              SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+            case (threadObj) =>
+              SafeFuture(socket.channel.push(Json.arr("thread", threadObj)))
           }
         } {
           basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {

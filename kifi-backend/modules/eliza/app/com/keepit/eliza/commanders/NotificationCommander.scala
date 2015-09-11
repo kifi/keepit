@@ -69,7 +69,7 @@ class NotificationCommander @Inject() (
             val threadId = (json \ "thread").as[String]
             val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
             if (messageThread.replyable) {
-              backfillMessageThreadForUser(userId, messageThread)
+              backfillMessageThreadForUser(userId, messageThread.id.get)
             } else {
               val notif = notificationRepo.save(Notification(
                 recipient = recipient,
@@ -97,21 +97,21 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def backfillMessageThreadForUser(userId: Id[User], messageThread: MessageThread)(implicit session: RWSession): NotificationWithItems = {
+  def backfillMessageThreadForUser(userId: Id[User], messageThreadId: Id[MessageThread])(implicit session: RWSession): NotificationWithItems = {
     val recipient = Recipient(userId)
-    val userThread = userThreadRepo.getUserThread(userId, messageThread.id.get)
+    val userThread = userThreadRepo.getUserThread(userId, messageThreadId)
     val lastChecked = Seq(userThread.lastActive, userThread.lastSeen, userThread.notificationLastSeen).collect {
       case Some(time) => time
     }.maxOpt
-    val messages = messageRepo.get(messageThread.id.get, 0)
+    val messages = messageRepo.get(messageThreadId, 0)
     val lastEvent = messages.map(_.createdAt).max
-    val groupIdentifier = messageThread.id.get.toString
+    val groupIdentifier = messageThreadId.toString
     notificationRepo.getByGroupIdentifier(recipient, NewMessage, groupIdentifier).fold({
       val notif = notificationRepo.save(Notification(
         recipient = recipient,
         kind = NewMessage,
         lastEvent = lastEvent,
-        groupIdentifier = Some(messageThread.id.get.toString)
+        groupIdentifier = Some(messageThreadId.toString)
       ))
       val notifId = notif.id.get
       userThreadRepo.save(userThread.copy(
@@ -131,7 +131,7 @@ class NotificationCommander @Inject() (
               time = message.createdAt,
               from = from,
               messageId = message.id.get.id,
-              messageThreadId = messageThread.id.get.id
+              messageThreadId = messageThreadId.id
             ),
             eventTime = message.createdAt
           ))
