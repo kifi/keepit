@@ -4,7 +4,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model.{ Organization, OrganizationPermission, User }
+import com.keepit.model.{ OrganizationRole, Organization, OrganizationPermission, User }
 import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 
@@ -85,22 +85,16 @@ class PaymentsController @Inject() (
   }
 
   def getPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: This is currently a dummy
-    val dummyFeatureOne = PlanFeature(name = "keeping", displayName = "Users can keep things", editable = false, default = true)
-    val dummyFeatureTwo = PlanFeature(name = "messaging", displayName = "Users can send messages", editable = true, default = true)
-    val settings = Seq(
-      PlanFeatureSetting(dummyFeatureOne, enabled = true),
-      PlanFeatureSetting(dummyFeatureTwo, enabled = false)
-    )
-    Ok(Json.obj("settings" -> settings))
+    Ok
   }
 
   @json
-  case class SimplePlanFeaureSettingRequest(name: String, enabled: Boolean)
+  case class SimplePlanFeatureSettingRequest(name: String, setting: Setting)
 
   def setPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
-    request.body.validate[Seq[SimplePlanFeaureSettingRequest]] match {
-      case JsSuccess(settings, _) => Ok
+    request.body.validate[Seq[SimplePlanFeatureSettingRequest]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
+      case JsSuccess(settings, _) => Ok
     }
   }
 

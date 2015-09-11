@@ -4,10 +4,11 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time.Clock
-import com.keepit.model.{ User, Organization }
+import com.keepit.model.{ Name, User, Organization }
 import com.keepit.common.mail.EmailAddress
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import play.api.libs.json.{ Json, JsString, JsObject }
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
@@ -29,6 +30,10 @@ class PaidAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val settingsConfigColumnType = MappedColumnType.base[Map[Name[PlanFeature], Setting], String](
+    { obj => Json.stringify(Json.toJson(obj.map { case (name, setting) => name.toString -> setting.value })) },
+    { str => Json.parse(str).as[Map[String, String]].map { case (name, setting) => Name[PlanFeature](name) -> Setting(setting) } }
+  )
 
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
@@ -39,7 +44,8 @@ class PaidAccountRepoImpl @Inject() (
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def settingsByFeature = column[Map[Name[PlanFeature], Setting]]("settings_by_feature", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, settingsByFeature) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)

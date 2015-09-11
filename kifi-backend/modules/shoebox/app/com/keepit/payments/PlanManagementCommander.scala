@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
-import com.keepit.model.{ Organization, User, Name, OrganizationMembershipRepo, OrganizationRole, UserRepo }
+import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.social.BasicUserRepo
@@ -61,6 +61,9 @@ trait PlanManagementCommander {
   def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
+  def getPlanFeatureSettings(orgId: Id[Organization]): Map[Name[PlanFeature], FeatureSetting]
+  def setPlanFeatureSettings(orgId: Id[Organization], settings: Map[PlanFeature, FeatureSetting]): Boolean
+
   //UTILITIES
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
@@ -106,7 +109,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                settingsConfiguration = Map.empty
               )))
             case None =>
               log.info(s"[PAC] $orgId: Creating Account")
@@ -115,7 +119,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                settingsConfiguration = Map.empty
               )))
           }
           maybeAccount.map { account =>
@@ -322,7 +327,8 @@ class PlanManagementCommanderImpl @Inject() (
       kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
       billingCycle = billingCycle,
-      pricePerCyclePerUser = price
+      pricePerCyclePerUser = price,
+      features = Set.empty //
     ))
   }
 
@@ -488,6 +494,18 @@ class PlanManagementCommanderImpl @Inject() (
       paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
       memo = event.memo
     )
+  }
+
+  def getPlanFeatureSettings(orgId: Id[Organization]): Map[Name[PlanFeature], FeatureSetting] = {
+    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsConfiguration }
+    Map.empty
+  }
+
+  def setPlanFeatureSettings(orgId: Id[Organization], settings: Map[PlanFeature, FeatureSetting]): Boolean = true
+
+  def getPlanOrgPermissionSettings(orgId: Id[Organization]): BasePermissions = {
+    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsConfiguration }
+    BasePermissions(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]])
   }
 
 }
