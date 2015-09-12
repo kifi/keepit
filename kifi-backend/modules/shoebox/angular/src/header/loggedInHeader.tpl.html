@@ -41,8 +41,15 @@
       <div class="kf-lih-dropdown-parent" kf-click-menu>
         <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button>
         <menu class="kf-dropdown-menu">
-          <a class="kf-dropdown-menu-item" href="{{me|profileUrl:'connections'}}">Your Kifi connections</a>
+          <a class="kf-dropdown-menu-item" ng-href="{{me|profileUrl:'connections'}}">Your Kifi connections</a>
           <a class="kf-dropdown-menu-item" href="/invite">Invite someone to Kifi</a>
+          <a
+            class="kf-dropdown-menu-item"
+            ui-sref="orgProfile.members({ handle: o.handle, openInviteModal: true })"
+            ui-sref-opts="{ reload: true }"
+            ng-bind="'Invite someone to join ' + o.name"
+            ng-repeat="o in me.orgs"
+          ></a>
         </menu>
       </div>
       <a class="kf-lih-settings" ui-sref="settings"><span class="svg-settings-gear-filled-white"></span>Settings</a>
@@ -69,6 +76,5 @@
     </div>
   </div>
   <span style="position: fixed; top: 10px; left: 5px; font-size:20px; color:white;"> {{orgName}} </span>
-
   <div kf-mobile-interstitial></div>
 </div>

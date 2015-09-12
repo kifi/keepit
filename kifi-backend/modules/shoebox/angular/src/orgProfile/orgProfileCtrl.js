@@ -28,6 +28,14 @@ angular.module('kifi')
   // Watches and listeners.
   //
 
+  $scope.$on('parentOpenInviteModal', function () {
+    if ($state.current.name !== 'orgProfile.members') {
+      $state.go('orgProfile.members', { openInviteModal: true });
+    } else {
+      $scope.$broadcast('childOpenInviteModal');
+    }
+  });
+
   [
     $rootScope.$on('trackOrgProfileEvent', function (e, eventType, attributes) {
       if (eventType === 'click') {
@@ -43,7 +51,8 @@ angular.module('kifi')
       }
     })
   ].forEach(function (deregister) {
-        $scope.$on('$destroy', deregister);
-    });
+    $scope.$on('$destroy', deregister);
+  });
+
   }
 ]);
