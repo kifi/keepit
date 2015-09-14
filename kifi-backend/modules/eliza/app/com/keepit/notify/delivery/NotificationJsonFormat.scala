@@ -127,7 +127,7 @@ class NotificationJsonFormat @Inject() (
             "url" -> messageThread.nUrl,
             "title" -> messageThread.pageTitle,
             "author" -> sender,
-            "locator" -> ("/messages/" + messageThread.externalId.id),
+            "locator" -> ("/messages/" + notif.externalId),
             "unread" -> notif.unread,
             "category" -> NotificationCategory.User.MESSAGE.category,
             "firstAuthor" -> originalAuthor,

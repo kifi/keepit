@@ -201,10 +201,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               onConnect(socketInfo)
               val finalEnum = Enumerator(startMessages: _*) >>> enumerator
               finalEnum.apply(Iteratee.foreach { arr =>
-                httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-                  "username" -> socketInfo.userId.toString,
-                  "text" -> s"send: ```${Json.prettyPrint(arr)}```"
-                ))
+                if (arr != Json.arr("pong")) {
+                  httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
+                    "username" -> s"kifi -> ${socketInfo.userId.toString}",
+                    "text" -> s"```${Json.prettyPrint(arr)}```"
+                  ))
+                }
               })
               Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
             } getOrElse {
@@ -248,10 +250,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case other => other
     }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
-      httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-        "username" -> socketInfo.userId.toString,
-        "text" -> s"from: ```${Json.prettyPrint(jsArr)}```"
-      ))
+      if (jsArr != Json.arr("ping")) {
+        httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
+          "username" -> s"${socketInfo.userId.toString} -> kifi",
+          "text" -> s"```${Json.prettyPrint(jsArr)}```"
+        ))
+      }
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
         statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>
