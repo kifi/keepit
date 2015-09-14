@@ -33,9 +33,20 @@
         <button class="kf-lih-add-link sprite sprite-add-link">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="addKeeps()">Add a keep</button>
-          <button class="kf-dropdown-menu-item" ng-click="createLibrary()">Create a library</button>
-          <button class="kf-dropdown-menu-item" ng-if="::shouldShowCreateTeam()" ng-click="createTeam()">Create a team</button>
+          <button class="kf-dropdown-menu-item" ng-click="addKeeps()">
+            <span class="kf-lih-create-icon kf-lih-create-keep">&#10084;</span><!--
+         -->Add a keep
+          </button>
+          <button class="kf-dropdown-menu-item" ng-click="createLibrary()">
+            <span class="kf-lih-create-icon kf-lih-create-lib">+</span><!--
+         -->Create a library
+          </button>
+          <button class="kf-dropdown-menu-item" ng-if="::shouldShowCreateTeam()" ng-click="createTeam()">
+            <span class="kf-lih-create-icon kf-lih-create-org">
+              <svg kf-symbol-sprite icon="org"></svg>
+            </span><!--
+         -->Create a team
+          </button>
         </menu>
       </div>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>

@@ -50,7 +50,7 @@ angular.module('kifi')
         };
 
         scope.createTeam = function () {
-          $state.go('organizations.new');
+          $state.go('teams.new');
         };
       }
     };
