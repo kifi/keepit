@@ -31,7 +31,7 @@ import securesocial.core.{ Authenticator, UserService, SecureSocial }
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
-import com.keepit.common.net.UserAgent
+import com.keepit.common.net.{ HttpClient, DirectUrl, UserAgent }
 import com.keepit.common.store.KifiInstallationStore
 import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
@@ -62,6 +62,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val userExperimentCommander: RemoteUserExperimentCommander
   protected val websocketRouter: WebSocketRouter
   protected val shoutdownListener: WebsocketsShutdownListener
+
+  protected val httpClient: HttpClient
 
   val kifInstallationStore: KifiInstallationStore
   val accessLog: AccessLog
@@ -197,7 +199,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 startMessages = startMessages :+ Json.arr("version", "new")
               }
               onConnect(socketInfo)
-              Right((iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator))
+              val finalEnum = Enumerator(startMessages: _*) >>> enumerator
+              finalEnum.apply(Iteratee.foreach { arr =>
+                httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
+                  "username" -> socketInfo.userId.toString,
+                  "text" -> s"send: ```${Json.prettyPrint(arr)}```"
+                ))
+              })
+              Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
             } getOrElse {
               Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
             }
@@ -239,6 +248,10 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case other => other
     }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
+      httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
+        "username" -> socketInfo.userId.toString,
+        "text" -> s"from: ```${Json.prettyPrint(jsArr)}```"
+      ))
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
         statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>

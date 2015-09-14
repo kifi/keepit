@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.common.net.HttpClient
 import com.keepit.eliza.commanders.NotificationMessagingCommander.NotificationResultsForPage
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
@@ -50,6 +51,7 @@ class SharedWsMessagingController @Inject() (
   protected val heimdal: HeimdalServiceClient,
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
   protected val userExperimentCommander: RemoteUserExperimentCommander,
+  protected val httpClient: HttpClient,
   val accessLog: AccessLog,
   val shoutdownListener: WebsocketsShutdownListener)
     extends UserActions with AuthenticatedWebSocketsController {
