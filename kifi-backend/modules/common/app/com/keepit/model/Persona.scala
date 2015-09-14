@@ -57,7 +57,7 @@ object Persona {
   val keeps: Map[PersonaName, PersonaKeep] = Map(
     PersonaName.DEVELOPER -> PersonaKeep(
       title = "Good Tech Lead, Bad Tech Lead",
-      url = "https://medium.com/@jliszka/good-tech-lead-bad-tech-lead-948b2b806d86",
+      url = "https://blog.growth.supply/good-tech-lead-bad-tech-lead-948b2b806d86",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/techlead_960x892.57da042.jpg", 480, 446),
       noun = "blog post",
       query = "tech+lead",

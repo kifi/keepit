@@ -122,7 +122,7 @@ object OrganizationModifications {
     (__ \ 'description).readNullable[String] and
     (__ \ 'permissions).readNullable[PermissionsDiff] and
     (__ \ 'site).readNullable[String].map {
-      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
+      case Some(site) if httpRegex.findFirstMatchIn(site).isEmpty => Some("http://" + site)
       case Some(site) => Some(site)
       case None => None
     }
@@ -130,4 +130,6 @@ object OrganizationModifications {
 
   val website = defaultReads
   val mobileV1 = defaultReads
+
+  private val httpRegex = "^https?://".r
 }
