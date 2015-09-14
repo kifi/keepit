@@ -67,9 +67,9 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(response) === OK
 
           val jsonResponse = Json.parse(contentAsString(response))
-          (jsonResponse \ "organization" \ "name").as[String] === "Forty Two Kifis"
-          (jsonResponse \ "organization" \ "handle").as[String] === "kifi"
-          (jsonResponse \ "organization" \ "numLibraries").as[Int] === 10 + 15
+          (jsonResponse \ "name").as[String] === "Forty Two Kifis"
+          (jsonResponse \ "handle").as[String] === "kifi"
+          (jsonResponse \ "numLibraries").as[Int] === 10 + 15
         }
       }
     }
@@ -153,8 +153,8 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val createResponseJson = Json.parse(contentAsString(result))
-          (createResponseJson \ "organization" \ "name").as[String] === orgName
-          (createResponseJson \ "organization" \ "description").as[Option[String]] === Some(orgDescription)
+          (createResponseJson \ "name").as[String] === orgName
+          (createResponseJson \ "description").as[Option[String]] === Some(orgDescription)
         }
       }
     }
