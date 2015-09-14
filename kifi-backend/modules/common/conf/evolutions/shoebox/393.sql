@@ -2,10 +2,9 @@
 
 # --- !Ups
 
-ALTER TABLE paid_plan ADD COLUMN features text NOT NULL;
+ALTER TABLE paid_account ADD COLUMN modified_since_last_integrity_check boolean DEFAULT false;
+ALTER TABLE paid_account ADD COLUMN active_users int(11) DEFAULT 0;
 
-ALTER TABLE paid_account ADD COLUMN settings_by_feature text NOT NULL;
-
-insert into evolutions(name, description) values('393.sql', 'add features to paid_plan, add settings_by_feature to paid_account');
+insert into evolutions (name, description) values('393.sql', 'adding modified_since_last_integrity_check and active_users columns to paid_account');
 
 # --- !Downs

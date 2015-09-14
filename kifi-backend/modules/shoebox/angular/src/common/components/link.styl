@@ -5,9 +5,11 @@
   color: accentGreen
   background: 0
 
-.kf-link:hover,
+.kf-link-parent:hover .kf-link
+.kf-link:hover
 .kf-link-underline
   text-decoration: underline
 
+.kf-link-parent:hover:not(:active) .kf-link
 .kf-link:hover:not(:active)
   color: lighten(accentGreen, 20%)

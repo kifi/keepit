@@ -19,7 +19,6 @@ angular.module('kifi')
         $scope.unsetOrg = function() {
           $scope.libraryProps.selectedOrgId = undefined;
           $scope.space.destination = $scope.me;
-          onChangeSpace();
         };
 
         $scope.setOrg = function(id) { 
@@ -29,34 +28,41 @@ angular.module('kifi')
           $scope.space.destination = $scope.me.orgs.filter(function(org) {
             return org.id === orgId;
           })[0];
-          onChangeSpace();
         };
 
         $scope.spaceIsOrg = function (space) {
           return !('firstName' in (space || {}));
         };
 
-        var onChangeSpace = function () {
-          var currIsOrg = $scope.spaceIsOrg($scope.space.current);
-          var destIsOrg = $scope.spaceIsOrg($scope.space.destination);
+        // Store privacy setting when switching between org and user profile
+        var privacyToken = {
+          org: $scope.library.visibility
+        };
 
-          if (currIsOrg !== destIsOrg) {
-            if (currIsOrg) {
+        $scope.$watch('space.destination', function(newValue, oldValue) {
+          var oldIsOrg = $scope.spaceIsOrg(oldValue);
+          var newIsOrg = $scope.spaceIsOrg(newValue);
+          
+          if (oldIsOrg !== newIsOrg) {
+            if (oldIsOrg) {
               if ($scope.library.visibility === 'organization') {
                 $scope.library.visibility = 'secret';
+                privacyToken.org = 'organization';
+              } else {
+                privacyToken.org = '';
               }
             } else {
-              if ($scope.library.visibility === 'secret') {
+              if (privacyToken.org === 'organization') {
                 $scope.library.visibility = 'organization';
               }
             }
           }
 
           // Prevent non-org lib from having visibility === 'organization'
-          if (!destIsOrg && $scope.library.visibility === 'organization') {
+          if (!newIsOrg && $scope.library.visibility === 'organization') {
             $scope.library.visibility = 'secret';
           }
-        };
+        });
       }
     };
   }

@@ -10,7 +10,7 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryVisibilitySelector.tpl.html',
       scope: {
         library: '=',
-        space: '='
+        space: '=?'
       },
       link: function ($scope) {
         $scope.spaceIsOrg = function () {

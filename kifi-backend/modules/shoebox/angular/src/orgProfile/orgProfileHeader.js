@@ -29,6 +29,10 @@ angular.module('kifi')
         signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
       }
 
+      scope.goToMemberInvite = function () {
+        scope.$emit('parentOpenInviteModal');
+      };
+
       scope.undo = function () {
         scope.profile = angular.extend(scope.profile, lastSavedInfo);
       };
@@ -106,6 +110,8 @@ angular.module('kifi')
       scope.shouldShowSignupBanner = function () {
         return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
       };
+
+      scope.canInvite = scope.membership.permissions && scope.membership.permissions.indexOf('invite_members') > -1;
 
       scope.inviteBannerButtons = [
         {

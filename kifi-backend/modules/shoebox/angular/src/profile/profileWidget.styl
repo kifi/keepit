@@ -88,11 +88,15 @@
 
   .kf-pw-org
     border-top: 1px solid borderLightGray
-    margin: 15px -16px
-    margin-bottom: -10px
-    display: flex
+    margin: 15px -16px -10px
     padding: 15px
+    display: flex
+    flex-flow: wrap
     justify-content: space-between
+
+    .kf-pw-org-pending-label
+      flex: 1 100%
+      text-align: center
 
     .kf-pw-org-img
       border-radius: 20%
@@ -101,6 +105,9 @@
       height: 70px
       overflow: hidden
       display: block
+
+    &.kf-pw-org-pending .kf-pw-org-img
+      opacity: .35
 
     .kf-pw-org-link
 

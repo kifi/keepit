@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
-  '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
-  function ($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator) {
+  '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
+  'orgProfileService', 'modalService', 'Paginator',
+  function ($rootScope, $scope, $stateParams, profile, profileService,
+            orgProfileService, modalService, Paginator) {
     var organization = profile.organization;
     var libraryLazyLoader = new Paginator(librarySource);
     var newLibraryIds = {};
@@ -47,6 +49,7 @@ angular.module('kifi')
     $scope.organization = organization;
 
     $scope.me = profileService.me;
+    $scope.canInvite = $scope.membership.permissions && $scope.membership.permissions.indexOf('invite_members') > -1;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -97,6 +100,11 @@ angular.module('kifi')
       });
     };
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgLibraries'});
+
+    if ($stateParams.openCreateLibrary) {
+      $scope.openCreateLibrary();
+    }
+
     resetAndFetchLibraries();
   }
 ]);

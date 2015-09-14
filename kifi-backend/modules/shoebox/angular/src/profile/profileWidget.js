@@ -10,18 +10,27 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'profile/profileWidget.tpl.html',
       link: function (scope) {
-        scope.me = profileService.me;
-        scope.organizations = profileService.me.orgs;
+        var me = profileService.me;
 
-        scope.registerEvent = function(action) {
+        scope.me = me;
+        scope.organizations = me.orgs;
+
+        if (me.pendingOrgs) {
+          me.pendingOrgs.forEach(function (o) {
+            o.pending = true;
+          });
+          scope.organizations = scope.organizations.concat(me.pendingOrgs);
+        }
+
+        scope.registerEvent = function (action) {
           $analytics.eventTrack('user_clicked_page', {
             'action': 'clickedProfile' + action,
             'type': 'yourKeeps'
           });
         };
 
-        scope.bioClick = function() {
-          if (typeof(scope.me.biography) === 'undefined') {
+        scope.bioClick = function () {
+          if (typeof(me.biography) === 'undefined') {
             this.registerEvent('AddBio');
 
             modalService.open({

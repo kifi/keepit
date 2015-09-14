@@ -79,22 +79,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           Json.parse(contentAsString(result)) === Json.obj(
             "libraries" -> Seq(
               Json.obj(
-                "id" -> pubId1,
-                "name" -> "Million Dollar Baby",
-                "color" -> LibraryColor.RED,
-                "visibility" -> "published",
-                "path" -> "/morgan/baby",
-                "hasCollaborators" -> false,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq.empty[BasicUser],
-                "membership" -> Json.obj(
-                  "access" -> LibraryAccess.OWNER,
-                  "listed" -> true,
-                  "subscribed" -> false,
-                  "permissions" -> Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))
-                )
-              ),
-              Json.obj(
                 "id" -> pubId2,
                 "name" -> "Dark Knight",
                 "color" -> LibraryColor.BLUE,
@@ -108,6 +92,22 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
                   "listed" -> true,
                   "subscribed" -> false,
                   "permissions" -> Json.toJson(lib2.permissionsByAccess(LibraryAccess.READ_WRITE))
+                )
+              ),
+              Json.obj(
+                "id" -> pubId1,
+                "name" -> "Million Dollar Baby",
+                "color" -> LibraryColor.RED,
+                "visibility" -> "published",
+                "path" -> "/morgan/baby",
+                "hasCollaborators" -> false,
+                "subscribedToUpdates" -> false,
+                "collaborators" -> Seq.empty[BasicUser],
+                "membership" -> Json.obj(
+                  "access" -> LibraryAccess.OWNER,
+                  "listed" -> true,
+                  "subscribed" -> false,
+                  "permissions" -> Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))
                 )
               ),
               Json.obj(
