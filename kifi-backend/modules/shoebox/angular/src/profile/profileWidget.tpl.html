@@ -41,15 +41,18 @@
   </div>
 
   <div class="kf-pw-orgs" ng-if="organizations">
-    <div ng-repeat="org in organizations" class="kf-pw-org">
+    <div ng-repeat="org in organizations" class="kf-pw-org" ng-class="{ 'kf-pw-org-pending': org.pending }">
+      <p ng-if="org.pending" class="kf-pw-org-pending-label">You've been invited to join this team</p>
       <a class="kf-pw-org-link" href="{{org.handle}}" ng-click="registerEvent('clickedOrgFromProfile')">
         <img class="kf-pw-org-img" ng-src="{{ org | pic:200 }}" />
       </a>
       <div class="kf-pw-org-bio">
         <h1>
-          <a class="kf-pw-org-link" href="{{org.handle}}" ng-click="registerEvent('clickedOrgFromProfile')">
-            {{ org.name }}
-          </a>
+          <a
+            class="kf-pw-org-link"
+            ng-href="{{org.handle}}"
+            ng-click="registerEvent('clickedOrgFromProfile')"
+          >{{ org.name }}</a>
         </h1>
         <table class="stats">
           <tr class="stats-row">
