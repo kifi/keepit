@@ -404,12 +404,24 @@ class MessagingCommander @Inject() (
       case _ => thread.allParticipants
     }
     usersToNotify.foreach { userId =>
-      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
+      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip => () } { recip =>
+        notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
+      }
     }
 
     // update user thread of the sender again, might be deprecated
     from.asUser.foreach { sender =>
-      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+      legacyNotificationCheck.ifElseUserExperiment(Recipient(sender)) { recip =>
+        notificationProcessing.processNewEvent(NewMessage(
+          recipient = recip,
+          time = message.createdAt,
+          from = recip,
+          messageThreadId = thread.id.get.id,
+          messageId = message.id.get.id
+        ))
+      } { recip =>
+        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+      }
     }
 
     // update non user threads of non user recipients

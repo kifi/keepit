@@ -63,7 +63,7 @@ class NotificationProcessing @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent): Notification = {
+  def processNewEvent(event: NotificationEvent, tryDeliver: Boolean = true): Notification = {
     val groupIdentifier = getGroupIdentifier(event)
     val notif = groupIdentifier match {
       case Some(identifier) =>
@@ -92,8 +92,10 @@ class NotificationProcessing @Inject() (
     val items = db.readOnlyMaster { implicit session =>
       notificationItemRepo.getAllForNotification(notif.id.get)
     }.toSet
-    legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
-      delivery.deliver(recipient, NotificationWithItems(notif, items))
+    if (tryDeliver) {
+      legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
+        delivery.deliver(recipient, NotificationWithItems(notif, items))
+      }
     }
     notif
   }

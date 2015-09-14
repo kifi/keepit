@@ -10,7 +10,7 @@ import com.keepit.notify.model.{ EmailRecipient, Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.{ Mode, Play }
 
-import scala.concurrent.Await
+import scala.concurrent.{ExecutionContext, Future, Await}
 import scala.concurrent.duration._
 
 /**
@@ -23,21 +23,27 @@ class LegacyNotificationCheck @Inject() (
     db: Database,
     notificationCommander: NotificationCommander,
     notificationRepo: NotificationRepo,
-    notificationItemRepo: NotificationItemRepo) {
+    notificationItemRepo: NotificationItemRepo,
+    implicit val executionContext: ExecutionContext) {
 
   def checkUserExperiment(recipient: Recipient): LegacyNotificationCheck.Result = {
+    Await.result(checkUserExperimentAsync(recipient), 10 seconds)
+  }
+
+  def checkUserExperimentAsync(recipient: Recipient): Future[LegacyNotificationCheck.Result] = {
     // Don't want to have to keep switching experiments in dev mode
     val flipResults = Play.maybeApplication.exists(_.mode == Mode.Dev)
     recipient match {
       case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
         case None =>
-          val experiments = Await.result(shoeboxServiceClient.getUserExperiments(id), 10 seconds)
-          val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
-          val enabledFlipped = if (flipResults) !enabled else enabled
-          LegacyNotificationCheck.Result(enabledFlipped, u.copy(experimentEnabled = Some(enabledFlipped)))
-        case Some(result) => LegacyNotificationCheck.Result(result, u)
+          shoeboxServiceClient.getUserExperiments(id).map { experiments =>
+            val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
+            val enabledFlipped = if (flipResults) !enabled else enabled
+            LegacyNotificationCheck.Result(enabledFlipped, u.copy(experimentEnabled = Some(enabledFlipped)))
+          }
+        case Some(result) => Future.successful(LegacyNotificationCheck.Result(result, u))
       }
-      case _: EmailRecipient => LegacyNotificationCheck.Result(false, recipient)
+      case _: EmailRecipient => Future.successful(LegacyNotificationCheck.Result(false, recipient))
     }
   }
 

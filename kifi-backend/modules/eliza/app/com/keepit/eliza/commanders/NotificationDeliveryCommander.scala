@@ -15,6 +15,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.notify.delivery.NotificationJsonFormat
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.{ NotificationProcessing, LegacyNotificationCheck }
 import com.keepit.notify.model.{ Recipient, UserRecipient }
@@ -38,6 +39,7 @@ class NotificationDeliveryCommander @Inject() (
     messagingAnalytics: MessagingAnalytics,
     pushNotifier: MobilePushNotifier,
     notificationJsonMaker: NotificationJsonMaker,
+    notificationJsonFormat: NotificationJsonFormat,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
     emailCommander: ElizaEmailCommander,
@@ -61,7 +63,6 @@ class NotificationDeliveryCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
     }
-    sendToUser(from, Json.arr("notification", notifJson))
   }
 
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
@@ -353,17 +354,7 @@ class NotificationDeliveryCommander @Inject() (
         (userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(true)), userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(false)))
       }
 
-      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip =>
-        notificationProcessing.processNewEvent(NewMessage(
-          recipient = recip,
-          time = currentDateTime,
-          from = message.from.asRecipient.get,
-          messageThreadId = thread.id.get.id,
-          messageId = message.id.get.id
-        ))
-      } { recip =>
-        notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
-      }
+      notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
 
       if (!muted) {

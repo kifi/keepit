@@ -237,6 +237,7 @@ class NotificationJsonFormat @Inject() (
           (author, participants) <- participantsF
           basicFormat <- basicFormatF
         } yield {
+          val fullParticipants = participants + author
           val unreadJson =
             if (notif.unread)
               Json.obj(
@@ -252,10 +253,10 @@ class NotificationJsonFormat @Inject() (
               )
 
           val participantsJson =
-            if (participants.isEmpty)
+            if (fullParticipants.isEmpty)
               Json.obj()
             else
-              Json.obj("participants" -> participants)
+              Json.obj("participants" -> fullParticipants)
 
           val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
             val image = summary.images.get(idealImageSize)
