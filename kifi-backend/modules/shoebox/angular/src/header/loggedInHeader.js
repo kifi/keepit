@@ -159,6 +159,10 @@ angular.module('kifi')
       });
     };
 
+    $scope.createLibrary = function () {
+      $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+    };
+
     function onDocKeyDown(e) {
       if (!e.isDefaultPrevented()) {
         switch (e.which) {

@@ -30,7 +30,7 @@
     <div class="kf-oph-about">
       <div class="kf-oph-about-info">
         <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" class-name="'kf-oph-input'" readonly="readonly"></div>
-        <div 
+        <div
           class="kf-oph-description"
           kf-click-to-edit
           on-save="save"
@@ -43,6 +43,13 @@
         <p class="kf-oph-url">
           <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
         </p>
+        <button ng-if="canInvite" class="kf-button" ng-click="goToMemberInvite()">
+          <svg
+            kf-symbol-sprite
+            icon="add-member"
+          ></svg>
+          <span>Invite new member</span>
+        </button>
       </div>
       <nav class="kf-oph-stats">
         <a class="kf-oph-stats-a" ui-sref="orgProfile.libraries" ng-click="onClickTrack($event, 'clickedProfileLibraries')">
