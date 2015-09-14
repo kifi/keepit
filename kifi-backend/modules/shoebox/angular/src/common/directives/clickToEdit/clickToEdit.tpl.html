@@ -3,7 +3,7 @@
   ng-class="{'editable': !readonly}"
 >
   <div ng-show="!readonly">
-    <span class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester {{ className }}">##{{view.editableValue}}</span>
+    <span class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester {{ className }}">{{view.editableValue}}</span>
     <textarea placeholder="{{ inputPlaceholder }}" class="kf-click-to-edit-textarea {{ className }}" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-blur="onBlur()" ng-style="view.textareaHeight"></textarea>
   </div>
   <p class="kf-click-to-edit-p" ng-if="readonly && !linkable">{{ view.editableValue }}</p>
