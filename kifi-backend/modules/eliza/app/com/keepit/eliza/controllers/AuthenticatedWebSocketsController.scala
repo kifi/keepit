@@ -203,8 +203,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               finalEnum.apply(Iteratee.foreach { arr =>
                 if (arr != Json.arr("pong")) {
                   httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-                    "username" -> s"kifi -> ${socketInfo.userId.toString}",
-                    "text" -> s"```${Json.prettyPrint(arr)}```"
+                    "text" -> s"*kifi -> ${streamSession.socialUser.username.getOrElse("[" + socketInfo.userId + "]")}* ```${Json.prettyPrint(arr)}```"
                   ))
                 }
               })
@@ -252,8 +251,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       if (jsArr != Json.arr("ping")) {
         httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-          "username" -> s"${socketInfo.userId.toString} -> kifi",
-          "text" -> s"```${Json.prettyPrint(jsArr)}```"
+          "text" -> s"*${streamSession.socialUser.username.getOrElse("[" + socketInfo.userId + "]")} -> kifi* ```${Json.prettyPrint(jsArr)}```"
         ))
       }
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>

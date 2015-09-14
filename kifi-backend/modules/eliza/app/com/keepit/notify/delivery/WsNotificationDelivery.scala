@@ -25,7 +25,7 @@ class WsNotificationDelivery @Inject() (
 
   def deliver(recipient: Recipient, notif: NotificationWithItems): Future[Unit] = {
     notificationInfoGenerator.generateInfo(Seq(notif)).flatMap { infos =>
-      elizaNotificationInfo.basicJson(infos.head).map { notifJson =>
+      elizaNotificationInfo.extendedJson(infos.head).map { notifJson =>
         legacyNotificationCheck.ifUserExperiment(recipient) {
           case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson.json))
           case _ =>
