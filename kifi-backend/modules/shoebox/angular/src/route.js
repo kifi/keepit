@@ -117,12 +117,12 @@ angular.module('kifi')
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
       })
-      .state('organizations', {
-        url: '/organizations',
+      .state('teams', {
+        url: '/teams',
         'abstract': true,
         template: '<ui-view/>'
       })
-      .state('organizations.new', {
+      .state('teams.new', {
         url: '/new',
         controller: 'OrgProfileCreateCtrl',
         templateUrl: 'orgProfile/orgProfileCreate.tpl.html'
