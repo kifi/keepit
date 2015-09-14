@@ -35,6 +35,7 @@
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="addKeeps()">Add a keep</button>
           <button class="kf-dropdown-menu-item" ng-click="createLibrary()">Create a library</button>
+          <button class="kf-dropdown-menu-item" ng-if="::shouldShowCreateTeam()" ng-click="createTeam()">Create a team</button>
         </menu>
       </div>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
