@@ -4,9 +4,14 @@
       <header class="kf-full-pane">
         <h1 class="kf-org-create-title">Create an org</h1>
       </header>
-      <div class="kf-org-create-container kf-container kf-full-pane">
+    </div>
+    <div class="kf-row kf-container">
+      <div class="kf-org-create-container kf-split-pane">
         <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your org" />
         <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Organization"/>
+      </div>
+      <div class="kf-split-pane">
+        <p>After choosing a name for your org, we'll let you choose a logo, description, and link.</p>
       </div>
     </div>
   </div>
