@@ -14,7 +14,6 @@ class UriInternException(msg: String, cause: Throwable) extends Exception(msg, c
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI] {
-  def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexablesWithContent(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
@@ -95,9 +94,6 @@ class NormalizedURIRepoImpl @Inject() (
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
     idCache.getOrElse(NormalizedURIKey(id)) { getCompiled(id).first }
   }
-
-  def allActive()(implicit session: RSession): Seq[NormalizedURI] =
-    (for (f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
 

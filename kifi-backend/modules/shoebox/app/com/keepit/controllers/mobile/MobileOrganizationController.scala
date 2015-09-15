@@ -25,6 +25,8 @@ class MobileOrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
+  implicit val organizationViewWrites = OrganizationView.mobileWrites
+
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     request.body.validate[OrganizationInitialValues](OrganizationInitialValues.mobileV1) match {
@@ -76,10 +78,11 @@ class MobileOrganizationController @Inject() (
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgViewsMap = orgCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt)
+
+    val orgViewsMap = orgCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
 
     val orgViews = visibleOrgs.map(org => orgViewsMap(org))
 
-    Ok(Json.obj("organizations" -> orgViews.map(OrganizationView.mobileWrites.writes)))
+    Ok(Json.obj("organizations" -> orgViews))
   }
 }
