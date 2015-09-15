@@ -181,3 +181,26 @@ ophImageWidth = 200px
 
   :not([href])>&
     color: inherit
+
+.profile-image
+  overflow: hidden
+  position: relative
+
+  &:after
+    content: 'Upload new'
+    position: absolute
+    right: 20%
+    left: 20%
+    background: white
+    font-size: 0.85rem
+    padding: 7px
+    background: secondaryTextGray
+    border-top-left-radius: defaultBorderRadius
+    border-top-right-radius: defaultBorderRadius
+    bottom: -50px
+    transition: bottom 0.25s ease-out
+
+  &:hover
+    &:after
+      bottom: 0
+
