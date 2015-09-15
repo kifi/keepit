@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$rootScope', '$scope', '$q', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService',
-  function($rootScope, $scope, $q, $analytics, feedService, Paginator, routeService, modalService) {
+  '$window', '$rootScope', '$scope', '$q', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService',
+  function($window, $rootScope, $scope, $q, $analytics, feedService, Paginator, routeService, modalService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[$scope.feed.length - 1];
 
@@ -115,6 +115,7 @@ angular.module('kifi')
     $scope.featuredLibrariesRoute = routeService.featuredLibraries();
 
     // Initialize
+    $window.document.title = 'Kifi • Your stream';
     $scope.fetchKeeps();
   }
 ]);
