@@ -7,13 +7,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
-import org.apache.poi.ss.formula.functions.T
 
 import org.joda.time.DateTime
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-
-import scala.util.Try
 
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
@@ -43,6 +38,7 @@ case class PaidAccount(
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
+  def withFeatureSettings(featureSettings: Set[FeatureSetting]): PaidAccount = this.copy(featureSettings = featureSettings)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 }
 

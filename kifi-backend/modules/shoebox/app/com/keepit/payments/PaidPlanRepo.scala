@@ -28,11 +28,10 @@ class PaidPlanRepoImpl @Inject() (
   implicit val featuresColumnType = MappedColumnType.base[Set[PlanFeature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
     { str =>
-      val a: Set[PlanFeature] = Json.parse(str) match {
+      Json.parse(str) match {
         case x: JsArray => x.value.map(_.as[PlanFeature]).toSet
         case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Set of PlanFeature")
       }
-      a
     }
   )
 

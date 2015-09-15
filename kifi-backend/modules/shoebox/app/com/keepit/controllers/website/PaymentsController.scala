@@ -4,13 +4,13 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model._
+import com.keepit.model.{ OrganizationPermission, Organization }
 import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 
 import com.kifi.macros.json
 
-import play.api.libs.json._
+import play.api.libs.json.{ Json, JsSuccess, JsError }
 
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.{ ExecutionContext, Future }
