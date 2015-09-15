@@ -162,7 +162,8 @@ angular.module('kifi')
         scope.deleteKeep = function (event, keep) {
           angular.element(event.target).closest('.kf-keep').find('.kf-knf').remove();
           var libraryId = keep.library.id;
-          keepActionService.unkeepFromLibrary(libraryId, keep.id).then(function () {
+          var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
+          keepActionService.unkeepFromLibrary(libraryId, distinctKeep.id).then(function () {
             keep.unkept = true;
             keep.keepersTotal--;
 
@@ -189,7 +190,8 @@ angular.module('kifi')
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
             var noteEl = keepEl.find('.kf-keep-note');
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.libraryId, keep.id, function update(noteText) {
+            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.library.id, distinctKeep.id, function update(noteText) {
               keep.note = noteText;
             });
           } else {
