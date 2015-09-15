@@ -14,6 +14,8 @@ angular.module('kifi')
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
+      scope.state = $state;
+
       var lastSavedInfo = {};
       scope.notification = null;
 
