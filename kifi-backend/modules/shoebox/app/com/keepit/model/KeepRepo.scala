@@ -210,6 +210,7 @@ class KeepRepoImpl @Inject() (
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
     getOpt(extId).filter(k => !excludeStates.contains(k.state))
   }
+
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
     if (extIds.isEmpty) {
       Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table

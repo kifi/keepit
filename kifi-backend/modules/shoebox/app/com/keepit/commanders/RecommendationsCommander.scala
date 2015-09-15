@@ -17,11 +17,14 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.search.util.LongSetIdFilter
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Random
+import play.api.libs.json.Json
 
 class RecommendationsCommander @Inject() (
+    systemValueRepo: SystemValueRepo,
     curator: CuratorServiceClient,
     search: SearchServiceClient,
     db: Database,
@@ -77,10 +80,12 @@ class RecommendationsCommander @Inject() (
 
   }
 
-  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullRecoInfo)]] = {
-    val curatedLibIds: Seq[Id[Library]] = Seq(
-      25345L, 44612L, 24542L, 25471L, 28148L, 25381L, 27207L, 25370L, 25388L, 25371L, 25340L, 26473L, 26460L, 27238L, 42651L, 25168L, 27760L, 49090L, 47498L
-    ).map(Id[Library])
+  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
+
+    val curatedLibIds = db.readOnlyReplica { implicit s =>
+      val json = systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName).get
+      Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(json)).get.map(lib => lib.id)
+    }
 
     val curatedLibraries = {
       val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
