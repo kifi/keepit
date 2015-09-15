@@ -26,7 +26,7 @@ case class StandardNotificationInfo(
   title: String,
   body: String,
   linkText: String,
-  category: Option[NotificationCategory] = None,
+  category: NotificationCategory,
   extraJson: Option[JsObject] = None) extends NotificationInfo
 
 object StandardNotificationInfo {
@@ -36,7 +36,7 @@ object StandardNotificationInfo {
     title: String,
     body: String,
     linkText: String,
-    category: Option[NotificationCategory],
+    category: NotificationCategory,
     extraJson: Option[JsObject]): StandardNotificationInfo = {
     StandardNotificationInfo(
       user.path.encode.absolute,

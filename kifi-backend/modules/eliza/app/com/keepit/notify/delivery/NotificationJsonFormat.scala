@@ -151,8 +151,10 @@ class NotificationJsonFormat @Inject() (
             "time" -> relevantItem.eventTime,
             "thread" -> notif.externalId,
             "unread" -> Json.toJson(notif.unread),
-            "category" -> "triggered",
-            "fullCategory" -> "replace me", // todo replace
+            "category" -> Json.toJson(
+              NotificationCategory.User.kifiMessageFormattingCategory.getOrElse(info.category, "global")
+            ),
+            "fullCategory" -> info.category.category, // todo replace
             "title" -> info.title,
             "bodyHtml" -> info.body,
             "linkText" -> info.linkText,
