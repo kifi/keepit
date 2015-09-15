@@ -355,14 +355,14 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val publicId = Organization.publicId(org.id.get)
 
           db.readOnlyMaster { implicit session =>
-            orgRepo.get(org.id.get).getNonmemberPermissions === Set(OrganizationPermission.VIEW_ORGANIZATION)
+            orgRepo.get(org.id.get).getNonmemberPermissions === Set(OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.VIEW_MEMBERS)
           }
 
           val json =
             """{ "permissions":
                 {
                   "add": {"member": ["invite_members"]},
-                  "remove": {"none": ["view_organization"]}
+                  "remove": {"none": ["view_organization", "view_members" ]}
                 }
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
@@ -371,7 +371,10 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           db.readOnlyMaster { implicit session =>
             orgRepo.get(org.id.get).getNonmemberPermissions === Set.empty
-            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)
+            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) ===
+              Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES, OrganizationPermission.INVITE_MEMBERS,
+                OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.GROUP_MESSAGING, OrganizationPermission.MOVE_ORG_LIBRARIES,
+                OrganizationPermission.VIEW_MEMBERS)
           }
         }
       }

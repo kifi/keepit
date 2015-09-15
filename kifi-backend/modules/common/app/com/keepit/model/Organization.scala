@@ -88,21 +88,27 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 
   val defaultBasePermissions: BasePermissions =
     BasePermissions(
-      None -> Set(VIEW_ORGANIZATION),
+      None -> Set(VIEW_ORGANIZATION, VIEW_MEMBERS),
       Some(OrganizationRole.ADMIN) -> Set(
         VIEW_ORGANIZATION,
         EDIT_ORGANIZATION,
+        VIEW_MEMBERS,
         INVITE_MEMBERS,
         MODIFY_MEMBERS,
         REMOVE_MEMBERS,
         ADD_LIBRARIES,
-        REMOVE_LIBRARIES
+        REMOVE_LIBRARIES,
+        GROUP_MESSAGING,
+        MOVE_ORG_LIBRARIES
       ),
       Some(OrganizationRole.MEMBER) -> Set(
         VIEW_ORGANIZATION,
         ADD_LIBRARIES,
         REMOVE_LIBRARIES,
-        INVITE_MEMBERS
+        VIEW_MEMBERS,
+        INVITE_MEMBERS,
+        GROUP_MESSAGING,
+        MOVE_ORG_LIBRARIES
       )
     )
   val totallyInvisiblePermissions: BasePermissions =

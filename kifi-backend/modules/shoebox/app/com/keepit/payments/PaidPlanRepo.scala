@@ -1,13 +1,13 @@
 package com.keepit.payments
 
-import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
+import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time.Clock
 import com.keepit.model.Name
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsArray, Json }
 
 @ImplementedBy(classOf[PaidPlanRepoImpl])
 trait PaidPlanRepo extends Repo[PaidPlan] {
@@ -27,7 +27,13 @@ class PaidPlanRepoImpl @Inject() (
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featuresColumnType = MappedColumnType.base[Set[PlanFeature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[Set[PlanFeature]] }
+    { str =>
+      val a: Set[PlanFeature] = Json.parse(str) match {
+        case x: JsArray => x.value.map(_.as[PlanFeature]).toSet
+        case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Set of PlanFeature")
+      }
+      a
+    }
   )
 
   type RepoImpl = PaidPlanTable
