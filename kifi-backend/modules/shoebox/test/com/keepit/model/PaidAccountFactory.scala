@@ -3,14 +3,14 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.Id
-import com.keepit.payments.{ DollarAmount, PaidAccount, PaidPlan }
+import com.keepit.payments._
 
 object PaidAccountFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def paidAccount(): PartialPaidAccount = {
     new PartialPaidAccount(PaidAccount(id = Some(Id[PaidAccount](idx.incrementAndGet())), orgId = Id[Organization](idx.incrementAndGet()),
-      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, settingsByFeature = Map.empty))
+      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, featureSettings = Set.empty, activeUsers = 0))
   }
 
   def paidAccounts(count: Int): Seq[PartialPaidAccount] = List.fill(count)(paidAccount())
@@ -19,7 +19,8 @@ object PaidAccountFactory {
     def withId(id: Id[PaidAccount]) = new PartialPaidAccount(plan.copy(id = Some(id)))
     def withOrganization(orgId: Id[Organization]) = new PartialPaidAccount(plan.copy(orgId = orgId))
     def withPlan(planId: Id[PaidPlan]) = new PartialPaidAccount(plan.copy(planId = planId))
-    def withCredit(amount: DollarAmount) = new PartialPaidAccount(plan.copy())
+    def withCredit(amount: DollarAmount) = new PartialPaidAccount(plan.copy(credit = amount))
+    def withSettings(settingsByFeature: Set[FeatureSetting]) = new PartialPaidAccount(plan.copy(featureSettings = settingsByFeature))
     def get: PaidAccount = plan
   }
 

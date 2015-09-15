@@ -8,11 +8,12 @@ import com.keepit.common.store.ImagePath
 import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model.OrganizationFactory.PartialOrganization
 import com.keepit.payments._
+import com.keepit.model.PaidPlanFactoryHelper._
 
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      injector.getInstance(classOf[PlanManagementCommanderImpl]).createNewPlanHelper(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+      val plan = PaidPlanFactory.paidPlan().saved
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       val handleCommander = injector.getInstance(classOf[HandleCommander])
       val org = if (orgTemplate.primaryHandle.isEmpty) {
@@ -21,7 +22,7 @@ object OrganizationFactoryHelper {
         handleCommander.setOrganizationHandle(orgTemplate, orgTemplate.handle, overrideValidityCheck = true).get
       }
 
-      injector.getInstance(classOf[PlanManagementCommander]).createAndInitializePaidAccountForOrganization(orgTemplate.id.get, PaidPlan.DEFAULT, org.ownerId, session)
+      injector.getInstance(classOf[PlanManagementCommander]).createAndInitializePaidAccountForOrganization(orgTemplate.id.get, plan.id.get, org.ownerId, session)
 
       val userRepo = injector.getInstance(classOf[UserRepo])
       assume(userRepo.get(org.ownerId).id.isDefined)

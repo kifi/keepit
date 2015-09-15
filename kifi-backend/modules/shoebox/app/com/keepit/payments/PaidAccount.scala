@@ -36,7 +36,7 @@ case class PaidAccount(
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
-    settingsByFeature: Map[Name[PlanFeature], Setting],
+    featureSettings: Set[FeatureSetting],
     modifiedSinceLastIntegrityCheck: Boolean = true,
     activeUsers: Int) extends ModelWithState[PaidAccount] {
 

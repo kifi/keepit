@@ -9,6 +9,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -120,7 +121,10 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
     "create an organization" in {
       "reject malformed input" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
+          val user = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.user().withName("foo", "bar").saved
+          }
 
           inject[FakeUserActionsHelper].setUser(user)
           val request = route.createOrganization().withBody(Json.parse("""{"asdf": "qwer"}"""))
@@ -140,8 +144,10 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       }
       "let a user create an organization" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val user = db.readWrite { implicit session => UserFactory.user().withName("foo", "bar").saved }
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
+          val user = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.user().withName("foo", "bar").saved
+          }
 
           val orgName = "Banana Capital, USA"
           val orgDescription = "Fun for the whole family"

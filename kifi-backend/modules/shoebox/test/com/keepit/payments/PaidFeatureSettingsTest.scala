@@ -47,9 +47,32 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val (org, owner, admin, member, paidPlan, paidAccount) = setup()
 
-        //
-        // configure PaidFeature set and PaidFeatureSettings
-        //
+        val planManagementCommander = inject[PlanManagementCommander]
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().withFeatures(
+            Set(
+              PermissionsFeature(
+                PermissionsFeatureNames.PUBLISH_LIBRARIES,
+                editable = true,
+                options = Seq(PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))),
+                default = PermissionSetting(Some(OrganizationRole.MEMBER))
+              )
+            )
+          ).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(
+            Set(
+              PermissionFeatureSetting(name = PermissionsFeatureNames.PUBLISH_LIBRARIES, setting = PermissionSetting(Some(OrganizationRole.ADMIN)))
+            )
+          ).saved
+
+          val newPermissions = FeatureSetting.toBasePermissions(account.featureSettings)
+
+          val orgModifyRequest = OrganizationModifyRequest(owner.id.get, org.id.get, OrganizationModifications(permissionsDiff = Some(PermissionsDiff())))
+
+          inject[OrganizationCommander].modifyOrganization(OrganizationModifyRequest(owner.id.get, org.id.get, OrganizationModifications(permissionsDiff = Some(PermissionsDiff()))))
+          (plan, account)
+        }
 
         // owner can create public libraries
         val libraryCommander = inject[LibraryCommander]
@@ -80,20 +103,20 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val (org, owner, admin, member, paidPlan, paidAccount) = setup()
 
-        val invitees = db.readWrite { implicit sessoin => UserFactory.users(3).saved }
+        val invitees = db.readWrite { implicit session => UserFactory.users(3).saved }
 
         val orgInviteCommander = inject[OrganizationInviteCommander]
         val ownerInviteRequest = OrganizationInviteSendRequest(org.id.get, owner.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(0).id.get))
         val ownerInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(ownerInviteRequest), Duration(5, "seconds"))
-        ownerInviteResponse.isRight === true
+        ownerInviteResponse must beRight
 
         val adminInviteRequest = OrganizationInviteSendRequest(org.id.get, admin.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(1).id.get))
         val adminInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(adminInviteRequest), Duration(5, "seconds"))
-        adminInviteResponse.isRight === true
+        adminInviteResponse must beRight
 
         val memberInviteRequest = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest), Duration(5, "seconds"))
-        memberInviteResponse.isRight === false
+        memberInviteResponse must beRight
       }
     }
   }
@@ -117,9 +140,9 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val adminModifyRequest = LibraryModifyRequest(name = Some("Larry's Main Library"))
         val memberModifyRequest = LibraryModifyRequest(name = Some("Sergey's Main Library"))
 
-        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest).isRight === true
-        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest).isRight === true
-        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest).isRight === false
+        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
     }
   }

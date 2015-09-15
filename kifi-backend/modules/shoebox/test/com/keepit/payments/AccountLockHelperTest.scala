@@ -4,8 +4,9 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.commanders.OrganizationCommander
-import com.keepit.model.{ Name, UserFactory, OrganizationCreateRequest, OrganizationInitialValues }
+import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.heimdal.HeimdalContext
 
 import org.specs2.mutable.SpecificationLike
@@ -25,8 +26,10 @@ class AccountLockHelperTest extends SpecificationLike with ShoeboxTestInjector {
         val helper = inject[AccountLockHelper]
         val orgCommander = inject[OrganizationCommander]
 
-        inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-        val user = db.readWrite { implicit session => UserFactory.user().withName("Mr", "Spock").saved }
+        val user = db.readWrite { implicit session =>
+          PaidPlanFactory.paidPlan().saved
+          UserFactory.user().withName("Mr", "Spock").saved
+        }
         val createRequest = OrganizationCreateRequest(requesterId = user.id.get, OrganizationInitialValues(name = "Kifi"))
         val createResponse = orgCommander.createOrganization(createRequest)
         val org = createResponse.right.get.newOrg
