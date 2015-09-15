@@ -24,6 +24,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView]
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
@@ -69,6 +70,12 @@ class OrganizationCommanderImpl @Inject() (
       val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
       val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
+    }
+  }
+
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView] = {
+    db.readOnlyReplica { implicit session =>
+      orgIds.map(id => id -> getOrganizationView(id, viewerIdOpt, authTokenOpt)).toMap
     }
   }
 
