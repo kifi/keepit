@@ -1,10 +1,10 @@
 ophSmallMaxDim = 736px // for @media max-height and max-width
-ophImageWidth = 200px
+ophImageWidth = 100px
 
 .kf-oph
   background: pageHeaderColor
   color: #fff
-  padding-bottom: 75px
+  padding-bottom: 45px
   position: relative
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
@@ -16,6 +16,7 @@ ophImageWidth = 200px
   max-width: 480px
   margin: 0 auto
   display: flex
+  flex-direction: column
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     padding-top: 12px
@@ -40,6 +41,12 @@ ophImageWidth = 200px
     overflow: hidden
     border-radius: 5%
     margin: auto
+    margin-bottom: 15px
+
+.kf-oph-invite-button
+  margin: 0px auto
+  display: block
+  margin-bottom: 20px
 
 .kf-oph-pic-wrapper
   position: relative
@@ -63,7 +70,6 @@ ophImageWidth = 200px
 
 .kf-oph-about
   flex: 1
-  margin-left: 25px
   text-align: left
 
   @media (max-width: appMobileWidth)
@@ -72,10 +78,15 @@ ophImageWidth = 200px
 
   .kf-oph-input
     width: 100%
+    text-align: center
+
+  .kf-click-to-edit .kf-click-to-edit-p
+    text-align: center
+    width: 100%
 
 .kf-oph-name
   line-height: 31px
-  font-size: 21px
+  font-size: 30px
   font-weight: normal
   color: inherit
   box-sizing: border-box
@@ -83,6 +94,10 @@ ophImageWidth = 200px
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     line-height: 20px
     font-size: 14px
+
+  @media screen and (min-width: ophSmallMaxDim)
+    &.kf-click-to-edit .kf-click-to-edit-textarea
+      height: 45px
 
 .kf-oph-description
   color: #d8d8d8
