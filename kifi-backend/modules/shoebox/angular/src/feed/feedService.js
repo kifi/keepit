@@ -16,6 +16,7 @@ angular.module('kifi')
 
     [
       'keepAdded',
+      'keepRemoved',
       'libraryJoined',
       'libraryLeft',
       'libraryDeleted',
