@@ -124,8 +124,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 class UserThreadRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent,
-    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
-    notificationRepoImpl: NotificationRepoImpl) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
