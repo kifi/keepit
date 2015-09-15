@@ -90,7 +90,7 @@ class NotificationRepoImpl @Inject() (
 
   def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.hasNewEvent
+      row <- rows if row.recipient === recipient && row.hasNewEvent && row.kind =!= "legacy_notification"
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -98,7 +98,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.unread
+      row <- rows if row.recipient === recipient && row.unread && row.kind =!= "legacy_notification"
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -106,7 +106,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind === kind && row.unread
+      row <- rows if row.recipient === recipient && row.kind === kind && row.unread && row.kind =!= "legacy_notification"
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -114,7 +114,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind =!= kind && row.unread
+      row <- rows if row.recipient === recipient && row.kind =!= kind && row.unread && row.kind =!= "legacy_notification"
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -122,14 +122,14 @@ class NotificationRepoImpl @Inject() (
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
     val q = for (
-      row <- rows if row.recipient === recipient && row.unread && row.lastEvent < time
+      row <- rows if row.recipient === recipient && row.unread && row.lastEvent < time && row.kind =!= "legacy_notification"
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }
 
   def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient
+      notif <- rows if notif.recipient === recipient && notif.kind =!= "legacy_notification"
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
@@ -137,7 +137,7 @@ class NotificationRepoImpl @Inject() (
 
   def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.kind =!= "legacy_notification"
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
@@ -145,7 +145,7 @@ class NotificationRepoImpl @Inject() (
 
   def getNotificationsForSentMessages(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient
+      notif <- rows if notif.recipient === recipient && notif.kind =!= "legacy_notification"
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
@@ -153,7 +153,7 @@ class NotificationRepoImpl @Inject() (
 
   def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.kind =!= "legacy_notification"
       userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
@@ -161,28 +161,28 @@ class NotificationRepoImpl @Inject() (
 
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.hasNewEvent
+      notif <- rows if notif.recipient === recipient && notif.hasNewEvent && notif.kind =!= "legacy_notification"
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.hasNewEvent
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.hasNewEvent && notif.kind =!= "legacy_notification"
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient
+      notif <- rows if notif.recipient === recipient && notif.kind =!= "legacy_notification"
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.kind =!= "legacy_notification"
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }

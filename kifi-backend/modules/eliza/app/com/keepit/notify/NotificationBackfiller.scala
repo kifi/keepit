@@ -25,6 +25,7 @@ class NotificationBackfillerPluginImpl @Inject() (
     implicit val application: Application,
     override val scheduling: SchedulingProperties) extends NotificationBackfillerPlugin {
 
+  override def enabled: Boolean = true
   override def onStart() {
     for (app <- Play.maybeApplication) {
       val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (5 minutes, 3 minutes)

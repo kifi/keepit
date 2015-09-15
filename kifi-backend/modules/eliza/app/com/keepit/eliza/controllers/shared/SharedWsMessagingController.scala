@@ -108,13 +108,13 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_notifications_count" -> { _ =>
       val recipient = Recipient(socket.userId)
-      legacyNotificationCheck.ifElseUserExperiment(recipient) { recipient =>
-        notificationMessagingCommander.sendUnreadNotifications(recipient)
-      } { recip =>
-        val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-        val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-        socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmutedMessages + numUnreadUnmutedNotifications, numUnreadUnmutedMessages, numUnreadUnmutedNotifications))
-      }
+      val (newMsg, newNotif) = notificationMessagingCommander.getUnreadNotifications(recipient)
+      val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+      val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+      socket.channel.push(Json.arr("unread_notifications_count",
+        numUnreadUnmutedMessages + numUnreadUnmutedNotifications + newMsg + newNotif,
+        numUnreadUnmutedMessages + newMsg,
+        numUnreadUnmutedNotifications + newNotif))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
     // inbox notification/thread handlers
@@ -152,7 +152,7 @@ class SharedWsMessagingController @Inject() (
             socket.channel.push(Json.arr(requestId.toLong, notices, numTotal, numUnread))
         }
         fut.onFailure {
-          case _ =>
+          case e =>
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
