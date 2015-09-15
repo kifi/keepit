@@ -106,7 +106,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                activeUsers = 0
               )))
             case None =>
               log.info(s"[PAC] $orgId: Creating Account")
@@ -115,7 +116,8 @@ class PlanManagementCommanderImpl @Inject() (
                 planId = planId,
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
-                emailContacts = Seq.empty
+                emailContacts = Seq.empty,
+                activeUsers = 0
               )))
           }
           maybeAccount.map { account =>

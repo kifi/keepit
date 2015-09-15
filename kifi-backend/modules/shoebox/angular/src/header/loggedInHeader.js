@@ -151,12 +151,24 @@ angular.module('kifi')
       }
     };
 
+    $scope.shouldShowCreateTeam = function () {
+      return $scope.me.experiments.indexOf('admin') !== -1;
+    };
+
     $scope.addKeeps = function () {
       var library = $scope.library;
       modalService.open({
         template: 'keeps/addKeepModal.tpl.html',
         modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
       });
+    };
+
+    $scope.createLibrary = function () {
+      $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+    };
+
+    $scope.createTeam = function () {
+      $state.go('teams.new');
     };
 
     function onDocKeyDown(e) {
