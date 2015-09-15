@@ -16,7 +16,7 @@ object AmplitudeClient {
   val killedProperties = Set("client", "clientBuild", "clientVersion",
     "device", "experiments", "extensionVersion", "kcid_6", "kcid_7", "kcid_8",
     "kcid_9", "kcid_10", "kcid_11", "os", "osVersion", "remoteAddress", "serviceInstance", "serviceZone",
-    "userId", "userSegment", "libraryId", "keepId", "keep")
+    "userId", "userSegment")
 
   private val killedEvents = Set("user_old_slider_sliderShown", "user_expanded_keeper", "user_used_kifi", "user_reco_action",
     "user_logged_in", "visitor_expanded_keeper", "visitor_reco_action", "visitor_viewed_notification",
