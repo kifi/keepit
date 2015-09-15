@@ -24,6 +24,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationView]
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
@@ -72,6 +73,16 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationView] = {
+    db.readOnlyReplica { implicit session =>
+      orgIds.map { orgId =>
+        val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
+        val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt = None)
+        orgId -> OrganizationView(organizationInfo, membershipInfo)
+      }.toMap
+    }
+  }
+
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
     db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
@@ -102,8 +113,10 @@ class OrganizationCommanderImpl @Inject() (
       avatarPath = avatarPath)
   }
 
-  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = db.readOnlyReplica { implicit session =>
-    orgIds.map(id => id -> getOrganizationInfo(id, viewerIdOpt)).toMap
+  def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = {
+    db.readOnlyReplica { implicit session =>
+      orgIds.map(id => id -> getOrganizationInfo(id, viewerIdOpt)).toMap
+    }
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -247,27 +260,11 @@ class OrganizationCommanderImpl @Inject() (
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
           if (request.modifications.permissionsDiff.isDefined) {
-            val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
-            applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
+            planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
           }
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)
-      }
-    }
-  }
-  private def applyNewBasePermissionsToMembers(memberships: Set[OrganizationMembership], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
-    val membershipsByRole = memberships.groupBy(_.role)
-    for ((role, memberships) <- membershipsByRole) {
-      val beingAdded = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
-      val beingRemoved = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
-      memberships.foreach { membership =>
-        // If the member is currently MISSING some permissions that normally come with their role
-        // it means those permissions were explicitly revoked. We do not give them those back.
-        val explicitlyRevoked = oldBasePermissions.forRole(role) -- membership.permissions
-
-        val newPermissions = ((membership.permissions ++ beingAdded) -- beingRemoved) -- explicitlyRevoked
-        orgMembershipRepo.save(membership.withPermissions(newPermissions))
       }
     }
   }
@@ -338,8 +335,7 @@ class OrganizationCommanderImpl @Inject() (
       val org = orgRepo.get(orgId)
       val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
       if (modifications.permissionsDiff.isDefined) {
-        val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
-        applyNewBasePermissionsToMembers(memberships, org.basePermissions, modifiedOrg.basePermissions)
+        planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
       }
     }
   }

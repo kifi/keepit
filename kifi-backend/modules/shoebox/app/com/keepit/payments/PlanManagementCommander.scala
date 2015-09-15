@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -14,7 +15,7 @@ import com.keepit.common.social.BasicUserRepo
 import scala.concurrent.ExecutionContext
 import scala.util.{ Try, Success, Failure }
 
-import play.api.libs.json.JsNull
+import play.api.libs.json.{ JsObject, JsValue, Writes, JsNull }
 
 import com.google.inject.{ ImplementedBy, Inject }
 
@@ -46,7 +47,7 @@ trait PlanManagementCommander {
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan
+  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature]): PaidPlan
 
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
   def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
@@ -61,8 +62,12 @@ trait PlanManagementCommander {
   def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
-  def getPlanFeatureSettings(orgId: Id[Organization]): Map[Name[PlanFeature], FeatureSetting]
-  def setPlanFeatureSettings(orgId: Id[Organization], settings: Map[PlanFeature, FeatureSetting]): Boolean
+  def getPlanFeatures(orgId: Id[Organization]): Set[PlanFeature]
+
+  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsView
+  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsView
+
+  def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession)
 
   //UTILITIES
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
@@ -74,6 +79,7 @@ class PlanManagementCommanderImpl @Inject() (
   accountEventRepo: AccountEventRepo,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
+  orgRepo: OrganizationRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   basicUserRepo: BasicUserRepo,
   clock: Clock,
@@ -87,7 +93,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  //very explicitely accepts a db session to allow account creation on org creation within the same db session
+  //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
     Try { paidPlanRepo.get(planId) } match {
@@ -110,7 +116,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                settingsByFeature = Map.empty,
+                featureSettings = PlanFeature.toDefaultFeatureSettings(plan.features),
                 activeUsers = 0
               )))
             case None =>
@@ -121,7 +127,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                settingsByFeature = Map.empty,
+                featureSettings = PlanFeature.toDefaultFeatureSettings(plan.features),
                 activeUsers = 0
               )))
           }
@@ -320,17 +326,16 @@ class PlanManagementCommanderImpl @Inject() (
     paidPlanRepo.get(account.planId)
   }
 
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false): PaidPlan = {
-    db.readWrite { implicit session => createNewPlanHelper(name, billingCycle, price, custom) }
+  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature]): PaidPlan = {
+    db.readWrite { implicit session => createNewPlanHelper(name, billingCycle, price, custom, features) }
   }
 
-  def createNewPlanHelper(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false)(implicit session: RWSession): PaidPlan = {
-    paidPlanRepo.save(PaidPlan(
-      kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
+  def createNewPlanHelper(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature])(implicit session: RWSession): PaidPlan = {
+    paidPlanRepo.save(PaidPlan(kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
       billingCycle = billingCycle,
       pricePerCyclePerUser = price,
-      features = Set.empty //
+      features = features
     ))
   }
 
@@ -498,16 +503,81 @@ class PlanManagementCommanderImpl @Inject() (
     )
   }
 
-  def getPlanFeatureSettings(orgId: Id[Organization]): Map[Name[PlanFeature], FeatureSetting] = {
-    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsByFeature }
-    Map.empty
+  def getPlanFeatures(orgId: Id[Organization]): Set[PlanFeature] = {
+    val plan = db.readOnlyReplica { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val plan = paidPlanRepo.get(account.planId)
+      plan
+    }
+    plan.features
   }
 
-  def setPlanFeatureSettings(orgId: Id[Organization], settings: Map[PlanFeature, FeatureSetting]): Boolean = true
+  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsView = {
+    val (account, plan) = db.readOnlyReplica { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val plan = paidPlanRepo.get(account.planId)
+      (account, plan)
+    }
+    AccountFeatureSettingsView(plan.features, account.featureSettings)
+  }
+
+  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsView = {
+    val oldAccount = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId) }
+    val updatedAccount = oldAccount.copy(featureSettings = settings)
+
+    updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
+
+    val plan = db.readWrite { implicit session =>
+      paidAccountRepo.save(updatedAccount)
+      paidPlanRepo.get(updatedAccount.planId)
+    } // only saved if organization permissions are successfully updated (i.e. no exceptions)
+
+    AccountFeatureSettingsView(plan.features, updatedAccount.featureSettings)
+  }
+
+  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting]): BasePermissions = {
+
+    val oldPermissionByRole = FeatureSetting.toPermissionsByRole(oldFeatureSettings)
+    val newPermissionByRole = FeatureSetting.toPermissionsByRole(newFeatureSettings)
+
+    val addPermissions = PermissionsMap(newPermissionByRole) -- PermissionsMap(oldPermissionByRole)
+    val removePermissions = PermissionsMap(oldPermissionByRole) -- PermissionsMap(newPermissionByRole)
+
+    val permissionsDiff = PermissionsDiff(addPermissions, removePermissions)
+
+    val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+
+    val oldBasePermissions = org.basePermissions
+    val newBasePermissions = oldBasePermissions.applyPermissionsDiff(permissionsDiff)
+
+    db.readWrite { implicit session =>
+      orgRepo.save(org.copy(basePermissions = newBasePermissions))
+      applyNewBasePermissionsToMembers(org.id.get, oldBasePermissions, newBasePermissions)
+    }
+
+    newBasePermissions
+  }
+
+  def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
+    val memberships = orgMembershipRepo.getAllByOrgId(orgId)
+    val membershipsByRole = memberships.groupBy(_.role)
+    for ((role, memberships) <- membershipsByRole) {
+      val beingAdded = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
+      val beingRemoved = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
+      memberships.foreach { membership =>
+        // If the member is currently MISSING some permissions that normally come with their role
+        // it means those permissions were explicitly revoked. We do not give them those back.
+        val explicitlyRevoked = oldBasePermissions.forRole(role) -- membership.permissions
+
+        val newPermissions = ((membership.permissions ++ beingAdded) -- beingRemoved) -- explicitlyRevoked
+        orgMembershipRepo.save(membership.withPermissions(newPermissions))
+      }
+    }
+  }
 
   def getPlanOrgPermissionSettings(orgId: Id[Organization]): BasePermissions = {
-    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).settingsByFeature }
-    BasePermissions(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]])
+    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).featureSettings }
+    FeatureSetting.toBasePermissions(settingsConfig)
   }
 
 }

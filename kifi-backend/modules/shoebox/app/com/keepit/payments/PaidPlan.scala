@@ -96,28 +96,6 @@ trait FeatureSetting {
 
   def isPermissionFeature = PermissionsFeatureNames.ALL.contains(this.name)
 }
-
-case class PermissionFeatureSetting(name: Name[PlanFeature], setting: PermissionSetting) extends FeatureSetting
-object PermissionFeatureSetting {
-  def apply(name: String, setting: String): PermissionFeatureSetting = {
-    if (PermissionsFeatureNames.ALL.contains(Name[PlanFeature](name))) {
-      setting match {
-        case none if none.toLowerCase == "none" => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(role = None))
-        case role => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(Some(OrganizationRole(role))))
-      }
-    } else { throw new IllegalArgumentException(s"tried calling PermissionFeatureSetting.apply with unsupported name=$name and setting=$setting") }
-  }
-
-  def format = new Format[PermissionFeatureSetting] {
-    def reads(json: JsValue): JsResult[PermissionFeatureSetting] = {
-      ((json \ "name").as[String], (json \ "string").as[String]) match {
-        case (name, setting) if PermissionsFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting))
-        case _ => JsError(s"tried to call PermissionFeatureSetting.apply on unsupported json=$json")
-      }
-    }
-    def writes(o: PermissionFeatureSetting): JsValue = Json.obj("name" -> o.name.name, "setting" -> o.setting.value)
-  }
-}
 object FeatureSetting {
 
   implicit val format = new Format[FeatureSetting] {
@@ -130,9 +108,18 @@ object FeatureSetting {
     def writes(o: FeatureSetting): JsValue = Json.obj("name" -> o.name.name, "setting" -> o.setting.value)
   }
 
+  def apply(name: String, setting: String): FeatureSetting = {
+    name match {
+      case name if PermissionsFeatureNames.contains(name) => PermissionFeatureSetting(name, setting)
+      case _ => throw new IllegalArgumentException(s"tried to call FeatureSetting.apply with unsupported name=$name")
+    }
+  }
+  def apply(name: Name[PlanFeature], setting: Setting): FeatureSetting = FeatureSetting(name.name, setting.value)
+
   def isPermissionFeature(featureSetting: FeatureSetting): Boolean = PermissionsFeatureNames.ALL.contains(featureSetting.name)
 
   def toSettingByName(featureSettings: Set[FeatureSetting]): Map[Name[PlanFeature], Setting] = featureSettings.map { featureSetting => featureSetting.name -> featureSetting.setting }.toMap
+  def fromSettingByName(settingByName: Map[Name[PlanFeature], Setting]): Set[FeatureSetting] = settingByName.map { case (name, setting) => FeatureSetting(name, setting) }.toSet
 
   def toBasePermissions(featureSettings: Set[FeatureSetting]): BasePermissions = {
     val namesAndSettings = FeatureSetting.toSettingByName(featureSettings).toSet
@@ -158,6 +145,28 @@ object FeatureSetting {
   }
 }
 
+case class PermissionFeatureSetting(name: Name[PlanFeature], setting: PermissionSetting) extends FeatureSetting
+object PermissionFeatureSetting {
+  def apply(name: String, setting: String): PermissionFeatureSetting = {
+    if (PermissionsFeatureNames.ALL.contains(Name[PlanFeature](name))) {
+      setting match {
+        case none if none.toLowerCase == "none" => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(role = None))
+        case role => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(Some(OrganizationRole(role))))
+      }
+    } else { throw new IllegalArgumentException(s"tried calling PermissionFeatureSetting.apply with unsupported name=$name and setting=$setting") }
+  }
+
+  def format = new Format[PermissionFeatureSetting] {
+    def reads(json: JsValue): JsResult[PermissionFeatureSetting] = {
+      ((json \ "name").as[String], (json \ "string").as[String]) match {
+        case (name, setting) if PermissionsFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting))
+        case _ => JsError(s"tried to call PermissionFeatureSetting.apply on unsupported json=$json")
+      }
+    }
+    def writes(o: PermissionFeatureSetting): JsValue = Json.obj("name" -> o.name.name, "setting" -> o.setting.value)
+  }
+}
+
 object PermissionsFeatureNames {
   val PUBLISH_LIBRARIES = Name[PlanFeature](OrganizationPermission.PUBLISH_LIBRARIES.value)
   val INVITE_MEMBERS = Name[PlanFeature](OrganizationPermission.INVITE_MEMBERS.value)
@@ -171,6 +180,8 @@ object PermissionsFeatureNames {
   val CASCADING = Set(PUBLISH_LIBRARIES, INVITE_MEMBERS, GROUP_MESSAGING, RECLAIM_LIBRARIES, EXPORT_KEEPS, VIEW_MEMBERS, FORCE_EDIT_LIBRARIES)
 
   val ALL = Set(PUBLISH_LIBRARIES, INVITE_MEMBERS, GROUP_MESSAGING, RECLAIM_LIBRARIES, EXPORT_KEEPS, VIEW_MEMBERS, FORCE_EDIT_LIBRARIES)
+
+  def contains(name: String) = ALL.contains(Name[PlanFeature](name))
 }
 
 object PlanFeatureNames {

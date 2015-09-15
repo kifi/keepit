@@ -4,13 +4,13 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model.{ OrganizationRole, Organization, OrganizationPermission, User }
+import com.keepit.model._
 import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 
 import com.kifi.macros.json
 
-import play.api.libs.json.{ Json, JsSuccess, JsError }
+import play.api.libs.json._
 
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -68,9 +68,6 @@ class PaymentsController @Inject() (
     Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
   }
 
-  @json
-  case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean)
-
   def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request =>
     request.body.validate[Seq[SimpleAccountContactSettingRequest]] match {
       case JsSuccess(contacts, _) => {
@@ -84,17 +81,17 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: This is currently a dummy
-    Ok
+  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
+    val accountFeatureSettingsView = planCommander.getAccountFeatureSettings(request.orgId)
+    Ok(Json.toJson(accountFeatureSettingsView))
   }
 
-  @json
-  case class SimplePlanFeatureSettingRequest(name: String, setting: Setting)
-
-  def setPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
-    request.body.validate[Seq[SimplePlanFeatureSettingRequest]] match {
+  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
+    request.body.validate[SimpleAccountFeatureSettingRequest] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
-      case JsSuccess(settings, _) => Ok
+      case JsSuccess(settings, _) =>
+        val accountFeatureSettingsView = planCommander.setAccountFeatureSettings(request.orgId, settings.settingByName)
+        Ok(Json.toJson(accountFeatureSettingsView))
     }
   }
 
