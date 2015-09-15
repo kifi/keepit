@@ -36,12 +36,19 @@ angular.module('kifi')
           resetAndFetchLibraries();
         }
       }),
+
       $rootScope.$on('libraryDeleted', function (event, libraryId) {
         _.remove($scope.libraries, {id: libraryId});
       }),
+
       $rootScope.$on('libraryKeepCountChanged', function (event, libraryId, keepCount) {
         (_.find($scope.libraries, {id: libraryId}) || {}).keepCount = keepCount;
+      }),
+
+      $rootScope.$on('openCreateLibrary', function () {
+        $scope.openCreateLibrary();
       })
+
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
     });

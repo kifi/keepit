@@ -164,7 +164,11 @@ angular.module('kifi')
     };
 
     $scope.createLibrary = function () {
-      $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+      if ($state.includes('*.libraries.**')) {
+        $rootScope.$broadcast('openCreateLibrary');
+      } else {
+        $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+      }
     };
 
     $scope.createTeam = function () {
