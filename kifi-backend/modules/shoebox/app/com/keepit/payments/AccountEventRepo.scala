@@ -40,11 +40,9 @@ class AccountEventRepoImpl @Inject() (
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
-  implicit val processingStageColumnType = MappedColumnType.base[AccountEvent.ProcessingStage, String](_.name, AccountEvent.ProcessingStage(_))
 
   type RepoImpl = AccountEventTable
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "account_event") {
-    def stage = column[AccountEvent.ProcessingStage]("processing_stage", O.NotNull)
     def eventGroup = column[EventGroup]("event_group", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
@@ -58,7 +56,8 @@ class AccountEventRepoImpl @Inject() (
     def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
     def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
     def memo = column[Option[String]]("memo", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, stage, eventGroup, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
+    def chargeId = column[Option[String]]("charge_id", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, eventGroup, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new AccountEventTable(tag)

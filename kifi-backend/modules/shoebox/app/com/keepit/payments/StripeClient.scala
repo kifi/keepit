@@ -20,7 +20,7 @@ case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String,
 
 trait StripeChargeResult
 
-case class StripeChargeSuccess(chargeId: String) extends StripeChargeResult
+case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
 
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
 
@@ -41,6 +41,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
   };
 
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = lock.withLock {
+    require(amount.cents > 0)
     val chargeParams: Map[String, java.lang.Object] = Map(
       "amount" -> new java.lang.Integer(amount.cents),
       "currency" -> "usd",
@@ -50,7 +51,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     try {
       val charge = Charge.create(chargeParams.asJava)
-      StripeChargeSuccess(charge.getId())
+      StripeChargeSuccess(DollarAmount(charge.getAmount()), charge.getId())
     } catch {
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())

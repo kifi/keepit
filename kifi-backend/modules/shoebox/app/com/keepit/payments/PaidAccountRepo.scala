@@ -9,6 +9,8 @@ import com.keepit.common.mail.EmailAddress
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
+import org.joda.time.DateTime
+
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
   //every org should have a PaidAccount, created during org creation. Every time this method gets called that better exist.
@@ -18,6 +20,7 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
   def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
+  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount]
 }
 
 @Singleton
@@ -41,7 +44,8 @@ class PaidAccountRepoImpl @Inject() (
     def frozen = column[Boolean]("frozen", O.NotNull)
     def modifiedSinceLastIntegrityCheck = column[Boolean]("modified_since_last_integrity_check", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, modifiedSinceLastIntegrityCheck, activeUsers) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, modifiedSinceLastIntegrityCheck, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -73,6 +77,10 @@ class PaidAccountRepoImpl @Inject() (
 
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean = {
     (for (row <- rows if row.orgId === orgId && row.lockedForProcessing === true) yield row.lockedForProcessing).update(false) > 0
+  }
+
+  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if row.credit < maxBalance || row.billingCycleStart < maxCycleAge) yield row).list
   }
 
 }

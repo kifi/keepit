@@ -154,7 +154,6 @@ case class AccountEvent(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
-    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -166,7 +165,8 @@ case class AccountEvent(
     creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
-    memo: Option[String]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
+    memo: Option[String],
+    chargeId: Option[String]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
@@ -183,7 +183,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[AccountEvent],
-    stage: AccountEvent.ProcessingStage,
     eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
@@ -196,13 +195,13 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
-    memo: Option[String]): AccountEvent = {
+    memo: Option[String],
+    chargeId: Option[String]): AccountEvent = {
     AccountEvent(
       id,
       createdAt,
       updatedAt,
       state,
-      stage,
       eventGroup,
       eventTime,
       accountId,
@@ -214,20 +213,20 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       creditChange,
       paymentMethod,
       paymentCharge,
-      memo
+      memo,
+      chargeId
     )
   }
 
   def unapplyFromDbRow(e: AccountEvent) = {
     val (eventType, extras) = e.action.toDbRow
-    Some((e.id, e.createdAt, e.updatedAt, e.state, e.stage, e.eventGroup, e.eventTime, e.accountId,
+    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventGroup, e.eventTime, e.accountId,
       e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
-      extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo))
+      extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo, e.chargeId))
   }
 
-  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, pending: Boolean = false) = {
+  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, creditChange: DollarAmount = DollarAmount.ZERO) = {
     AccountEvent(
-      stage = if (pending) ProcessingStage.PENDING else ProcessingStage.COMPLETE,
       eventGroup = EventGroup(),
       eventTime = eventTime,
       accountId = accountId,
@@ -236,19 +235,12 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = attribution.admin,
       action = action,
-      creditChange = DollarAmount(0),
+      creditChange = creditChange,
       paymentMethod = None,
       paymentCharge = None,
-      memo = None
+      memo = None,
+      chargeId = None
     )
-  }
-
-  case class ProcessingStage(name: String)
-  object ProcessingStage {
-    val PENDING = ProcessingStage("pending")
-    val PROCESSING = ProcessingStage("processing")
-    val FAILED = ProcessingStage("failed")
-    val COMPLETE = ProcessingStage("complete")
   }
 
 }
