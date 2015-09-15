@@ -151,6 +151,12 @@ ophImageWidth = 200px
   &:not([href])
     color: accentGreen
     cursor: default
+    
+  &.active
+    color: lighten(accentGreen, 15%)
+
+    .kf-oph-stats-count
+      color: inherit
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     padding: 3px 5px
