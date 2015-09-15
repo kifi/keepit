@@ -16,6 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
+import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.{ NotificationProcessing, LegacyNotificationCheck }
 import com.keepit.notify.model.Recipient
@@ -64,6 +65,8 @@ class MessagingCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
+    notificationJsonFormat: NotificationJsonFormat,
+    wsNotificationDelivery: WsNotificationDelivery,
     notificationCommander: NotificationCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     notificationProcessing: NotificationProcessing,
@@ -371,14 +374,26 @@ class MessagingCommander @Inject() (
     )
 
     // send message through websockets immediately
-    thread.participants.foreach(_.allUsers.foreach { user =>
+    val notifMap = thread.participants.fold(Map.empty[Id[User], NotificationWithItems])(_.allUsers.flatMap { user =>
+      val checked = legacyNotificationCheck.checkUserExperiment(Recipient(user))
+      val notif =
+        if (checked.experimentEnabled) Some(user -> db.readWrite { implicit session =>
+          notificationCommander.updateMessageThreadForUser(user, thread.id.get)
+        })
+        else None
+
       notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
-    })
+
+      notif.toList
+    }.toMap)
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
+      notifMap.get(sender).foreach { notif =>
+        notificationCommander.setNotificationUnreadTo(notif.notification.id.get, false)
+      }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
@@ -404,24 +419,16 @@ class MessagingCommander @Inject() (
       case _ => thread.allParticipants
     }
     usersToNotify.foreach { userId =>
-      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip => () } { recip =>
+      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip =>
+        wsNotificationDelivery.deliver(recip, notifMap(userId))
+      } { recip =>
         notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
       }
     }
 
     // update user thread of the sender again, might be deprecated
     from.asUser.foreach { sender =>
-      legacyNotificationCheck.ifElseUserExperiment(Recipient(sender)) { recip =>
-        notificationProcessing.processNewEvent(NewMessage(
-          recipient = recip,
-          time = message.createdAt,
-          from = recip,
-          messageThreadId = thread.id.get.id,
-          messageId = message.id.get.id
-        ))
-      } { recip =>
-        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
-      }
+      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
 
     // update non user threads of non user recipients

@@ -113,6 +113,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 
   def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread]
+
+  def getThreadsThatNeedBackfilling(): Seq[UserThread]
 }
 
 /**
@@ -122,8 +124,9 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 class UserThreadRepoImpl @Inject() (
   val clock: Clock,
   val db: DataBaseComponent,
-  userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
-    extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
+  userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
+  notificationRepoImpl: NotificationRepoImpl
+) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -521,6 +524,17 @@ class UserThreadRepoImpl @Inject() (
 
   def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread] = {
     (for (row <- rows if row.notificationId === id) yield row).firstOption
+  }
+
+  def getThreadsThatNeedBackfilling(): Seq[Id[UserThread]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+       select id from user_thread
+       where last_notification != "null" and not exists (
+         select * from notification where recipient = concat('user|', user_thread.user_id)
+         and kind = "legacy_notification" and convert(group_identifier, unsigned integer) = user_thread.id
+       ) limit 100;
+      """.as[Id[UserThread]].list
   }
 
 }

@@ -10,7 +10,7 @@ import com.keepit.notify.model.{ EmailRecipient, Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.{ Mode, Play }
 
-import scala.concurrent.{ExecutionContext, Future, Await}
+import scala.concurrent.{ ExecutionContext, Future, Await }
 import scala.concurrent.duration._
 
 /**
