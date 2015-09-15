@@ -132,7 +132,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              if (accountLockHelper.aquireAccountLockForSession(orgId, session)) {
+              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
@@ -148,7 +148,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              if (accountLockHelper.aquireAccountLockForSession(orgId, session)) {
+              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage

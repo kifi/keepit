@@ -9,7 +9,7 @@ import com.google.inject.Inject
 
 class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRepo) {
 
-  def aquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {
+  def acquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {
     val hasLock = try {
       paidAccountRepo.tryGetAccountLock(orgId)(session)
     } catch {
@@ -17,7 +17,7 @@ class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRep
       case ex: java.sql.SQLException if ex.getErrorCode() == 1205 => false //MySQL lock aquisition timeout
     }
     if (!hasLock && attempts > 1) {
-      aquireAccountLockForSession(orgId, session, attempts - 1)
+      acquireAccountLockForSession(orgId, session, attempts - 1)
     } else {
       hasLock
     }
@@ -28,7 +28,7 @@ class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRep
   }
 
   def maybeSessionWithAccountLock[T](orgId: Id[Organization], attempts: Int = 1)(f: RWSession => T): Option[T] = db.readWrite { implicit session =>
-    val hasLock = aquireAccountLockForSession(orgId, session, attempts)
+    val hasLock = acquireAccountLockForSession(orgId, session, attempts)
     if (hasLock) {
       try {
         Some(f(session))
