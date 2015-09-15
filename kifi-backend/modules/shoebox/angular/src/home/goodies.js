@@ -9,7 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {},
-      templateUrl: 'recos/goodies.tpl.html',
+      templateUrl: 'home/goodies.tpl.html',
       link: function (scope) {
 
         scope.installState = function () {
