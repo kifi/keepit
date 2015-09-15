@@ -12,12 +12,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
-import com.keepit.model.{ KeepRepo, Library, LibraryRepo, NormalizedURIRepo, User, UserRepo, UserValueRepo }
+import com.keepit.model._
 
 import scala.concurrent.Future
 
 @Singleton
 class FakeRecommendationsCommander @Inject() (
+  systemValueRepo: SystemValueRepo,
   curator: CuratorServiceClient,
   search: SearchServiceClient,
   rover: RoverServiceClient,
@@ -36,6 +37,7 @@ class FakeRecommendationsCommander @Inject() (
   userValueRepo: UserValueRepo,
   imageConfig: S3ImageConfig)
     extends RecommendationsCommander(
+      systemValueRepo,
       curator,
       search,
       db,

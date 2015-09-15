@@ -49,6 +49,7 @@ object KeepFactory {
     def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
     def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))
     def withUri(uri: NormalizedURI) = new PartialKeep(keep.copy(uriId = uri.id.get, url = uri.url))
+    def withUri(uri: String) = new PartialKeep(keep.copy(url = uri))
     def nonPrimary() = new PartialKeep(keep.copy(isPrimary = false))
     def get: Keep = keep
   }
