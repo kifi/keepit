@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$rootScope', '$scope', 'profileService',
-  function($rootScope, $scope, profileService) {
+  '$window', '$rootScope', '$scope', 'profileService',
+  function($window, $rootScope, $scope, profileService) {
+
+    $window.document.title = 'Kifi • Your stream';
 
     $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
 
