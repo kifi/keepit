@@ -18,7 +18,6 @@ import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
-import com.keepit.notify.{ NotificationProcessing, LegacyNotificationCheck }
 import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -65,12 +64,8 @@ class MessagingCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
-    notificationJsonFormat: NotificationJsonFormat,
-    wsNotificationDelivery: WsNotificationDelivery,
     notificationCommander: NotificationCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
-    notificationProcessing: NotificationProcessing,
-    legacyNotificationCheck: LegacyNotificationCheck,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
@@ -304,15 +299,10 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
-    val thread = legacyNotificationCheck.ifNotifExistsReturn(threadId.id) { notif =>
-      db.readOnlyMaster { implicit session =>
-        notificationCommander.getMessageThread(notif.id.get)
-      }.get
-    } {
+    val thread =
       db.readOnlyMaster { implicit session =>
         threadRepo.get(threadId)
       }
-    }
 
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
@@ -374,26 +364,14 @@ class MessagingCommander @Inject() (
     )
 
     // send message through websockets immediately
-    val notifMap = thread.participants.fold(Map.empty[Id[User], NotificationWithItems])(_.allUsers.flatMap { user =>
-      val checked = legacyNotificationCheck.checkUserExperiment(Recipient(user))
-      val notif =
-        if (checked.experimentEnabled) Some(user -> db.readWrite { implicit session =>
-          notificationCommander.updateMessageThreadForUser(user, thread.id.get)
-        })
-        else None
-
+    thread.participants.foreach(_.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
-
-      notif.toList
-    }.toMap)
+    })
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
-      notifMap.get(sender).foreach { notif =>
-        notificationCommander.setNotificationUnreadTo(notif.notification.id.get, false)
-      }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
@@ -419,11 +397,7 @@ class MessagingCommander @Inject() (
       case _ => thread.allParticipants
     }
     usersToNotify.foreach { userId =>
-      legacyNotificationCheck.ifElseUserExperiment(Recipient(userId)) { recip =>
-        wsNotificationDelivery.deliver(recip, notifMap(userId))
-      } { recip =>
-        notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
-      }
+      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
     // update user thread of the sender again, might be deprecated

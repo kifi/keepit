@@ -63,8 +63,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val websocketRouter: WebSocketRouter
   protected val shoutdownListener: WebsocketsShutdownListener
 
-  protected val httpClient: HttpClient
-
   val kifInstallationStore: KifiInstallationStore
   val accessLog: AccessLog
 
@@ -200,13 +198,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               }
               onConnect(socketInfo)
               val finalEnum = Enumerator(startMessages: _*) >>> enumerator
-              finalEnum.apply(Iteratee.foreach { arr =>
-                if (arr != Json.arr("pong")) {
-                  httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-                    "text" -> s"*kifi -> ${streamSession.socialUser.username.getOrElse("[" + socketInfo.userId + "]")}* ```${Json.prettyPrint(arr)}```"
-                  ))
-                }
-              })
               Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
             } getOrElse {
               Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
@@ -249,11 +240,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       case other => other
     }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
-      if (jsArr != Json.arr("ping")) {
-        httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-          "text" -> s"*${streamSession.socialUser.username.getOrElse("[" + socketInfo.userId + "]")} -> kifi* ```${Json.prettyPrint(jsArr)}```"
-        ))
-      }
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
         statsd.time(s"websocket.handler.$action", ONE_IN_HUNDRED) { t =>

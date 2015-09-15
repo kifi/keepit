@@ -114,7 +114,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread]
 
-  def getThreadsThatNeedBackfilling(): Seq[UserThread]
+  def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]
 }
 
 /**
@@ -122,11 +122,10 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
  */
 @Singleton
 class UserThreadRepoImpl @Inject() (
-  val clock: Clock,
-  val db: DataBaseComponent,
-  userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
-  notificationRepoImpl: NotificationRepoImpl
-) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
+    val clock: Clock,
+    val db: DataBaseComponent,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
+    notificationRepoImpl: NotificationRepoImpl) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -526,15 +525,15 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.notificationId === id) yield row).firstOption
   }
 
-  def getThreadsThatNeedBackfilling(): Seq[Id[UserThread]] = {
+  def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
-       select id from user_thread
-       where last_notification != "null" and not exists (
+       select id, user_id, last_notification, notification_pending, uri_id from user_thread
+       where user_thread.replyable = FALSE and uri_id is null and last_notification != "null" and not exists (
          select * from notification where recipient = concat('user|', user_thread.user_id)
          and kind = "legacy_notification" and convert(group_identifier, unsigned integer) = user_thread.id
-       ) limit 100;
-      """.as[Id[UserThread]].list
+       ) limit 500;
+      """.as[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])].list
   }
 
 }

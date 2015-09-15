@@ -211,12 +211,8 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+  def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEvents(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -224,6 +220,15 @@ class NotificationMessagingCommander @Inject() (
     }
     notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+    }.map { finalNotifs =>
+      if (newEventNotifs.length < howMany) {
+        FullNotificationResults(finalNotifs)
+      } else {
+        val (numTotal, numUnread) = db.readOnlyReplica { implicit session =>
+          (notificationRepo.getNotificationsWithNewEventsCount(recipient), notificationRepo.getUnreadNotificationsCount(recipient))
+        }
+        SubsetNotificationResults(finalNotifs, numTotal, numUnread)
+      }
     }
   }
 
