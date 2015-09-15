@@ -73,7 +73,7 @@ angular.module('kifi')
       var unkeptFeedItem = matches && matches[0];
       var removedIndex;
 
-      if (unkeptFeedItem.libraries.length === 1) {
+      if (unkeptFeedItem.libraries.length <= 1) {
         removedIndex = $scope.feed.indexOf(unkeptFeedItem);
 
         if (removedIndex !== -1) {
