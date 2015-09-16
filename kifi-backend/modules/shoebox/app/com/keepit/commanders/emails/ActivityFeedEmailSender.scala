@@ -258,9 +258,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
-            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
-              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
-
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"
               else "What's happening right now on Kifi"

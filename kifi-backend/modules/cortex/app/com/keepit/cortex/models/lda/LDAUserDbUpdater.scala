@@ -42,8 +42,7 @@ class LDAUserDbUpdaterImpl @Inject() (
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
     userTopicRepo: UserLDAInterestsRepo,
-    commitRepo: FeatureCommitInfoRepo,
-    curator: CuratorServiceClient) extends LDAUserDbUpdater with Logging {
+    commitRepo: FeatureCommitInfoRepo) extends LDAUserDbUpdater with Logging {
 
   private val fetchSize = 5000
   private val modelName = StatModelName.LDA_USER
