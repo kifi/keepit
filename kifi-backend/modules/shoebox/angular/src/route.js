@@ -119,6 +119,12 @@ angular.module('kifi')
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
         activetab: 'libraries'
       })
+      .state('orgProfile.settings', {
+        url: '',
+        controller: 'OrgProfileSettingsCtrl',
+        templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
+        activetab: 'settings'
+      })
       .state('teams', {
         url: '/teams',
         'abstract': true,

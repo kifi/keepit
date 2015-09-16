@@ -71,6 +71,15 @@
             <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
             <div class="kf-oph-stats-name">Members</div>
           </a>
+          <a
+            class="kf-oph-stats-a"
+            ui-sref="orgProfile.settings"
+            ng-click="onClickTrack($event, 'clickedProfileSettings')"
+            ng-class="{ 'active': state.current.activetab ==='members'}"
+            ng-if="!readonly"
+          >
+            <div class="kf-oph-stats-name">Settings</div>
+          </a>
         </nav>
         </table>
       </div>
