@@ -11,7 +11,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsString, JsArray, JsValue, Json }
+import play.api.libs.json.{ JsValue, Json }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
