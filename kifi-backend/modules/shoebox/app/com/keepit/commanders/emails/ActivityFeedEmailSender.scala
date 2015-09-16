@@ -17,8 +17,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
 import com.keepit.common.performance._
-import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
-import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
+import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -106,7 +105,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val membershipRepo: LibraryMembershipRepo,
     val db: Database,
     val eliza: ElizaServiceClient,
-    curator: CuratorServiceClient,
     userRepo: UserRepo,
     experimentCommander: LocalUserExperimentCommander,
     emailTemplateSender: EmailTemplateSender,

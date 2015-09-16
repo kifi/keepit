@@ -13,7 +13,6 @@ import com.keepit.cortex.ModelVersions
 import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
 import com.keepit.cortex.utils.MatrixUtils.cosineDistance
 import org.joda.time.DateTime

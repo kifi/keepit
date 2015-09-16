@@ -10,7 +10,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -60,8 +59,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
-    FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCryptoModule()
   )
 
   "UserCommander" should {

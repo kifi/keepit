@@ -18,7 +18,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, _ }
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
@@ -45,8 +44,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     FakeHeimdalServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule()
+    FakeSocialGraphModule()
   )
 
   import com.keepit.commanders.RawBookmarkRepresentation._

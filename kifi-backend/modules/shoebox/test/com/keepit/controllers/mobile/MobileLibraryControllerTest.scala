@@ -18,7 +18,6 @@ import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.controllers.website.LibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
@@ -56,7 +55,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule(),
     FakeSliderHistoryTrackerModule()
   )
 

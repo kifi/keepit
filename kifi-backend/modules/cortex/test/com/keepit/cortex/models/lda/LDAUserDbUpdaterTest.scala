@@ -4,7 +4,6 @@ import com.keepit.common.db.{ State, SequenceNumber, Id }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.dbmodel._
-import com.keepit.curator.FakeCuratorServiceClientImpl
 import com.keepit.model.{ KeepSource, User, Keep }
 import com.keepit.search.Lang
 import org.joda.time.DateTime
