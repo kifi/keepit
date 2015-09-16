@@ -1,0 +1,55 @@
+.message_bar
+  position: fixed
+  top: 0
+  left: 0
+  right: 0
+  z-index: 2500
+  display: flex
+  pointer-events: none
+  transition: transform 0.25s
+  transform: translateY(0px)
+
+  &.hide
+    transform: translateY(-40px)
+
+  .message_bar-message
+    background: noticeYellow
+    padding: 5px 8px
+    border-radius: smallBorderRadius
+    color: textBlackColor
+    text-align: center
+    margin: 5px auto
+    max-width: 300px
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.15)
+    z-index: 1000
+    animation-duration: 0.25s
+    animation-timing-function: ease
+    animation-fill-mode: both
+    animation-name: fadeInDown
+    font-size: 0.85rem
+
+    &[data-type="green"]
+      background: accentGreen
+      color: white
+
+    &[data-type="red"]
+      background: errorRed
+      color: white
+
+@keyframes fadeInDown 
+  0%
+    opacity: 0
+    transform: translateY(-20px)
+
+  100%
+    opacity: 1
+    transform: translateY(0)
+
+@-webkit-keyframes fadeInDown 
+  0%
+    opacity: 0
+    transform: translateY(-20px)
+
+  100%
+    opacity: 1
+    transform: translateY(0)
