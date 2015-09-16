@@ -1025,11 +1025,6 @@ class AdminUserController @Inject() (
     NoContent
   }
 
-  def refreshRecos(userId: Id[User]) = AdminUserPage { implicit request =>
-    SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
-    NoContent
-  }
-
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
