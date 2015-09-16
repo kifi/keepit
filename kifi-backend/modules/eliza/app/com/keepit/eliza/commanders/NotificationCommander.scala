@@ -104,13 +104,13 @@ class NotificationCommander @Inject() (
     }.maxOpt
     val messages = messageRepo.get(messageThreadId, 0)
     val lastEvent = messages.map(_.createdAt).max
-    val groupIdentifier = messageThreadId.toString
+    val groupIdentifier = messageThreadId.id.toString
     notificationRepo.getByGroupIdentifier(recipient, NewMessage, groupIdentifier).fold({
       val notif = notificationRepo.save(Notification(
         recipient = recipient,
         kind = NewMessage,
         lastEvent = lastEvent,
-        groupIdentifier = Some(messageThreadId.toString)
+        groupIdentifier = Some(messageThreadId.id.toString)
       ))
       val notifId = notif.id.get
       userThreadRepo.save(userThread.copy(
