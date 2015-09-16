@@ -115,11 +115,6 @@ class RecommendationsCommander @Inject() (
 
       val libToRecoInfoMap = libsAndRecoInfos.map { case (lib, info) => info.libraryId -> info }.toMap
 
-      // for analytics and delivery tracking
-      if (trackDelivery) SafeFuture {
-        val deliveredIds = libraries.map(_._1).toSet
-        curator.notifyLibraryRecosDelivered(userId, deliveredIds, source, subSource)
-      }
       // context from curator is generated with limit * 4 items. Not right.
       val newContext = generateNewContext(context.getOrElse(""), idToLibraryMap.keySet)
 

@@ -79,13 +79,7 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
 
-    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).map { _ =>
-      generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
-    }.recover {
-      case _ =>
-        curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct) // fire and forget this time
-        generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
-    }
+    Future.successful(generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)) //no need for future here, though this code will die soon anyway
   }
 
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona] = {
@@ -109,7 +103,6 @@ class UserPersonaCommanderImpl @Inject() (
           }
       }
     }
-    curator.ingestPersonaRecos(userId, personasToRemove.values.map { _.id.get }.toSeq.distinct, reverseIngestion = true)
     personasToRemove.values.toSet
   }
 

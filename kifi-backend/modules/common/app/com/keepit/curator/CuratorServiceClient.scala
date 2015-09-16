@@ -19,10 +19,6 @@ trait CuratorServiceClient extends ServiceClient {
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults]
-  def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
-  def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
-  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit]
-  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] // votes and signals
 }
 
 class CuratorServiceClientImpl(
@@ -60,35 +56,6 @@ class CuratorServiceClientImpl(
         case err: JsError =>
           val recos = js.as[Seq[LibraryRecoInfo]]
           LibraryRecoResults(recos, "")
-      }
-    }
-  }
-
-  def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None) = {
-    val payload = Json.toJson(selectionParams)
-    call(Curator.internal.refreshLibraryRecos(userId, await), body = payload).map { _ => Unit }
-  }
-
-  def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource) = {
-    val payload = Json.obj(
-      "libraryIds" -> libraryIds,
-      "source" -> source,
-      "subSource" -> subSource
-    )
-    call(Curator.internal.notifyLibraryRecosDelivered(userId), body = payload).map { _ => Unit }
-  }
-
-  def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit] = {
-    val payload = Json.obj("personaIds" -> personaIds)
-    call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload).map { _ => Unit }
-  }
-
-  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] = {
-    call(Curator.internal.examineUserFeedbackCounter(userId)).map { r =>
-      r.json match {
-        case JsNull => (Seq(), Seq())
-        case js =>
-          ((js \ "votes").as[Seq[UserFeedbackCountView]], (js \ "signals").as[Seq[UserFeedbackCountView]])
       }
     }
   }
