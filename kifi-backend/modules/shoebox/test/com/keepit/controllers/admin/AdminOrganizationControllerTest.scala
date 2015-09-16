@@ -44,7 +44,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
         inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
         val payload: JsValue = Json.obj("permissions" -> Json.obj("add" -> Json.obj(OrganizationRole.ADMIN.value -> Seq(targetPermission.value))), "confirmation" -> "i swear i know what i am doing")
         val request = route.addPermissionToAllOrganizations().withBody(payload)
-        val result = controller.addPermissionToAllOrganizations()(request)
+        val result = controller.applyPermissionsDiffToAllOrganizations()(request)
         status(result) === OK
 
         inject[WatchableExecutionContext].drain()

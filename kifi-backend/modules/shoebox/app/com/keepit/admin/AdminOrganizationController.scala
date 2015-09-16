@@ -460,7 +460,7 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def addPermissionToAllOrganizations() = AdminUserAction(parse.tolerantJson) { implicit request =>
+  def applyPermissionsDiffToAllOrganizations() = AdminUserAction(parse.tolerantJson) { implicit request =>
     implicit val reads = KeyFormat.key2Reads[PermissionsDiff, String]("permissions", "confirmation")
     val (permissionsDiff, confirmation) = request.body.as[(PermissionsDiff, String)]
     assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
