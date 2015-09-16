@@ -11,7 +11,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.zones
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -60,7 +59,6 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
   var modules = Seq(
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
-    FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeShoeboxStoreModule(),

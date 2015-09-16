@@ -13,7 +13,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, HeimdalQueueDevModule }
 import com.keepit.model._
@@ -46,7 +45,6 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     AbuseControlModule(),
-    FakeCuratorServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
   )

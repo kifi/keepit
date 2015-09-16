@@ -7,7 +7,6 @@ import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -32,7 +31,6 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector w
     FakeCortexServiceClientModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
-    FakeCuratorServiceClientModule() ::
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     FakeSliderHistoryTrackerModule() ::

@@ -1,12 +1,10 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,7 +27,6 @@ class UserPersonaCommanderImpl @Inject() (
     personaRepo: PersonaRepo,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
-    curator: CuratorServiceClient,
     clock: Clock) extends UserPersonaCommander with Logging {
 
   def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): Future[(Option[Persona], Option[Library])] = {

@@ -10,7 +10,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.search.augmentation.LimitedAugmentationInfo
@@ -29,7 +28,6 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
-    FakeCuratorServiceClientModule() ::
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     Nil

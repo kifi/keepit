@@ -14,7 +14,6 @@ import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGr
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.AuthController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -58,7 +57,6 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
     MaybeAppFakeUserActionsModule(),
     FakeCortexServiceClientModule(),
     KeepImportsModule(),
-    FakeCuratorServiceClientModule(),
     FakeOAuth2ConfigurationModule(),
     FakeCryptoModule()
   )

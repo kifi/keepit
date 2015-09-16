@@ -8,7 +8,6 @@ import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSoc
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ UserFactory, SocialUserInfo }
 import com.keepit.model.UserFactoryHelper._
@@ -36,8 +35,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeUserActionsModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   "ExtAuthController" should {

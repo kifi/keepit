@@ -11,7 +11,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ UserEmailAddress, UserEmailAddressRepo }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -39,8 +38,7 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule())
+    FakeCortexServiceClientModule())
 
   "AuthController" should {
     val call = com.keepit.controllers.core.routes.AuthController.forgotPassword()

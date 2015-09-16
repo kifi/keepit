@@ -16,7 +16,6 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.time._
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
@@ -118,7 +117,6 @@ class KeepCommanderImpl @Inject() (
     heimdalClient: HeimdalServiceClient,
     airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
-    curator: CuratorServiceClient,
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryAccessCommander: LibraryAccessCommander,
@@ -358,7 +356,6 @@ class KeepCommanderImpl @Inject() (
     }
     SafeFuture {
       searchClient.updateKeepIndex()
-      keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
@@ -694,7 +691,6 @@ class KeepCommanderImpl @Inject() (
     if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
     if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
     searchClient.updateKeepIndex()
-    curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
   }
 
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {

@@ -17,7 +17,6 @@ import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.{ SearchServiceClientModule }
 import com.keepit.eliza.{ ElizaServiceClientModule }
-import com.keepit.curator.CuratorServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.{ HeimdalServiceClientModule }
 import com.keepit.abook.{ ABookServiceClientModule }
@@ -63,7 +62,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val abookServiceClientModule: ABookServiceClientModule
   val cortexServiceClientModule: CortexServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule
-  val curatorServiceClientModule: CuratorServiceClientModule
   val roverServiceClientModule: RoverServiceClientModule
 
   val abuseControlModule = AbuseControlModule()

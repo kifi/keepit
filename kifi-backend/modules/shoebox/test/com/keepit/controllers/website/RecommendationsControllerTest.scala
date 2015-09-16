@@ -3,14 +3,13 @@ package com.keepit.controllers.website
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.common.db.{ ExternalId }
+import com.keepit.common.db.ExternalId
 
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ UserFactory, NormalizedURI }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -28,7 +27,6 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
 
   val modules = Seq(
     FakeShoeboxServiceModule(),
-    FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),

@@ -14,7 +14,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.{ AuthHelper, AuthController }
 import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -52,8 +51,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    KeepImportsModule(),
-    FakeCuratorServiceClientModule()
+    KeepImportsModule()
   )
 
   val oldPwd1 = "1234567"
