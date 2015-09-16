@@ -9,8 +9,11 @@ ophImageWidth = 100px
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
     padding-bottom: 12px
 
-.kf-oph-top
+.kf-oph-wrapper
+  wrapper()
   position: relative
+
+.kf-oph-top
   padding-top: 50px
   max-width: 480px
   margin: 0 auto
@@ -42,10 +45,20 @@ ophImageWidth = 100px
     margin: auto
     margin-bottom: 15px
 
-.kf-oph-invite-button
-  margin: 0px auto
-  display: block
-  margin-bottom: 20px
+.kf-oph-invite-button.kf-link
+  position: absolute
+  top: 25px
+  right: 25px
+  color: rgba(255, 255, 255, 0.8)
+
+  svg
+    fill: rgba(255, 255, 255, 0.8)
+
+  &:hover
+    color: white
+
+    svg
+      fill: white
 
 .kf-oph-pic-wrapper
   position: relative
