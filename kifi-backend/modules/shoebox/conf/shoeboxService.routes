@@ -466,7 +466,6 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, trackLibDelivery: Boolean ?= true)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -862,12 +861,6 @@ GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.cont
 GET     /admin/learning/pornDetect/bms/:page                    @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= true)
 POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
 POST    /admin/learning/pornDetect/whitelist               @com.keepit.controllers.admin.AdminPornDetectorController.whitelist
-
-GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
-GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
-GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
-GET     /admin/curator/feedback                            @com.keepit.controllers.admin.AdminCuratorController.view
-POST    /admin/curator/feedback/counter                    @com.keepit.controllers.admin.AdminCuratorController.examineUserFeedbackCounter
 
 GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
 GET     /adimin/cortex/lda/version                         @com.keepit.controllers.admin.AdminLDAController.versionPage(version: ModelVersion[DenseLDA])

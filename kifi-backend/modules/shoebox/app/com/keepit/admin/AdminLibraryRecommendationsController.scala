@@ -21,10 +21,6 @@ class AdminLibraryRecommendationsController @Inject() (
     db: Database,
     curator: CuratorServiceClient) extends AdminUserActions with Logging {
 
-  def index() = AdminUserAction { implicit request =>
-    Ok(html.admin.curator.librecos.index())
-  }
-
   def view() = AdminUserAction.async { implicit request =>
     val userId = request.request.getQueryString("userId")
       .filter(_.nonEmpty) map (s => Id[User](s.toInt)) getOrElse request.userId
