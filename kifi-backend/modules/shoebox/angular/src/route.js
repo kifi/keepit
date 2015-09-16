@@ -120,7 +120,7 @@ angular.module('kifi')
         activetab: 'libraries'
       })
       .state('orgProfile.settings', {
-        url: '',
+        url: '/settings',
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
         activetab: 'settings'
