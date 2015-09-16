@@ -6,24 +6,11 @@
     actions="inviteBannerButtons"
   ></div>
   <div
-    ng-if="notification == 'save'"
-    kf-generic-banner
-    text="Saved successfully"
-    icon="'save'"
-  ></div>
-  <div
     ng-if="shouldShowSignupBanner()"
     kf-generic-banner
     thumb="{{membership.invite.inviter|pic}}"
     text="{{membership.invite.inviter|name}} invited you to become a member of this team."
     actions="signupBannerButtons"
-  ></div>
-  <div
-    ng-if="notification == 'error'"
-    kf-generic-banner
-    text="We're sorry, there was a problem saving your information. Please try again"
-    icon="'error'"
-    variation="'kf-generic-banner-error'"
   ></div>
   <div class="kf-oph-wrapper">
     <div class="kf-oph-top">

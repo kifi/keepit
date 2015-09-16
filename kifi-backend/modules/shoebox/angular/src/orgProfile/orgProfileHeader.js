@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'profileService', 'signupService',
-  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout, profileService, signupService) {
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'profileService', 'signupService', 'messageTicker',
+  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout, profileService, signupService, messageTicker) {
 
   return {
     restrict: 'A',
@@ -17,7 +17,6 @@ angular.module('kifi')
       scope.state = $state;
 
       var lastSavedInfo = {};
-      scope.notification = null;
 
       var authToken = $location.search().authToken || '';
       scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
@@ -58,17 +57,17 @@ angular.module('kifi')
               'action': 'updateOrgProfile',
               'path': $location.path()
             });
-            scope.notification = 'save';
-            $timeout(function() {
-              scope.notification = null;
-            }, 1500);
+            messageTicker({
+              text: 'Saved Successfully',
+              type: 'green'
+            });
             return updateMe(res.data);
           })['catch'](function() {
-            scope.notification = 'error';
             scope.undo();
-            $timeout(function() {
-              scope.notification = null;
-            }, 1500);
+            messageTicker({
+              text: 'We\'re sorry. There was a problem saving your information. Please try again.',
+              type: 'red'
+            });
           });
       };
 
