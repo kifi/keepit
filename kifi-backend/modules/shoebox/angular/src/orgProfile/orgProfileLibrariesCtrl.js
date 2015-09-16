@@ -77,6 +77,10 @@ angular.module('kifi')
     };
 
     $scope.openCreateLibrary = function () {
+      if (!$scope.canCreateLibraries) {
+        return;
+      }
+
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
