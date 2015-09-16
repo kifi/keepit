@@ -10,7 +10,6 @@ import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -34,8 +33,7 @@ class AndroidAppStoreParamsControllerTest extends Specification with ShoeboxTest
     FakeHeimdalServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule()
+    FakeSocialGraphModule()
   )
 
   def prenormalize(url: String)(implicit injector: Injector): String = normalizationService.prenormalize(url).get

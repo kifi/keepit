@@ -16,6 +16,7 @@ import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
+import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -26,6 +27,8 @@ class NotificationMessagingCommander @Inject() (
     pushNotifier: MobilePushNotifier,
     messageFetchingCommander: MessageFetchingCommander,
     notificationRepo: NotificationRepo,
+    messageRepo: MessageRepo,
+    messagingCommander: MessagingCommander,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
@@ -43,12 +46,20 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def sendUnreadNotifications(recipient: Recipient): Unit = {
-    val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
-      (notificationRepo.getUnreadNotificationsCountForKind(recipient, NewMessage.name),
-        notificationRepo.getUnreadNotificationsCountExceptKind(recipient, NewMessage.name))
-    }
+  def combineNotificationsWithThreads(threadJsons: Seq[NotificationJson], notifJsons: Seq[NotificationWithJson], howMany: Option[Int] = None): Seq[JsObject] = {
+    val allNotifs = threadJsons.map(Left.apply) ++ notifJsons.map(Right.apply)
+    val full = allNotifs.sortBy {
+      case Left(old) => (old.obj \ "time").as[DateTime]
+      case Right(newn) => newn.notification.lastEvent
+    }.map {
+      case Left(old) => old.obj
+      case Right(newn) => newn.json
+    }.reverse
+    howMany.fold(full)(full.take)
+  }
 
+  def sendUnreadNotifications(recipient: Recipient): Unit = {
+    val (unreadMessages, unreadNotifications) = getUnreadNotifications(recipient)
     recipient match {
       case UserRecipient(user, _) =>
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -56,13 +67,18 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
-    val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
+  def getUnreadNotifications(recipient: Recipient): (Int, Int) = {
+    db.readOnlyMaster { implicit session =>
       (notificationRepo.getUnreadNotificationsCountForKind(recipient, NewMessage.name),
         notificationRepo.getUnreadNotificationsCountExceptKind(recipient, NewMessage.name))
     }
+  }
+
+  def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
     recipient match {
       case UserRecipient(user, _) =>
+        val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user, Some(true))
+        val unreadNotifications = messagingCommander.getUnreadUnmutedThreadCount(user, Some(false))
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
         val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
         pushNotifier.notifyUser(user, pushNotif, false)
@@ -109,10 +125,6 @@ class NotificationMessagingCommander @Inject() (
     val recipient = Recipient(userId)
     shoeboxServiceClient.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
       case Left(nUri) =>
-        val previous = db.readOnlyReplica { implicit session =>
-          userThreadRepo.getLatestRawNotificationsForUri(userId, nUri.id.get, howMany)
-        }
-        notificationCommander.backfillLegacyNotificationsFor(userId, previous)
         val notifsForPage = db.readOnlyReplica { implicit session =>
           notificationRepo.getNotificationsForPage(recipient, nUri.id.get, howMany).map { notif =>
             NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -146,10 +158,6 @@ class NotificationMessagingCommander @Inject() (
     val recipient = Recipient(userId)
     shoeboxServiceClient.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
       case Left(nUri) =>
-        val previous = db.readOnlyReplica { implicit session =>
-          userThreadRepo.getRawNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
-        }
-        notificationCommander.backfillLegacyNotificationsFor(userId, previous)
         val notifsForPage = db.readOnlyReplica { implicit session =>
           notificationRepo.getNotificationsForPageBefore(recipient, nUri.id.get, time, howMany).map { notif =>
             NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -163,22 +171,23 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def getNotificationMessages(userId: Id[User], notifId: Id[Notification]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getNotificationMessages(userId: Id[User], notifId: Id[Notification]): Future[JsObject] = {
     db.readOnlyReplica { implicit session =>
       notificationCommander.getMessageThread(notifId)
-    }.fold(
-      Future.failed[(MessageThread, Seq[MessageWithBasicUser])](new Exception(s"Notification $notifId does not have a message thread"))
-    ) { messageThread =>
-        messageFetchingCommander.getThreadMessagesWithBasicUser(userId, messageThread)
+    }.fold(Future.failed[MessageThread](new Exception(s"Notification $notifId does not have a message thread"))) { messageThread =>
+      Future.successful(messageThread)
+    }.flatMap { messageThread =>
+      val notifWithItems = db.readWrite { implicit session =>
+        notificationCommander.backfillMessageThreadForUser(userId, messageThread.id.get)
       }
+      notificationInfoGenerator.generateInfo(Seq(notifWithItems)).flatMap { infos =>
+        notificationJsonFormat.threadMessagesInfo(infos.head)
+      }
+    }
   }
 
   def getNotificationsForSentMessages(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestRawNotificationsForStartedThreads(userId, howMany)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val sentNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsForSentMessages(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -191,10 +200,6 @@ class NotificationMessagingCommander @Inject() (
 
   def getNotificationsForSentMessagesBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestRawNotificationsForStartedThreads(userId, howMany)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val sentNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsForSentMessagesBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -205,12 +210,8 @@ class NotificationMessagingCommander @Inject() (
     }
   }
 
-  def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
+  def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEvents(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -218,15 +219,20 @@ class NotificationMessagingCommander @Inject() (
     }
     notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
+    }.map { finalNotifs =>
+      if (newEventNotifs.length < howMany) {
+        FullNotificationResults(finalNotifs)
+      } else {
+        val (numTotal, numUnread) = db.readOnlyReplica { implicit session =>
+          (notificationRepo.getNotificationsWithNewEventsCount(recipient), notificationRepo.getUnreadNotificationsCount(recipient))
+        }
+        SubsetNotificationResults(finalNotifs, numTotal, numUnread)
+      }
     }
   }
 
   def getNotificationsWithNewEventsBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEventsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -239,10 +245,6 @@ class NotificationMessagingCommander @Inject() (
 
   def getLatestNotifications(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestRawNotifications(userId, howMany, None)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotifications(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -265,10 +267,6 @@ class NotificationMessagingCommander @Inject() (
 
   def getLatestNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
     val recipient = Recipient(userId)
-    val previous = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getRawNotificationsBefore(userId, time, howMany, None)
-    }
-    notificationCommander.backfillLegacyNotificationsFor(userId, previous)
     val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotificationsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)

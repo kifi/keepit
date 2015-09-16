@@ -14,7 +14,6 @@ import com.keepit.common.oauth.ProviderIds
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -46,8 +45,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
     FakeSocialGraphModule(),
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
-    FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCryptoModule()
   )
 
   val senderEmail = EmailAddress("foo@foo.com")

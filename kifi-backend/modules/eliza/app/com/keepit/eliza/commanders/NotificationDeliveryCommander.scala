@@ -10,13 +10,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.eliza.util.MessageFormatter
 import com.keepit.eliza.{ PushNotificationExperiment, SimplePushNotificationCategory }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
-import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.notify.{ LegacyNotificationCheck }
-import com.keepit.notify.model.UserRecipient
+import com.keepit.notify.LegacyNotificationCheck
+import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
@@ -58,7 +58,6 @@ class NotificationDeliveryCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
     }
-    sendToUser(from, Json.arr("notification", notifJson))
   }
 
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
@@ -151,8 +150,8 @@ class NotificationDeliveryCommander @Inject() (
     })
   }
 
-  def notifyMessage(userId: Id[User], threadExtId: ExternalId[MessageThread], message: MessageWithBasicUser): Unit =
-    sendToUser(userId, Json.arr("message", threadExtId.id, message))
+  def notifyMessage(userId: Id[User], thread: MessageThread, message: MessageWithBasicUser): Unit =
+    sendToUser(userId, Json.arr("message", thread.externalId.id, message))
 
   def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[Message], nUrl: String, creationDate: DateTime, unreadMessages: Int, unreadNotifications: Int): Unit = {
     sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, msgExtId.id))
@@ -185,7 +184,7 @@ class NotificationDeliveryCommander @Inject() (
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]) = {
-    val experiments = userIds.map(id => legacyNotificationCheck.checkUserExperiment(UserRecipient(id)))
+    val experiments = userIds.map(id => legacyNotificationCheck.checkUserExperiment(Recipient(id)))
     val experimentsMap = experiments.map {
       case LegacyNotificationCheck.Result(experimentEnabled, UserRecipient(id, _)) => id -> experimentEnabled
     }.toMap
@@ -358,6 +357,7 @@ class NotificationDeliveryCommander @Inject() (
         val notification = MessageThreadPushNotification(thread.externalId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
+
     }
 
     //This is mostly for testing and monitoring

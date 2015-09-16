@@ -64,7 +64,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
         notifOut(0).as[String] === "notification"
         val notif = notifOut(1)
         (notif \ "bodyHtml").as[String] === "Marvin just grumbled about Life, the universe, and everything"
-        (notif \ "category").as[String] === "triggered"
+        (notif \ "category").as[String] === "global"
         (notif \ "unread").as[Boolean] === true
       }
 

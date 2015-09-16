@@ -6,7 +6,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.{ SpecificationLike }
 
 import org.joda.time.DateTime
@@ -45,8 +44,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule()
+    FakeSocialGraphModule()
   )
 
   "mobileController" should {

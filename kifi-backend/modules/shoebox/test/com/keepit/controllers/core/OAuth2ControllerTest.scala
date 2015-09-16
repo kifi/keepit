@@ -9,7 +9,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -26,8 +25,7 @@ class OAuth2ControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule())
+    FakeCortexServiceClientModule())
 
   "OAuth2Controller" should {
     "handle state token" in {

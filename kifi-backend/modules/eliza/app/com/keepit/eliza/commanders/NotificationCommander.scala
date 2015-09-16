@@ -68,14 +68,13 @@ class NotificationCommander @Inject() (
           notificationRepo.getByGroupIdentifier(recipient, LegacyNotification, id).fold {
             val threadId = (json \ "thread").as[String]
             val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
-            if (messageThread.replyable) {
-              backfillMessageThreadForUser(userId, messageThread)
-            } else {
+            val userThread = userThreadRepo.getUserThread(userId, messageThread.id.get)
+            if (!messageThread.replyable) {
               val notif = notificationRepo.save(Notification(
                 recipient = recipient,
                 kind = LegacyNotification,
                 lastEvent = time,
-                groupIdentifier = Some(id)
+                groupIdentifier = Some(userThread.id.get.id.toString)
               ))
               val item = notificationItemRepo.save(NotificationItem(
                 notificationId = notif.id.get,
@@ -88,30 +87,30 @@ class NotificationCommander @Inject() (
                 ),
                 eventTime = time
               ))
-              NotificationWithItems(notif, Set(item))
-            }
+              Some(NotificationWithItems(notif, Set(item)))
+            } else None
           } { notif =>
-            NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
+            Some(NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet))
           }
-      }
+      }.collect { case Some(notif) => notif }
     }
   }
 
-  def backfillMessageThreadForUser(userId: Id[User], messageThread: MessageThread)(implicit session: RWSession): NotificationWithItems = {
+  def backfillMessageThreadForUser(userId: Id[User], messageThreadId: Id[MessageThread])(implicit session: RWSession): NotificationWithItems = {
     val recipient = Recipient(userId)
-    val userThread = userThreadRepo.getUserThread(userId, messageThread.id.get)
+    val userThread = userThreadRepo.getUserThread(userId, messageThreadId)
     val lastChecked = Seq(userThread.lastActive, userThread.lastSeen, userThread.notificationLastSeen).collect {
       case Some(time) => time
     }.maxOpt
-    val messages = messageRepo.get(messageThread.id.get, 0)
+    val messages = messageRepo.get(messageThreadId, 0)
     val lastEvent = messages.map(_.createdAt).max
-    val groupIdentifier = messageThread.id.get.toString
+    val groupIdentifier = messageThreadId.id.toString
     notificationRepo.getByGroupIdentifier(recipient, NewMessage, groupIdentifier).fold({
       val notif = notificationRepo.save(Notification(
         recipient = recipient,
         kind = NewMessage,
         lastEvent = lastEvent,
-        groupIdentifier = Some(messageThread.id.get.toString)
+        groupIdentifier = Some(messageThreadId.id.toString)
       ))
       val notifId = notif.id.get
       userThreadRepo.save(userThread.copy(
@@ -131,7 +130,7 @@ class NotificationCommander @Inject() (
               time = message.createdAt,
               from = from,
               messageId = message.id.get.id,
-              messageThreadId = messageThread.id.get.id
+              messageThreadId = messageThreadId.id
             ),
             eventTime = message.createdAt
           ))
@@ -140,7 +139,41 @@ class NotificationCommander @Inject() (
     }) { notif =>
       NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
     }
+  }
 
+  def updateMessageThreadForUser(userId: Id[User], messageThreadId: Id[MessageThread]): NotificationWithItems = {
+    db.readWrite { implicit session =>
+      val notifWithItems = backfillMessageThreadForUser(userId, messageThreadId)
+      val mostRecent = notifWithItems.relevantItem
+      val newItems = messageRepo.getAfter(messageThreadId, mostRecent.eventTime).map { message =>
+        (message, message.from.asRecipient)
+      }.collect {
+        case (message, Some(from)) => (message, from)
+      }.map {
+        case (message, from) =>
+          notificationItemRepo.save(NotificationItem(
+            notificationId = notifWithItems.notification.id.get,
+            kind = NewMessage,
+            event = NewMessage(
+              recipient = Recipient(userId),
+              time = message.createdAt,
+              from = from,
+              messageId = message.id.get.id,
+              messageThreadId = messageThreadId.id
+            ),
+            eventTime = message.createdAt
+          ))
+      }.toSet
+      notifWithItems.copy(items = notifWithItems.items | newItems)
+    }
+  }
+
+  def getNotifForMessageThread(userId: Id[User], messageThreadId: Id[MessageThread]): Option[Notification] = {
+    db.readOnlyMaster { implicit session =>
+      userThreadRepo.getUserThread(userId, messageThreadId).notificationId.map { id =>
+        notificationRepo.get(id)
+      }
+    }
   }
 
   /**

@@ -9,7 +9,6 @@ import com.keepit.cortex.nlp.NLPDevModule
 import com.keepit.cortex.{ CortexDevModelModule, CortexTestInjector }
 import com.keepit.cortex.models.lda.LDAInfoStoreDevModule
 import com.keepit.cortex.store.{ StatModelDevStoreModule, CortexCommonDevStoreModule }
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ Library, User }
 import com.keepit.rover.FakeRoverServiceClientModule
 import org.specs2.mutable.Specification
@@ -24,7 +23,6 @@ class LDAControllerTest extends Specification with CortexTestInjector {
     AwsDevModule(),
     CortexCommonDevStoreModule(),
     CortexDevModelModule(),
-    FakeCuratorServiceClientModule(),
     FakeRoverServiceClientModule(),
     FakeActorSystemModule(),
     NLPDevModule(),

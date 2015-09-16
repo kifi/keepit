@@ -23,7 +23,6 @@ import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
 import com.keepit.queue.{ DevLibrarySuggestedSearchQueueModule, DevNormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
-import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val secureSocialModule = ProdShoeboxSecureSocialModule()
@@ -52,6 +51,5 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val abookServiceClientModule = ProdABookServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
-  val curatorServiceClientModule = ProdCuratorServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
 }

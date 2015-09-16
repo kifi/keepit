@@ -1,12 +1,10 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,7 +27,6 @@ class UserPersonaCommanderImpl @Inject() (
     personaRepo: PersonaRepo,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
-    curator: CuratorServiceClient,
     clock: Clock) extends UserPersonaCommander with Logging {
 
   def addPersonaForUser(userId: Id[User], persona: PersonaName)(implicit context: HeimdalContext): Future[(Option[Persona], Option[Library])] = {
@@ -79,13 +76,7 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
 
-    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).map { _ =>
-      generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
-    }.recover {
-      case _ =>
-        curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct) // fire and forget this time
-        generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
-    }
+    Future.successful(generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)) //no need for future here, though this code will die soon anyway
   }
 
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona] = {
@@ -109,7 +100,6 @@ class UserPersonaCommanderImpl @Inject() (
           }
       }
     }
-    curator.ingestPersonaRecos(userId, personasToRemove.values.map { _.id.get }.toSeq.distinct, reverseIngestion = true)
     personasToRemove.values.toSet
   }
 

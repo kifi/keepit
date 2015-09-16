@@ -110,12 +110,14 @@ angular.module('kifi')
       .state('orgProfile.members', {
         url: '/members?openInviteModal',
         controller: 'OrgProfileMemberManageCtrl',
-        templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html'
+        templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html',
+        activetab: 'members'
       })
       .state('orgProfile.libraries', {
         url: '',
         controller: 'OrgProfileLibrariesCtrl',
-        templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
+        templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
+        activetab: 'libraries'
       })
       .state('teams', {
         url: '/teams',

@@ -99,7 +99,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         ADD_LIBRARIES,
         REMOVE_LIBRARIES,
         GROUP_MESSAGING,
-        MOVE_ORG_LIBRARIES
+        MOVE_ORG_LIBRARIES,
+        PUBLISH_LIBRARIES
       ),
       Some(OrganizationRole.MEMBER) -> Set(
         VIEW_ORGANIZATION,
@@ -108,7 +109,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         VIEW_MEMBERS,
         INVITE_MEMBERS,
         GROUP_MESSAGING,
-        MOVE_ORG_LIBRARIES
+        MOVE_ORG_LIBRARIES,
+        PUBLISH_LIBRARIES
       )
     )
   val totallyInvisiblePermissions: BasePermissions =

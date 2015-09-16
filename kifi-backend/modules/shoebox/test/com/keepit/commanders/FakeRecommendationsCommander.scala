@@ -10,7 +10,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
 import com.keepit.model._
 
@@ -19,7 +18,6 @@ import scala.concurrent.Future
 @Singleton
 class FakeRecommendationsCommander @Inject() (
   systemValueRepo: SystemValueRepo,
-  curator: CuratorServiceClient,
   search: SearchServiceClient,
   rover: RoverServiceClient,
   db: Database,
@@ -38,7 +36,6 @@ class FakeRecommendationsCommander @Inject() (
   imageConfig: S3ImageConfig)
     extends RecommendationsCommander(
       systemValueRepo,
-      curator,
       search,
       db,
       nUriRepo,
@@ -57,11 +54,7 @@ class FakeRecommendationsCommander @Inject() (
       userExperimentCommander
     ) {
 
-  var uriRecoInfos: Seq[FullUriRecoInfo] = Seq.empty
   var libRecoInfos: Seq[(Id[Library], FullLibRecoInfo)] = Seq.empty
-
-  override def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] =
-    Future.successful(FullUriRecoResults(uriRecoInfos, "fake_uri_context"))
 
   override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 

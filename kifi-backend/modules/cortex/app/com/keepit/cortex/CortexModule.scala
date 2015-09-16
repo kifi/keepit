@@ -4,7 +4,6 @@ import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.cortex.nlp.NLPModule
 import com.keepit.cortex.store.{ CortexCommonStoreModule, StatModelStoreModule }
-import com.keepit.curator.ProdCuratorServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -30,7 +29,6 @@ abstract class CortexModule(
     val queueModule: CortexQueueModule,
     val nlpModule: NLPModule) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
-  val curatorServiceClientModule = ProdCuratorServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val cortexSlickModule = CortexSlickModule()

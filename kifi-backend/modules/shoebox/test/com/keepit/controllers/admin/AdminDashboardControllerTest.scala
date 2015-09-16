@@ -1,11 +1,10 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.concurrent.{ FakeExecutionContextModule }
-import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller._
-import com.keepit.common.social.{ FakeSocialGraphModule }
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
@@ -39,8 +38,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeAirbrakeModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   "AdminDashboardController" should {

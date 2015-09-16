@@ -33,7 +33,7 @@ angular.module('kifi')
 
         scope.inviteMany = function () {
           var commaSeparatedEmails = scope.state.emails;
-          var emails = commaSeparatedEmails.split(/,\s?|\s/);
+          var emails = commaSeparatedEmails.split(/\"|\'|;|,|<|>|\s/);
           var invites = emails.map(mapInviteEmail).filter(Boolean);
 
           return orgProfileService

@@ -19,6 +19,7 @@ object OrganizationPermission {
   case object GROUP_MESSAGING extends OrganizationPermission("group_messaging")
   case object MOVE_ORG_LIBRARIES extends OrganizationPermission("move_org_libraries")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
+  case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
 
   def all: Set[OrganizationPermission] = Set(
     VIEW_ORGANIZATION,
@@ -33,7 +34,8 @@ object OrganizationPermission {
     FORCE_EDIT_LIBRARIES,
     GROUP_MESSAGING,
     MOVE_ORG_LIBRARIES,
-    EXPORT_KEEPS
+    EXPORT_KEEPS,
+    CREATE_SLACK_INTEGRATION
   )
 
   def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, LibraryPermission] = Map(
@@ -41,7 +43,8 @@ object OrganizationPermission {
     REMOVE_LIBRARIES -> LibraryPermission.DELETE_LIBRARY,
     MOVE_ORG_LIBRARIES -> LibraryPermission.MOVE_LIBRARY,
     FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
-    EXPORT_KEEPS -> LibraryPermission.EXPORT_KEEPS
+    EXPORT_KEEPS -> LibraryPermission.EXPORT_KEEPS,
+    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY
   )
 
   def toLibraryPermissionOpt(orgPermission: OrganizationPermission): Option[LibraryPermission] = orgPermissionsToLibraryPermissions.get(orgPermission)
@@ -67,6 +70,7 @@ object OrganizationPermission {
       case GROUP_MESSAGING.value => GROUP_MESSAGING
       case MOVE_ORG_LIBRARIES.value => MOVE_ORG_LIBRARIES
       case EXPORT_KEEPS.value => EXPORT_KEEPS
+      case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
     }
   }
 

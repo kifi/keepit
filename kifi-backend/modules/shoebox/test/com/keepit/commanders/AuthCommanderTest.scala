@@ -12,7 +12,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -44,8 +43,7 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     MaybeAppFakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    KeepImportsModule(),
-    FakeCuratorServiceClientModule()
+    KeepImportsModule()
   )
 
   "AuthCommander" should {

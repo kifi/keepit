@@ -20,7 +20,6 @@ import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
 import com.keepit.queue.{ ProdLibrarySuggestedSearchQueueModule, ProdNormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
-import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
 
@@ -50,6 +49,5 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val abookServiceClientModule = ProdABookServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
-  val curatorServiceClientModule = ProdCuratorServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
 }

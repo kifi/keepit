@@ -7,7 +7,6 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule }
 import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.search.{ FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -23,7 +22,6 @@ class PageCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
-    FakeCuratorServiceClientModule() ::
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     FakeSliderHistoryTrackerModule() ::

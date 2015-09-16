@@ -57,7 +57,7 @@ class UserProfileCommander @Inject() (
       val libraryIds = libs.map(_.id.get).toSet
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
       val libraryInfos = libraryInfoCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
-      val permissionsFromOrg = libs.map(lib => lib.id.get -> libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, user.id)).toMap
+      val permissionsFromOrg = libs.map(lib => lib.id.get -> libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, user.id)).toMap
       (libraryInfos, memberships, permissionsFromOrg)
     }
     libraryInfos map {

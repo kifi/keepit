@@ -9,7 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {},
-      templateUrl: 'recos/userChecklist.tpl.html',
+      templateUrl: 'home/userChecklist.tpl.html',
       link: function (scope, element) {
         function completeOrIncomplete(complete) {
           return complete ? 'completed' : 'incomplete';
@@ -35,7 +35,7 @@ angular.module('kifi')
             subtitle: 'Keep from the site, browser add-on, or mobile',
             action: function () {
               modalService.open({
-                template: 'recos/userChecklistKeepModal.tpl.html',
+                template: 'home/userChecklistKeepModal.tpl.html',
                 scope: scope
               });
 
@@ -52,7 +52,7 @@ angular.module('kifi')
             subtitle: 'Browse libraries from your connections',
             action: function () {
               modalService.open({
-                template: 'recos/userChecklistFollowModal.tpl.html',
+                template: 'home/userChecklistFollowModal.tpl.html',
                 scope: scope
               });
               $analytics.eventTrack('user_clicked_page', {

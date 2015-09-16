@@ -9,7 +9,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ KeepSource, URLFactory, NormalizedURI, Keep, Library, LibrarySlug, LibraryVisibility, NotificationCategory }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -30,8 +29,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   "EmailTemplateProcessor" should {

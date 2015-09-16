@@ -112,11 +112,6 @@ class CuratorController @Inject() (
     }
   }
 
-  def refreshUserRecos(userId: Id[User]) = Action { request =>
-    SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
-    Ok
-  }
-
   def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
 

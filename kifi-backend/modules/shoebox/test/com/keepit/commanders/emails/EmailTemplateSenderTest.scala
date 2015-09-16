@@ -9,7 +9,6 @@ import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ UserEventTypes, UserEvent, FakeHeimdalServiceClientImpl, HeimdalServiceClient }
 import com.keepit.model.{ UserValueName, UserValueRepo, User, NotificationCategory }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -32,8 +31,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   "EmailTemplateSender" should {

@@ -216,12 +216,14 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
+          println(contentAsString(response))
           status(response) === OK
 
           db.readOnlyMaster { implicit session =>
-            orgRepo.get(org.id.get).getNonmemberPermissions === Set.empty
-            orgRepo.get(org.id.get).getRolePermissions(OrganizationRole.MEMBER) === Set(OrganizationPermission.ADD_LIBRARIES, OrganizationPermission.REMOVE_LIBRARIES,
-              OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.VIEW_MEMBERS, OrganizationPermission.MOVE_ORG_LIBRARIES, OrganizationPermission.GROUP_MESSAGING)
+            val updatedOrg = orgRepo.get(org.id.get)
+            updatedOrg.getNonmemberPermissions === Set.empty
+            updatedOrg.getRolePermissions(OrganizationRole.MEMBER) === Organization.defaultBasePermissions.forRole(OrganizationRole.MEMBER) + OrganizationPermission.INVITE_MEMBERS
+            updatedOrg.getRolePermissions(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN)
           }
         }
       }
