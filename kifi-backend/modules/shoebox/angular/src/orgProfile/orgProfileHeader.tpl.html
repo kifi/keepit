@@ -58,8 +58,8 @@
           ng-click="onClickTrack($event, 'clickedProfileLibraries')"
           ng-class="{ 'active': state.current.activetab === 'libraries' }"
         >
-          <div class="kf-oph-stats-name">Libraries</div>
           <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
+          <div class="kf-oph-stats-name">Libraries</div>
         </a>
         <a 
           class="kf-oph-stats-a" 
@@ -67,8 +67,8 @@
           ng-click="onClickTrack($event, 'clickedProfileMembers')"
           ng-class="{ 'active': state.current.activetab === 'members' }"
         >
-          <div class="kf-oph-stats-name">Members</div>
           <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
+          <div class="kf-oph-stats-name">Members</div>
         </a>
       </nav>
       </table>

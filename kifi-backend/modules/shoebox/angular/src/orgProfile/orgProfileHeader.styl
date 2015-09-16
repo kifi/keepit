@@ -83,6 +83,9 @@ ophImageWidth = 100px
     text-align: center
     width: 100%
 
+.kf-oph-about-info
+  margin-bottom: 40px
+
 .kf-oph-name
   line-height: 31px
   font-size: 30px
@@ -158,15 +161,19 @@ ophImageWidth = 100px
   padding-left: 20px
   padding-right: 20px
 
-  &[href]:hover
+  &:not(.active)[href]:hover
     background-color: alpha(#fff, 10%)
 
   &:not([href])
     color: accentGreen
     cursor: default
 
+  &:focus
+    outline: none
+
   &.active
-    color: lighten(accentGreen, 15%)
+    background: appBackgroundColor
+    color: textBlackColor
 
     .kf-oph-stats-count
       color: inherit
@@ -181,8 +188,7 @@ ophImageWidth = 100px
 
 .kf-oph-stats-name
   line-height: 20px
-  font-size: 12px
-  text-transform: uppercase
+  font-size: 14px
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     line-height: 12px
@@ -191,7 +197,8 @@ ophImageWidth = 100px
 .kf-oph-stats-count
   color: #fff
   line-height: 24px
-  font-size: 18px
+  font-size: 14px
+  margin-right: 5px
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     line-height: 15px
