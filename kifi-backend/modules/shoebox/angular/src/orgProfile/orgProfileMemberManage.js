@@ -225,6 +225,10 @@ angular.module('kifi')
     }
 
     $scope.openInviteModal = function (inviteType) {
+      if (!$scope.canInvite) {
+        return;
+      }
+
       memberPageAnalytics({ action: 'clickedInviteBegin' });
 
       modalService.open({
