@@ -16,6 +16,7 @@ import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
+import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -27,6 +28,7 @@ class NotificationMessagingCommander @Inject() (
     messageFetchingCommander: MessageFetchingCommander,
     notificationRepo: NotificationRepo,
     messageRepo: MessageRepo,
+    messagingCommander: MessagingCommander,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
@@ -42,6 +44,18 @@ class NotificationMessagingCommander @Inject() (
     userThread.fold(ExternalId[MessageThread](notif.externalId.id)) { userThread =>
       messageThreadRepo.get(userThread.threadId).externalId
     }
+  }
+
+  def combineNotificationsWithThreads(threadJsons: Seq[NotificationJson], notifJsons: Seq[NotificationWithJson], howMany: Option[Int] = None): Seq[JsObject] = {
+    val allNotifs = threadJsons.map(Left.apply) ++ notifJsons.map(Right.apply)
+    val full = allNotifs.sortBy {
+      case Left(old) => (old.obj \ "time").as[DateTime]
+      case Right(newn) => newn.notification.lastEvent
+    }.map {
+      case Left(old) => old.obj
+      case Right(newn) => newn.json
+    }.reverse
+    howMany.fold(full)(full.take)
   }
 
   def sendUnreadNotifications(recipient: Recipient): Unit = {
@@ -61,12 +75,10 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
-    val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
-      (notificationRepo.getUnreadNotificationsCountForKind(recipient, NewMessage.name),
-        notificationRepo.getUnreadNotificationsCountExceptKind(recipient, NewMessage.name))
-    }
     recipient match {
       case UserRecipient(user, _) =>
+        val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user, Some(true))
+        val unreadNotifications = messagingCommander.getUnreadUnmutedThreadCount(user, Some(false))
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
         val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
         pushNotifier.notifyUser(user, pushNotif, false)

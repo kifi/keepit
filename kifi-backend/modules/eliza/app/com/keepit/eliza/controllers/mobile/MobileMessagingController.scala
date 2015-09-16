@@ -24,33 +24,52 @@ class MobileMessagingController @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationDeliveryCommander,
     val userActionsHelper: UserActionsHelper,
+    notificationMessagingCommander: NotificationMessagingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val noticesFuture = before match {
+    val threadNoticesFuture = before match {
       case Some(before) =>
         notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationMessagingCommander.getLatestNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
+      case None =>
+        notificationMessagingCommander.getLatestNotifications(request.userId, howMany.toInt, true).map(_.results)
+    }
+    for {
+      threadNotices <- threadNoticesFuture
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
   def getSystemNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val noticesFuture = before match {
+    val threadNoticesFuture = before match {
       case Some(before) =>
         notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
       case None =>
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationMessagingCommander.getLatestNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
+      case None =>
+        notificationMessagingCommander.getLatestNotifications(request.userId, howMany.toInt, true).map(_.results)
+    }
+    for {
+      threadNotices <- threadNoticesFuture
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
@@ -68,15 +87,24 @@ class MobileMessagingController @Inject() (
   }
 
   def getUnreadNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val noticesFuture = before match {
+    val threadNoticesFuture = before match {
       case Some(before) =>
         notificationCommander.getUnreadSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
         notificationCommander.getLatestUnreadSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true).map(_._1)
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationMessagingCommander.getNotificationsWithNewEventsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
+      case None =>
+        notificationMessagingCommander.getNotificationsWithNewEvents(request.userId, howMany.toInt, true).map(_.results)
+    }
+    for {
+      threadNotices <- threadNoticesFuture
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 

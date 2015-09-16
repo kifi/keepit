@@ -63,6 +63,7 @@ class MessagingCommander @Inject() (
     messagingAnalytics: MessagingAnalytics,
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
+    notificationRepo: NotificationRepo,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
@@ -567,13 +568,23 @@ class MessagingCommander @Inject() (
 
   def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None): Int = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable)
+      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable) + (filterByReplyable match {
+        case Some(true) => notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
+        case Some(false) => notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
+        case None => notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+      })
     }
   }
 
   def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadThreadCounts(userId)
+      userThreadRepo.getUnreadThreadCounts(userId) match {
+        case (numUnread, numUnmuted) =>
+          (
+            numUnread + notificationRepo.getNotificationsWithNewEventsCount(Recipient(userId)),
+            numUnmuted + notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+          )
+      }
     }
   }
 

@@ -108,13 +108,12 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_notifications_count" -> { _ =>
       val recipient = Recipient(socket.userId)
-      val (newMsg, newNotif) = notificationMessagingCommander.getUnreadNotifications(recipient)
       val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
       val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
       socket.channel.push(Json.arr("unread_notifications_count",
-        numUnreadUnmutedMessages + numUnreadUnmutedNotifications + newMsg + newNotif,
-        numUnreadUnmutedMessages + newMsg,
-        numUnreadUnmutedNotifications + newNotif))
+        numUnreadUnmutedMessages + numUnreadUnmutedNotifications,
+        numUnreadUnmutedMessages,
+        numUnreadUnmutedNotifications))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
     // inbox notification/thread handlers
@@ -133,18 +132,11 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val recipient = Recipient(socket.userId)
         val fut = for {
-          oldNotifs <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-          newNotifs <- notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          threadJsons <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
         } yield {
           val (oldNumUnread, oldNumUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          val allNotifs = oldNotifs.map(Left.apply) ++ newNotifs.results.map(Right.apply)
-          (allNotifs.sortBy {
-            case Left(old) => (old.obj \ "time").as[DateTime]
-            case Right(newn) => newn.notification.lastEvent
-          }.map {
-            case Left(old) => old.obj
-            case Right(newn) => newn.json
-          }.take(howMany.toInt), oldNumUnread + newNotifs.numTotal, oldNumUnreadUnmuted + newNotifs.numUnread)
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results), oldNumUnread, oldNumUnreadUnmuted)
         }
 
         fut.foreach {
@@ -160,17 +152,10 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val recipient = Recipient(socket.userId)
         val fut = for {
-          oldNotifs <- notificationDeliveryCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-          newNotifs <- notificationMessagingCommander.getLatestNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          threadJsons <- notificationDeliveryCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getLatestNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         } yield {
-          val allNotifs = oldNotifs.map(Left.apply) ++ newNotifs.map(Right.apply)
-          allNotifs.sortBy {
-            case Left(old) => (old.obj \ "time").as[DateTime]
-            case Right(newn) => newn.notification.lastEvent
-          }.map {
-            case Left(old) => old.obj
-            case Right(newn) => newn.json
-          }.take(howMany.toInt)
+          notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons, Some(howMany.toInt))
         }
 
         fut.foreach { notices =>
@@ -185,18 +170,11 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val recipient = Recipient(socket.userId)
         val fut = for {
-          oldNotifs <- notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-          newNotifs <- notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, howMany.toInt, needsPageImages(socket))
+          threadJsons <- notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, howMany.toInt, needsPageImages(socket))
         } yield {
-          val total = oldNotifs._2 + newNotifs.numTotal
-          val allNotifs = oldNotifs._1.map(Left.apply) ++ newNotifs.results.map(Right.apply)
-          (allNotifs.sortBy {
-            case Left(old) => (old.obj \ "time").as[DateTime]
-            case Right(newn) => newn.notification.lastEvent
-          }.map {
-            case Left(old) => old.obj
-            case Right(newn) => newn.json
-          }.take(howMany.toInt), total)
+          val total = threadJsons._2 + notifJsons.numTotal
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons._1, notifJsons.results), total)
         }
         fut.foreach {
           case (notices, numTotal) =>
@@ -211,17 +189,10 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val recipient = Recipient(socket.userId)
         val fut = for {
-          oldNotifs <- notificationDeliveryCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
-          newNotifs <- notificationMessagingCommander.getNotificationsWithNewEventsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          threadJsons <- notificationDeliveryCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEventsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         } yield {
-          val allNotifs = oldNotifs.map(Left.apply) ++ newNotifs.map(Right.apply)
-          allNotifs.sortBy {
-            case Left(old) => (old.obj \ "time").as[DateTime]
-            case Right(newn) => newn.notification.lastEvent
-          }.map {
-            case Left(old) => old.obj
-            case Right(newn) => newn.json
-          }.take(howMany.toInt)
+          notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons, Some(howMany.toInt))
         }
 
         fut.foreach { notices =>
