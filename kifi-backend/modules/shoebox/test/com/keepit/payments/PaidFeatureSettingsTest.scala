@@ -52,8 +52,8 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().withFeatures(
             Set(
-              PermissionsFeature(
-                PermissionsFeatureNames.PUBLISH_LIBRARIES,
+              PermissionFeature(
+                PermissionFeatureNames.PUBLISH_LIBRARIES,
                 editable = true,
                 options = Seq(PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))),
                 default = PermissionSetting(Some(OrganizationRole.MEMBER))
@@ -62,7 +62,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
           ).saved
           val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(
             Set(
-              PermissionFeatureSetting(name = PermissionsFeatureNames.PUBLISH_LIBRARIES, setting = PermissionSetting(Some(OrganizationRole.ADMIN)))
+              PermissionFeatureSetting(name = PermissionFeatureNames.PUBLISH_LIBRARIES, setting = PermissionSetting(Some(OrganizationRole.ADMIN)))
             )
           ).saved
 

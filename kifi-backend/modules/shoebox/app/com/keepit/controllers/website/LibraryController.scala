@@ -274,6 +274,7 @@ class LibraryController @Inject() (
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
+        val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, membership.map(_.userId)) }
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -284,7 +285,7 @@ class LibraryController @Inject() (
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
-          membership = membership.map(lib.getMembershipInfo)
+          membership = membership.map(mem => lib.createMembershipInfo(mem, permissionsFromOrg))
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -358,7 +359,8 @@ class LibraryController @Inject() (
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((lib, mem)) =>
-            Ok(Json.obj("membership" -> lib.getMembershipInfo(mem)))
+            val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, Some(mem.userId)) }
+            Ok(Json.obj("membership" -> lib.createMembershipInfo(mem, permissionsFromOrg)))
         }
     }
   }
@@ -372,7 +374,9 @@ class LibraryController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
-            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+            case Right((lib, mem)) =>
+              val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, Some(mem.userId)) }
+              (pubId, Right(lib.createMembershipInfo(mem, permissionsFromOrg)))
           }
       }
     }

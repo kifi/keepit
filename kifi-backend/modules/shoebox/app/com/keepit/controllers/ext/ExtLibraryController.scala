@@ -72,6 +72,7 @@ class ExtLibraryController @Inject() (
         val orgAvatarPath = lib.organizationId.map { orgId =>
           orgAvatarsById.get(orgId).map(_.imagePath).getOrElse(throw new Exception(s"No avatar for org of lib $lib"))
         }
+        val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, Some(request.userId)) }
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -82,7 +83,7 @@ class ExtLibraryController @Inject() (
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = orgAvatarPath,
-          membership = membership.map(lib.getMembershipInfo)
+          membership = membership.map(mem => lib.createMembershipInfo(mem, permissionsFromOrg))
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -124,6 +125,7 @@ class ExtLibraryController @Inject() (
                 organizationAvatarCommander.getBestImageByOrgId(orgId, ExtLibraryController.defaultImageSize).imagePath
               }
               val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
+              val permissionsFromOrg = libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib, Some(request.userId))
               LibraryData(
                 id = Library.publicId(lib.id.get),
                 name = lib.name,
@@ -134,7 +136,7 @@ class ExtLibraryController @Inject() (
                 subscribedToUpdates = membership.exists(_.subscribedToUpdates),
                 collaborators = Seq.empty,
                 orgAvatar = orgAvatarPath,
-                membership = membership.map(lib.getMembershipInfo)
+                membership = membership.map(mem => lib.createMembershipInfo(mem, permissionsFromOrg))
               )
             }
             Ok(Json.toJson(data))

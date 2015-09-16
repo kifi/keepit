@@ -74,7 +74,7 @@ object PermissionSetting {
   implicit val format = new Format[PermissionSetting] {
     def reads(json: JsValue): JsResult[PermissionSetting] = {
       json.validate[String].map { str =>
-        if (str == "none") PermissionSetting(None) else PermissionSetting(Some(OrganizationRole(str)))
+        PermissionSetting(str)
       }
     }
 
@@ -82,26 +82,30 @@ object PermissionSetting {
   }
 
   def apply(value: String): PermissionSetting = {
-    value match {
-      case value if Set("member", "admin").contains(value) => PermissionSetting(Some(OrganizationRole(value)))
-      case "none" => PermissionSetting(None)
+    value.toLowerCase match {
+      case "none" => PermissionSetting.NONE
+      case "member" => PermissionSetting.MEMBER
+      case "admin" => PermissionSetting.ADMIN
       case _ => throw new Exception(s"tried calling PermissionSetting.apply with invalid value=$value")
     }
   }
+
+  val ADMIN = PermissionSetting(Some(OrganizationRole.ADMIN))
+  val MEMBER = PermissionSetting(Some(OrganizationRole.MEMBER))
+  val NONE = PermissionSetting(None)
+  val ALL = Set(NONE, ADMIN, MEMBER)
 }
 
 trait FeatureSetting {
   val name: Name[PlanFeature]
   val setting: Setting
-
-  def isPermissionFeature = PermissionsFeatureNames.ALL.contains(this.name)
 }
 object FeatureSetting {
 
   implicit val format = new Format[FeatureSetting] {
     def reads(json: JsValue): JsResult[FeatureSetting] = {
       ((json \ "name").as[String], (json \ "setting").as[String]) match {
-        case (name, setting) if PermissionsFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting)) // I don't need Name[PlanFeature] because of type erasure, right?
+        case (name, setting) if PermissionFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting))
         case _ => JsError(s"tried to call FeatureSettings.reads on json=$json with an unsupported name")
       }
     }
@@ -110,13 +114,11 @@ object FeatureSetting {
 
   def apply(name: String, setting: String): FeatureSetting = {
     name match {
-      case name if PermissionsFeatureNames.contains(name) => PermissionFeatureSetting(name, setting)
+      case name if PermissionFeatureNames.contains(name) => PermissionFeatureSetting(name, setting)
       case _ => throw new IllegalArgumentException(s"tried to call FeatureSetting.apply with unsupported name=$name")
     }
   }
   def apply(name: Name[PlanFeature], setting: Setting): FeatureSetting = FeatureSetting(name.name, setting.value)
-
-  def isPermissionFeature(featureSetting: FeatureSetting): Boolean = PermissionsFeatureNames.ALL.contains(featureSetting.name)
 
   def toSettingByName(featureSettings: Set[FeatureSetting]): Map[Name[PlanFeature], Setting] = featureSettings.map { featureSetting => featureSetting.name -> featureSetting.setting }.toMap
   def fromSettingByName(settingByName: Map[Name[PlanFeature], Setting]): Set[FeatureSetting] = settingByName.map { case (name, setting) => FeatureSetting(name, setting) }.toSet
@@ -131,13 +133,13 @@ object FeatureSetting {
   }
 
   def toPermissionsByRole(featureSettings: Set[FeatureSetting]): Map[Option[OrganizationRole], Set[OrganizationPermission]] = {
-    val permissionFeatureSettings = featureSettings.collect { case featureSetting if featureSetting.isPermissionFeature => PermissionFeatureSetting(featureSetting.name.name, featureSetting.setting.value) }
+    val permissionFeatureSettings = featureSettings.collect { case featureSetting: PermissionFeatureSetting => featureSetting }
 
     permissionFeatureSettings.flatMap {
-      case PermissionFeatureSetting(name, PermissionSetting(None)) if PermissionsFeatureNames.CASCADING.contains(name) => {
+      case PermissionFeatureSetting(name, PermissionSetting(None)) if PermissionFeatureNames.CASCADING.contains(name) => {
         List(None -> PlanFeature.toPermission(name), Some(OrganizationRole.MEMBER) -> PlanFeature.toPermission(name), Some(OrganizationRole.ADMIN) -> PlanFeature.toPermission(name))
       }
-      case PermissionFeatureSetting(name, PermissionSetting(Some(OrganizationRole.MEMBER))) if PermissionsFeatureNames.CASCADING.contains(name) => {
+      case PermissionFeatureSetting(name, PermissionSetting(Some(OrganizationRole.MEMBER))) if PermissionFeatureNames.CASCADING.contains(name) => {
         List(Some(OrganizationRole.MEMBER) -> PlanFeature.toPermission(name), Some(OrganizationRole.ADMIN) -> PlanFeature.toPermission(name))
       }
       case PermissionFeatureSetting(name, setting) => List(setting.role -> PlanFeature.toPermission(name))
@@ -148,9 +150,9 @@ object FeatureSetting {
 case class PermissionFeatureSetting(name: Name[PlanFeature], setting: PermissionSetting) extends FeatureSetting
 object PermissionFeatureSetting {
   def apply(name: String, setting: String): PermissionFeatureSetting = {
-    if (PermissionsFeatureNames.ALL.contains(Name[PlanFeature](name))) {
-      setting match {
-        case none if none.toLowerCase == "none" => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(role = None))
+    if (PermissionFeatureNames.ALL.contains(Name[PlanFeature](name))) {
+      setting.toLowerCase match {
+        case "none" => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(role = None))
         case role => PermissionFeatureSetting(Name[PlanFeature](name), PermissionSetting(Some(OrganizationRole(role))))
       }
     } else { throw new IllegalArgumentException(s"tried calling PermissionFeatureSetting.apply with unsupported name=$name and setting=$setting") }
@@ -159,7 +161,7 @@ object PermissionFeatureSetting {
   def format = new Format[PermissionFeatureSetting] {
     def reads(json: JsValue): JsResult[PermissionFeatureSetting] = {
       ((json \ "name").as[String], (json \ "string").as[String]) match {
-        case (name, setting) if PermissionsFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting))
+        case (name, setting) if PermissionFeatureNames.ALL contains Name[PlanFeature](name) => JsSuccess(PermissionFeatureSetting(name, setting))
         case _ => JsError(s"tried to call PermissionFeatureSetting.apply on unsupported json=$json")
       }
     }
@@ -167,7 +169,7 @@ object PermissionFeatureSetting {
   }
 }
 
-object PermissionsFeatureNames {
+object PermissionFeatureNames {
   val PUBLISH_LIBRARIES = Name[PlanFeature](OrganizationPermission.PUBLISH_LIBRARIES.value)
   val INVITE_MEMBERS = Name[PlanFeature](OrganizationPermission.INVITE_MEMBERS.value)
   val GROUP_MESSAGING = Name[PlanFeature](OrganizationPermission.GROUP_MESSAGING.value)
@@ -185,7 +187,7 @@ object PermissionsFeatureNames {
 }
 
 object PlanFeatureNames {
-  val ALL = PermissionsFeatureNames.ALL // all plan feature names
+  val ALL = PermissionFeatureNames.ALL
 }
 
 trait PlanFeature {
@@ -195,37 +197,36 @@ trait PlanFeature {
   val default: Setting
 }
 
-case class PermissionsFeature(name: Name[PlanFeature], editable: Boolean, options: Seq[PermissionSetting], default: PermissionSetting) extends PlanFeature
-object PermissionsFeature {
-  implicit val format: Format[PermissionsFeature] = (
+case class PermissionFeature(name: Name[PlanFeature], editable: Boolean, options: Seq[PermissionSetting], default: PermissionSetting) extends PlanFeature
+object PermissionFeature {
+  implicit val format: Format[PermissionFeature] = (
     (__ \ 'name).format(Name.format[PlanFeature]) and
     (__ \ 'editable).format[Boolean] and
     (__ \ 'options).format[Seq[PermissionSetting]] and
     (__ \ 'default).format[PermissionSetting]
-  )(PermissionsFeature.apply, unlift(PermissionsFeature.unapply))
+  )(PermissionFeature.apply, unlift(PermissionFeature.unapply))
 }
 
 object PlanFeature {
   def toPermission(name: Name[PlanFeature]): OrganizationPermission = {
     name match {
-      case PermissionsFeatureNames.PUBLISH_LIBRARIES => OrganizationPermission.PUBLISH_LIBRARIES
-      case PermissionsFeatureNames.INVITE_MEMBERS => OrganizationPermission.INVITE_MEMBERS
-      case PermissionsFeatureNames.GROUP_MESSAGING => OrganizationPermission.GROUP_MESSAGING
-      case PermissionsFeatureNames.RECLAIM_LIBRARIES => OrganizationPermission.MOVE_ORG_LIBRARIES
-      case PermissionsFeatureNames.EXPORT_KEEPS => OrganizationPermission.EXPORT_KEEPS
-      case PermissionsFeatureNames.VIEW_MEMBERS => OrganizationPermission.VIEW_MEMBERS
-      case PermissionsFeatureNames.FORCE_EDIT_LIBRARIES => OrganizationPermission.FORCE_EDIT_LIBRARIES
+      case PermissionFeatureNames.PUBLISH_LIBRARIES => OrganizationPermission.PUBLISH_LIBRARIES
+      case PermissionFeatureNames.INVITE_MEMBERS => OrganizationPermission.INVITE_MEMBERS
+      case PermissionFeatureNames.GROUP_MESSAGING => OrganizationPermission.GROUP_MESSAGING
+      case PermissionFeatureNames.RECLAIM_LIBRARIES => OrganizationPermission.MOVE_ORG_LIBRARIES
+      case PermissionFeatureNames.EXPORT_KEEPS => OrganizationPermission.EXPORT_KEEPS
+      case PermissionFeatureNames.VIEW_MEMBERS => OrganizationPermission.VIEW_MEMBERS
+      case PermissionFeatureNames.FORCE_EDIT_LIBRARIES => OrganizationPermission.FORCE_EDIT_LIBRARIES
       case _ => throw new IllegalArgumentException(s"[PlanFeature] called PlanFeature.toPermission with no mapping from $name to an organization permission")
     }
   }
-
   implicit val format = new Format[PlanFeature] {
     def writes(o: PlanFeature): JsValue = {
       Json.obj("name" -> o.name.toString, "editable" -> o.editable, "options" -> o.options.map(_.value), "default" -> o.default.value)
     }
     def reads(json: JsValue): JsResult[PlanFeature] = {
       (json \ "name").as[Name[PlanFeature]](Name.format[PlanFeature]) match {
-        case name if PermissionsFeatureNames.ALL.contains(name) => Json.fromJson[PermissionsFeature](json)
+        case name if PermissionFeatureNames.ALL.contains(name) => Json.fromJson[PermissionFeature](json)
         case _ => throw new IllegalArgumentException(s"tried to read invalid json=$json into a PlanFeature")
       }
     }
@@ -233,17 +234,15 @@ object PlanFeature {
 
   def apply(name: Name[PlanFeature], editable: Boolean, options: Seq[Setting], default: Setting): PlanFeature = {
     name match {
-      case name if PermissionsFeatureNames.ALL.contains(name) => PermissionsFeature(name, editable, options.map(setting => PermissionSetting(setting.value)), PermissionSetting(default.value))
+      case name if PermissionFeatureNames.ALL.contains(name) => PermissionFeature(name, editable, options.map(setting => PermissionSetting(setting.value)), PermissionSetting(default.value))
       case _ => throw new Exception(s"tried to call PlanFeature.apply with unsupported name=$name")
     }
   }
 
   def toDefaultFeatureSettings(features: Set[PlanFeature]): Set[FeatureSetting] = {
     features.map {
-      case feature: PlanFeature if PermissionsFeatureNames.ALL.contains(feature.name) => PermissionFeatureSetting(feature.name.name, feature.default.value)
+      case feature: PermissionFeature => PermissionFeatureSetting(feature.name.name, feature.default.value)
       case feature: PlanFeature => throw new IllegalArgumentException(s"tried to call PlanFeature.toDefaultFeatureSettings with unsupported name=${feature.name}")
     }
   }
-
-  def isPermissionFeature(feature: PlanFeature): Boolean = PermissionsFeatureNames.ALL.contains(feature.name)
 }

@@ -36,6 +36,16 @@ object OrganizationPermission {
     EXPORT_KEEPS
   )
 
+  def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, LibraryPermission] = Map(
+    PUBLISH_LIBRARIES -> LibraryPermission.PUBLISH_LIBRARY,
+    REMOVE_LIBRARIES -> LibraryPermission.DELETE_LIBRARY,
+    MOVE_ORG_LIBRARIES -> LibraryPermission.MOVE_LIBRARY,
+    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
+    EXPORT_KEEPS -> LibraryPermission.EXPORT_KEEPS
+  )
+
+  def toLibraryPermissionOpt(orgPermission: OrganizationPermission): Option[LibraryPermission] = orgPermissionsToLibraryPermissions.get(orgPermission)
+
   implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
       def writes(o: OrganizationPermission) = JsString(o.value)

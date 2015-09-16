@@ -522,9 +522,8 @@ class PlanManagementCommanderImpl @Inject() (
     val oldAccount = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId) }
     val updatedAccount = oldAccount.withFeatureSettings(settings)
 
-    updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
-
     val plan = db.readWrite { implicit session =>
+      updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
       paidAccountRepo.save(updatedAccount) // only saved if organization permissions are successfully updated (i.e. no exceptions)
       paidPlanRepo.get(updatedAccount.planId)
     }
@@ -532,7 +531,7 @@ class PlanManagementCommanderImpl @Inject() (
     AccountFeatureSettingsView(plan.features, updatedAccount.featureSettings)
   }
 
-  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting]): BasePermissions = {
+  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): BasePermissions = {
 
     val oldPermissionByRole = FeatureSetting.toPermissionsByRole(oldFeatureSettings)
     val newPermissionByRole = FeatureSetting.toPermissionsByRole(newFeatureSettings)
@@ -542,14 +541,12 @@ class PlanManagementCommanderImpl @Inject() (
 
     val permissionsDiff = PermissionsDiff(addedPermissions, removedPermissions)
 
-    val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+    val org = orgRepo.get(orgId)
 
     val updatedOrg = org.applyPermissionsDiff(permissionsDiff)
 
-    db.readWrite { implicit session =>
-      orgRepo.save(updatedOrg)
-      applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, updatedOrg.basePermissions)
-    }
+    orgRepo.save(updatedOrg)
+    applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, updatedOrg.basePermissions)
 
     updatedOrg.basePermissions
   }

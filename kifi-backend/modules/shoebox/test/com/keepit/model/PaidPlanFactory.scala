@@ -9,8 +9,8 @@ import org.apache.commons.lang3.RandomStringUtils.random
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
-  val testPlanFeatures: Set[PlanFeature] = PermissionsFeatureNames.ALL.map { name =>
-    PermissionsFeature(name, editable = true, options = Seq(PermissionSetting(None), PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))), default = PermissionSetting(Some(OrganizationRole.MEMBER)))
+  val testPlanFeatures: Set[PlanFeature] = PermissionFeatureNames.ALL.map { name =>
+    PermissionFeature(name, editable = true, options = Seq(PermissionSetting(None), PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))), default = PermissionSetting(Some(OrganizationRole.MEMBER)))
   }
 
   def paidPlan(): PartialPaidPlan = {
