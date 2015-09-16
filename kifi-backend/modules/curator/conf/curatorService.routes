@@ -13,8 +13,7 @@ GET   /internal/curator/publicFeedStartInitialLoading               @com.keepit.
 
 POST   /internal/curator/updateUriRecommendationFeedback            @com.keepit.curator.controllers.internal.CuratorController.updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI])
 POST   /internal/curator/updateLibraryRecommendationFeedback        @com.keepit.curator.controllers.internal.CuratorController.updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library])
-POST   /internal/curator/triggerEmailToUser 	                    @com.keepit.curator.controllers.internal.CuratorController.triggerEmailToUser(code: String, userId: Id[User])
-POST   /internal/curator/refreshUserRecos                           @com.keepit.curator.controllers.internal.CuratorController.refreshUserRecos(userId: Id[User])
+POST   /internal/curator/triggerEmailToUser 	                      @com.keepit.curator.controllers.internal.CuratorController.triggerEmailToUser(code: String, userId: Id[User])
 
 POST   /internal/curator/topLibraryRecos                            @com.keepit.curator.controllers.internal.CuratorController.topLibraryRecos(userId: Id[User], limit: Int ?= 100)
 POST   /internal/curator/refreshLibraryRecos                        @com.keepit.curator.controllers.internal.CuratorController.refreshLibraryRecos(userId: Id[User], await: Boolean ?= false)
