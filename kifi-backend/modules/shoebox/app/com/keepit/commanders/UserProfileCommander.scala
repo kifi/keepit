@@ -50,14 +50,15 @@ class UserProfileCommander @Inject() (
   }
 
   def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], orderedByPriority: Boolean): ParSeq[LibraryCardInfo] = {
-    val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
+    val (libraryInfos, memberships, permissionsFromOrg) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, orderedByPriority)
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
       val libraryInfos = libraryInfoCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
-      (libraryInfos, memberships)
+      val permissionsFromOrg = libs.map(lib => lib.id.get -> libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, user.id)).toMap
+      (libraryInfos, memberships, permissionsFromOrg)
     }
     libraryInfos map {
       case (info, lib) =>
@@ -78,7 +79,7 @@ class UserProfileCommander @Inject() (
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           following = Some(true),
-          membership = memberships(lib.id.get).map(lib.getMembershipInfo),
+          membership = memberships(lib.id.get).map(mem => lib.createMembershipInfo(mem, permissionsFromOrg(lib.id.get))),
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,

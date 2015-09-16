@@ -10,6 +10,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
+import com.keepit.model.OrganizationPermission
 import com.keepit.model.OrganizationPermission._
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
@@ -88,7 +89,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 
   val defaultBasePermissions: BasePermissions =
     BasePermissions(
-      None -> Set(VIEW_ORGANIZATION),
+      None -> Set(VIEW_ORGANIZATION, VIEW_MEMBERS),
       Some(OrganizationRole.ADMIN) -> Set(
         VIEW_ORGANIZATION,
         EDIT_ORGANIZATION,
@@ -96,13 +97,21 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         MODIFY_MEMBERS,
         REMOVE_MEMBERS,
         ADD_LIBRARIES,
-        REMOVE_LIBRARIES
+        VIEW_MEMBERS,
+        REMOVE_LIBRARIES,
+        GROUP_MESSAGING,
+        MOVE_ORG_LIBRARIES,
+        PUBLISH_LIBRARIES
       ),
       Some(OrganizationRole.MEMBER) -> Set(
         VIEW_ORGANIZATION,
         ADD_LIBRARIES,
         REMOVE_LIBRARIES,
-        INVITE_MEMBERS
+        INVITE_MEMBERS,
+        VIEW_MEMBERS,
+        GROUP_MESSAGING,
+        MOVE_ORG_LIBRARIES,
+        PUBLISH_LIBRARIES
       )
     )
   val totallyInvisiblePermissions: BasePermissions =
