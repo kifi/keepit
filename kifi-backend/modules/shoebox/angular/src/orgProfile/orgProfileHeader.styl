@@ -4,7 +4,6 @@ ophImageWidth = 100px
 .kf-oph
   background: pageHeaderColor
   color: #fff
-  padding-bottom: 45px
   position: relative
 
   @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
@@ -145,12 +144,6 @@ ophImageWidth = 100px
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     margin-top: 2px
 
-  &::before
-    content: ''
-    display: block
-    height: 1px
-    background-color: #fff
-
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &::before
       transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
@@ -159,14 +152,19 @@ ophImageWidth = 100px
   display: inline-block
   padding: 6px 10px
   color: #9fa3aa
+  background-color: alpha(#fff, 5%)
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
+  padding-left: 20px
+  padding-right: 20px
 
   &[href]:hover
-    background-color: alpha(#fff, 5%)
+    background-color: alpha(#fff, 10%)
 
   &:not([href])
     color: accentGreen
     cursor: default
-    
+
   &.active
     color: lighten(accentGreen, 15%)
 
@@ -175,6 +173,11 @@ ophImageWidth = 100px
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     padding: 3px 5px
+
+  .kf-oph-stats-count
+  .kf-oph-stats-name
+    display: inline-block
+    vertical-align: middle
 
 .kf-oph-stats-name
   line-height: 20px
