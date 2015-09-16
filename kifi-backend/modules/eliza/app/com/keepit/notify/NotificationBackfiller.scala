@@ -43,19 +43,21 @@ class NotificationBackfiller @Inject() (
     userThreadRepo: UserThreadRepo,
     notificationCommander: NotificationCommander) extends FortyTwoActor(airbrake) {
   override def receive: Receive = {
-    case dgBackfillNotifications =>
+    case BackfillNotifications =>
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
-      needBackfilling.foreach {
+      val msgStr = needBackfilling.map {
         case (userThreadId, userId, lastNotif, pending, uriId) =>
           val rawNotif = (lastNotif, pending, uriId)
-          notificationCommander.backfillLegacyNotificationsFor(userId, Seq(rawNotif)).foreach { items =>
-            httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
-              "text" -> s"Backfilled user thread $userThreadId to notif ${items.notification.id.get}"
-            ))
-          }
-      }
+          val backfilled = notificationCommander.backfillLegacyNotificationsFor(userId, Seq(rawNotif))
+          (userThreadId, backfilled.map(_.notification.id.get).mkString(":"))
+      }.map {
+        case (userThreadId, backfilledId) => s"$userThreadId -> $backfilledId"
+      }.mkString("backfilled: ", ", ", "")
+      httpClient.post(DirectUrl("https://hooks.slack.com/services/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"), Json.obj(
+        "text" -> msgStr
+      ))
   }
 }
 
