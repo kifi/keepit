@@ -752,7 +752,7 @@ GET     /admin/findOrganizationByNameJson                    @com.keepit.control
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
-POST    /admin/organizations/addPermissionToAllOrgs          @com.keepit.controllers.admin.AdminOrganizationController.addPermissionToAllOrganizations()
+POST    /admin/organizations/applyPermissionsDiffToAllOrganizations   @com.keepit.controllers.admin.AdminOrganizationController.applyPermissionsDiffToAllOrganizations()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
