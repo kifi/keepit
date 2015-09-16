@@ -2,10 +2,10 @@ package com.keepit.notify.delivery
 
 import com.google.inject.Inject
 import com.keepit.common.JsObjectExtensionOps
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import com.keepit.eliza.commanders.{ MessageWithBasicUser, NotificationCommander, NotificationJsonMaker }
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessageWithBasicUser, NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
 import com.keepit.model.{ NotificationCategory, NormalizedURI }
@@ -27,6 +27,7 @@ class NotificationJsonFormat @Inject() (
     db: Database,
     shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
+    messageFetchingCommander: MessageFetchingCommander,
     notificationJsonMaker: NotificationJsonMaker,
     messageThreadRepo: MessageThreadRepo,
     messageRepo: MessageRepo,
@@ -53,6 +54,44 @@ class NotificationJsonFormat @Inject() (
       case NotificationWithInfo(notif, items, MessageNotificationInfo(messages)) =>
         val mostRecent = messages.maxBy(_.time)
         messageInfo(notifWithInfo, mostRecent)
+    }
+  }
+
+  def threadMessagesInfo(notifWithInfo: NotificationWithInfo): Future[JsObject] = {
+    notifWithInfo match {
+      case NotificationWithInfo(notif, items, MessageNotificationInfo(newMessages)) =>
+        val messageThreadId = Id[MessageThread](newMessages.head.messageThreadId)
+        val (messageThread, messages) = db.readOnlyMaster { implicit session =>
+          (messageThreadRepo.get(messageThreadId), messageRepo.get(messageThreadId, 0))
+        }
+        val itemIdsByMessageId = items.map(i => i -> i.event).collect {
+          case (i, e: NewMessage) => Id[Message](e.messageId) -> ExternalId[Message](i.externalId.id)
+        }.toMap
+        val userIds = messages.map(_.from.asUser).collect { case Some(id) => id }
+        val basicUsers = shoeboxServiceClient.getBasicUsers(userIds)
+        basicUsers.flatMap { users =>
+          Future.sequence(messages.map { message =>
+            messageFetchingCommander.getMessageWithBasicUser(
+              itemIdsByMessageId(message.id.get),
+              message.createdAt,
+              message.messageText,
+              message.source,
+              message.auxData,
+              messageThread.url.getOrElse(""),
+              messageThread.nUrl.getOrElse(""),
+              message.from.asUser.flatMap(id => users.get(id)),
+              Seq()
+            )
+          })
+        }.map { messagesBasicUsers =>
+          val messagesJson = Json.toJson(messagesBasicUsers)
+          val url: String = messageThread.url.getOrElse("")
+          Json.obj(
+            "id" -> notif.externalId,
+            "url" -> url,
+            "messages" -> messagesJson
+          )
+        }
     }
   }
 
@@ -88,7 +127,7 @@ class NotificationJsonFormat @Inject() (
             "url" -> messageThread.nUrl,
             "title" -> messageThread.pageTitle,
             "author" -> sender,
-            "locator" -> ("/messages/" + messageThread.externalId.id),
+            "locator" -> ("/messages/" + notif.externalId),
             "unread" -> notif.unread,
             "category" -> NotificationCategory.User.MESSAGE.category,
             "firstAuthor" -> originalAuthor,
@@ -112,8 +151,10 @@ class NotificationJsonFormat @Inject() (
             "time" -> relevantItem.eventTime,
             "thread" -> notif.externalId,
             "unread" -> Json.toJson(notif.unread),
-            "category" -> "triggered",
-            "fullCategory" -> "replace me", // todo replace
+            "category" -> Json.toJson(
+              NotificationCategory.User.kifiMessageFormattingCategory.getOrElse(info.category, "global")
+            ),
+            "fullCategory" -> info.category.category, // todo replace
             "title" -> info.title,
             "bodyHtml" -> info.body,
             "linkText" -> info.linkText,
@@ -198,6 +239,7 @@ class NotificationJsonFormat @Inject() (
           (author, participants) <- participantsF
           basicFormat <- basicFormatF
         } yield {
+          val fullParticipants = participants + author
           val unreadJson =
             if (notif.unread)
               Json.obj(
@@ -213,10 +255,10 @@ class NotificationJsonFormat @Inject() (
               )
 
           val participantsJson =
-            if (participants.isEmpty)
+            if (fullParticipants.isEmpty)
               Json.obj()
             else
-              Json.obj("participants" -> participants)
+              Json.obj("participants" -> fullParticipants)
 
           val uriSummaryJson = uriSummary.fold(Json.obj()) { summary =>
             val image = summary.images.get(idealImageSize)

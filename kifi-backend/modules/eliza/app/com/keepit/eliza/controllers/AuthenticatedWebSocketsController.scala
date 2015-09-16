@@ -31,7 +31,7 @@ import securesocial.core.{ Authenticator, UserService, SecureSocial }
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
-import com.keepit.common.net.UserAgent
+import com.keepit.common.net.{ HttpClient, DirectUrl, UserAgent }
 import com.keepit.common.store.KifiInstallationStore
 import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
@@ -197,7 +197,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 startMessages = startMessages :+ Json.arr("version", "new")
               }
               onConnect(socketInfo)
-              Right((iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator))
+              val finalEnum = Enumerator(startMessages: _*) >>> enumerator
+              Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
             } getOrElse {
               Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
             }

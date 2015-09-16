@@ -3,7 +3,7 @@ package com.keepit.notify.info
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.path.Path
 import com.keepit.eliza.model.{Notification, NotificationItem}
-import com.keepit.model.LibraryAccess
+import com.keepit.model.{NotificationCategory, LibraryAccess}
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event._
 import play.api.libs.json.Json
@@ -67,7 +67,7 @@ class NotificationKindInfoRequests @Inject() () {
         extraJson = Some(Json.obj(
           "friend" -> inviter
         )),
-        category = None
+        category = NotificationCategory.User.FRIEND_REQUEST
       )
     }
   }
@@ -86,7 +86,7 @@ class NotificationKindInfoRequests @Inject() () {
         extraJson = Some(Json.obj(
           "friend" -> accepter
         )),
-        category = None
+        category = NotificationCategory.User.FRIEND_ACCEPTED
       )
     }
   }
@@ -112,7 +112,8 @@ class NotificationKindInfoRequests @Inject() () {
             "id" -> newKeep.id,
             "url" -> newKeep.url
           )
-        ))
+        )),
+        category = NotificationCategory.User.NEW_KEEP
       )
     }
   }
@@ -138,7 +139,8 @@ class NotificationKindInfoRequests @Inject() () {
             "id" -> newKeep.id,
             "url" -> newKeep.url
           )
-        ))
+        )),
+        category = NotificationCategory.User.NEW_KEEP
       )
     }
   }
@@ -159,7 +161,7 @@ class NotificationKindInfoRequests @Inject() () {
           "follower" -> accepter,
           "library" -> Json.toJson(invitedLib)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -180,7 +182,7 @@ class NotificationKindInfoRequests @Inject() () {
           "follower" -> accepter,
           "library" -> Json.toJson(acceptedLib)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -202,7 +204,8 @@ class NotificationKindInfoRequests @Inject() () {
           "inviter" -> inviter,
           "library" -> Json.toJson(invitedLib),
           "access" -> LibraryAccess.READ_WRITE
-        ))
+        )),
+        category = NotificationCategory.User.LIBRARY_INVITATION
       )
     }
   }
@@ -224,7 +227,8 @@ class NotificationKindInfoRequests @Inject() () {
           "inviter" -> inviter,
           "library" -> Json.toJson(invitedLib),
           "access" -> LibraryAccess.READ_ONLY
-        ))
+        )),
+        category = NotificationCategory.User.LIBRARY_INVITATION
       )
     }
   }
@@ -238,7 +242,8 @@ class NotificationKindInfoRequests @Inject() () {
         image = PublicImage("http://i.imgur.com/qs8QofA.png"),
         title = s"${plural("A robot")} just grumbled! ${plural("He")} must be depressed...",
         body = s"${NotificationEnglish.englishJoin(events.toSeq.map(_.robotName))} just grumbled about ${NotificationEnglish.englishJoin(events.toSeq.map(_.grumblingAbout))}",
-        linkText = "Organize and share knowledge with Kifi!"
+        linkText = "Organize and share knowledge with Kifi!",
+        category = NotificationCategory.System.ADMIN
       )
     }
   }
@@ -255,7 +260,8 @@ class NotificationKindInfoRequests @Inject() () {
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
-        linkText = "Visit organization"
+        linkText = "Visit organization",
+        category = NotificationCategory.User.ORGANIZATION_INVITATION
       )
     }
   }
@@ -276,7 +282,8 @@ class NotificationKindInfoRequests @Inject() () {
         extraJson = Some(Json.obj(
           "member" -> accepter,
           "organization" -> Json.toJson(acceptedOrg)
-        ))
+        )),
+        category = NotificationCategory.User.ORGANIZATION_JOINED
       )
     }
   }
@@ -299,7 +306,7 @@ class NotificationKindInfoRequests @Inject() () {
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -322,7 +329,7 @@ class NotificationKindInfoRequests @Inject() () {
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -343,7 +350,7 @@ class NotificationKindInfoRequests @Inject() () {
           "follower" -> follower,
           "library" -> Json.toJson(libraryFollowed)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -364,7 +371,7 @@ class NotificationKindInfoRequests @Inject() () {
           "follower" -> collaborator, // the mobile clients read it like this
           "library" -> Json.toJson(libraryCollaborating)
         )),
-        category = None
+        category = NotificationCategory.User.LIBRARY_FOLLOWED
       )
     }
   }
@@ -383,7 +390,7 @@ class NotificationKindInfoRequests @Inject() () {
         extraJson = Some(Json.obj(
           "friend" -> friend
         )),
-        category = None
+        category = NotificationCategory.User.SOCIAL_FRIEND_JOINED
       )
     }
   }
@@ -400,7 +407,7 @@ class NotificationKindInfoRequests @Inject() () {
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
         linkText = s"Invite ${joiner.firstName} to connect",
         extraJson = None,
-        category = None
+        category = NotificationCategory.User.CONTACT_JOINED
       )
     }
   }
