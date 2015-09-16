@@ -32,7 +32,7 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
         }
 
         val uriUpdater = new LDADbUpdaterImpl(uriReps, db, uriRepo, uriTopicRepo, commitRepo)
-        val userTopicUpdater = new LDAUserDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userTopicRepo, commitRepo, new FakeCuratorServiceClientImpl(null))
+        val userTopicUpdater = new LDAUserDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userTopicRepo, commitRepo)
 
         uriUpdater.update()
         userTopicUpdater.update()
@@ -67,7 +67,7 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
           }
 
           val uriUpdater = new LDADbUpdaterImpl(uriReps, db, uriRepo, uriTopicRepo, commitRepo)
-          val userTopicUpdater = new LDAUserDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userTopicRepo, commitRepo, new FakeCuratorServiceClientImpl(null))
+          val userTopicUpdater = new LDAUserDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userTopicRepo, commitRepo)
 
           uriUpdater.update()
           userTopicUpdater.update()
