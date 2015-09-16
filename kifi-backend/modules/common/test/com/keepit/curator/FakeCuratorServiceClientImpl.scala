@@ -42,8 +42,6 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
-  def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful(()) }
-
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] =
     Future.successful {
       val recos = topLibraryRecosExpectations(userId)
