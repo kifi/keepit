@@ -36,7 +36,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you are carrying a balance of more than $100 we will charge you immediately
+  private val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
   private val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   val processingLock = new ReactiveLock(1)
