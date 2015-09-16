@@ -15,9 +15,6 @@ import play.api.libs.json._
 trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults]
-  def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]]
-  def generalRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
@@ -36,37 +33,6 @@ class CuratorServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
-
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
-    val payload = Json.obj(
-      "source" -> source,
-      "subSource" -> subSource,
-      "more" -> more,
-      "recencyWeight" -> recencyWeight,
-      "context" -> context
-    )
-    call(Curator.internal.topRecos(userId), body = payload).map { response =>
-      val js = response.json
-      js.validate[URIRecoResults] match {
-        case res: JsSuccess[URIRecoResults] => res.get
-        case err: JsError =>
-          val recos = js.as[Seq[RecoInfo]]
-          URIRecoResults(recos, "")
-      }
-    }
-  }
-
-  def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]] = {
-    call(Curator.internal.topPublicRecos(userId)).map { response =>
-      response.json.as[Seq[RecoInfo]]
-    }
-  }
-
-  def generalRecos(): Future[Seq[RecoInfo]] = {
-    call(Curator.internal.generalRecos()).map { response =>
-      response.json.as[Seq[RecoInfo]]
-    }
-  }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>

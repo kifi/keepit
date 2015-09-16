@@ -57,11 +57,7 @@ class FakeRecommendationsCommander @Inject() (
       userExperimentCommander
     ) {
 
-  var uriRecoInfos: Seq[FullUriRecoInfo] = Seq.empty
   var libRecoInfos: Seq[(Id[Library], FullLibRecoInfo)] = Seq.empty
-
-  override def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] =
-    Future.successful(FullUriRecoResults(uriRecoInfos, "fake_uri_context"))
 
   override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 

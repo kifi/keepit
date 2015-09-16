@@ -26,19 +26,6 @@ class RecommendationsController @Inject() (
     val libMemRepo: LibraryMembershipRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with RecommendationControllerHelper {
 
-  def topRecosV2(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], trackLibDelivery: Boolean) = UserAction.async { request =>
-    val libCnt = libraryRecoCount(request.userId)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, trackDelivery = trackLibDelivery, context = libContext)
-    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, libContext.isDefined, recencyWeight, context = uriContext)
-
-    for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      val FullUriRecoResults(urisReco, newUriContext) = uris
-      val FullLibRecoResults(libsReco, newLibContext) = libs
-      val recos = mix(urisReco, libsReco)
-      Json.obj("recos" -> recos, "uctx" -> newUriContext, "lctx" -> newLibContext)
-    }
-  }
-
   def topPublicRecos() = UserAction.async { request =>
     commander.topPublicRecos(request.userId).map { recos =>
       Ok(Json.toJson(recos))
