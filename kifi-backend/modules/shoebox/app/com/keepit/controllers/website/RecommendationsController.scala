@@ -24,7 +24,7 @@ class RecommendationsController @Inject() (
     val db: Database,
     val userRepo: UserRepo,
     val libMemRepo: LibraryMembershipRepo,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with RecommendationControllerHelper {
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def topPublicRecos() = UserAction.async { request =>
     commander.topPublicRecos(request.userId).map { recos =>

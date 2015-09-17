@@ -1,36 +1,27 @@
+# this playbook shouldn't be run manually, it's intended to be run automaticaly
+# from Ubuntu cloud-init (set via the AWS EC2 user-data)
 ---
 - hosts: localhost
   sudo: yes
   tasks:
-    - name: install kifi-node-setup python dependencies
-      pip: name={{ item }}
-      with_items:
-        - boto3
+    - name: add localhost to the ec2 group
+      add_host: name=localhost groups=ec2
 
-    # add kifi-node-setup as upstart
-    - name: add /opt/kifi-node-setup script
-      template:
-        src: templates/opt/kifi-node-setup.j2
-        dest: /opt/kifi-node-setup
-        owner: root
-        group: root
-        mode: 0750
-    - name: add /etc/init/kifi-node-setup.conf
-      template:
-        src: templates/etc/init/kifi-node-setup.conf.j2
-        dest: /etc/init/kifi-node-setup.conf
-        owner: root
-        group: root
-        mode: 0750
-    - command: /opt/kifi-node-setup
-      changed_when: False
+- include: kifi-node-setup.yml
+
+- hosts: localhost
+  sudo: yes
+  tasks:
+    # the kifi-node-setup playbook writes this file on the ec2 instance
     - include_vars: /opt/kifi-vars.yml
-    - set_fact:
-        ansible_fqdn: "{{ kifi_hostname }}"
-    - name: add ec2 instances to our hosts lists
+
+    - set_fact: ansible_fqdn="{{ kifi_hostname }}"
+
+    - name: add localhost to service group {{ ec2_tag_Service }}
       add_host:
         name: localhost
-        groups: ec2,tag_Service_{{ ec2_tag_Service }}
+        groups: tag_Service_{{ ec2_tag_Service }}
+
     - name: notify slack started
       local_action:
         module: slack

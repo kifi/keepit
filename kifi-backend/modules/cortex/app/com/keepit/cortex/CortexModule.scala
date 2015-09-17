@@ -15,7 +15,7 @@ import com.keepit.common.service.ServiceType
 
 case class CortexServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.CORTEX
-  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.HEIMDAL :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.HEIMDAL :: ServiceType.ROVER :: Nil
 }
 
 abstract class CortexModule(

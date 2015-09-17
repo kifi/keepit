@@ -62,13 +62,14 @@ class NotificationRepoImpl @Inject() (
     def groupIdentifier = column[Option[String]]("group_identifier", O.Nullable)
     def lastEvent = column[DateTime]("last_event", O.NotNull)
     def disabled = column[Boolean]("disabled", O.NotNull)
+    def backfilledFor = column[Option[Id[UserThread]]]("backfilled_for", O.Nullable)
 
     def hasNewEvent: Column[Boolean] = lastChecked.getOrElse(START_OF_TIME) < lastEvent
     def unread: Column[Boolean] = !disabled && hasNewEvent
 
     def ofKind(kind: NKind): Column[Boolean] = this.kind === kind.name
 
-    def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId, backfilledFor) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
 

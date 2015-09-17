@@ -1,5 +1,7 @@
 'use strict';
 
+// Usage instructions: https://gist.github.com/adamjgrant/a166ac9311dba2f783bc
+
 angular.module('kifi')
 
 .factory('ml', [

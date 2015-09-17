@@ -4,7 +4,7 @@ ec2:
   defaults:
     region: us-west-1
     security_group: default
-    ami: ami-0da85c49 # ubuntu14.04-play-30-ansible
+    ami: ami-df6a8b9b # ubuntu-trusty-14.04-amd64-server-20150325
     key_name: andrew
     volumes:
       - device_name: /dev/sda1
@@ -26,20 +26,6 @@ ec2:
         Ansible: v1
       zone: us-west-1a
       instance_type: m3.medium
-    - tags:
-        Name: curator-demand-1
-        Service: curator
-        Mode: primary
-        Ansible: v1
-      zone: us-west-1a
-      instance_type: m3.xlarge
-    - tags:
-        Name: curator-demand-2
-        Service: curator
-        Mode: primary
-        Ansible: v1
-      zone: us-west-1b
-      instance_type: m3.xlarge
     - tags:
         Name: eliza-demand-5
         Service: eliza
