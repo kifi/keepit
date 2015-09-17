@@ -51,7 +51,7 @@ class NotificationBackfiller @Inject() (
 
   def backfillHead(seq: Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]): Unit =
     if (seq.nonEmpty) {
-      context.system.scheduler.scheduleOnce(0.1 seconds) {
+      context.system.scheduler.scheduleOnce(0.5 seconds) {
         backfillHead(seq.tail)
       }
 
