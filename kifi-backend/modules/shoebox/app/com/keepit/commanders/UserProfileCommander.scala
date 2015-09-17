@@ -83,6 +83,7 @@ class UserProfileCommander @Inject() (
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,
+          orgMembership = info.orgMembership,
           orgMemberAccess = info.orgMemberAccess
         )
     }

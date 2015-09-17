@@ -13,7 +13,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
+import com.keepit.common.store.{ ImagePath, FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.KeepFactoryHelper._
@@ -700,55 +700,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         firstTime.isBefore(secondTime) === true
 
-        val permissionsFromOrg = org1.getRolePermissions(OrganizationRole.ADMIN).flatMap { OrganizationPermission.toLibraryPermissionOpt }
+        implicit val orgMembershipReads = OrganizationMembershipInfo.testReads
 
-        val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
-        val expected = Json.parse(
-          s"""{
-             "library":{
-               "id":"${Library.publicId(lib1.id.get).id}",
-               "name":"Library1",
-               "visibility":"secret",
-               "slug":"lib1",
-               "url":"/${orgHandle.value}/lib1",
-               "kind":"user_created",
-               "owner":{
-                 "id":"${basicUser1.externalId}",
-                 "firstName":"${basicUser1.firstName}",
-                 "lastName":"${basicUser1.lastName}",
-                 "pictureName":"${basicUser1.pictureName}",
-                 "username":"${basicUser1.username.value}"
-                 },
-               "followers":[],
-               "collaborators":[],
-               "keeps":[],
-               "numKeeps":0,
-               "numCollaborators":0,
-               "numFollowers":0,
-               "whoCanInvite":"collaborator",
-               "modifiedAt": ${lib1.updatedAt.getMillis},
-               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, Some(org1.handle), lib1.slug)}",
-               "org": {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
-                  "avatarPath":"oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
-               },
-               "orgMemberAccess": "read_write",
-               "membership":{
-                "access":"owner",
-                "listed":false,
-                "subscribed":false,
-                "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER) ++ permissionsFromOrg)}
-               },
-               "invite": null
-              },
-             "subscriptions": [],
-             "suggestedSearches": {"terms": [], "weights": []}
-            }
-          """)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+        val resultJson = contentAsJson(result1)
+        (resultJson \ "library" \ "org").as[Option[BasicOrganization]] must equalTo(Some(BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"))))
+        (resultJson \ "library" \ "orgMembership").as[Option[OrganizationMembershipInfo]] must equalTo(Some(OrganizationMembershipInfo(isInvited = false, invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationRole.ADMIN))))
+        (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
       }
     }
 

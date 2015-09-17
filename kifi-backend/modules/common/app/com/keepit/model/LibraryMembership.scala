@@ -112,7 +112,6 @@ object LibraryPermission {
   case object EDIT_OTHER_KEEPS extends LibraryPermission("edit_other_keeps")
   case object REMOVE_OWN_KEEPS extends LibraryPermission("remove_own_keeps")
   case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
-  case object PUBLISH_LIBRARY extends LibraryPermission("publish_library")
 
   implicit val format: Format[LibraryPermission] =
     Format(__.read[String].map(LibraryPermission(_)), new Writes[LibraryPermission] {

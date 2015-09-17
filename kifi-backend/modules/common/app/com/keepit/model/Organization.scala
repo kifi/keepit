@@ -10,7 +10,6 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import com.keepit.model.OrganizationPermission
 import com.keepit.model.OrganizationPermission._
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
