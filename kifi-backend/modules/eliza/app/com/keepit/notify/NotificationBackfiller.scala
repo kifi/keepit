@@ -68,6 +68,7 @@ class NotificationBackfiller @Inject() (
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
+      log.info(s"Need backfilling: ${needBackfilling.map(_._1.id).mkString(", ")}")
       backfillHead(needBackfilling)
   }
 }
