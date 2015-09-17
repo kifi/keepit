@@ -65,6 +65,7 @@ class NotificationBackfiller @Inject() (
 
   override def receive: Receive = {
     case BackfillNotifications =>
+      log.info(s"Running backfilling query")
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
