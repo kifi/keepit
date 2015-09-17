@@ -27,20 +27,6 @@ ec2:
       zone: us-west-1a
       instance_type: m3.medium
     - tags:
-        Name: curator-demand-1
-        Service: curator
-        Mode: primary
-        Ansible: v1
-      zone: us-west-1a
-      instance_type: m3.xlarge
-    - tags:
-        Name: curator-demand-2
-        Service: curator
-        Mode: primary
-        Ansible: v1
-      zone: us-west-1b
-      instance_type: m3.xlarge
-    - tags:
         Name: eliza-demand-5
         Service: eliza
         Mode: primary
