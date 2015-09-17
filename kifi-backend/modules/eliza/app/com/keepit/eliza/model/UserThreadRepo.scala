@@ -530,7 +530,7 @@ class UserThreadRepoImpl @Inject() (
        select id, user_id, last_notification, notification_pending, uri_id from user_thread
        where user_thread.replyable = FALSE and uri_id is null and last_notification != 'null' and not exists (
          select * from notification where kind = 'legacy' and backfilled_for = user_thread.id
-       ) limit 50;
+       ) limit 500;
       """.as[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])].list
   }
 
