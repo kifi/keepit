@@ -71,7 +71,8 @@ class NotificationCommander @Inject() (
               recipient = recipient,
               kind = LegacyNotification,
               lastEvent = time,
-              groupIdentifier = Some(id)
+              groupIdentifier = Some(id),
+              backfilledFor = Some(userThreadId)
             ))
             val item = notificationItemRepo.save(NotificationItem(
               notificationId = notif.id.get,
