@@ -56,7 +56,7 @@ class NotificationBackfiller @Inject() (
 
       seq.head match {
         case (userThreadId, userId, lastNotif, pending, uriId) =>
-          val rawNotif = (lastNotif, pending, uriId)
+          val rawNotif = (userThreadId, lastNotif, pending, uriId)
           val backfilled = notificationCommander.backfillLegacyNotificationsFor(userId, Seq(rawNotif))
           val backfilledIds = backfilled.map(_.notification.id.get).mkString(":")
           log.info(s"Just backfilled $userThreadId -> $backfilledIds")
