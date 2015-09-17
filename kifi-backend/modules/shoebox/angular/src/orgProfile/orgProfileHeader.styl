@@ -45,10 +45,12 @@ ophImageWidth = 100px
     margin: auto
     margin-bottom: 15px
 
-.kf-oph-invite-button.kf-link
+.kf-oph-upper-right
   position: absolute
   top: 25px
   right: 25px
+
+.kf-oph-invite-button.kf-link
   color: rgba(255, 255, 255, 0.8)
 
   svg
@@ -242,3 +244,12 @@ ophImageWidth = 100px
     &:after
       bottom: 0
 
+.kf-upsell
+  > svg
+    transition: fill .25s
+    border-bottom: 1px solid transparent
+
+  &:hover > svg
+    border-bottom: 1px solid #fff
+    fill: linkBlueColor
+    cursor: pointer
