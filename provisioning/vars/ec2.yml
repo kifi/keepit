@@ -4,7 +4,7 @@ ec2:
   defaults:
     region: us-west-1
     security_group: default
-    ami: ami-0da85c49 # ubuntu14.04-play-30-ansible
+    ami: ami-df6a8b9b # ubuntu-trusty-14.04-amd64-server-20150325
     key_name: andrew
     volumes:
       - device_name: /dev/sda1
