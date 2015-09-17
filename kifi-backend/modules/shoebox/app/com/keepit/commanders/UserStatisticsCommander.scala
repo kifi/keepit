@@ -13,7 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
-import com.keepit.payments.{ DollarAmount, PlanManagementCommander }
+import com.keepit.payments.{ DollarAmount, PlanManagementCommander, PaidPlan }
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -96,7 +96,10 @@ case class OrganizationStatistics(
   domains: Set[Domain],
   internalMemberChatStats: Seq[SummaryByYearWeek],
   allMemberChatStats: Seq[SummaryByYearWeek],
-  credit: DollarAmount)
+  credit: DollarAmount,
+  stripeToken: String,
+  billingCycleStart: DateTime,
+  plan: PaidPlan)
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -265,6 +268,9 @@ class UserStatisticsCommander @Inject() (
     }
 
     val credit = planManagementCommander.getCurrentCredit(orgId)
+    val stripeToken = planManagementCommander.getDefaultPaymentMethod(orgId).map(_.stripeToken.token).getOrElse("N/A")
+    val plan = planManagementCommander.currentPlan(orgId)
+    val billingCycleStart = planManagementCommander.getBillingCycleStart(orgId)
 
     for {
       membersStats <- membersStatsFut
@@ -289,7 +295,10 @@ class UserStatisticsCommander @Inject() (
       domains = domains,
       internalMemberChatStats = internalMemberChatStats,
       allMemberChatStats = allMemberChatStats,
-      credit = credit
+      credit = credit,
+      stripeToken = stripeToken,
+      billingCycleStart = billingCycleStart,
+      plan = plan
     )
   }
 

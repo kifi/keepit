@@ -20,6 +20,8 @@ class AdminPaymentsController @Inject() (
     organizationRepo: OrganizationRepo,
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
+    paymentProcessingCommander: PaymentProcessingCommander,
+    stripeClient: StripeClient,
     db: Database) extends AdminUserActions {
 
   val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 243).map(Id[User](_))
@@ -92,6 +94,41 @@ class AdminPaymentsController @Inject() (
     } else {
       planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), memo)
       Ok(s"Sucessfully granted special credit of $dollarAmount to Organization $orgId.")
+    }
+  }
+
+  def processOrgNow(orgId: Id[Organization]) = AdminUserAction.async { request =>
+    val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
+    paymentProcessingCommander.processAccount(account).map { charged =>
+      Ok(charged.toString)
+    }
+  }
+
+  def changePlanForOrg(orgId: Id[Organization]) = AdminUserAction { request =>
+    val newPlan = Id[PaidPlan](request.body.asFormUrlEncoded.get.apply("planId").head.toInt)
+    planCommander.changePlan(orgId, newPlan, ActionAttribution(user = None, admin = Some(request.userId))) match {
+      case Success(res) => Ok(res.toString)
+      case Failure(ex) => Ok(ex.toString)
+    }
+  }
+
+  def addCreditCardView(orgId: Id[Organization]) = AdminUserAction { request =>
+    Ok(views.html.admin.addCreditCard(orgId))
+  }
+
+  def addCreditCard(orgId: Id[Organization]) = AdminUserAction.async { request =>
+    val data = request.body.asFormUrlEncoded.get
+    val cardDetails = CardDetails(
+      data("number").head.trim,
+      data("expMonth").head.trim.toInt,
+      data("expYear").head.trim.toInt,
+      data("cvc").head.trim,
+      data("cardholderName").head.trim
+    )
+    stripeClient.getPermanentToken(cardDetails, s"Manually Entered through admin ${request.userId} for org $orgId").map { token =>
+      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)))
+      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)))
+      Ok(event.toString)
     }
   }
 

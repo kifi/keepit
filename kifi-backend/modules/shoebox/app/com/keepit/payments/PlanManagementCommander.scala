@@ -55,10 +55,12 @@ trait PlanManagementCommander {
 
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
+  def getBillingCycleStart(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): PaymentMethod
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent]
+  def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
   def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
@@ -425,6 +427,10 @@ class PlanManagementCommanderImpl @Inject() (
     Failure(new Exception("failed_getting_account_lock"))
   }
 
+  def getBillingCycleStart(orgId: Id[Organization]): DateTime = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).billingCycleStart
+  }
+
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod] = db.readOnlyMaster { implicit session =>
     paymentMethodRepo.getByAccountId(orgId2AccountId(orgId))
   }
@@ -464,6 +470,10 @@ class PlanManagementCommanderImpl @Inject() (
       )))
     }
 
+  }
+
+  def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod] = {
+    getActivePaymentMethods(orgId).find(_.default)
   }
 
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>

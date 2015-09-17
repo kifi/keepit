@@ -7,7 +7,9 @@ import com.keepit.common.db.slick.DBSession.RWSession
 
 import com.google.inject.Inject
 
-class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRepo) {
+import scala.concurrent.{ Future, ExecutionContext }
+
+class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRepo, implicit val ec: ExecutionContext) {
 
   def acquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {
     val hasLock = try {
@@ -34,6 +36,26 @@ class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRep
         Some(f(session))
       } finally {
         releaseAccountLockForSession(orgId, session)
+      }
+    } else {
+      None
+    }
+  }
+
+  def maybeWithAccountLockAsync[T](orgId: Id[Organization], attempts: Int = 1)(f: => Future[T]): Option[Future[T]] = db.readWrite { implicit session =>
+    val hasLock = db.readWrite { session => acquireAccountLockForSession(orgId, session, attempts) }
+    if (hasLock) {
+      try {
+        val resFut = f
+        resFut.onComplete { _ =>
+          db.readWrite { session => releaseAccountLockForSession(orgId, session) }
+        }
+        Some(resFut)
+      } catch {
+        case t: Throwable => {
+          db.readWrite { session => releaseAccountLockForSession(orgId, session) }
+          throw t
+        }
       }
     } else {
       None

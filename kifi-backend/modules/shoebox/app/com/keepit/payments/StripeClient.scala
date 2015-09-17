@@ -35,7 +35,8 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
   val lock = new ReactiveLock(2)
 
   Stripe.apiKey = if (mode == Mode.Prod) {
-    "sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    //"sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
   } else {
     "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
   };
@@ -80,7 +81,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
       "name" -> cardDetails.cardholderName
     )
     val customerParams: Map[String, java.lang.Object] = Map(
-      "source" -> cardDetailsMap,
+      "source" -> cardDetailsMap.asJava,
       "description" -> description //This is for us. It will show up in the stripe dashboard
     )
     val customer = Customer.create(customerParams.asJava);

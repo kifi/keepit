@@ -42,7 +42,10 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
-    <tr><td>Credit</td><td>@orgStats.credit</td></tr>
+    <tr><td>Plan</td><td>@orgStats.plan.id (Price per User per Cycle: @orgStats.plan.pricePerCyclePerUser, Cycle Length: @orgStats.plan.billingCycle.month month)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td>Billing Cycle Start</td><td>@adminHelper.dateTimeDisplay(orgStats.billingCycleStart)</td></tr>
+    <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
+    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>)</td></tr>
     <tr><td>Extra credit</td><td>
         Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
         Passphrase: <input id="extra-credit-pass" type="text"></input>
@@ -406,6 +409,39 @@ orgStats: OrganizationStatistics
         })
     });
 
+    $("#process-billing-now").click(function () {
+        if ("@orgStats.stripeToken" === "N/A") {
+            alert("There seems to be no active credit card on file");
+            return;
+        }
+        if (confirm("Are you sure?")) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
+
+
+    $("#edit-plan").click(function () {
+        var newPlanId = prompt("Enter New Plan Id")
+        if (newPlanId != null) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.changePlanForOrg(orgStats.orgId)", {planId: newPlanId});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
 
 </script>
 }
