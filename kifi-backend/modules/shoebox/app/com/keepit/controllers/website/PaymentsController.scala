@@ -82,16 +82,16 @@ class PaymentsController @Inject() (
   }
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
-    val accountFeatureSettingsView = planCommander.getAccountFeatureSettings(request.orgId)
-    Ok(Json.toJson(accountFeatureSettingsView))
+    val accountFeatureSettingsResponse = planCommander.getAccountFeatureSettings(request.orgId)
+    Ok(Json.toJson(accountFeatureSettingsResponse))
   }
 
-  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
+  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request =>
     request.body.validate[SimpleAccountFeatureSettingRequest] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
-        val accountFeatureSettingsView = planCommander.setAccountFeatureSettings(request.orgId, settings.settingByName)
-        Ok(Json.toJson(accountFeatureSettingsView))
+        val accountFeatureSettingsResponse = planCommander.setAccountFeatureSettings(request.orgId, settings.featureSettings)
+        Ok(Json.toJson(accountFeatureSettingsResponse))
     }
   }
 

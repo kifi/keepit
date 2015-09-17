@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.model.OrganizationPermission
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -44,7 +45,8 @@ object OrganizationPermission {
     MOVE_ORG_LIBRARIES -> LibraryPermission.MOVE_LIBRARY,
     FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
     EXPORT_KEEPS -> LibraryPermission.EXPORT_KEEPS,
-    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY
+    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
+    CREATE_SLACK_INTEGRATION -> LibraryPermission.CREATE_SLACK_INTEGRATION
   )
 
   def toLibraryPermissionOpt(orgPermission: OrganizationPermission): Option[LibraryPermission] = orgPermissionsToLibraryPermissions.get(orgPermission)

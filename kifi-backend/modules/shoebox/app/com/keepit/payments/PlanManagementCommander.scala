@@ -62,10 +62,8 @@ trait PlanManagementCommander {
   def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
-  def getPlanFeatures(orgId: Id[Organization]): Set[PlanFeature]
-
-  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsView
-  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsView
+  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse
+  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse
 
   def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession)
 
@@ -93,6 +91,10 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
+  private def planFeaturesToDefaultSettings(planFeatures: Set[PlanFeature]): Set[FeatureSetting] = {
+    planFeatures.map { case PlanFeature(name, default, _) => FeatureSetting(name, default) }
+  }
+
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
@@ -116,7 +118,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                featureSettings = PlanFeature.toDefaultFeatureSettings(plan.features),
+                featureSettings = planFeaturesToDefaultSettings(plan.features),
                 activeUsers = 0
               )))
             case None =>
@@ -127,7 +129,7 @@ class PlanManagementCommanderImpl @Inject() (
                 credit = DollarAmount(0),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                featureSettings = PlanFeature.toDefaultFeatureSettings(plan.features),
+                featureSettings = planFeaturesToDefaultSettings(plan.features),
                 activeUsers = 0
               )))
           }
@@ -503,22 +505,15 @@ class PlanManagementCommanderImpl @Inject() (
     )
   }
 
-  def getPlanFeatures(orgId: Id[Organization]): Set[PlanFeature] = {
-    db.readOnlyReplica { implicit session =>
-      val account = paidAccountRepo.getByOrgId(orgId)
-      paidPlanRepo.get(account.planId).features
-    }
-  }
-
-  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsView = {
+  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse = {
     db.readOnlyReplica { implicit session =>
       val account = paidAccountRepo.getByOrgId(orgId)
       val plan = paidPlanRepo.get(account.planId)
-      AccountFeatureSettingsView(plan.features, account.featureSettings)
+      AccountFeatureSettingsResponse(plan.features, account.featureSettings)
     }
   }
 
-  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsView = {
+  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse = {
     val oldAccount = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId) }
     val updatedAccount = oldAccount.withFeatureSettings(settings)
 
@@ -528,16 +523,31 @@ class PlanManagementCommanderImpl @Inject() (
       paidPlanRepo.get(updatedAccount.planId)
     }
 
-    AccountFeatureSettingsView(plan.features, updatedAccount.featureSettings)
+    AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings)
   }
 
-  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): BasePermissions = {
+  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): Unit = {
+    assert(oldFeatureSettings.map(_.featureName) == newFeatureSettings.map(_.featureName))
 
-    val oldPermissionByRole = FeatureSetting.toPermissionsByRole(oldFeatureSettings)
-    val newPermissionByRole = FeatureSetting.toPermissionsByRole(newFeatureSettings)
+    val permissionFeaturesByName = oldFeatureSettings.flatMap(featureSetting => Feature.get(featureSetting.featureName)).collect {
+      case feature: OrganizationPermissionFeature => feature.name -> feature
+    }.toMap
 
-    val addedPermissions = PermissionsMap(newPermissionByRole) -- PermissionsMap(oldPermissionByRole)
-    val removedPermissions = PermissionsMap(oldPermissionByRole) -- PermissionsMap(newPermissionByRole)
+    def featureSettingsToPermissionsByRole(featureSettings: Set[FeatureSetting]): Map[Option[OrganizationRole], Set[OrganizationPermission]] = {
+      val settingsByName = featureSettings.map { case FeatureSetting(name, setting) => name -> setting }.toMap
+
+      settingsByName.foldLeft(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]]) {
+        case (acc, (name, setting)) =>
+          val permissionsByRole = permissionFeaturesByName(name).permissionsByRoleBySetting(setting)
+          acc.map { case (role, permissions) => role -> (permissions ++ permissionsByRole(role)) }
+      }
+    }
+
+    val oldPermissionsByRole = featureSettingsToPermissionsByRole(oldFeatureSettings)
+    val newPermissionsByRole = featureSettingsToPermissionsByRole(newFeatureSettings)
+
+    val addedPermissions = PermissionsMap(newPermissionsByRole) -- PermissionsMap(oldPermissionsByRole)
+    val removedPermissions = PermissionsMap(oldPermissionsByRole) -- PermissionsMap(newPermissionsByRole)
 
     val permissionsDiff = PermissionsDiff(addedPermissions, removedPermissions)
 
@@ -547,8 +557,6 @@ class PlanManagementCommanderImpl @Inject() (
 
     orgRepo.save(updatedOrg)
     applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, updatedOrg.basePermissions)
-
-    updatedOrg.basePermissions
   }
 
   def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
@@ -566,11 +574,6 @@ class PlanManagementCommanderImpl @Inject() (
         orgMembershipRepo.save(membership.withPermissions(newPermissions))
       }
     }
-  }
-
-  def getPlanOrgPermissionSettings(orgId: Id[Organization]): BasePermissions = {
-    val settingsConfig = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId).featureSettings }
-    FeatureSetting.toBasePermissions(settingsConfig)
   }
 
 }
