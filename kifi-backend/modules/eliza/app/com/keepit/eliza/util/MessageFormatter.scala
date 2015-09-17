@@ -35,7 +35,7 @@ object MessageFormatter {
       kind match {
         case "i" => ImageLookHereSegment(text, payload)
         case "r" => TextLookHereSegment(text, payload)
-        case _ => throw new Exception("Unknown look-here type: " + kind)
+        case _ => throw new Exception(s"Unknown look-here type in ${m.matched}")
       }
     }
 

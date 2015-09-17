@@ -124,14 +124,17 @@ class TwitterSyncCommander @Inject() (
         if (throttle.waiting < states.length + 1) {
           val (socialUserInfo, library) = db.readOnlyReplica { implicit session =>
             val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
-              socialRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER)
+              // Grab Twitter SUIs, prefer ones that are "fetched_using_self", which is the state for active, working records
+              socialRepo.getByUser(userId).filter(s => s.networkType == SocialNetworks.TWITTER).sortBy(sui => sui.state == SocialUserInfoStates.FETCHED_USING_SELF).reverse.headOption
             }
             val library = libraryRepo.get(state.libraryId)
 
             (socialUserInfo, library)
           }
 
-          if (library.state == LibraryStates.ACTIVE) {
+          if (socialUserInfo.exists(_.state == SocialUserInfoStates.TOKEN_EXPIRED)) {
+            // Skip for now. This leaves their sync active, but doesn't attempt to update it. If they update their SUI record later, we'll begin refetching.
+          } else if (library.state == LibraryStates.ACTIVE) {
             syncOne(socialUserInfo, state, library.ownerId)
           } else {
             db.readWrite { implicit session =>
