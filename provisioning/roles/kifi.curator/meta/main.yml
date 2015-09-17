@@ -1,4 +1,0 @@
----
-dependencies:
-- role: kifi.common
-  service: curator
