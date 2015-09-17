@@ -47,7 +47,7 @@ trait CortexServiceController extends ServiceController {
 }
 
 trait CuratorServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.CURATOR
+  val serviceType: ServiceType = ServiceType.TEST_MODE //hacking it, should be dead code soon
 }
 
 trait GraphServiceController extends ServiceController {
