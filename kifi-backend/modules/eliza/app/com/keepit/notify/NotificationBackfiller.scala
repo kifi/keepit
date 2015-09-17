@@ -19,6 +19,7 @@ import play.api.{ Application, Play }
 import play.api.libs.json.{ JsValue, Json }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.util.Random
 
 @ImplementedBy(classOf[NotificationBackfillerPluginImpl])
 trait NotificationBackfillerPlugin extends SchedulerPlugin {
@@ -33,7 +34,7 @@ class NotificationBackfillerPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 1 minutes)
+    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 0.5 minutes)
     log.info(s"[onStart] NotificationBackfillerPlugin started with initDelay=$initDelay freq=$freq")
     scheduleTaskOnOneMachine(actor.system, initDelay, freq, actor.ref, BackfillNotifications, BackfillNotifications.getClass.getName)
   }
@@ -69,8 +70,9 @@ class NotificationBackfiller @Inject() (
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
-      log.info(s"Need backfilling: ${needBackfilling.map(_._1.id).mkString(", ")}")
-      backfillHead(needBackfilling)
+      val actuallyBackfill = Random.shuffle(needBackfilling).take(250)
+      log.info(s"Need backfilling: ${actuallyBackfill.map(_._1.id).mkString(", ")}")
+      backfillHead(actuallyBackfill)
   }
 }
 
