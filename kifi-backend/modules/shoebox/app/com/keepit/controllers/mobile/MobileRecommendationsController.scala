@@ -4,18 +4,14 @@ import com.keepit.common.time._
 import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryInfoCommander, KeepCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
-import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
-import com.keepit.controllers.website.RecommendationControllerHelper
 import com.keepit.curator.model._
 import com.keepit.model._
-import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }
-import play.api.mvc.Result
 
 import scala.concurrent.Future
 
@@ -29,7 +25,7 @@ class MobileRecommendationsController @Inject() (
     val db: Database,
     val userRepo: UserRepo,
     val keepRepo: KeepRepo,
-    val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController with RecommendationControllerHelper {
+    val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController {
 
   def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
     getKeepStreamAsRecos(request.userId, 10, None) map {
