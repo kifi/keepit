@@ -70,7 +70,7 @@ class NotificationBackfiller @Inject() (
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
-      val actuallyBackfill = Random.shuffle(needBackfilling).take(250)
+      val actuallyBackfill = Random.shuffle(needBackfilling)
       log.info(s"Need backfilling: ${actuallyBackfill.map(_._1.id).mkString(", ")}")
       backfillHead(actuallyBackfill)
   }
