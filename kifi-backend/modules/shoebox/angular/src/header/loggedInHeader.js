@@ -151,6 +151,10 @@ angular.module('kifi')
       }
     };
 
+    $scope.shouldShowCreateTeam = function () {
+      return $scope.me.experiments.indexOf('admin') !== -1;
+    };
+
     $scope.addKeeps = function () {
       var library = $scope.library;
       modalService.open({
@@ -160,7 +164,15 @@ angular.module('kifi')
     };
 
     $scope.createLibrary = function () {
-      $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+      if ($state.includes('*.libraries.**')) {
+        $rootScope.$broadcast('openCreateLibrary');
+      } else {
+        $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+      }
+    };
+
+    $scope.createTeam = function () {
+      $state.go('teams.new');
     };
 
     function onDocKeyDown(e) {

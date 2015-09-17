@@ -24,6 +24,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView]
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
@@ -69,6 +70,12 @@ class OrganizationCommanderImpl @Inject() (
       val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
       val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
       OrganizationView(organizationInfo, membershipInfo)
+    }
+  }
+
+  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView] = {
+    db.readOnlyReplica { implicit session =>
+      orgIds.map(id => id -> getOrganizationView(id, viewerIdOpt, authTokenOpt)).toMap
     }
   }
 
@@ -191,7 +198,7 @@ class OrganizationCommanderImpl @Inject() (
     val badName = modifications.name.exists(_.isEmpty)
     val badPermissionsChange = modifications.permissionsDiff.exists { pdiff =>
       def roleCannotSeeOrg = OrganizationRole.all.exists { role => pdiff.removed(Some(role)).contains(VIEW_ORGANIZATION) }
-      def messedWithAdmins = pdiff.added(Some(OrganizationRole.ADMIN)).nonEmpty || pdiff.removed(Some(OrganizationRole.ADMIN)).nonEmpty
+      def messedWithAdmins = pdiff.added(Some(OrganizationRole.ADMIN)).nonEmpty || pdiff.removed(Some(OrganizationRole.ADMIN)).nonEmpty // not going to tackle this right now, but we may need to take this check off with new permissions e.g. FORCE_EDIT_LIBRARIES
       roleCannotSeeOrg || messedWithAdmins
     }
     val normalizedSiteUrl = modifications.site.map { url =>
@@ -225,7 +232,7 @@ class OrganizationCommanderImpl @Inject() (
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when thing sare solidified
+            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when things are solidified
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             org
           }

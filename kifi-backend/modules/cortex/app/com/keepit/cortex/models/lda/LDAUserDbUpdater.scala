@@ -13,7 +13,6 @@ import com.keepit.cortex.ModelVersions
 import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
 import com.keepit.cortex.utils.MatrixUtils.cosineDistance
 import org.joda.time.DateTime
@@ -42,8 +41,7 @@ class LDAUserDbUpdaterImpl @Inject() (
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
     userTopicRepo: UserLDAInterestsRepo,
-    commitRepo: FeatureCommitInfoRepo,
-    curator: CuratorServiceClient) extends LDAUserDbUpdater with Logging {
+    commitRepo: FeatureCommitInfoRepo) extends LDAUserDbUpdater with Logging {
 
   private val fetchSize = 5000
   private val modelName = StatModelName.LDA_USER
@@ -98,7 +96,6 @@ class LDAUserDbUpdaterImpl @Inject() (
       }
       val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (snaphShotChanged && version == ModelVersions.defaultLDAVersion) { curator.refreshUserRecos(user) }
     }
   }
 

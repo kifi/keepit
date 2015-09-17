@@ -1,0 +1,27 @@
+- hosts: ec2
+  sudo: yes
+  tasks:
+    - name: install kifi-node-setup python dependencies
+      pip: name={{ item }}
+      with_items:
+        - boto3
+
+    - name: add /opt/kifi-node-setup script
+      template:
+        src: templates/opt/kifi-node-setup.j2
+        dest: /opt/kifi-node-setup
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: add /etc/init/kifi-node-setup.conf
+      template:
+        src: templates/etc/init/kifi-node-setup.conf.j2
+        dest: /etc/init/kifi-node-setup.conf
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: run /opt/kifi-node-setup
+      command: /opt/kifi-node-setup
+      changed_when: False

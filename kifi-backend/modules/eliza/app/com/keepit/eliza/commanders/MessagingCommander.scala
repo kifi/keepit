@@ -16,6 +16,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
+import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
+import com.keepit.notify.model.event.NewMessage
+import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
@@ -60,25 +63,27 @@ class MessagingCommander @Inject() (
     messagingAnalytics: MessagingAnalytics,
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
+    notificationRepo: NotificationRepo,
     basicMessageCommander: MessageFetchingCommander,
-    notificationCommander: NotificationDeliveryCommander,
+    notificationCommander: NotificationCommander,
+    notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationCommander.sendPushNotification(userId, notification)
+    notificationDeliveryCommander.sendPushNotification(userId, notification)
   }
 
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = {
     val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationCommander.sendPushNotification(userId, notification, force)
+    notificationDeliveryCommander.sendPushNotification(userId, notification, force)
   }
 
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = {
     val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationCommander.sendPushNotification(userId, notification, force)
+    notificationDeliveryCommander.sendPushNotification(userId, notification, force)
   }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
@@ -188,7 +193,7 @@ class MessagingCommander @Inject() (
         db.readWrite { implicit session =>
           userThreadRepo.delete(userThread)
         }
-        notificationCommander.notifyRemoveThread(userThread.user, threadExtId)
+        notificationDeliveryCommander.notifyRemoveThread(userThread.user, threadExtId)
       }
     }
   }
@@ -295,9 +300,11 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
-    val thread = db.readOnlyMaster { implicit session =>
-      threadRepo.get(threadId)
-    }
+    val thread =
+      db.readOnlyMaster { implicit session =>
+        threadRepo.get(threadId)
+      }
+
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
@@ -359,7 +366,7 @@ class MessagingCommander @Inject() (
 
     // send message through websockets immediately
     thread.participants.foreach(_.allUsers.foreach { user =>
-      notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
+      notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
     })
 
     // update user thread of the sender
@@ -391,17 +398,17 @@ class MessagingCommander @Inject() (
       case _ => thread.allParticipants
     }
     usersToNotify.foreach { userId =>
-      notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
+      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
     // update user thread of the sender again, might be deprecated
     from.asUser.foreach { sender =>
-      notificationCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
 
     // update non user threads of non user recipients
-    notificationCommander.updateEmailParticipantThreads(thread, message)
-    if (isNew.exists(identity)) { notificationCommander.notifyEmailParticipants(thread) }
+    notificationDeliveryCommander.updateEmailParticipantThreads(thread, message)
+    if (isNew.exists(identity)) { notificationDeliveryCommander.notifyEmailParticipants(thread) }
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
@@ -507,7 +514,7 @@ class MessagingCommander @Inject() (
             }
           }
 
-          notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+          notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
           messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
           true
 
@@ -530,7 +537,7 @@ class MessagingCommander @Inject() (
 
     val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
     val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
-    notificationCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
+    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -544,7 +551,7 @@ class MessagingCommander @Inject() (
     if (changed) {
       val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
       val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
-      notificationCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
+      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
     }
   }
 
@@ -561,13 +568,23 @@ class MessagingCommander @Inject() (
 
   def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None): Int = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable)
+      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable) + (filterByReplyable match {
+        case Some(true) => notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
+        case Some(false) => notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
+        case None => notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+      })
     }
   }
 
   def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadThreadCounts(userId)
+      userThreadRepo.getUnreadThreadCounts(userId) match {
+        case (numUnread, numUnmuted) =>
+          (
+            numUnread + notificationRepo.getNotificationsWithNewEventsCount(Recipient(userId)),
+            numUnmuted + notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+          )
+      }
     }
   }
 
@@ -593,7 +610,7 @@ class MessagingCommander @Inject() (
       }
     }
     if (stateChanged) {
-      notificationCommander.notifyUserAboutMuteChange(userId, threadId, mute)
+      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, threadId, mute)
       messagingAnalytics.changedMute(userId, threadId, mute, context)
     }
     stateChanged
@@ -651,8 +668,7 @@ class MessagingCommander @Inject() (
       shoebox.hasOrganizationMembership(oid, userId).flatMap {
         case true =>
           //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("org_chat", true)
-          moreContext += ("org_id", oid.id)
+          moreContext += ("messagedWholeOrgId", oid.id)
           shoebox.getOrganizationMembers(oid)
         case false =>
           Future.successful(Set.empty[Id[User]])

@@ -238,6 +238,57 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  def getWriteableLibrariesWithUrlV3 = UserAction(parse.tolerantJson) { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    getLibrariesUserCanKeepToWithUrl(request.userId, urlOpt)
+  }
+
+  private def getLibrariesUserCanKeepToWithUrl(userId: Id[User], urlOpt: Option[String]) = {
+    val parseUrl = urlOpt.map { url =>
+      pageCommander.getUrlInfo(url, userId)
+    }
+
+    val libs = libraryInfoCommander.getLibrariesUserCanKeepTo(userId, includeOrgLibraries = true)
+    val libOwnerIds = libs.map(_._1.ownerId).toSet
+    val libraryCards = db.readOnlyReplica { implicit session =>
+      val user = userRepo.get(userId)
+      val libOwners = basicUserRepo.loadAll(libOwnerIds)
+      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+    }
+
+    val writeableLibraryInfos = libraryCards.map { libraryCard =>
+      val access = libraryCard.membership.map(_.access).getOrElse(LibraryAccess.READ_WRITE)
+      val memInfo = Json.obj("access" -> access)
+      val shortDesc = Json.obj("shortDescription" -> libraryCard.description.getOrElse("").take(100))
+
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo ++ shortDesc
+    }.toList
+
+    val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)
+    val keepResponse = parseUrl.collect {
+      case Left(error) =>
+        Json.obj("error" -> error)
+      case Right(keepDataList) if keepDataList.nonEmpty =>
+        val completeKeepData = db.readOnlyMaster { implicit s =>
+          val allKeepExtIds = keepDataList.map(_.id).toSet
+          val keepMap = keepRepo.getByExtIds(allKeepExtIds)
+
+          keepDataList.map { keepData =>
+            keepMap(keepData.id) match {
+              case Some(keep) =>
+                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
+                Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, false), "imageUrl" -> keepImageUrl, "libraryId" -> keepData.libraryId)
+              case _ => Json.obj()
+            }
+          }
+        }
+        Json.obj("alreadyKept" -> completeKeepData)
+    }.getOrElse(Json.obj())
+    Ok(libsResponse ++ keepResponse)
+  }
+
+  // Next 3 methods can be removed when everyone's on org mobile clients (Sept 14 2015)
+
   def getWriteableLibrariesWithUrlV1 = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     getWriteableLibrariesWithUrl(request.userId, urlOpt, true)
@@ -460,7 +511,10 @@ class MobileLibraryController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
-            case Right((lib, mem)) => (pubId, Right(lib.getMembershipInfo(mem)))
+            case Right((lib, mem)) => {
+              val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
+              (pubId, Right(lib.createMembershipInfo(mem, permissionsFromOrg)))
+            }
           }
       }
     }

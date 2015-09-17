@@ -10,7 +10,6 @@ import com.keepit.common.http._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -47,7 +46,6 @@ class HomeController @Inject() (
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
   userExperimentCommander: LocalUserExperimentCommander,
-  curatorServiceClient: CuratorServiceClient,
   applicationConfig: FortyTwoConfig,
   keepsCommander: KeepCommander,
   smsCommander: SmsCommander,

@@ -700,6 +700,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         firstTime.isBefore(secondTime) === true
 
+        val permissionsFromOrg = org1.getRolePermissions(OrganizationRole.ADMIN).flatMap { OrganizationPermission.toLibraryPermissionOpt }
+
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(
           s"""{
@@ -738,7 +740,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "access":"owner",
                 "listed":false,
                 "subscribed":false,
-                "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))}
+                "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER) ++ permissionsFromOrg)}
                },
                "invite": null
               },

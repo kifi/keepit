@@ -267,4 +267,5 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def getOptVersionNumberResult[T] = getResultOptionFromMapper[VersionNumber[T]]
   implicit val getOptDurationResult = getResultOptionFromMapper[Duration]
   implicit val getUrlHashResult = getResultFromMapper[UrlHash]
+  implicit val getJsValueResult = getResultFromMapper[JsValue]
 }

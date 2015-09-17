@@ -98,8 +98,8 @@ case class Library(
       LibraryPermission.INVITE_COLLABORATORS
     )
   }
-  def getMembershipInfo(mem: LibraryMembership): LibraryMembershipInfo = {
-    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access))
+  def createMembershipInfo(mem: LibraryMembership, extraPermissions: Set[LibraryPermission]): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access) ++ extraPermissions)
   }
 }
 

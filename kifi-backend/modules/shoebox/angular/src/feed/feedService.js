@@ -16,6 +16,7 @@ angular.module('kifi')
 
     [
       'keepAdded',
+      'keepRemoved',
       'libraryJoined',
       'libraryLeft',
       'libraryDeleted',
@@ -29,7 +30,7 @@ angular.module('kifi')
     var api = {
       getFeed: function (limit, beforeId, afterId) {
         ml.specs.getsFeed = new ml.Spec([
-          new ml.Assert('Feed retrieved in 3 seconds or less', 3000),
+          new ml.Assert('Feed retrieved in 5 seconds or less', 5000),
           new ml.Expect('Feed returns a list', function(data) { return typeof data.length !== 'undefined'; })
         ]);
 

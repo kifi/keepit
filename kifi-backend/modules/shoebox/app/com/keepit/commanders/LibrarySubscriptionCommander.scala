@@ -37,6 +37,7 @@ class LibrarySubscriptionCommander @Inject() (
     httpClient: HttpClient,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     userRepo: UserRepo,
+    organizationRepo: OrganizationRepo,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -46,18 +47,19 @@ class LibrarySubscriptionCommander @Inject() (
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
 
-    val (subscriptions, keeper, owner) = db.readOnlyReplica { implicit session =>
+    val (subscriptions, keeper, handle) = db.readOnlyReplica { implicit session =>
       val subscriptions = librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP)
       val keeper = userRepo.get(keep.userId)
       val owner = userRepo.get(library.ownerId)
-      (subscriptions, keeper, owner)
+      val handle = library.organizationId.map(organizationRepo.get).map(_.handle.value).getOrElse(owner.username.value)
+      (subscriptions, keeper, handle)
     }
 
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
           val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
-          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
+          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/$handle/${library.slug.value}?kma=1|${library.name}> library."
           val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${keeper.firstName}") }
           val body = BasicSlackMessage(text = text, channel = Some(subscription.name.toLowerCase), attachments = attachments)
 

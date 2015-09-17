@@ -13,6 +13,7 @@ import datetime
 import json
 import shutil
 import math
+import uuid
 from multiprocessing import Pool
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -275,7 +276,9 @@ if __name__=="__main__":
           if potential_key.exists():
             log('Build asset %s already exists, continuing with deploy' % relative_path)
           else:
-            source_path = 'deploy-tmp/%s' % relative_path
+            tmp_uuid = str(uuid.uuid4())
+            source_dir = 'deploy-tmp/%s' % (tmp_uuid)
+            source_path = '%s/%s' % (source_dir, relative_path)
             os.makedirs(os.path.dirname(source_path))
             jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
             with open(source_path, 'wb') as handle:
@@ -283,10 +286,9 @@ if __name__=="__main__":
                 handle.write(chunk)
             multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
             log('Uploaded build asset %s' % relative_path)
+            if os.path.exists(source_dir):
+              shutil.rmtree(source_dir)
           latest_asset = potential_asset
-
-      if os.path.exists('deploy-tmp/'):
-        shutil.rmtree('deploy-tmp/')
 
       version = latest_asset.hash
       full_version = latest_asset.name + " (latest)"

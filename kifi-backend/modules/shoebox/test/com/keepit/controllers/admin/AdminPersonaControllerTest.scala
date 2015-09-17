@@ -10,7 +10,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeShoeboxAppSecureSocialModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -40,8 +39,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule())
+    FakeCortexServiceClientModule())
 
   "AdminPersonaController" should {
     "get all personas" in {

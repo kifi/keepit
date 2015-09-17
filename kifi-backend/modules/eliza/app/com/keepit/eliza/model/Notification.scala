@@ -36,7 +36,8 @@ case class Notification(
     groupIdentifier: Option[String],
     lastEvent: DateTime,
     disabled: Boolean = false,
-    externalId: ExternalId[Notification] = ExternalId()) extends ModelWithExternalId[Notification] {
+    externalId: ExternalId[Notification] = ExternalId(),
+    backfilledFor: Option[Id[UserThread]] = None) extends ModelWithExternalId[Notification] {
 
   def hasNewEvent: Boolean = lastChecked.fold(true) { checked =>
     lastEvent > checked
@@ -59,10 +60,10 @@ case class Notification(
  */
 class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
 
-  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
-  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
+  //  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
+  //  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
 
-  lazy val relevantItem = items.maxBy(_.eventTime)
+  def relevantItem = items.maxBy(_.eventTime)
 
   def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
 
@@ -103,7 +104,8 @@ object Notification {
     (__ \ "recipient").format[Recipient] and
     (__ \ "lastEvent").format[DateTime] and
     (__ \ "disabled").format[Boolean] and
-    (__ \ "externalId").format[ExternalId[Notification]]
+    (__ \ "externalId").format[ExternalId[Notification]] and
+    (__ \ "backfilledFor").formatNullable[Id[UserThread]]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
 
   def applyFromDbRow(
@@ -116,7 +118,8 @@ object Notification {
     recipient: Recipient,
     lastEvent: DateTime,
     disabled: Boolean,
-    externalId: ExternalId[Notification]): Notification = Notification(
+    externalId: ExternalId[Notification],
+    backfilledFor: Option[Id[UserThread]]): Notification = Notification(
     id,
     createdAt,
     updatedAt,
@@ -126,10 +129,11 @@ object Notification {
     groupIdentifier,
     lastEvent,
     disabled,
-    externalId
+    externalId,
+    backfilledFor
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Option[DateTime], String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification])] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Option[DateTime], String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification], Option[Id[UserThread]])] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,
@@ -139,7 +143,8 @@ object Notification {
     notification.recipient,
     notification.lastEvent,
     notification.disabled,
-    notification.externalId
+    notification.externalId,
+    notification.backfilledFor
   )
 
 }

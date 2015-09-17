@@ -16,7 +16,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal._
 import com.keepit.model._
@@ -46,8 +45,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id

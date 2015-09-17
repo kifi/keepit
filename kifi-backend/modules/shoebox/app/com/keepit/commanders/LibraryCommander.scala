@@ -77,7 +77,7 @@ class LibraryCommanderImpl @Inject() (
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
     Future {
       db.readWrite { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map { mem =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).foreach { mem =>
           libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
         }
       }
@@ -116,10 +116,8 @@ class LibraryCommanderImpl @Inject() (
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
-          val sameSlugOpt = targetSpace match {
-            case UserSpace(space) => libraryRepo.getBySpaceAndSlug(space, validSlug)
-            case OrganizationSpace(space) => libraryRepo.getBySpaceAndSlug(space, validSlug).orElse(libraryRepo.getBySpaceAndSlug(UserSpace(ownerId), validSlug))
-          }
+          val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
+
           (userHasPermissionToCreateInSpace, sameSlugOpt)
         } match {
           case (false, _) =>
@@ -581,4 +579,8 @@ class LibraryCommanderImpl @Inject() (
         Right(updatedMembership)
     }
   }
+}
+
+protected object LibraryCommanderImpl {
+  val slugPrefixRegex = """^(.*)-\d+$""".r
 }

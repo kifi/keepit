@@ -264,6 +264,7 @@ POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.M
 GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
 POST    /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV1()
 POST    /m/2/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV2()
+POST    /m/3/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getWriteableLibrariesWithUrlV3()
 GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByIdV1(id: PublicId[Library], is: Option[String] ?= None)
 GET     /m/2/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByIdV2(id: PublicId[Library], is: Option[String] ?= None)
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
@@ -465,7 +466,6 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, trackLibDelivery: Boolean ?= true)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
@@ -718,7 +718,6 @@ GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserCont
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
-POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
 POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.AdminUserController.setIgnoreForPotentialOrganizations(id: Id[User])
 POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
 
@@ -753,7 +752,7 @@ GET     /admin/findOrganizationByNameJson                    @com.keepit.control
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
-POST    /admin/organizations/addPermissionToAllOrgs          @com.keepit.controllers.admin.AdminOrganizationController.addPermissionToAllOrganizations()
+POST    /admin/organizations/applyPermissionsDiffToAllOrganizations   @com.keepit.controllers.admin.AdminOrganizationController.applyPermissionsDiffToAllOrganizations()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
@@ -861,12 +860,6 @@ GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.cont
 GET     /admin/learning/pornDetect/bms/:page                    @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= true)
 POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
 POST    /admin/learning/pornDetect/whitelist               @com.keepit.controllers.admin.AdminPornDetectorController.whitelist
-
-GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
-GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
-GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
-GET     /admin/curator/feedback                            @com.keepit.controllers.admin.AdminCuratorController.view
-POST    /admin/curator/feedback/counter                    @com.keepit.controllers.admin.AdminCuratorController.examineUserFeedbackCounter
 
 GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
 GET     /adimin/cortex/lda/version                         @com.keepit.controllers.admin.AdminLDAController.versionPage(version: ModelVersion[DenseLDA])
@@ -1078,6 +1071,9 @@ GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRoute
 GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
 GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /teams                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)

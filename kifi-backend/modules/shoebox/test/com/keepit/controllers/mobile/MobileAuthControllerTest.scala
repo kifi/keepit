@@ -2,7 +2,6 @@ package com.keepit.controllers.mobile
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import org.specs2.mutable.Specification
 
@@ -43,8 +42,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
     FakeABookServiceClientModule(),
-    FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCryptoModule()
   )
 
   "register iphone version" in {

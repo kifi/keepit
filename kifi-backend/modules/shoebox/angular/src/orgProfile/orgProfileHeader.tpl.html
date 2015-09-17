@@ -6,62 +6,61 @@
     actions="inviteBannerButtons"
   ></div>
   <div
-    ng-if="notification == 'save'"
-    kf-generic-banner
-    text="Saved successfully"
-    icon="'save'"
-  ></div>
-  <div
     ng-if="shouldShowSignupBanner()"
     kf-generic-banner
     thumb="{{membership.invite.inviter|pic}}"
     text="{{membership.invite.inviter|name}} invited you to become a member of this team."
     actions="signupBannerButtons"
   ></div>
-  <div
-    ng-if="notification == 'error'"
-    kf-generic-banner
-    text="We're sorry, there was a problem saving your information. Please try again"
-    icon="'error'"
-    variation="'kf-generic-banner-error'"
-  ></div>
-  <div class="kf-oph-top">
-    <div kf-profile-image readonly="readonly" profile="profile" upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
-    <div class="kf-oph-about">
-      <div class="kf-oph-about-info">
-        <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" class-name="'kf-oph-input'" readonly="readonly"></div>
-        <div
-          class="kf-oph-description"
-          kf-click-to-edit
-          on-save="save"
-          class-name="'kf-oph-input'"
-          input-placeholder="'Description'"
-          value="profile.description"
-          readonly="readonly"
-          ng-if="!(readonly && !profile.description.length)"
-        ></div><div ng-if="showAdminLink"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
-        <p class="kf-oph-url">
-          <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
-        </p>
-        <button ng-if="canInvite" class="kf-button" ng-click="goToMemberInvite()">
-          <svg
-            kf-symbol-sprite
-            icon="add-member"
-          ></svg>
-          <span>Invite new member</span>
-        </button>
+  <div class="kf-oph-wrapper">
+    <div class="kf-oph-top">
+      <div kf-profile-image readonly="readonly" profile="profile" upload-url="{{'/organizations/' + profile.id + '/avatar/upload'}}" pic-url="profile | pic:200"></div>
+      <div class="kf-oph-about">
+        <div class="kf-oph-about-info">
+          <div class="kf-oph-name" kf-click-to-edit on-save="save" value="profile.name" class-name="'kf-oph-input'" readonly="readonly"></div>
+          <div
+            class="kf-oph-description"
+            kf-click-to-edit
+            on-save="save"
+            class-name="'kf-oph-input'"
+            input-placeholder="'Description'"
+            value="profile.description"
+            readonly="readonly"
+            ng-if="!(readonly && !profile.description.length)"
+          ></div><div ng-if="showAdminLink"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
+          <p class="kf-oph-url">
+            <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
+          </p>
+          <a ng-if="canInvite" class="kf-link kf-oph-invite-button" ng-click="goToMemberInvite()">
+            <svg
+              kf-symbol-sprite
+              icon="add-member"
+            ></svg>
+            <span>Invite new member</span>
+          </a>
+        </div>
+        <nav class="kf-oph-stats">
+          <a 
+            class="kf-oph-stats-a" 
+            ui-sref="orgProfile.libraries" 
+            ng-click="onClickTrack($event, 'clickedProfileLibraries')"
+            ng-class="{ 'active': state.current.activetab === 'libraries' }"
+          >
+            <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
+            <div class="kf-oph-stats-name">Libraries</div>
+          </a>
+          <a 
+            class="kf-oph-stats-a" 
+            ui-sref="orgProfile.members" 
+            ng-click="onClickTrack($event, 'clickedProfileMembers')"
+            ng-class="{ 'active': state.current.activetab === 'members' }"
+          >
+            <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
+            <div class="kf-oph-stats-name">Members</div>
+          </a>
+        </nav>
+        </table>
       </div>
-      <nav class="kf-oph-stats">
-        <a class="kf-oph-stats-a" ui-sref="orgProfile.libraries" ng-click="onClickTrack($event, 'clickedProfileLibraries')">
-          <div class="kf-oph-stats-name">Libraries</div>
-          <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
-        </a>
-        <a class="kf-oph-stats-a" ui-sref="orgProfile.members" ng-click="onClickTrack($event, 'clickedProfileMembers')">
-          <div class="kf-oph-stats-name">Members</div>
-          <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
-        </a>
-      </nav>
-      </table>
     </div>
   </div>
 </div>

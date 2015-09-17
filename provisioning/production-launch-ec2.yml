@@ -25,6 +25,10 @@
         group: "{{ ec2.defaults.security_group }}"
         region: "{{ ec2.defaults.region }}"
         zone: "{{ item.zone }}"
+        user_data: "{{ lookup('file', 'ec2-user-data') }}"
+        instance_profile_name: kifi-service
+        spot_price: "{{ item.spot_price | default('') }}"
+        # spot_type: "{{ item.spot_type | default('') }}" # only works in ansible 2+
         state: present
       register: ec2_task
     - name: add ec2 instances to our hosts lists

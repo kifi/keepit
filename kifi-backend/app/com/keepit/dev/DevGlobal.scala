@@ -7,7 +7,6 @@ import com.keepit.common.akka.{ SlowRunningExecutionContext, SafeFuture }
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.ServiceType
-import com.keepit.curator.CuratorServices
 import com.keepit.eliza.ElizaServices
 import com.keepit.graph.dev.GraphDevModule
 import com.keepit.heimdal.HeimdalServices
@@ -34,7 +33,6 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     with GraphServices
     with HeimdalServices
     with ElizaServices
-    with CuratorServices
     with RoverServices {
 
   def composeModules(modules: Seq[Module]): Module = {
@@ -47,7 +45,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
   }
 
   // Modules are overridden on top of each other, so the last modules in this list have higher precedence
-  val modules: Seq[Module] = Seq(RoverDevModule(), CuratorDevModule(), GraphDevModule(), CortexDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
+  val modules: Seq[Module] = Seq(RoverDevModule(), GraphDevModule(), CortexDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
 
   override val module = composeModules(modules)
 
@@ -64,7 +62,6 @@ object DevGlobal extends FortyTwoGlobal(Dev)
       startGraphServices()
       startElizaServices()
       startHeimdalServices()
-      startCuratorServices()
       startRoverServices()
       log.info(s"Started services in ${System.currentTimeMillis - t}ms")
     }

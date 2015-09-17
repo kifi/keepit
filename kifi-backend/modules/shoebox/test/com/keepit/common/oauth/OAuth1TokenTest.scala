@@ -15,7 +15,6 @@ import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGr
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.AuthController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -65,7 +64,6 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
     KeepImportsModule(),
-    FakeCuratorServiceClientModule(),
     FakeOAuth1ConfigurationModule()
   )
 

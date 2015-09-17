@@ -6,10 +6,6 @@
   sudo: yes
   roles:
     - { role: kifi.cortex }
-- hosts: tag_Service_curator
-  sudo: yes
-  roles:
-    - { role: kifi.curator }
 - hosts: tag_Service_eliza
   sudo: yes
   roles:

@@ -6,7 +6,6 @@ import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, Inval
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.service.IpAddress
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
@@ -116,7 +115,6 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
-    curator: CuratorServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
@@ -359,7 +357,7 @@ class AdminUserController @Inject() (
           case All => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
           case TopKeepersNotInOrg =>
-            val users = userRepo.topKeepersNotInOrgs(20)
+            val users = userRepo.topKeepersNotInOrgs(40)
             (users, users.size)
           case Registered => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
             userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
@@ -1020,13 +1018,8 @@ class AdminUserController @Inject() (
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
     code match {
       case "activity" => activityEmailSender(Set(toUserId))
-      case _ => curator.triggerEmailToUser(code, toUserId)
+      case _ => throw new UnsupportedOperationException(code)
     }
-    NoContent
-  }
-
-  def refreshRecos(userId: Id[User]) = AdminUserPage { implicit request =>
-    SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
   }
 

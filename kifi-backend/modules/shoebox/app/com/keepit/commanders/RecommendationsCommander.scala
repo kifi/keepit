@@ -2,10 +2,10 @@ package com.keepit.commanders
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
@@ -17,12 +17,14 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.search.util.LongSetIdFilter
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Random
+import play.api.libs.json.Json
 
 class RecommendationsCommander @Inject() (
-    curator: CuratorServiceClient,
+    systemValueRepo: SystemValueRepo,
     search: SearchServiceClient,
     db: Database,
     nUriRepo: NormalizedURIRepo,
@@ -38,27 +40,16 @@ class RecommendationsCommander @Inject() (
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val imageConfig: S3ImageConfig,
-    userExperimentCommander: LocalUserExperimentCommander) {
+    userExperimentCommander: LocalUserExperimentCommander) extends Logging {
 
   def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
-    val uriOpt = db.readOnlyMaster { implicit s =>
-      nUriRepo.getOpt(extId)
-    }
-    uriOpt match {
-      case Some(uri) => curator.updateUriRecommendationFeedback(userId, uri.id.get, feedback)
-      case None => Future.successful(false)
-    }
+    log.info(s"updateUriRecommendationFeedback is NO-OP")
+    Future.successful(true)
   }
 
   def updateLibraryRecommendationFeedback(userId: Id[User], id: Id[Library], feedback: LibraryRecommendationFeedback): Future[Boolean] = {
-    curator.updateLibraryRecommendationFeedback(userId, id, feedback)
-  }
-
-  def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] = {
-    curator.topRecos(userId, source, subSource, more, recencyWeight, context).flatMap { recoResults =>
-      val decorated = decorateUriRecos(userId, recoResults.recos, explain = true)
-      decorated.map { fullinfo => FullUriRecoResults(fullinfo, recoResults.context) }
-    }
+    log.info(s"updateLibraryRecommendationFeedback is NO-OP")
+    Future.successful(true)
   }
 
   def topPublicRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
@@ -77,10 +68,11 @@ class RecommendationsCommander @Inject() (
 
   }
 
-  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullRecoInfo)]] = {
-    val curatedLibIds: Seq[Id[Library]] = Seq(
-      25345L, 44612L, 24542L, 25471L, 28148L, 25381L, 27207L, 25370L, 25388L, 25371L, 25340L, 26473L, 26460L, 27238L, 42651L, 25168L, 27760L, 49090L, 47498L
-    ).map(Id[Library])
+  def curatedPublicLibraries(): Seq[Library] = {
+    val curatedLibIds = db.readOnlyReplica { implicit s =>
+      val json = systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName).get
+      Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(json)).get.map(lib => lib.id)
+    }
 
     val curatedLibraries = {
       val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
@@ -88,46 +80,18 @@ class RecommendationsCommander @Inject() (
     }.filter { lib =>
       lib.visibility == LibraryVisibility.PUBLISHED
     }
+    curatedLibraries
+  }
 
-    createFullLibraryInfos(userId, curatedLibraries)
+  def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
+    createFullLibraryInfos(userId, curatedPublicLibraries())
   }
 
   def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true, context: Option[String]): Future[FullLibRecoResults] = {
-    def generateNewContext(oldContext: String, newLibs: Set[Id[Library]]): String = {
-      val filter = new LongSetIdFilter() {}
-      val oldSet = filter.fromBase64ToSet(oldContext)
-      val newSet = oldSet ++ newLibs.map { _.id }
-      val newContext = filter.fromSetToBase64(newSet)
-      newContext
-    }
+    val libraries = curatedPublicLibraries()
 
-    // get extra recos from curator incase we filter out some below
-    curator.topLibraryRecos(userId, Some(limit * 4), context) flatMap { libResults =>
-      val libInfos = libResults.recos
-      val libIds = libInfos.map(_.libraryId)
-      val libraries = db.readOnlyReplica { implicit s =>
-        val mapping = libRepo.getLibraries(libIds.toSet)
-        libIds.flatMap { id => mapping.get(id).map { x => (id, x) } }.filter(x => x._2.visibility == LibraryVisibility.PUBLISHED && x._2.state == LibraryStates.ACTIVE)
-      }.take(limit)
-
-      val idToLibraryMap = libraries.toMap
-      val libsAndRecoInfos = libInfos.map { libInfo =>
-        idToLibraryMap.get(libInfo.libraryId).map { library => (library, libInfo) }
-      }.flatten
-
-      val libToRecoInfoMap = libsAndRecoInfos.map { case (lib, info) => info.libraryId -> info }.toMap
-
-      // for analytics and delivery tracking
-      if (trackDelivery) SafeFuture {
-        val deliveredIds = libraries.map(_._1).toSet
-        curator.notifyLibraryRecosDelivered(userId, deliveredIds, source, subSource)
-      }
-      // context from curator is generated with limit * 4 items. Not right.
-      val newContext = generateNewContext(context.getOrElse(""), idToLibraryMap.keySet)
-
-      createFullLibraryInfos(userId, libraries map (_._2), id => Some(libToRecoInfoMap(id).explain)).map {
-        recosInfo => FullLibRecoResults(recosInfo, newContext)
-      }
+    createFullLibraryInfos(userId, libraries).map {
+      recosInfo => FullLibRecoResults(recosInfo, "")
     }
   }
 
