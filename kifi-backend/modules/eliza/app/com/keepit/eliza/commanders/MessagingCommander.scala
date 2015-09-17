@@ -668,8 +668,7 @@ class MessagingCommander @Inject() (
       shoebox.hasOrganizationMembership(oid, userId).flatMap {
         case true =>
           //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("org_chat", true)
-          moreContext += ("org_id", oid.id)
+          moreContext += ("messagedWholeOrgId", oid.id)
           shoebox.getOrganizationMembers(oid)
         case false =>
           Future.successful(Set.empty[Id[User]])
