@@ -18,7 +18,7 @@ import com.keepit.common.zookeeper.{ ServiceTypeModule }
 import com.keepit.common.service.ServiceType
 
 case class CuratorServiceTypeModule() extends ServiceTypeModule {
-  val serviceType = ServiceType.CURATOR
+  val serviceType = ServiceType.TEST_MODE
   val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.CORTEX :: ServiceType.HEIMDAL :: ServiceType.SEARCH :: ServiceType.ABOOK :: ServiceType.ELIZA :: ServiceType.ROVER :: Nil
 }
 
