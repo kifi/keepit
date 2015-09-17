@@ -49,6 +49,23 @@ angular.module('kifi')
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
       },
+      getOrgSettings: function(initialSettings, orgId) {
+
+        var settingsSpec = new ml.Spec([
+          new ml.Expect('Settings keys mirrored on server and local', function(settings) {
+            return Object.keys(settings).length === Object.keys(initialSettings).length;
+          }),
+          new ml.Expect('Settings is non-empty', function(settings) {
+            return JSON.stringify(settings).length > 2;
+          })
+        ]);
+        return net.getOrgSettings(orgId).then(function(response) {
+          settingsSpec.respond(response, response);
+        });
+      },
+      setOrgSettings: function(orgId, data) {
+        return net.setOrgSettings(orgId, data);
+      },
       getOrgLibraries: function (orgId, page, size) {
         return net.getOrgLibraries(orgId, {
           offset: page,

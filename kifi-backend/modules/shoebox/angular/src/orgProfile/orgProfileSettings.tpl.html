@@ -17,7 +17,11 @@
           <p>Select who is able to make your teams' libraries public. Public libraries
           are discoverable in search engine's results, like Google.</p>
         </div>
-        <select class="kf-ops-setting-select kf-side-pane">
+        <select 
+          class="kf-ops-setting-select kf-side-pane"
+          ng-model="settings.publish_libraries"
+          ng-options="key as value for ( key, value ) in options"
+        >
         </select>
       </div>
 
@@ -49,7 +53,11 @@
           <p>Select who is able to see the team's members page. "Anyone" means it's also
           discoverable in other search engine's results like Google.</p>
         </div>
-        <select class="kf-ops-setting-select kf-side-pane">
+        <select 
+          class="kf-ops-setting-select kf-side-pane"
+          ng-model="settings.view_members"
+          ng-options="key as value for ( key, value ) in options"
+        >
         </select>
       </div>
       
@@ -59,7 +67,11 @@
           <p>Members of the team have access to your team visible libraries. In most
           scenarios they can also keep to any public or team visible library.</p>
         </div>
-        <select class="kf-ops-setting-select kf-side-pane">
+        <select 
+          class="kf-ops-setting-select kf-side-pane"
+          ng-model="settings.invite_members"
+          ng-options="key as value for ( key, value ) in options"
+        >
         </select>
       </div>
       
@@ -70,7 +82,11 @@
           <h3>Who can message everyone in the team?</h3>
           <p>Send a same page chat to everyone in the team with just a couple of clicks.</p>
         </div>
-        <select class="kf-ops-setting-select kf-side-pane">
+        <select 
+          class="kf-ops-setting-select kf-side-pane"
+          ng-model="settings.group_messaging"
+          ng-options="key as value for ( key, value ) in options"
+        >
         </select>
       </div>
       
@@ -89,6 +105,7 @@
       <h1 id="team-contacts">Contacts</h1>
       <h1 id="credit-card">Credit Card</h1>
       <h1 id="history">History</h1>
+      <div class="kf-ops-push"></div>
     </div>
   </div>
 </main>
